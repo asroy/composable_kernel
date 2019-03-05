@@ -7,11 +7,7 @@
 #include "tensor.hpp"
 #include "ConstantTensorDescriptor.hip.hpp"
 #include "conv_common.hip.hpp"
-#include "device_direct_convolution_1.hpp"
-#include "device_direct_convolution_2.hpp"
 #include "device_implicit_gemm_convolution_1_chwn_csrk_khwn.hpp"
-#include "device_implicit_gemm_convolution_1_chwn_csrk_khwn_padded.hpp"
-#include "device_implicit_gemm_convolution_2_chwn_csrk_khwn.hpp"
 
 struct GeneratorTensor_1
 {
@@ -595,41 +591,12 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 0
-        in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-        wei_kcsr.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-#elif 1
         in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcsr.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-#elif 1
-        in_nchw.GenerateTensorValue(GeneratorTensor_2{-2, 2}, num_thread);
-        wei_kcsr.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-#endif
     }
 
-#if 1
-#if 0
-    device_direct_convolution_1
-#elif 0
-    device_direct_convolution_2
-#elif 1
-    device_implicit_gemm_convolution_1_chwn_csrk_khwn
-#elif 0
-    device_implicit_gemm_convolution_2_chwn_csrk_khwn
-#endif
-    (in_nchw_desc, in_nchw, wei_kcsr_desc, wei_kcsr, out_nkhw_desc, out_nkhw_device, nrepeat);
-
-#elif 1
-    device_implicit_gemm_convolution_1_chwn_csrk_khwn_padded(in_nchw_desc,
-                                                             in_nchw,
-                                                             wei_kcsr_desc,
-                                                             wei_kcsr,
-                                                             out_nkhw_desc,
-                                                             out_nkhw_device,
-                                                             lower_pads,
-                                                             upper_pads,
-                                                             nrepeat);
-#endif
+    device_implicit_gemm_convolution_1_chwn_csrk_khwn(
+        in_nchw_desc, in_nchw, wei_kcsr_desc, wei_kcsr, out_nkhw_desc, out_nkhw_device, nrepeat);
 
     if(do_verification)
     {

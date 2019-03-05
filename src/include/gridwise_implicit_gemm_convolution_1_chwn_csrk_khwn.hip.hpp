@@ -4,8 +4,8 @@
 #include "ConstantMatrixDescriptor.hip.hpp"
 #include "blockwise_4d_tensor_op.hip.hpp"
 #include "blockwise_2d_tensor_op.hip.hpp"
-#include "threadwise_nd_tensor_op.hip.hpp"
 #include "threadwise_4d_tensor_op.hip.hpp"
+#include "threadwise_nd_tensor_op.hip.hpp"
 #include "blockwise_gemm.hip.hpp"
 
 template <unsigned GridSize,
@@ -39,9 +39,6 @@ gridwise_implicit_gemm_convolution_1_chwn_csrk_khwn(const Float* const __restric
                                                     const Float* const __restrict__ p_wei_global,
                                                     Float* const __restrict__ p_out_global)
 {
-    // NPerThread == NPerBlock, because the format of input in LDS [C,Hi,Wi,N]
-    //   for GEMM trans([C,K]) * [C,Wo*N], we need a thread to do all the "N"
-    // if we use [C,Hi,N,Wi,N] in LDS, then NPerThread can be different from NPerBlock
     static_assert(NPerBlock % NPerThread == 0, "wrong! NPerBlock % NPerThread !=0");
     static_assert((NPerThread < NPerBlock && WoPerThread == 1) || NPerThread == NPerBlock,
                   "wrong!");
@@ -217,41 +214,6 @@ gridwise_implicit_gemm_convolution_1_chwn_csrk_khwn(const Float* const __restric
     }
 
     // output: register to global mem,
-#if 0
-    const auto c_thread_mtx_begin =
-        blockwise_batch_gemm.GetBeginOfThreadMatrixC(get_thread_local_1d_id());
-
-    for(unsigned k = 0; k < out_khwn_thread_desc.GetLength(I0); ++k)
-    {
-        for(unsigned ho = 0; ho < out_khwn_thread_desc.GetLength(I1); ++ho)
-        {
-            for(unsigned wo = 0; wo < out_khwn_thread_desc.GetLength(I2); ++wo)
-            {
-                for(unsigned n = 0; n < out_khwn_thread_desc.GetLength(I3); ++n)
-                {
-                    const unsigned b = out_khwn_thread_desc.Get1dIndex(0, 0, wo, n);
-
-                    const auto c_thread_mtx_distance =
-                        blockwise_batch_gemm.GetDistanceFromBeginOfThreadMatrixC(ho, k, b);
-
-                    const unsigned ho_thread =
-                        c_thread_mtx_begin.batch + c_thread_mtx_distance.batch;
-                    const unsigned k_thread = c_thread_mtx_begin.row + c_thread_mtx_distance.row;
-                    const unsigned b_thread = c_thread_mtx_begin.col + c_thread_mtx_distance.col;
-
-                    const unsigned wo_thread = b_thread / NPerBlock;
-                    const unsigned n_thread  = b_thread % NPerBlock;
-
-                    p_out_global[out_khwn_global_desc.Get1dIndex(k_block_data_begin + k_thread,
-                                                                 ho_block_data_begin + ho_thread,
-                                                                 wo_block_data_begin + wo_thread,
-                                                                 n_block_data_begin + n_thread)] =
-                        p_out_thread[out_khwn_thread_desc.Get1dIndex(k, ho, wo, n)];
-                }
-            }
-        }
-    }
-#elif 1
     const auto c_thread_mtx_begin =
         blockwise_batch_gemm.GetBeginOfThreadMatrixC(get_thread_local_1d_id());
 
@@ -275,17 +237,6 @@ gridwise_implicit_gemm_convolution_1_chwn_csrk_khwn(const Float* const __restric
         constexpr auto out_8d_thread_desc = make_ConstantTensorDescriptor(
             Sequence<KPerBlock / (K1_ * K2_), 1, K2_, HoPerThread, WoPerBlock / W1_, 1, 1, N1_>{});
 
-#if 0
-        if(get_thread_local_1d_id() == 0 && get_block_1d_id() == 0)
-        {
-            print_ConstantTensorDescriptor(out_khwn_thread_desc, "out_khwn_thread_desc");
-            print_ConstantTensorDescriptor(out_8d_thread_desc, "out_8d_thread_desc");
-
-            print_ConstantTensorDescriptor(out_khwn_global_desc, "out_khwn_global_desc");
-            print_ConstantTensorDescriptor(out_8d_global_desc, "out_8d_global_desc");
-        }
-#endif
-
         threadwise_8d_tensor_copy(out_8d_thread_desc,
                                   p_out_thread,
                                   out_8d_global_desc,
@@ -306,5 +257,4 @@ gridwise_implicit_gemm_convolution_1_chwn_csrk_khwn(const Float* const __restric
     {
         assert(false);
     }
-#endif
 }
