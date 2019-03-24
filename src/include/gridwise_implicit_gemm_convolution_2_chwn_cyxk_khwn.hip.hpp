@@ -206,6 +206,10 @@ gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn(const Float* const __restric
     __shared__ Float p_in_block[max_align * ((in_block_size + max_align - 1) / max_align)];
     __shared__ Float p_wei_block[max_align * ((wei_block_size + max_align - 1) / max_align)];
 
+#if 1
+    constexpr Float* p_lds_begin = p_wei_block;
+#endif
+
     const Float* p_in_global_block_offset =
         p_in_global + in_cb_global_desc.Get1dIndex(0, b_block_data_begin);
 
@@ -246,7 +250,8 @@ gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn(const Float* const __restric
                 (p_wei_block + wei_cyxk_block_desc.Get1dIndex(0, y, x, 0),
                  p_in_block + y * Wi + x,
                  p_out_thread,
-                 f_accum);
+                 f_accum,
+                 p_lds_begin);
             }
         }
     }

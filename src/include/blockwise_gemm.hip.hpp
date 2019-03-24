@@ -563,7 +563,8 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
     __device__ void Run_RegisterDoubleBuffer(FloatA* const p_a_block,
                                              FloatB* const p_b_block,
                                              FloatC* p_c_thread,
-                                             Accumulator f_accum) const
+                                             Accumulator f_accum,
+                                             float* p_lds_begin) const
     {
         constexpr auto True  = integral_constant<bool, true>{};
         constexpr auto False = integral_constant<bool, false>{};
@@ -610,21 +611,23 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
 #pragma unroll
         for(index_t m_repeat = 0; m_repeat < MRepeat; ++m_repeat)
         { // copy A-sub to form A
-            threadwise_matrix_copy(a_block_mtx,
-                                   p_a_block + mMyThreadOffsetA + m_repeat * MPerLevel1Cluster,
-                                   a_thread_sub_mtx,
-                                   p_a_thread_0 + m_repeat * MPerThreadSubC,
-                                   a_thread_sub_mtx.GetLengths());
+            threadwise_matrix_copy_v2(a_block_mtx,
+                                      p_a_block + mMyThreadOffsetA + m_repeat * MPerLevel1Cluster,
+                                      a_thread_sub_mtx,
+                                      p_a_thread_0 + m_repeat * MPerThreadSubC,
+                                      a_thread_sub_mtx.GetLengths(),
+                                      p_lds_begin);
         }
 
 #pragma unroll
         for(index_t n_repeat = 0; n_repeat < NRepeat; ++n_repeat)
         { // copy B-sub to form B
-            threadwise_matrix_copy(b_block_mtx,
-                                   p_b_block + mMyThreadOffsetB + n_repeat * NPerLevel1Cluster,
-                                   b_thread_sub_mtx,
-                                   p_b_thread_0 + n_repeat * NPerThreadSubC,
-                                   b_thread_sub_mtx.GetLengths());
+            threadwise_matrix_copy_v2(b_block_mtx,
+                                      p_b_block + mMyThreadOffsetB + n_repeat * NPerLevel1Cluster,
+                                      b_thread_sub_mtx,
+                                      p_b_thread_0 + n_repeat * NPerThreadSubC,
+                                      b_thread_sub_mtx.GetLengths(),
+                                      p_lds_begin);
         }
 
         bool even_loop = true;
@@ -643,26 +646,34 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
 #pragma unroll
             for(index_t m_repeat = 0; m_repeat < MRepeat; ++m_repeat)
             { // copy A-sub to form A
-                threadwise_matrix_copy(a_block_mtx,
-                                       p_a_block + mMyThreadOffsetA +
-                                           (k_begin + 1) * a_block_mtx.RowStride() +
-                                           m_repeat * MPerLevel1Cluster,
-                                       a_thread_sub_mtx,
-                                       p_a_thread_next + m_repeat * MPerThreadSubC,
-                                       a_thread_sub_mtx.GetLengths());
+                threadwise_matrix_copy_v2(a_block_mtx,
+                                          p_a_block + mMyThreadOffsetA +
+                                              (k_begin + 1) * a_block_mtx.RowStride() +
+                                              m_repeat * MPerLevel1Cluster,
+                                          a_thread_sub_mtx,
+                                          p_a_thread_next + m_repeat * MPerThreadSubC,
+                                          a_thread_sub_mtx.GetLengths(),
+                                          p_lds_begin);
             }
 
 #pragma unroll
             for(index_t n_repeat = 0; n_repeat < NRepeat; ++n_repeat)
             { // copy B-sub to form B
-                threadwise_matrix_copy(b_block_mtx,
-                                       p_b_block + mMyThreadOffsetB +
-                                           (k_begin + 1) * b_block_mtx.RowStride() +
-                                           n_repeat * NPerLevel1Cluster,
-                                       b_thread_sub_mtx,
-                                       p_b_thread_next + n_repeat * NPerThreadSubC,
-                                       b_thread_sub_mtx.GetLengths());
+                threadwise_matrix_copy_v2(b_block_mtx,
+                                          p_b_block + mMyThreadOffsetB +
+                                              (k_begin + 1) * b_block_mtx.RowStride() +
+                                              n_repeat * NPerLevel1Cluster,
+                                          b_thread_sub_mtx,
+                                          p_b_thread_next + n_repeat * NPerThreadSubC,
+                                          b_thread_sub_mtx.GetLengths(),
+                                          p_lds_begin);
             }
+
+#if 1
+            asm volatile("\n \
+            s_waitcnt lgkmcnt(0) \n \
+            " ::);
+#endif
 
             // C = A * B
             threadwise_gemm(a_thread_mtx,
