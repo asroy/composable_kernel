@@ -28,12 +28,12 @@ __device__ void threadwise_matrix_copy_v2(SrcMatrix,
                                           DstMatrix,
                                           Float* __restrict__ p_dst,
                                           Sequence<NRow, NCol>,
-                                          const float* p_lds_begin)
+                                          const float* const p_lds_begin)
 {
     constexpr auto src_mtx = SrcMatrix{};
     constexpr auto dst_mtx = DstMatrix{};
 
-#if 1
+#if 0
     for(index_t i = 0; i < NRow; ++i)
     {
         for(index_t j = 0; j < NCol; ++j)
@@ -48,11 +48,11 @@ __device__ void threadwise_matrix_copy_v2(SrcMatrix,
                         ds_read_b32 %0, %1 \n \
                         "
                          : "=v"(p_dst[dst_index])
-                         : "v"((uint32_t)((uintptr_t)((p_src + src_index) - p_lds_begin))));
+                         : "v"((uint32_t)(sizeof(Float) * (uintptr_t)((p_src + src_index) - p_lds_begin))));
 #endif
         }
     }
-#elif 0
+#elif 1
     static_assert(NCol == 4, "only for NCol == 4");
 
     using vector_t = typename vector_type<Float, 4>::MemoryType;
@@ -66,11 +66,12 @@ __device__ void threadwise_matrix_copy_v2(SrcMatrix,
         *(reinterpret_cast<vector_t*>(p_dst + dst_index)) =
             *(reinterpret_cast<const vector_t*>(p_src + src_index));
 #elif 1
-        asm volatile("\n \
-                    ds_read_b128 %0, %1, offset:0 \n \
+        asm volatile(
+            "\n \
+                    ds_read_b128 %0, %1 \n \
                     "
-                     : "=v"(*(reinterpret_cast<vector_t*>(p_dst + dst_index)))
-                     : "v"((uint32_t)((uintptr_t)(p_src + src_index - p_lds_begin))));
+            : "=v"(*(reinterpret_cast<vector_t*>(p_dst + dst_index)))
+            : "v"((uint32_t)(sizeof(Float) * (uintptr_t)((p_src + src_index) - p_lds_begin))));
 #endif
     }
 #endif

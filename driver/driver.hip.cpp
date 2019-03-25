@@ -593,9 +593,9 @@ int main(int argc, char* argv[])
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
 #elif 1
-    // 1x1 filter, 14x14 image, C = 256
+    // 1x1 filter, 14x14 image, C = 128
     constexpr index_t N  = 128;
-    constexpr index_t C  = 256;
+    constexpr index_t C  = 128;
     constexpr index_t HI = 14;
     constexpr index_t WI = 14;
     constexpr index_t K  = 512;
@@ -638,10 +638,16 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 1
+#if 0
         in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 0
+        in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+#elif 0
+        in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+#elif 1
         in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
 #elif 0
