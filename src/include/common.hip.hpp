@@ -21,21 +21,45 @@ struct is_same<T, T>
     static const bool value = true;
 };
 
-#if DEVICE_BACKEND_CUDA
-template <typename T>
-__host__ __device__ constexpr T max(T a, T b)
-{
-    return a > b ? a : b;
-}
-
-template <typename T>
-__host__ __device__ constexpr T min(T a, T b)
-{
-    return a < b ? a : b;
-}
-#endif
-
 __host__ __device__ constexpr index_t integer_divide_ceil(index_t a, index_t b)
 {
     return (a + b - 1) / b;
+}
+
+namespace mod_conv {
+template <class T>
+__host__ __device__ constexpr T max(T x, T y)
+{
+    return x > y ? x : y;
+}
+
+template <class T, class... Ts>
+__host__ __device__ constexpr T max(T x, Ts... xs)
+{
+    static_assert(sizeof...(xs) > 0, "not enough argument");
+
+    auto y = max(xs...);
+
+    static_assert(is_same<decltype(y), T>::value, "not the same type");
+
+    return x > y ? x : y;
+}
+
+template <class T>
+__host__ __device__ constexpr T min(T x, T y)
+{
+    return x < y ? x : y;
+}
+
+template <class T, class... Ts>
+__host__ __device__ constexpr T min(T x, Ts... xs)
+{
+    static_assert(sizeof...(xs) > 0, "not enough argument");
+
+    auto y = min(xs...);
+
+    static_assert(is_same<decltype(y), T>::value, "not the same type");
+
+    return x < y ? x : y;
+}
 }

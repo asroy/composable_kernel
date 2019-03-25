@@ -55,17 +55,66 @@ __device__ void threadwise_matrix_copy_v2(SrcMatrix,
 #elif 1
     static_assert(NCol == 4, "only for NCol == 4");
 
-    using vector_t = typename vector_type<Float, 4>::MemoryType;
-
     for(index_t i = 0; i < NRow; ++i)
     {
         const index_t src_index = src_mtx.Get1dIndex(i, 0);
         const index_t dst_index = dst_mtx.Get1dIndex(i, 0);
 
 #if 1
+        using vector_t          = typename vector_type<Float, 4>::MemoryType;
+
         *(reinterpret_cast<vector_t*>(p_dst + dst_index)) =
             *(reinterpret_cast<const vector_t*>(p_src + src_index));
-#elif 1
+#elif 0
+        // ds_read_b32
+        asm volatile(
+            "\n \
+                    ds_read_b32 %0, %1 \n \
+                    "
+            : "=v"(p_dst[dst_index])
+            : "v"((uint32_t)(sizeof(Float) * (uintptr_t)((p_src + src_index) - p_lds_begin))));
+
+        asm volatile(
+            "\n \
+                    ds_read_b32 %0, %1 \n \
+                    "
+            : "=v"(p_dst[dst_index + 1])
+            : "v"((uint32_t)(sizeof(Float) * (uintptr_t)((p_src + src_index + 1) - p_lds_begin))));
+
+        asm volatile(
+            "\n \
+                    ds_read_b32 %0, %1 \n \
+                    "
+            : "=v"(p_dst[dst_index + 2])
+            : "v"((uint32_t)(sizeof(Float) * (uintptr_t)((p_src + src_index + 2) - p_lds_begin))));
+
+        asm volatile(
+            "\n \
+                    ds_read_b32 %0, %1 \n \
+                    "
+            : "=v"(p_dst[dst_index + 3])
+            : "v"((uint32_t)(sizeof(Float) * (uintptr_t)((p_src + src_index + 3) - p_lds_begin))));
+#elif 0
+        // ds_read_b64
+        using vector_t = typename vector_type<Float, 2>::MemoryType;
+
+        asm volatile(
+            "\n \
+                    ds_read_b64 %0, %1 \n \
+                    "
+            : "=v"(*(reinterpret_cast<vector_t*>(p_dst + dst_index)))
+            : "v"((uint32_t)(sizeof(Float) * (uintptr_t)((p_src + src_index) - p_lds_begin))));
+
+        asm volatile(
+            "\n \
+                    ds_read_b64 %0, %1 \n \
+                    "
+            : "=v"(*(reinterpret_cast<vector_t*>(p_dst + dst_index + 2)))
+            : "v"((uint32_t)(sizeof(Float) * (uintptr_t)((p_src + src_index + 2) - p_lds_begin))));
+#elif 0
+        // ds_read_b128
+        using vector_t = typename vector_type<Float, 4>::MemoryType;
+
         asm volatile(
             "\n \
                     ds_read_b128 %0, %1 \n \

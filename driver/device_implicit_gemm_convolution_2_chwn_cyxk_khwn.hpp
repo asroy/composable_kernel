@@ -86,15 +86,6 @@ void device_implicit_gemm_convolution_2_chwn_cyxk_khwn(InDesc,
     constexpr index_t GemmNLevel1Cluster = 8;
     constexpr index_t GemmKPerThreadLoop = 1;
 
-    constexpr index_t GemmThreadPerColumnPerCluster = 8;
-    constexpr index_t GemmThreadPerRowPerCluster    = 8;
-
-    constexpr index_t InBlockCopyThreadPerDim0 = 4;
-    constexpr index_t InBlockCopyThreadPerDim1 = 16;
-
-    constexpr index_t WeiBlockCopyThreadPerDim0 = 4;
-    constexpr index_t WeiBlockCopyThreadPerDim1 = 16;
-
     constexpr index_t InBlockCopyDataPerRead  = 4;
     constexpr index_t WeiBlockCopyDataPerRead = 4;
 
@@ -115,15 +106,6 @@ void device_implicit_gemm_convolution_2_chwn_cyxk_khwn(InDesc,
     constexpr index_t GemmMLevel1Cluster = 2;
     constexpr index_t GemmNLevel1Cluster = 4;
     constexpr index_t GemmKPerThreadLoop = 1;
-
-    constexpr index_t GemmThreadPerColumnPerCluster = 8;
-    constexpr index_t GemmThreadPerRowPerCluster    = 8;
-
-    constexpr index_t InBlockCopyThreadPerDim0 = 4;
-    constexpr index_t InBlockCopyThreadPerDim1 = 16;
-
-    constexpr index_t WeiBlockCopyThreadPerDim0 = 4;
-    constexpr index_t WeiBlockCopyThreadPerDim1 = 16;
 
     constexpr index_t InBlockCopyDataPerRead  = 4;
     constexpr index_t WeiBlockCopyDataPerRead = 4;
@@ -147,15 +129,6 @@ void device_implicit_gemm_convolution_2_chwn_cyxk_khwn(InDesc,
     constexpr index_t GemmNLevel1Cluster = 4;
     constexpr index_t GemmKPerThreadLoop = 1;
 
-    constexpr index_t GemmThreadPerColumnPerCluster = 8;
-    constexpr index_t GemmThreadPerRowPerCluster    = 8;
-
-    constexpr index_t InBlockCopyThreadPerDim0 = 4;
-    constexpr index_t InBlockCopyThreadPerDim1 = 16;
-
-    constexpr index_t WeiBlockCopyThreadPerDim0 = 4;
-    constexpr index_t WeiBlockCopyThreadPerDim1 = 16;
-
     constexpr index_t InBlockCopyDataPerRead  = 4;
     constexpr index_t WeiBlockCopyDataPerRead = 4;
 
@@ -177,15 +150,6 @@ void device_implicit_gemm_convolution_2_chwn_cyxk_khwn(InDesc,
     constexpr index_t GemmNLevel1Cluster = 4;
     constexpr index_t GemmKPerThreadLoop = 1;
 
-    constexpr index_t GemmThreadPerColumnPerCluster = 8;
-    constexpr index_t GemmThreadPerRowPerCluster    = 8;
-
-    constexpr index_t InBlockCopyThreadPerDim0 = 4;
-    constexpr index_t InBlockCopyThreadPerDim1 = 16;
-
-    constexpr index_t WeiBlockCopyThreadPerDim0 = 4;
-    constexpr index_t WeiBlockCopyThreadPerDim1 = 16;
-
     constexpr index_t InBlockCopyDataPerRead  = 4;
     constexpr index_t WeiBlockCopyDataPerRead = 4;
 
@@ -206,15 +170,6 @@ void device_implicit_gemm_convolution_2_chwn_cyxk_khwn(InDesc,
     constexpr index_t GemmMLevel1Cluster = 4;
     constexpr index_t GemmNLevel1Cluster = 4;
     constexpr index_t GemmKPerThreadLoop = 1;
-
-    constexpr index_t GemmThreadPerColumnPerCluster = 8;
-    constexpr index_t GemmThreadPerRowPerCluster    = 8;
-
-    constexpr index_t InBlockCopyThreadPerDim0 = 4;
-    constexpr index_t InBlockCopyThreadPerDim1 = 16;
-
-    constexpr index_t WeiBlockCopyThreadPerDim0 = 4;
-    constexpr index_t WeiBlockCopyThreadPerDim1 = 16;
 
     constexpr index_t InBlockCopyDataPerRead  = 4;
     constexpr index_t WeiBlockCopyDataPerRead = 4;
@@ -257,8 +212,6 @@ void device_implicit_gemm_convolution_2_chwn_cyxk_khwn(InDesc,
              CPerBlock,
              BPerThread,
              KPerThread,
-             GemmThreadPerColumnPerCluster,
-             GemmThreadPerRowPerCluster,
              GemmMPerThreadSubC,
              GemmNPerThreadSubC,
              GemmMLevel0Cluster,
@@ -266,10 +219,6 @@ void device_implicit_gemm_convolution_2_chwn_cyxk_khwn(InDesc,
              GemmMLevel1Cluster,
              GemmNLevel1Cluster,
              GemmKPerThreadLoop,
-             InBlockCopyThreadPerDim0,
-             InBlockCopyThreadPerDim1,
-             WeiBlockCopyThreadPerDim0,
-             WeiBlockCopyThreadPerDim1,
              InBlockCopyDataPerRead,
              WeiBlockCopyDataPerRead>,
             dim3(GridSize),

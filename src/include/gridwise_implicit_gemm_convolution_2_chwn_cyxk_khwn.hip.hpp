@@ -19,8 +19,6 @@ template <index_t GridSize,
           index_t CPerBlock,
           index_t BPerThread,
           index_t KPerThread,
-          index_t GemmThreadPerColumnPerCluster,
-          index_t GemmThreadPerRowPerCluster,
           index_t GemmMPerThreadSubC,
           index_t GemmNPerThreadSubC,
           index_t GemmMLevel0Cluster,
@@ -28,10 +26,6 @@ template <index_t GridSize,
           index_t GemmMLevel1Cluster,
           index_t GemmNLevel1Cluster,
           index_t GemmKPerThreadLoop,
-          index_t InBlockCopyThreadPerDim0,
-          index_t InBlockCopyThreadPerDim1,
-          index_t WeiBlockCopyThreadPerDim0,
-          index_t WeiBlockCopyThreadPerDim1,
           index_t InBlockCopyDataPerRead,
           index_t WeiBlockCopyDataPerRead>
 __global__ void
@@ -111,57 +105,23 @@ gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn(const Float* const __restric
     }
 #endif
 
-// blockwise in copy
-//   formmat is [CPerBlock,BPerBlock + BGhostRead]
-#if 0
-    const auto blockwise_in_copy =
-        Blockwise2dTensorCopy1<BlockSize,
-                               Float,
-                               decltype(in_cb_global_desc),
-                               decltype(in_cb_block_desc),
-                               decltype(in_cb_block_desc.GetLengths())>{};
-#elif 0
-    const auto blockwise_in_copy = Blockwise2dTensorCopy2<BlockSize,
-                                                          Float,
-                                                          decltype(in_cb_global_desc),
-                                                          decltype(in_cb_block_desc),
-                                                          decltype(in_cb_block_desc.GetLengths()),
-                                                          InBlockCopyThreadPerDim0,
-                                                          InBlockCopyThreadPerDim1>{};
-#elif 1
+    // blockwise in copy
+    //   formmat is [CPerBlock,BPerBlock + BGhostRead]
     const auto blockwise_in_copy = Blockwise2dTensorCopy3<BlockSize,
                                                           Float,
                                                           decltype(in_cb_global_desc),
                                                           decltype(in_cb_block_desc),
                                                           decltype(in_cb_block_desc.GetLengths()),
                                                           InBlockCopyDataPerRead>{};
-#endif
 
-// blockwise wei copy
-//   format is [CPerBlock*Y*X,KPerBlock]
-#if 0
-    const auto blockwise_wei_copy =
-        Blockwise2dTensorCopy1<BlockSize,
-                               Float,
-                               decltype(wei_ek_global_desc),
-                               decltype(wei_ek_block_desc),
-                               decltype(wei_ek_block_desc.GetLengths())>{};
-#elif 0
-    const auto blockwise_wei_copy = Blockwise2dTensorCopy2<BlockSize,
-                                                           Float,
-                                                           decltype(wei_ek_global_desc),
-                                                           decltype(wei_ek_block_desc),
-                                                           decltype(wei_ek_block_desc.GetLengths()),
-                                                           WeiBlockCopyThreadPerDim0,
-                                                           WeiBlockCopyThreadPerDim1>{};
-#elif 1
+    // blockwise wei copy
+    //   format is [CPerBlock*Y*X,KPerBlock]
     const auto blockwise_wei_copy = Blockwise2dTensorCopy3<BlockSize,
                                                            Float,
                                                            decltype(wei_ek_global_desc),
                                                            decltype(wei_ek_block_desc),
                                                            decltype(wei_ek_block_desc.GetLengths()),
                                                            WeiBlockCopyDataPerRead>{};
-#endif
 
     // a series of blockwise GEMM
     // c_mtx += transpose(a_mtx) * b_mtx
@@ -198,16 +158,27 @@ gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn(const Float* const __restric
     constexpr index_t wei_block_size =
         wei_cyxk_block_desc.GetElementSpace(Number<WeiBlockCopyDataPerRead>{});
 
-    constexpr index_t max_align = InBlockCopyDataPerRead > WeiBlockCopyDataPerRead
-                                      ? InBlockCopyDataPerRead
-                                      : WeiBlockCopyDataPerRead;
+    constexpr index_t max_align =
+        mod_conv::max(index_t(4), InBlockCopyDataPerRead, WeiBlockCopyDataPerRead);
 
-    // LDS
+// LDS
+#if 1
     __shared__ Float p_in_block[max_align * ((in_block_size + max_align - 1) / max_align)];
     __shared__ Float p_wei_block[max_align * ((wei_block_size + max_align - 1) / max_align)];
 
-#if 1
-    const Float* p_lds_begin = p_in_block < p_wei_block ? p_in_block : p_wei_block;
+    const Float* const p_lds_begin = p_in_block < p_wei_block ? p_in_block : p_wei_block;
+#else // debug
+    constexpr index_t lds_byte = 8 * 1024;
+
+    constexpr index_t in_block_space  = max_align * ((in_block_size + max_align - 1) / max_align);
+    constexpr index_t wei_block_space = max_align * ((wei_block_size + max_align - 1) / max_align);
+
+    static_assert(lds_byte >= (in_block_space + wei_block_space) * sizeof(Float),
+                  "lds allocation not enough");
+
+    __shared__ Float p_lds_begin[lds_byte / sizeof(Float)];
+    Float* const p_in_block  = p_lds_begin;
+    Float* const p_wei_block = p_lds_begin + in_block_space;
 #endif
 
     const Float* p_in_global_block_offset =
@@ -240,18 +211,18 @@ gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn(const Float* const __restric
             for(index_t x = 0; x < X; ++x)
             {
                 auto f_accum = [](auto& acc, const auto&& v) { acc += v; };
-#if 1
+#if 0
                 blockwise_gemm.Run
 #elif 0
                 blockwise_gemm.Run_asm
-#elif 0
+#elif 1
                 blockwise_gemm.Run_RegisterDoubleBuffer
 #endif
-                    (p_wei_block + wei_cyxk_block_desc.Get1dIndex(0, y, x, 0),
-                     p_in_block + y * Wi + x,
-                     p_out_thread,
-                     f_accum,
-                     p_lds_begin);
+                (p_wei_block + wei_cyxk_block_desc.Get1dIndex(0, y, x, 0),
+                 p_in_block + y * Wi + x,
+                 p_out_thread,
+                 f_accum,
+                 p_lds_begin);
             }
         }
     }
