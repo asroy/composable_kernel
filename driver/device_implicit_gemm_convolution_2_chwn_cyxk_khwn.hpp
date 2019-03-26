@@ -196,7 +196,7 @@ void device_implicit_gemm_convolution_2_chwn_cyxk_khwn(InDesc,
     for(index_t i = 0; i < nrepeat; ++i)
     {
         float time = launch_kernel(
-#if 1
+#if 0
             gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn
 #else
             gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn_lds_double_buffer

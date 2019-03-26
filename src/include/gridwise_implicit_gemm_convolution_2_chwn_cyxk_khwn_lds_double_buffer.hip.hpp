@@ -19,8 +19,6 @@ template <index_t GridSize,
           index_t CPerBlock,
           index_t BPerThread,
           index_t KPerThread,
-          index_t GemmThreadPerColumnPerCluster,
-          index_t GemmThreadPerRowPerCluster,
           index_t GemmMPerThreadSubC,
           index_t GemmNPerThreadSubC,
           index_t GemmMLevel0Cluster,
@@ -28,17 +26,9 @@ template <index_t GridSize,
           index_t GemmMLevel1Cluster,
           index_t GemmNLevel1Cluster,
           index_t GemmKPerThreadLoop,
-          index_t InBlockCopyThreadPerDim0,
-          index_t InBlockCopyThreadPerDim1,
-          index_t WeiBlockCopyThreadPerDim0,
-          index_t WeiBlockCopyThreadPerDim1,
           index_t InBlockCopyDataPerRead,
           index_t WeiBlockCopyDataPerRead>
-__global__ void
-#if 0
-__launch_bounds__(256,2)
-#endif
-gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn_lds_double_buffer(
+__global__ void gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn_lds_double_buffer(
     const Float* const __restrict__ p_in_global,
     const Float* const __restrict__ p_wei_global,
     Float* const __restrict__ p_out_global)
@@ -115,57 +105,23 @@ gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn_lds_double_buffer(
     }
 #endif
 
-// blockwise in copy
-//   formmat is [CPerBlock,BPerBlock + BGhostRead]
-#if 0
-    const auto blockwise_in_copy =
-        Blockwise2dTensorCopy1<BlockSize,
-                               Float,
-                               decltype(in_cb_global_desc),
-                               decltype(in_cb_block_desc),
-                               decltype(in_cb_block_desc.GetLengths())>{};
-#elif 0
-    const auto blockwise_in_copy = Blockwise2dTensorCopy2<BlockSize,
-                                                          Float,
-                                                          decltype(in_cb_global_desc),
-                                                          decltype(in_cb_block_desc),
-                                                          decltype(in_cb_block_desc.GetLengths()),
-                                                          InBlockCopyThreadPerDim0,
-                                                          InBlockCopyThreadPerDim1>{};
-#elif 1
+    // blockwise in copy
+    //   formmat is [CPerBlock,BPerBlock + BGhostRead]
     const auto blockwise_in_copy = Blockwise2dTensorCopy3<BlockSize,
                                                           Float,
                                                           decltype(in_cb_global_desc),
                                                           decltype(in_cb_block_desc),
                                                           decltype(in_cb_block_desc.GetLengths()),
                                                           InBlockCopyDataPerRead>{};
-#endif
 
-// blockwise wei copy
-//   format is [CPerBlock*Y*X,KPerBlock]
-#if 0
-    const auto blockwise_wei_copy =
-        Blockwise2dTensorCopy1<BlockSize,
-                               Float,
-                               decltype(wei_ek_global_desc),
-                               decltype(wei_ek_block_desc),
-                               decltype(wei_ek_block_desc.GetLengths())>{};
-#elif 0
-    const auto blockwise_wei_copy = Blockwise2dTensorCopy2<BlockSize,
-                                                           Float,
-                                                           decltype(wei_ek_global_desc),
-                                                           decltype(wei_ek_block_desc),
-                                                           decltype(wei_ek_block_desc.GetLengths()),
-                                                           WeiBlockCopyThreadPerDim0,
-                                                           WeiBlockCopyThreadPerDim1>{};
-#elif 1
+    // blockwise wei copy
+    //   format is [CPerBlock*Y*X,KPerBlock]
     const auto blockwise_wei_copy = Blockwise2dTensorCopy3<BlockSize,
                                                            Float,
                                                            decltype(wei_ek_global_desc),
                                                            decltype(wei_ek_block_desc),
                                                            decltype(wei_ek_block_desc.GetLengths()),
                                                            WeiBlockCopyDataPerRead>{};
-#endif
 
     // a series of blockwise GEMM
     // c_mtx += transpose(a_mtx) * b_mtx
@@ -182,19 +138,6 @@ gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn_lds_double_buffer(
     constexpr auto c_kxb_thread_mtx_desc =
         make_ConstantMatrixDescriptor(Number<KPerThread>{}, Number<BPerThread>{});
 
-#if 0
-    const auto blockwise_gemm = BlockwiseGemmBlockABlockBThreadC<BlockSize,
-                                                                 decltype(a_cxk_block_mtx_desc),
-                                                                 decltype(b_cxb_block_mtx_desc),
-                                                                 decltype(c_kxb_thread_mtx_desc),
-                                                                 true,
-                                                                 false,
-                                                                 false,
-                                                                 GemmKPerThreadLoop,
-                                                                 GemmThreadPerColumnPerCluster,
-                                                                 GemmThreadPerRowPerCluster,
-                                                                 true>{};
-#else
     const auto blockwise_gemm =
         BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2<BlockSize,
                                                                 decltype(a_cxk_block_mtx_desc),
@@ -207,7 +150,6 @@ gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn_lds_double_buffer(
                                                                 GemmMLevel1Cluster,
                                                                 GemmNLevel1Cluster,
                                                                 GemmKPerThreadLoop>{};
-#endif
 
     // LDS: be careful of alignment
     constexpr index_t in_block_size =
@@ -216,9 +158,8 @@ gridwise_implicit_gemm_convolution_2_chwn_cyxk_khwn_lds_double_buffer(
     constexpr index_t wei_block_size =
         wei_cyxk_block_desc.GetElementSpace(Number<WeiBlockCopyDataPerRead>{});
 
-    constexpr index_t max_align = InBlockCopyDataPerRead > WeiBlockCopyDataPerRead
-                                      ? InBlockCopyDataPerRead
-                                      : WeiBlockCopyDataPerRead;
+    constexpr index_t max_align =
+        mod_conv::max(index_t(4), InBlockCopyDataPerRead, WeiBlockCopyDataPerRead);
 
     // LDS double buffer
     __shared__ Float p_in_block_0[max_align * ((in_block_size + max_align - 1) / max_align)];
