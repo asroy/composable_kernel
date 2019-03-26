@@ -408,7 +408,7 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
                     p_lds_begin);
             }
 
-#if 0
+#if 1
             asm volatile("\n \
             s_waitcnt lgkmcnt(0) \n \
             " ::);

@@ -95,6 +95,23 @@ __device__ void threadwise_matrix_copy_v2(SrcMatrix,
             : "=v"(p_dst[dst_index + 3])
             : "v"((uint32_t)(sizeof(Float) * (uintptr_t)((p_src + src_index + 3) - p_lds_begin))));
 #elif 0
+        // ds_read2_b32
+        using vector_t = typename vector_type<Float, 2>::MemoryType;
+
+        asm volatile(
+            "\n \
+                    ds_read2_b32 %0, %1 offset1:1\n \
+                    "
+            : "=v"(*(reinterpret_cast<vector_t*>(p_dst + dst_index)))
+            : "v"((uint32_t)(sizeof(Float) * (uintptr_t)((p_src + src_index) - p_lds_begin))));
+
+        asm volatile(
+            "\n \
+                    ds_read2_b32 %0, %1 offset1:1\n \
+                    "
+            : "=v"(*(reinterpret_cast<vector_t*>(p_dst + dst_index + 2)))
+            : "v"((uint32_t)(sizeof(Float) * (uintptr_t)((p_src + src_index + 2) - p_lds_begin))));
+#elif 0
         // ds_read_b64
         using vector_t = typename vector_type<Float, 2>::MemoryType;
 
