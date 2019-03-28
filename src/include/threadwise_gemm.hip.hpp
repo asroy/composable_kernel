@@ -1,5 +1,7 @@
 #pragma once
 
+extern "C" __attribute__((address_space(3))) void* __to_local(void* p) [[hc]];
+
 template <class Float, class SrcMatrix, class DstMatrix, unsigned NRow, unsigned NCol>
 __device__ void threadwise_matrix_copy(SrcMatrix,
                                        const Float* __restrict__ p_src,
@@ -12,13 +14,34 @@ __device__ void threadwise_matrix_copy(SrcMatrix,
 
     for(unsigned i = 0; i < NRow; ++i)
     {
+#if 1
+        assert(NCol == 8);
+        {
+            const unsigned src_index = src_mtx.Get1dIndex(i, 0);
+            const unsigned dst_index = dst_mtx.Get1dIndex(i, 0);
+
+            const float4* loc = (const float4 *)(p_src + src_index);
+            float4* reg = (float4 *)(p_dst + dst_index); 
+
+            //reg[0] = loc[0];
+            //reg[1] = loc[1];
+
+            asm volatile("\n \
+                    ds_read2_b64 %0, %2 offset1:1 \n \
+                    ds_read2_b64 %1, %2 offset0:16 offset1:17 \n \
+                    s_waitcnt lgkmcnt(0)" : "=v"(reg[0]), "=v"(reg[1]) : "v"(__to_local((void *)&p_src[src_index])));
+        }
+
+#else
         for(unsigned j = 0; j < NCol; ++j)
         {
             const unsigned src_index = src_mtx.Get1dIndex(i, j);
             const unsigned dst_index = dst_mtx.Get1dIndex(i, j);
-
-            p_dst[dst_index] = p_src[src_index];
+            
+            //p_dst[dst_index] = p_src[src_index];
+            asm volatile("ds_read_b32 %0, %1 \ns_waitcnt lgkmcnt(0)" : "=v"(p_dst[dst_index]) : "v"(__to_local((void *)&p_src[src_index])));
         }
+#endif
     }
 }
 
