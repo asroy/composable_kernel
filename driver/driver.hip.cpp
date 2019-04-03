@@ -7,21 +7,7 @@
 #include "tensor.hpp"
 #include "ConstantTensorDescriptor.hip.hpp"
 #include "conv_common.hip.hpp"
-//#include "device_direct_convolution_1.hpp"
-#include "device_direct_convolution_2_nchw_kcyx_nkhw.hpp"
-//#include "device_direct_convolution_2_vectorized_nchw_kcyx_nkhw.hpp"
-#include "device_implicit_gemm_convolution_1_chwn_cyxk_khwn.hpp"
-//#include "device_implicit_gemm_convolution_1_chwn_cyxk_khwn_padded.hpp"
 #include "device_implicit_gemm_convolution_2_chwn_cyxk_khwn.hpp"
-
-struct GeneratorTensor_1
-{
-    template <class... Is>
-    double operator()(Is... is)
-    {
-        return 1;
-    }
-};
 
 struct GeneratorTensor_2
 {
@@ -32,21 +18,6 @@ struct GeneratorTensor_2
     double operator()(Is...)
     {
         return (std::rand() % (max_value - min_value)) + min_value;
-    }
-};
-
-struct GeneratorTensor_Checkboard
-{
-    template <class... Ts>
-    double operator()(Ts... Xs) const
-    {
-        std::array<index_t, sizeof...(Ts)> dims = {{Xs...}};
-        return std::accumulate(dims.begin(),
-                               dims.end(),
-                               true,
-                               [](bool init, index_t x) -> int { return init != (x % 2); })
-                   ? 1
-                   : -1;
     }
 };
 
@@ -398,201 +369,6 @@ void check_error(const Tensor<T>& ref, const Tensor<T>& result)
 
 int main(int argc, char* argv[])
 {
-#if 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 1;
-    constexpr index_t HI = 28;
-    constexpr index_t WI = 28;
-    constexpr index_t K  = 1;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 3x3, 34x34
-    constexpr index_t N  = 64;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 34;
-    constexpr index_t WI = 34;
-    constexpr index_t K  = 64;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 3x3, 56x56
-    constexpr index_t N  = 64;
-    constexpr index_t C  = 64;
-    constexpr index_t HI = 56;
-    constexpr index_t WI = 56;
-    constexpr index_t K  = 64;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-#elif 0
-    // 3x3, 58x58
-    constexpr index_t N  = 64;
-    constexpr index_t C  = 64;
-    constexpr index_t HI = 58;
-    constexpr index_t WI = 58;
-    constexpr index_t K  = 64;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-#elif 0
-    // 5x5, 36x36
-    constexpr index_t N  = 64;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 36;
-    constexpr index_t WI = 36;
-    constexpr index_t K  = 64;
-    constexpr index_t Y  = 5;
-    constexpr index_t X  = 5;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 7x7, 38x38
-    constexpr index_t N  = 64;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 38;
-    constexpr index_t WI = 38;
-    constexpr index_t K  = 64;
-    constexpr index_t Y  = 7;
-    constexpr index_t X  = 7;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 3x3, 58x58
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 128;
-    constexpr index_t HI = 58;
-    constexpr index_t WI = 58;
-    constexpr index_t K  = 256;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-#elif 0
-    // 3x3 filter, 58x58 image, 0x0 padding
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 128;
-    constexpr index_t HI = 58;
-    constexpr index_t WI = 58;
-    constexpr index_t K  = 256;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 3x3 filter, 56x56 image, 1x1 padding
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 128;
-    constexpr index_t HI = 56;
-    constexpr index_t WI = 56;
-    constexpr index_t K  = 256;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    constexpr index_t HPad = 1;
-    constexpr index_t WPad = 1;
-#elif 0
-    // 3x3 filter, 28x28 image, 1x1 padding
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 28;
-    constexpr index_t WI = 28;
-    constexpr index_t K  = 512;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    constexpr index_t HPad = 1;
-    constexpr index_t WPad = 1;
-#elif 0
-    // 1x1 filter, 28x28 image
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 28;
-    constexpr index_t WI = 28;
-    constexpr index_t K  = 512;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 3x3 filter, 20x84 image, 1x1 padding
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 20;
-    constexpr index_t WI = 84;
-    constexpr index_t K  = 256;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    constexpr index_t HPad = 1;
-    constexpr index_t WPad = 1;
-#elif 0
-    // 3x3 filter, 112x112 image, 1x1 padding
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 64;
-    constexpr index_t HI = 112;
-    constexpr index_t WI = 112;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    constexpr index_t HPad = 1;
-    constexpr index_t WPad = 1;
-#elif 0
-    // 5x5 filter, 20x86 image, 1x1 padding
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 20;
-    constexpr index_t WI = 86;
-    constexpr index_t K  = 512;
-    constexpr index_t Y  = 5;
-    constexpr index_t X  = 5;
-
-    constexpr index_t HPad = 1;
-    constexpr index_t WPad = 1;
-#elif 0
-    // 5x5 filter, 28x28 image, 2x2 padding
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 192;
-    constexpr index_t HI = 28;
-    constexpr index_t WI = 28;
-    constexpr index_t K  = 32;
-    constexpr index_t Y  = 5;
-    constexpr index_t X  = 5;
-
-    constexpr index_t HPad = 2;
-    constexpr index_t WPad = 2;
-#elif 0
-    // 1x1 filter, 32x32 image
-    constexpr index_t N  = 64;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 32;
-    constexpr index_t WI = 32;
-    constexpr index_t K  = 512;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 1x1 filter, 14x14 image, C = 2048
-    constexpr index_t N  = 128;
-    constexpr index_t C  = 2048;
-    constexpr index_t HI = 14;
-    constexpr index_t WI = 14;
-    constexpr index_t K  = 512;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 1
     // 1x1 filter, 14x14 image, C = 512
     constexpr index_t N  = 128;
     constexpr index_t C  = 512;
@@ -604,7 +380,6 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
-#endif
 
     auto lower_pads = Sequence<HPad, WPad>{};
     auto upper_pads = Sequence<HPad, WPad>{};
@@ -638,47 +413,12 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 0
-        in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-        wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-#elif 1
         in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-#elif 0
-        in_nchw.GenerateTensorValue(GeneratorTensor_2{1, 5}, num_thread);
-
-        auto gen_wei = [](auto... is) {
-            return GeneratorTensor_2{1, 5}(is...) * GeneratorTensor_Checkboard{}(is...);
-        };
-        wei_kcyx.GenerateTensorValue(gen_wei, num_thread);
-#endif
     }
 
-#if 1
-#if 0
-    device_direct_convolution_1
-#elif 0
-    device_direct_convolution_2_nchw_kcyx_nkhw
-#elif 0
-    device_direct_convolution_2_vectorized_nchw_kcyx_nkhw
-#elif 0
-    device_implicit_gemm_convolution_1_chwn_cyxk_khwn
-#elif 1
-    device_implicit_gemm_convolution_2_chwn_cyxk_khwn
-#endif
-    (in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
-
-#elif 1
-    device_implicit_gemm_convolution_1_chwn_cyxk_khwn_padded(in_nchw_desc,
-                                                             in_nchw,
-                                                             wei_kcyx_desc,
-                                                             wei_kcyx,
-                                                             out_nkhw_desc,
-                                                             out_nkhw_device,
-                                                             lower_pads,
-                                                             upper_pads,
-                                                             nrepeat);
-#endif
+    device_implicit_gemm_convolution_2_chwn_cyxk_khwn(
+        in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
 
     if(do_verification)
     {

@@ -78,17 +78,7 @@ __device__ void threadwise_gemm(MatrixA,
                     const index_t bindex = b_mtx.Get1dIndex(k, j);
                     const index_t cindex = c_mtx.Get1dIndex(i, j);
 
-#if DEVICE_BACKEND_HIP // this only does c += a * b
-                    asm volatile("\n \
-                                v_mac_f32 %0, %1, %2 \n \
-                                "
-                                 : "=v"(p_c_thread[cindex])
-                                 : "v"(p_a_thread[aindex]),
-                                   "v"(p_b_thread[bindex]),
-                                   "0"(p_c_thread[cindex]));
-#else // this does general accumulation defined by f_accum
                     f_accum(p_c_thread[cindex], p_a_thread[aindex] * p_b_thread[bindex]);
-#endif
                 }
             }
         }

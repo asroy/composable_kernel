@@ -2,7 +2,6 @@
 #include "common.hip.hpp"
 #include "ConstantTensorDescriptor.hip.hpp"
 #include "ConstantMatrixDescriptor.hip.hpp"
-#include "blockwise_4d_tensor_op.hip.hpp"
 #include "blockwise_2d_tensor_op.hip.hpp"
 #include "threadwise_2d_tensor_op.hip.hpp"
 #include "blockwise_gemm.hip.hpp"
@@ -284,8 +283,6 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn
                     blockwise_gemm.Run
 #elif 0
                     blockwise_gemm.Run_RegisterDoubleBuffer
-#elif 0
-                    blockwise_gemm.Run_asm
 #endif
                         (p_wei_block + wei_cyxk_block_desc.Get1dIndex(0, y, x, 0),
                          p_in_block + y * Wi + x,
