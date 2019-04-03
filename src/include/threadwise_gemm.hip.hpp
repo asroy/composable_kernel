@@ -10,7 +10,6 @@ __device__ void threadwise_matrix_copy(SrcMatrix,
     constexpr auto src_mtx = SrcMatrix{};
     constexpr auto dst_mtx = DstMatrix{};
 
-#if 1
     for(index_t i = 0; i < NRow; ++i)
     {
         for(index_t j = 0; j < NCol; ++j)
@@ -21,20 +20,6 @@ __device__ void threadwise_matrix_copy(SrcMatrix,
             p_dst[dst_index] = p_src[src_index];
         }
     }
-#elif 1
-    static_assert(NCol == 4, "only for NCol == 4");
-
-    using vector_t = typename vector_type<Float, 4>::MemoryType;
-
-    for(index_t i = 0; i < NRow; ++i)
-    {
-        const index_t src_index = src_mtx.Get1dIndex(i, 0);
-        const index_t dst_index = dst_mtx.Get1dIndex(i, 0);
-
-        *(reinterpret_cast<vector_t*>(&p_dst[dst_index])) =
-            *(reinterpret_cast<const vector_t*>(&p_src[src_index]));
-    }
-#endif
 }
 
 template <class MatrixA,
