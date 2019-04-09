@@ -10,7 +10,11 @@
 // cast a pointer of LDS to its address
 extern "C" __attribute__((address_space(3))) void* __to_local(void* p)[[hc]];
 
-__device__ void vmcnt(index_t cnt)
+#define data4_t vector_type<float, 4>::MemoryType
+#define data_t float
+
+template<unsigned cnt>
+inline __device__ void vmcnt()
 {
 #if !NO_VM_WAIT
     if(cnt == 0)
@@ -31,10 +35,16 @@ __device__ void vmcnt(index_t cnt)
                 s_waitcnt vmcnt(2) \n \
                 " ::);
     }
+    else if(cnt == 3)
+    {
+        asm volatile("\n \
+                s_waitcnt vmcnt(3) \n \
+                " ::);
+    }
     else if(cnt == 4)
     {
         asm volatile("\n \
-                s_waitcnt vmcnt(2) \n \
+                s_waitcnt vmcnt(4) \n \
                 " ::);
     }
     else
@@ -44,7 +54,7 @@ __device__ void vmcnt(index_t cnt)
 #endif
 }
 
-__device__ void lgkmcnt(index_t cnt)
+inline __device__ void lgkmcnt(index_t cnt)
 {
 #if !NO_LGKM_WAIT
     if(cnt == 0)
@@ -84,31 +94,11 @@ __device__ void lgkmcnt(index_t cnt)
 #endif
 }
 
-__device__ void outerProduct1x4(const float* a, const float* b, float* c)
+inline __device__ void outerProduct1x4(const data_t& a,
+                                const data4_t& b,
+                                data4_t& c)
 {
-    asm volatile("\n \
-            v_mac_f32 %0, %4, %5 \n \
-            v_mac_f32 %1, %4, %6 \n \
-            v_mac_f32 %2, %4, %7 \n \
-            v_mac_f32 %3, %4, %8 \n \
-            "
-                 : "=v"(c[0]), "=v"(c[1]), "=v"(c[2]), "=v"(c[3])
-                 : "v"(a[0]),
-                   "v"(b[0]),
-                   "v"(b[1]),
-                   "v"(b[2]),
-                   "v"(b[3]),
-                   "0"(c[0]),
-                   "1"(c[1]),
-                   "2"(c[2]),
-                   "3"(c[3]));
-}
-
-__device__ void outerProduct1x4(const float& a,
-                                const vector_type<float, 4>::MemoryType& b,
-                                vector_type<float, 4>::MemoryType& c)
-{
-#if 0
+#if 0 
     asm volatile(
             "\n \
             v_mac_f32 %0, %4, %5 \n \
@@ -121,73 +111,44 @@ __device__ void outerProduct1x4(const float& a,
             "v"(a.x),"v"(b.x),"v"(b.y),"v"(b.z),"v"(b.w)
             );
 #else
-    outerProduct1x4(&a, (float*)&b, (float*)&c);
+//hijack here due to a compiler issue that cannot perform proper register
+//mapping for float4 c
+    data_t *c_p = (data_t *)&c;
+    asm volatile("\n \
+            v_mac_f32 %0, %4, %5 \n \
+            v_mac_f32 %1, %4, %6 \n \
+            v_mac_f32 %2, %4, %7 \n \
+            v_mac_f32 %3, %4, %8 \n \
+            "
+                 : "=v"(c[0]), "=v"(c[1]), "=v"(c[2]), "=v"(c[3])
+                 : "v"(a),
+                   "v"(b.x),
+                   "v"(b.y),
+                   "v"(b.z),
+                   "v"(b.w),
+                   "0"(c[0]),
+                   "1"(c[1]),
+                   "2"(c[2]),
+                   "3"(c[3]));
 #endif
 }
 
-__device__ void outerProduct4x4(const vector_type<float, 4>::MemoryType& a,
-                                const vector_type<float, 4>::MemoryType& b,
-                                vector_type<float, 4>::MemoryType& c0,
-                                vector_type<float, 4>::MemoryType& c1,
-                                vector_type<float, 4>::MemoryType& c2,
-                                vector_type<float, 4>::MemoryType& c3)
+inline __device__ void outerProduct4x4(const data4_t& a,
+                                const data4_t& b,
+                                data4_t& c0,
+                                data4_t& c1,
+                                data4_t& c2,
+                                data4_t& c3)
 {
-#if 0
-    asm volatile(
-            "\n \
-            v_mac_f32 %0, %4, %5 \n \
-            v_mac_f32 %1, %4, %6 \n \
-            v_mac_f32 %2, %4, %7 \n \
-            v_mac_f32 %3, %4, %8 \n \
-            "
-            :
-            :"v"(c0.x),"v"(c0.y),"v"(c0.z),"v"(c0.w), \
-            "v"(a.x),"v"(b.x),"v"(b.y),"v"(b.z),"v"(b.w)
-            );
-    asm volatile(
-            "\n \
-            v_mac_f32 %0, %4, %5 \n \
-            v_mac_f32 %1, %4, %6 \n \
-            v_mac_f32 %2, %4, %7 \n \
-            v_mac_f32 %3, %4, %8 \n \
-            "
-            :
-            :"v"(c1.x),"v"(c1.y),"v"(c1.z),"v"(c1.w), \
-            "v"(a.y),"v"(b.x),"v"(b.y),"v"(b.z),"v"(b.w)
-            );
-    asm volatile(
-            "\n \
-            v_mac_f32 %0, %4, %5 \n \
-            v_mac_f32 %1, %4, %6 \n \
-            v_mac_f32 %2, %4, %7 \n \
-            v_mac_f32 %3, %4, %8 \n \
-            "
-            :
-            :"v"(c2.x),"v"(c2.y),"v"(c2.z),"v"(c2.w), \
-            "v"(a.z),"v"(b.x),"v"(b.y),"v"(b.z),"v"(b.w)
-            );
-    asm volatile(
-            "\n \
-            v_mac_f32 %0, %4, %5 \n \
-            v_mac_f32 %1, %4, %6 \n \
-            v_mac_f32 %2, %4, %7 \n \
-            v_mac_f32 %3, %4, %8 \n \
-            "
-            :
-            :"v"(c3.x),"v"(c3.y),"v"(c3.z),"v"(c3.w), \
-            "v"(a.w),"v"(b.x),"v"(b.y),"v"(b.z),"v"(b.w)
-            );
-#else
     outerProduct1x4(a.x, b, c0);
     outerProduct1x4(a.y, b, c1);
     outerProduct1x4(a.z, b, c2);
     outerProduct1x4(a.w, b, c3);
-#endif
 }
 
-__device__ void outerProduct8x8(const vector_type<float, 4>::MemoryType* a,
-                                const vector_type<float, 4>::MemoryType* b,
-                                vector_type<float, 4>::MemoryType* c)
+inline __device__ void outerProduct8x8(const data4_t* a,
+                                const data4_t* b,
+                                data4_t* c)
 {
     outerProduct4x4(a[0], b[0], c[0], c[2], c[4], c[6]);
     outerProduct4x4(a[0], b[1], c[1], c[3], c[5], c[7]);
@@ -195,7 +156,7 @@ __device__ void outerProduct8x8(const vector_type<float, 4>::MemoryType* a,
     outerProduct4x4(a[1], b[1], c[9], c[11], c[13], c[15]);
 }
 
-__device__ void ds_read_b128(vector_type<float, 4>::MemoryType& r, void* lds, index_t offset = 0)
+inline __device__ void ds_read_b128(data4_t& r, void* lds, index_t offset = 0)
 {
 #if !NO_DS_READ
     if(offset == 0)
@@ -421,8 +382,8 @@ __device__ void ds_read_b128(vector_type<float, 4>::MemoryType& r, void* lds, in
 #endif
 }
 
-__device__ void global_load(vector_type<float, 4>::MemoryType& r,
-                            const vector_type<float, 4>::MemoryType* ptr,
+inline __device__ void global_load(data4_t& r,
+                            const data4_t* ptr,
                             index_t offset = 0)
 {
 #if !NO_GLB_READ
@@ -441,8 +402,8 @@ __device__ void global_load(vector_type<float, 4>::MemoryType& r,
 #endif
 }
 
-__device__ void
-ds_write_b128(const vector_type<float, 4>::MemoryType& r, void* lds, index_t offset = 0)
+inline __device__ void
+ds_write_b128(const data4_t& r, void* lds, index_t offset = 0)
 {
 #if !NO_DS_WRITE
     if(offset == 0)

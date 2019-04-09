@@ -7,6 +7,7 @@
 #include "threadwise_2d_tensor_op.hip.hpp"
 #include "threadwise_nd_tensor_op.hip.hpp"
 #include "blockwise_gemm.hip.hpp"
+#include "gridwise_ops.hip.hpp"
 
 // define B = flatten(N, Hi, Wi)
 template <index_t GridSize,
@@ -208,12 +209,12 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
             blockwise_wei_copy.RunLoadRegisterClipboard(p_wei_global_block_offset,
                                                         p_wei_register_clipboard);
 
-#if 1
+#if 0
             blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard, p_in_block_double);
             blockwise_wei_copy.RunStoreRegisterClipboard(p_wei_register_clipboard,
                                                          p_wei_block_double);
 #else
-            vmcnt(0);
+            global_load_waitall();
             blockwise_in_copy.RunStoreRegisterClipboard_asm(p_in_register_clipboard,
                                                             p_in_block_double);
             blockwise_wei_copy.RunStoreRegisterClipboard_asm(p_wei_register_clipboard,
@@ -266,11 +267,11 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
                 {
                     for(index_t x = 0; x < X; ++x)
                     {
-#if 1
+#if 0
                         blockwise_gemm.Run
 #elif 0
                         blockwise_gemm.Run_RegisterDoubleBuffer
-#elif 0
+#elif 1
                         blockwise_gemm.Run_asm
 #endif
                             (p_wei_block_now + wei_cyxk_block_desc.Get1dIndex(0, y, x, 0),
@@ -279,13 +280,13 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
                     }
                 }
 
-#if 1
+#if 0
                 blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard,
                                                             p_in_block_next);
                 blockwise_wei_copy.RunStoreRegisterClipboard(p_wei_register_clipboard,
                                                              p_wei_block_next);
 #else
-                vmcnt(0);
+                global_load_waitall();
                 blockwise_in_copy.RunStoreRegisterClipboard_asm(p_in_register_clipboard,
                                                                 p_in_block_next);
                 blockwise_wei_copy.RunStoreRegisterClipboard_asm(p_wei_register_clipboard,
@@ -315,11 +316,11 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
             {
                 for(index_t x = 0; x < X; ++x)
                 {
-#if 1
+#if 0
                     blockwise_gemm.Run
 #elif 0
                     blockwise_gemm.Run_RegisterDoubleBuffer
-#elif 0
+#elif 1
                     blockwise_gemm.Run_asm
 #endif
                         (p_wei_block_double + wei_cyxk_block_desc.Get1dIndex(0, y, x, 0),
@@ -328,14 +329,14 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
                 }
             }
 
-#if 1
+#if 0
             blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard,
                                                         p_in_block_double + in_block_space);
 
             blockwise_wei_copy.RunStoreRegisterClipboard(p_wei_register_clipboard,
                                                          p_wei_block_double + wei_block_space);
 #else
-            vmcnt(0);
+            global_load_waitall();
             blockwise_in_copy.RunStoreRegisterClipboard_asm(p_in_register_clipboard,
                                                             p_in_block_double + in_block_space);
             blockwise_wei_copy.RunStoreRegisterClipboard_asm(p_wei_register_clipboard,
@@ -349,11 +350,11 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
             {
                 for(index_t x = 0; x < X; ++x)
                 {
-#if 1
+#if 0
                     blockwise_gemm.Run
 #elif 0
                     blockwise_gemm.Run_RegisterDoubleBuffer
-#elif 0
+#elif 1
                     blockwise_gemm.Run_asm
 #endif
                         (p_wei_block_double + wei_block_space +
