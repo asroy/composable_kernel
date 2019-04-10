@@ -383,21 +383,25 @@ inline __device__ void ds_read_b128(data4_t& r, void* lds, index_t offset = 0)
 }
 
 inline __device__ void global_load(data4_t& r,
-                            const data4_t* ptr,
-                            index_t offset = 0)
+                            const void* vptr,
+                            const void* sprt = 0)
 {
 #if !NO_GLB_READ
-    if(offset == 0)
+    if(sprt == 0)
     {
         asm volatile("\n \
                 global_load_dwordx4 %0, %1, off \n \
                 "
                      : "=v"(r)
-                     : "v"(ptr));
+                     : "v"(vptr));
     }
     else
     {
-        assert(false);
+            asm volatile("\n \
+                    global_load_dwordx4 %0, %1, %2 \n \
+                    "
+                    : "=v"(r)
+                    : "v"(vptr), "s"(sprt));
     }
 #endif
 }
