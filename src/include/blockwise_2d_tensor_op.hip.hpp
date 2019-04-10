@@ -493,6 +493,7 @@ struct Blockwise2dTensorCopy3
     __device__ void RunLoadRegisterClipboard(const Float* __restrict__ p_src,
                                              Float* p_clipboard,
                                              const index_t voff = 0) const
+                                             Float* __restrict__ p_clipboard) const
     {
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
@@ -520,14 +521,13 @@ struct Blockwise2dTensorCopy3
 
         auto f_copy = [&](index_t iloop) {
 #if 1
-            data4_t* reg = (data4_t* )&p_clipboard[iloop * DataPerRead];
-            const void *vptr = (void* )(uintptr_t)((mSrcMyThreadOffset + voff) * 4); 
-            const void *sprt = (void* )&p_src[iloop * src_loop_stride];
-            global_load(*reg, vptr, sprt);
-#else
             *(reinterpret_cast<vector_t*>(&p_clipboard[iloop * DataPerRead])) =
                 *(reinterpret_cast<const vector_t*>(
                             &p_src[mSrcMyThreadOffset + iloop * src_loop_stride + voff]));
+#else
+            void *sptr = (void *)&p_src[iloop * src_loop_stride]; 
+            void *vptr = (void *)(size_t)((mSrcMyThreadOffset + voff) * sizeof(Float));
+            global_load(*(vector_t*)(&p_clipboard[iloop * DataPerRead]), vptr, sptr);
 #endif
         };
 

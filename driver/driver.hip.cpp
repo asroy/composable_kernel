@@ -427,9 +427,12 @@ int main(int argc, char* argv[])
     constexpr index_t C  = 64;
     constexpr index_t HI = 56;
     constexpr index_t WI = 56;
-    constexpr index_t K  = 64;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
+
+    constexpr index_t HPad = 0;
+    constexpr index_t WPad = 0;
 #elif 0
     // 3x3, 58x58
     constexpr index_t N  = 64;
@@ -457,7 +460,7 @@ int main(int argc, char* argv[])
     constexpr index_t C  = 256;
     constexpr index_t HI = 38;
     constexpr index_t WI = 38;
-    constexpr index_t K  = 64;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 7;
     constexpr index_t X  = 7;
 
@@ -508,6 +511,18 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 1;
     constexpr index_t WPad = 1;
+#elif 0
+    // 3x3 filter, 28x28 image
+    constexpr index_t N  = 128;
+    constexpr index_t C  = 256;
+    constexpr index_t HI = 28;
+    constexpr index_t WI = 28;
+    constexpr index_t K  = 512;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+
+    constexpr index_t HPad = 0;
+    constexpr index_t WPad = 0;
 #elif 0
     // 1x1 filter, 28x28 image
     constexpr index_t N  = 16;
@@ -595,10 +610,10 @@ int main(int argc, char* argv[])
 #elif 1
     // 1x1 filter, 14x14 image, C = 512
     constexpr index_t N  = 128;
-    constexpr index_t C  = 512;
+    constexpr index_t C  = 128;
     constexpr index_t HI = 14;
     constexpr index_t WI = 14;
-    constexpr index_t K  = 512;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
 
@@ -640,6 +655,9 @@ int main(int argc, char* argv[])
     {
 #if 0
         in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+#elif 0
+        in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 1
         in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);

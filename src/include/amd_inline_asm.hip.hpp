@@ -382,6 +382,30 @@ inline __device__ void ds_read_b128(data4_t& r, void* lds, index_t offset = 0)
 #endif
 }
 
+inline __device__ void global_store(data4_t& r,
+                            const void* vptr,
+                            const void* sprt = 0)
+{
+#if !NO_GLB_READ
+    if(sprt == 0)
+    {
+        asm volatile("\n \
+                global_store_dwordx4 %0, %1, off \n \
+                "
+                :: "v"(vptr), "v"(r));
+    }
+    else
+    {
+        asm volatile("\n \
+                global_store_dwordx4 %0, %1, %2 \n \
+                "
+                :: "v"(vptr), "v"(r), "s"(sprt));
+    }
+#endif
+}
+
+
+
 inline __device__ void global_load(data4_t& r,
                             const void* vptr,
                             const void* sprt = 0)
@@ -392,8 +416,8 @@ inline __device__ void global_load(data4_t& r,
         asm volatile("\n \
                 global_load_dwordx4 %0, %1, off \n \
                 "
-                     : "=v"(r)
-                     : "v"(vptr));
+                : "=v"(r)
+                : "v"(vptr));
     }
     else
     {

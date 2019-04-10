@@ -7,7 +7,6 @@
 #include "threadwise_2d_tensor_op.hip.hpp"
 #include "threadwise_nd_tensor_op.hip.hpp"
 #include "blockwise_gemm.hip.hpp"
-#include "gridwise_ops.hip.hpp"
 
 // define B = flatten(N, Hi, Wi)
 template <index_t GridSize,
@@ -28,6 +27,8 @@ template <index_t GridSize,
           index_t GemmMLevel1Cluster,
           index_t GemmNLevel1Cluster,
           index_t GemmKPerThreadLoop,
+          index_t GemmDataPerReadA,
+          index_t GemmDataPerReadB,
           index_t InBlockCopyThreadPerDim0,
           index_t InBlockCopyThreadPerDim1,
           index_t WeiBlockCopyThreadPerDim0,
@@ -65,6 +66,7 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
         constexpr index_t B          = N * Hi * Wi;
         constexpr index_t BGhostRead = (Y - 1) * Wi + (X - 1);
 
+        // assert for LDS double buffer
         static_assert(C % (2 * CPerBlock) == 0, "C cannot be evenly divided");
 
         // divide block work by 2d: [K, B]
@@ -178,7 +180,9 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
                                                                     GemmNLevel0Cluster,
                                                                     GemmMLevel1Cluster,
                                                                     GemmNLevel1Cluster,
-                                                                    GemmKPerThreadLoop>{};
+                                                                    GemmKPerThreadLoop,
+                                                                    GemmDataPerReadA,
+                                                                    GemmDataPerReadB>{};
 
         // LDS: be careful of alignment
         constexpr index_t max_align =
@@ -213,24 +217,16 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
                                                         p_wei_register_clipboard,
                                                         p_wei_global_block_voffset);
 
-#if 0
             blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard, p_in_block_double);
             blockwise_wei_copy.RunStoreRegisterClipboard(p_wei_register_clipboard,
                                                          p_wei_block_double);
-#else
-            global_load_wait_all();
-            blockwise_in_copy.RunStoreRegisterClipboard_asm(p_in_register_clipboard,
-                                                            p_in_block_double);
-            blockwise_wei_copy.RunStoreRegisterClipboard_asm(p_wei_register_clipboard,
-                                                             p_wei_block_double);
-#endif
         }
 
         // register
-        Float p_out_thread[out_kb_thread_desc.GetElementSpace()];
+        Float p_out_thread[out_kb_thread_desc.GetElementSpace()] = {0};
 
         // set threadwise output tensor to 0
-        threadwise_2d_tensor_set_zero(out_kb_thread_desc, p_out_thread);
+        //threadwise_2d_tensor_set_zero(out_kb_thread_desc, p_out_thread);
 
         for(index_t c_block_data_begin = 0; c_block_data_begin + 2 * CPerBlock < C;
             c_block_data_begin += 2 * CPerBlock)
@@ -280,24 +276,17 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
 #elif 1
                         blockwise_gemm.Run_asm
 #endif
-                            (p_wei_block_now + wei_cyxk_block_desc.Get1dIndex(0, y, x, 0),
-                             p_in_block_now + y * Wi + x,
-                             p_out_thread);
+                        (p_wei_block_now + wei_cyxk_block_desc.Get1dIndex(0, y, x, 0),
+                         p_in_block_now + y * Wi + x,
+                         p_out_thread);
                     }
                 }
 
-#if 0
                 blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard,
                                                             p_in_block_next);
                 blockwise_wei_copy.RunStoreRegisterClipboard(p_wei_register_clipboard,
                                                              p_wei_block_next);
-#else
-                global_load_wait_all();
-                blockwise_in_copy.RunStoreRegisterClipboard_asm(p_in_register_clipboard,
-                                                                p_in_block_next);
-                blockwise_wei_copy.RunStoreRegisterClipboard_asm(p_wei_register_clipboard,
-                                                                 p_wei_block_next);
-#endif
+
             }
         }
 
@@ -331,25 +320,16 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
 #elif 1
                     blockwise_gemm.Run_asm
 #endif
-                        (p_wei_block_double + wei_cyxk_block_desc.Get1dIndex(0, y, x, 0),
-                         p_in_block_double + y * Wi + x,
-                         p_out_thread);
+                    (p_wei_block_double + wei_cyxk_block_desc.Get1dIndex(0, y, x, 0),
+                     p_in_block_double + y * Wi + x,
+                     p_out_thread);
                 }
             }
 
-#if 0
             blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard,
                                                         p_in_block_double + in_block_space);
-
             blockwise_wei_copy.RunStoreRegisterClipboard(p_wei_register_clipboard,
                                                          p_wei_block_double + wei_block_space);
-#else
-            global_load_wait_all();
-            blockwise_in_copy.RunStoreRegisterClipboard_asm(p_in_register_clipboard,
-                                                            p_in_block_double + in_block_space);
-            blockwise_wei_copy.RunStoreRegisterClipboard_asm(p_wei_register_clipboard,
-                                                             p_wei_block_double + wei_block_space);
-#endif
 
             // odd
             __syncthreads();
@@ -365,10 +345,10 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
 #elif 1
                     blockwise_gemm.Run_asm
 #endif
-                        (p_wei_block_double + wei_block_space +
-                             wei_cyxk_block_desc.Get1dIndex(0, y, x, 0),
-                         p_in_block_double + in_block_space + y * Wi + x,
-                         p_out_thread);
+                    (p_wei_block_double + wei_block_space +
+                         wei_cyxk_block_desc.Get1dIndex(0, y, x, 0),
+                     p_in_block_double + in_block_space + y * Wi + x,
+                     p_out_thread);
                 }
             }
         }
@@ -380,9 +360,8 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
         const index_t k_thread_data_begin = k_block_data_begin + c_thread_mtx_begin.row;
         const index_t b_thread_data_begin = b_block_data_begin + c_thread_mtx_begin.col;
 
-#if 1
         if(Y == 1 && X == 1)
-        { // pure 1x1 conv
+        { // pure 1x1 conv (non padding, 1x1 stride)
             constexpr index_t K2_ = GemmMPerThreadSubC;
             constexpr index_t K1_ = KPerBlock / KPerThread;
             constexpr index_t B2_ = GemmNPerThreadSubC;
@@ -400,13 +379,13 @@ struct GridwiseConvolutionImplicitGemm_v2_chwn_cyxk_khwn_lds_double_buffer
                 out_6d_thread_desc,
                 p_out_thread,
                 out_6d_global_desc,
-                p_out_global +
-                    out_kb_global_desc.Get1dIndex(k_thread_data_begin, b_thread_data_begin),
+                p_out_global,
                 out_6d_thread_desc.GetLengths(),
-                Number<OutThreadCopyDataPerWrite>{});
+                Number<OutThreadCopyDataPerWrite>{},
+                out_kb_global_desc.Get1dIndex(k_thread_data_begin, b_thread_data_begin)
+                );
         }
         else
-#endif
         {
             for(index_t k = 0; k < out_kb_thread_desc.GetLength(I0); ++k)
             {

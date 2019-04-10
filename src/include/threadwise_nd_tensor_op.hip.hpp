@@ -8,7 +8,8 @@ __device__ void threadwise_6d_tensor_copy(SrcDesc,
                                           DstDesc,
                                           Float* __restrict__ p_dst,
                                           SrcOpLengths,
-                                          Number<DataPerRead>)
+                                          Number<DataPerRead>,
+                                          index_t voffset = 0)
 {
     using vector_t = typename vector_type<Float, DataPerRead>::MemoryType;
 
@@ -60,9 +61,14 @@ __device__ void threadwise_6d_tensor_copy(SrcDesc,
 
                             const index_t dst_index = dst_desc.Get1dIndex(
                                 did0, did1, did2, did3, did4, iloop_d5 * DataPerRead);
-
-                            *(reinterpret_cast<vector_t*>(p_dst + dst_index)) =
+#if 1
+                            void *sptr = p_dst + dst_index; 
+                            void *vptr = (void *)(size_t)(voffset * sizeof(Float));
+                            global_store(*(vector_t *)(p_src + src_index), vptr, sptr);
+#else
+                            *(reinterpret_cast<vector_t*>(p_dst + dst_index + voffset)) =
                                 *(reinterpret_cast<const vector_t*>(p_src + src_index));
+#endif
                         }
                     }
                 }
