@@ -610,10 +610,10 @@ int main(int argc, char* argv[])
 #elif 1
     // 1x1 filter, 14x14 image, C = 512
     constexpr index_t N  = 128;
-    constexpr index_t C  = 128;
+    constexpr index_t C  = 512;
     constexpr index_t HI = 14;
     constexpr index_t WI = 14;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 512;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
 
