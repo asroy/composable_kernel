@@ -435,34 +435,47 @@ struct BlockwiseBatchGemmBlockABlockBThreadCTransANormalBNormalC_V2
         constexpr index_t a_lds_cluster_col_stride = sizeof(Float) * MPerLevel1Cluster;
         constexpr index_t b_lds_cluster_col_stride = sizeof(Float) * NPerLevel1Cluster;
 
-        ds_read_b128(reg_a[0], a_lds_loc, 0);
-        ds_read_b128(reg_b[0], b_lds_loc, 0);
-        ds_read_b128(reg_b[1], b_lds_loc, b_lds_cluster_col_stride);
-        ds_read_b128(reg_a[1], a_lds_loc, a_lds_cluster_col_stride);
-        lgkmcnt(2);
-        outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
-        lgkmcnt(1);
-        outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
-
-#pragma unroll
-        for(index_t k = 1; k < K; ++k)
+        for(index_t k = 0; k < K; k++)
         {
             ds_read_b128(reg_a[0], a_lds_loc, k * a_lds_row_stride);
-            lgkmcnt(1);
-            outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
             ds_read_b128(reg_b[0], b_lds_loc, k * b_lds_row_stride);
-            outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
             ds_read_b128(reg_b[1], b_lds_loc, b_lds_cluster_col_stride + k * b_lds_row_stride);
             ds_read_b128(reg_a[1], a_lds_loc, a_lds_cluster_col_stride + k * a_lds_row_stride);
-            lgkmcnt(2);
+
             outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
-            lgkmcnt(1);
             outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
+            outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
+            outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
         }
 
-        lgkmcnt(0);
-        outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
-        outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
+        //ds_read_b128(reg_a[0], a_lds_loc, 0);
+        //ds_read_b128(reg_b[0], b_lds_loc, 0);
+        //ds_read_b128(reg_b[1], b_lds_loc, b_lds_cluster_col_stride);
+        //ds_read_b128(reg_a[1], a_lds_loc, a_lds_cluster_col_stride);
+        //lgkmcnt(2);
+        //outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
+        //lgkmcnt(1);
+        //outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
+
+//#pragma unroll
+        //for(index_t k = 1; k < K; ++k)
+        //{
+            //ds_read_b128(reg_a[0], a_lds_loc, k * a_lds_row_stride);
+            //lgkmcnt(1);
+            //outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
+            //ds_read_b128(reg_b[0], b_lds_loc, k * b_lds_row_stride);
+            //outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
+            //ds_read_b128(reg_b[1], b_lds_loc, b_lds_cluster_col_stride + k * b_lds_row_stride);
+            //ds_read_b128(reg_a[1], a_lds_loc, a_lds_cluster_col_stride + k * a_lds_row_stride);
+            //lgkmcnt(2);
+            //outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
+            //lgkmcnt(1);
+            //outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
+        //}
+
+        //lgkmcnt(0);
+        //outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
+        //outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
     }
 #endif
 

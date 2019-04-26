@@ -46,7 +46,7 @@ __device__ void vmcnt(index_t cnt)
 
 __device__ void lgkmcnt(index_t cnt)
 {
-#if !NO_LGKM_WAIT
+#if 0 
     if(cnt == 0)
     {
         asm volatile("\n \
@@ -86,6 +86,7 @@ __device__ void lgkmcnt(index_t cnt)
 
 __device__ void outerProduct1x4(const float* a, const float* b, float* c)
 {
+#if 0
     asm volatile("\n \
             v_mac_f32 %0, %4, %5 \n \
             v_mac_f32 %1, %4, %6 \n \
@@ -102,6 +103,12 @@ __device__ void outerProduct1x4(const float* a, const float* b, float* c)
                    "1"(c[1]),
                    "2"(c[2]),
                    "3"(c[3]));
+#else
+    c[0] += a[0] * b[0];
+    c[1] += a[0] * b[1];
+    c[2] += a[0] * b[2];
+    c[3] += a[0] * b[3];
+#endif
 }
 
 __device__ void outerProduct1x4(const float& a,
@@ -197,7 +204,7 @@ __device__ void outerProduct8x8(const vector_type<float, 4>::MemoryType* a,
 
 __device__ void ds_read_b128(vector_type<float, 4>::MemoryType& r, void* lds, index_t offset = 0)
 {
-#if !NO_DS_READ
+#if 0 
     if(offset == 0)
     {
         asm volatile("\n \
@@ -418,6 +425,9 @@ __device__ void ds_read_b128(vector_type<float, 4>::MemoryType& r, void* lds, in
     {
         assert(false);
     }
+#else
+    using Float4 = vector_type<float, 4>::MemoryType;
+    r = ((Float4*)lds)[offset]; 
 #endif
 }
 

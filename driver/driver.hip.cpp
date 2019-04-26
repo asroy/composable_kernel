@@ -413,8 +413,8 @@ int main(int argc, char* argv[])
 {
 #if 1
     // 3x3, 34x34
-    constexpr index_t N  = 64;
-    constexpr index_t C  = 256;
+    constexpr index_t N  = 16;
+    constexpr index_t C  = 8;
     constexpr index_t HI = 34;
     constexpr index_t WI = 34;
     constexpr index_t K  = 128;

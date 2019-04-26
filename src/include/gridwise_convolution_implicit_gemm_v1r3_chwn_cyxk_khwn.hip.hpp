@@ -273,11 +273,11 @@ struct GridwiseConvolutionImplicitGemm_v1r3_chwn_cyxk_khwn
 
                     __syncthreads();
 
-#if 1
+#if 0
                     blockwise_batch_gemm.Run(p_wei_block, p_in_block, p_out_thread);
 #elif 0
                     blockwise_batch_gemm.Run_asm(p_wei_block, p_in_block, p_out_thread);
-#elif 0
+#elif 1
                     blockwise_batch_gemm.Run_asm_v2(p_wei_block, p_in_block, p_out_thread);
 #endif
 
