@@ -8,7 +8,7 @@
 #define NO_GLB_READ 0
 
 // cast a pointer of LDS to its address
-extern "C" __attribute__((address_space(3))) void* __to_local(void* p)[[hc]];
+extern "C" __attribute__((address_space(3))) void* __to_local(const void* p)[[hc]];
 
 __device__ void vmcnt(index_t cnt)
 {
@@ -721,18 +721,18 @@ __device__ void ds_read_b128(vector_type<float, 4>::MemoryType& r, void* lds, in
 #endif
 }
 
-__device__ void global_load(vector_type<float, 4>::MemoryType& r,
-                            const vector_type<float, 4>::MemoryType* ptr,
-                            index_t offset = 0)
+__device__ void global_loadx4(void* r, const void* ptr, index_t offset = 0)
 {
 #if !NO_GLB_READ
     if(offset == 0)
     {
+
+        //*(vector_type<float, 4>::MemoryType*)(r) = *(vector_type<float, 4>::MemoryType*)(ptr);
         asm volatile("\n \
                 global_load_dwordx4 %0, %1, off \n \
                 "
-                     : "=v"(r)
-                     : "v"(ptr));
+                     : "=v"(*(vector_type<float, 4>::MemoryType*)(r))
+                     : "r"(ptr));
     }
     else
     {
@@ -741,21 +741,142 @@ __device__ void global_load(vector_type<float, 4>::MemoryType& r,
 #endif
 }
 
-__device__ void
-ds_write_b128(const vector_type<float, 4>::MemoryType& r, void* lds, index_t offset = 0)
+__device__ void global_loadx2(void* r, const void* ptr, index_t offset = 0)
 {
-#if !NO_DS_WRITE
+#if !NO_GLB_READ
     if(offset == 0)
     {
         asm volatile("\n \
-            ds_write_b128 %0, %1 \n \
-            "
-                     :
-                     : "v"(__to_local(lds)), "v"(r));
+                global_load_dwordx2 %0, %1, off \n \
+                "
+                     : "=v"(*(vector_type<float, 2>::MemoryType*)(r))
+                     : "r"(ptr));
     }
     else
     {
         assert(false);
     }
 #endif
+}
+
+__device__ void global_loadx1(void* r, const void* ptr, index_t offset = 0)
+{
+#if !NO_GLB_READ
+    if(offset == 0)
+    {
+        //*(float*)(r) = *(float*)(ptr);
+        asm volatile("\n \
+                global_load_dword %0, %1, off \n \
+                "
+                     : "=v"(*(float*)(r))
+                     : "r"(ptr));
+    }
+    else
+    {
+        assert(false);
+    }
+#endif
+}
+
+__device__ void global_storex4(const void* ptr, const void* r, index_t offset = 0)
+{
+#if !NO_GLB_READ
+    if(offset == 0)
+    {
+        //*(vector_type<float, 4>::MemoryType*)(ptr) = *(vector_type<float, 4>::MemoryType*)(r);
+        asm volatile("\n \
+                global_store_dwordx4 %0, %1, off \n \
+                "
+                     :
+                     : "r"(ptr), "v"(*(vector_type<float, 4>::MemoryType*)(r)));
+    }
+    else
+    {
+        assert(false);
+    }
+#endif
+}
+
+__device__ void global_storex2(const void* ptr, const void* r, index_t offset = 0)
+{
+#if !NO_GLB_READ
+    if(offset == 0)
+    {
+        asm volatile("\n \
+                global_store_dwordx2 %0, %1, off \n \
+                "
+                     :
+                     : "r"(ptr), "v"(*(vector_type<float, 2>::MemoryType*)(r)));
+    }
+    else
+    {
+        assert(false);
+    }
+#endif
+}
+
+__device__ void global_storex1(const void* ptr, const void* r, index_t offset = 0)
+{
+#if !NO_GLB_READ
+    if(offset == 0)
+    {
+        //*(float*)(ptr) = *(float*)(r);
+        asm volatile("\n \
+                global_store_dword %0, %1, off \n \
+                "
+                     :
+                     : "r"(ptr), "v"(*(float*)(r)));
+    }
+    else
+    {
+        assert(false);
+    }
+#endif
+}
+
+__device__ void ds_write_b128(const void* lds, const void* r, index_t offset = 0)
+{
+#if !NO_DS_WRITE
+    if(offset == 0)
+    {
+        //*(vector_type<float, 4>::MemoryType*)(lds) = *(vector_type<float, 4>::MemoryType*)(r);
+        asm volatile("\n \
+                ds_write_b128 %0, %1 \n \
+                "
+                     :
+                     : "v"(__to_local(lds)), "v"(*(vector_type<float, 4>::MemoryType*)(r)));
+    }
+    else
+    {
+        assert(false);
+    }
+#endif
+}
+
+__device__ void ds_write_b32(const void* lds, const void* r, index_t offset = 0)
+{
+#if !NO_DS_WRITE
+    if(offset == 0)
+    {
+        //*(float*)(lds) = *(float*)(r);
+        asm volatile("\n \
+                ds_write_b32 %0, %1 \n \
+                "
+                     :
+                     : "v"(__to_local(lds)), "v"(*(float*)(r)));
+    }
+    else
+    {
+        assert(false);
+    }
+#endif
+}
+
+__device__ void s_barrier()
+{
+    asm volatile("\n \
+            s_barrier \n \
+            "
+                 :
+                 :);
 }

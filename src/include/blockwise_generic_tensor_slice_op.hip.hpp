@@ -217,7 +217,7 @@ struct BlockwiseGenericTensorSliceCopy_v1
             const index_t clipboard_offset = thread_tensor_desc.GetOffsetFromMultiIndex(
                 clipboard_data_multi_id_begin); // cannot not constexpr, why?
 
-            threadwise_generic_tensor_slice_copy_v1(SrcDesc{},
+            threadwise_generic_tensor_slice_copy_v1_asm(SrcDesc{},
                                                     p_src + src_offset + mThreadSrcOffset,
                                                     make_zero_array<index_t, nDim>(),
                                                     thread_tensor_desc,
@@ -225,7 +225,8 @@ struct BlockwiseGenericTensorSliceCopy_v1
                                                     make_zero_array<index_t, nDim>(),
                                                     thread_sub_tensor_lengths,
                                                     SrcAccessOrder{},
-                                                    Number<SrcDataPerRead>{});
+                                                    Number<SrcDataPerRead>{},
+                                                    Number<1>{});
         });
     }
 
