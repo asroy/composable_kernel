@@ -103,13 +103,20 @@ auto make_TensorDescriptor(TConstTensorDesc)
     return TensorDescriptor(lengths, strides);
 }
 
-template <class TIn, class TWei, class TOut, class LowerPads, class UpperPads, class Strides>
+template <class TIn,
+          class TWei,
+          class TOut,
+          class LowerPads,
+          class UpperPads,
+          class Strides,
+          class Dilations>
 void host_direct_convolution(const Tensor<TIn>& in_nchw,
                              const Tensor<TWei>& wei_kcyx,
                              Tensor<TOut>& out_nkhw,
                              LowerPads,
                              UpperPads,
-                             Strides)
+                             Strides,
+                             Dilations)
 {
     index_t h_pad_low = LowerPads{}.Get(Number<0>{});
     index_t w_pad_low = LowerPads{}.Get(Number<1>{});
@@ -120,16 +127,19 @@ void host_direct_convolution(const Tensor<TIn>& in_nchw,
     index_t stride_h = Strides{}.Get(Number<0>{});
     index_t stride_w = Strides{}.Get(Number<1>{});
 
+    index_t dilation_h = Dilations{}.Get(Number<0>{});
+    index_t dilation_w = Dilations{}.Get(Number<1>{});
+
     auto f = [&](auto n, auto k, auto ho, auto wo) {
         double v = 0;
         for(int c = 0; c < wei_kcyx.mDesc.GetLengths()[1]; ++c)
         {
             for(int y = 0; y < wei_kcyx.mDesc.GetLengths()[2]; ++y)
             {
-                int hi = ho * stride_h + y - h_pad_low;
+                int hi = ho * stride_h + y * dilation_h - h_pad_low;
                 for(int x = 0; x < wei_kcyx.mDesc.GetLengths()[3]; ++x)
                 {
-                    int wi = wo * stride_w + x - w_pad_low;
+                    int wi = wo * stride_w + x * dilation_w - w_pad_low;
                     if(hi >= 0 && hi < in_nchw.mDesc.GetLengths()[2] && wi >= 0 &&
                        wi < in_nchw.mDesc.GetLengths()[3])
                     {
@@ -412,13 +422,16 @@ void check_error(const Tensor<T>& ref, const Tensor<T>& result)
 
 int main(int argc, char* argv[])
 {
-    constexpr index_t U = 2;
-    constexpr index_t V = 2;
+    constexpr index_t U = 1;
+    constexpr index_t V = 1;
+
+    constexpr index_t Dh = 2;
+    constexpr index_t Dw = 2;
 #if 0
     constexpr index_t N  = 8;
     constexpr index_t C  = 16;
-    constexpr index_t HI = 16;
-    constexpr index_t WI = 16;
+    constexpr index_t HI = 20;
+    constexpr index_t WI = 20;
     constexpr index_t K  = 128;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
@@ -449,7 +462,7 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
-#elif 0
+#elif 1
     // 3x3 filter, 28x28 image
     constexpr index_t N  = 128;
     constexpr index_t C  = 256;
@@ -461,7 +474,7 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
-#elif 1
+#elif 0
     // 1x1 filter, 28x28 image
     constexpr index_t N  = 128;
     constexpr index_t C  = 512;
@@ -586,12 +599,13 @@ int main(int argc, char* argv[])
     auto lower_pads = Sequence<HPad, WPad>{};
     auto upper_pads = Sequence<HPad, WPad>{};
 
-    auto strides = Sequence<U, V>{};
+    auto strides   = Sequence<U, V>{};
+    auto dilations = Sequence<Dh, Dw>{};
 
     auto in_nchw_desc  = make_ConstantTensorDescriptor_packed(Sequence<N, C, HI, WI>{});
     auto wei_kcyx_desc = make_ConstantTensorDescriptor_packed(Sequence<K, C, Y, X>{});
-    auto out_nkhw_desc =
-        get_convolution_output_default_4d_tensor_descriptor(in_nchw_desc, wei_kcyx_desc, strides);
+    auto out_nkhw_desc = get_convolution_output_default_4d_tensor_descriptor(
+        in_nchw_desc, wei_kcyx_desc, strides, dilations);
 
     ostream_ConstantTensorDescriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
     ostream_ConstantTensorDescriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
@@ -665,6 +679,7 @@ int main(int argc, char* argv[])
      wei_kcyx,
      out_nkhw_desc,
      strides,
+     dilations,
      out_nkhw_device,
      nrepeat);
 
@@ -691,7 +706,7 @@ int main(int argc, char* argv[])
 #endif
         {
             host_direct_convolution(
-                in_nchw, wei_kcyx, out_nkhw_host, lower_pads, upper_pads, strides);
+                in_nchw, wei_kcyx, out_nkhw_host, lower_pads, upper_pads, strides, dilations);
         }
         check_error(out_nkhw_host, out_nkhw_device);
 

@@ -11,6 +11,7 @@
 template <index_t GridSize,
           index_t BlockSize,
           class Strides,
+          class Dilations,
           class Float,
           class InGlobalDesc,
           class WeiGlobalDesc,
@@ -121,9 +122,9 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
             in_n_c_h_w_global_desc.Fold(I0, Number<N1>{}, Number<N2>{})
                 .Extract(Sequence<0, 1, 2, 4, 5>{});
 
-        constexpr auto new_lengths = Sequence<N0, N1, N2, Ho, Wo>{};
+        constexpr auto in_lengths_new = Sequence<N0, N1, N2, Ho, Wo>{};
 
-        constexpr auto new_strides =
+        constexpr auto in_strides_new =
             Sequence<in_n0_n1_n2_h_w_global_desc.GetStride(I0),
                      in_n0_n1_n2_h_w_global_desc.GetStride(I1),
                      in_n0_n1_n2_h_w_global_desc.GetStride(I2),
@@ -131,17 +132,28 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
                      in_n0_n1_n2_h_w_global_desc.GetStride(I4) * Strides{}.Get(I1)>{};
 
         constexpr auto in_n0_n1_n2_h_w_new_global_desc =
-            make_ConstantTensorDescriptor(new_lengths, new_strides);
+            make_ConstantTensorDescriptor(in_lengths_new, in_strides_new);
 
         //     batch descritpor for device memory
         //     to-do: add dilation: keep lengths, modify strides
         constexpr auto in_c_y_x_global_desc = in_n_c_h_w_global_desc.Slice(I2, Number<Y>{})
                                                   .Slice(I3, Number<X>{})
                                                   .Extract(Sequence<1, 2, 3>{});
+        constexpr auto in_win_lengths_new = Sequence<in_c_y_x_global_desc.GetLength(I0),
+                                                     in_c_y_x_global_desc.GetLength(I1),
+                                                     in_c_y_x_global_desc.GetLength(I2)>{};
+
+        constexpr auto in_win_strides_new =
+            Sequence<in_c_y_x_global_desc.GetStride(I0),
+                     in_c_y_x_global_desc.GetStride(I1) * Dilations{}.Get(I0),
+                     in_c_y_x_global_desc.GetStride(I2) * Dilations{}.Get(I1)>{};
+
+        constexpr auto in_c_y_x_new_global_desc =
+            make_ConstantTensorDescriptor(in_win_lengths_new, in_win_strides_new);
 
         //     merged tensor descriptor in device memory [E, N1, B, N2], src of blockwise copy
         constexpr auto in_e_n1_b_n2_global_merged_desc = make_ConstantMergedTensorDescriptor(
-            in_c_y_x_global_desc.Embed(in_n0_n1_n2_h_w_new_global_desc),
+            in_c_y_x_new_global_desc.Embed(in_n0_n1_n2_h_w_new_global_desc),
             Sequence<0, 1, 2>{},
             Sequence<4>{},
             Sequence<3, 6, 7>{},

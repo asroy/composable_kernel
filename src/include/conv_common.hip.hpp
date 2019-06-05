@@ -2,8 +2,9 @@
 #include "ConstantTensorDescriptor.hip.hpp"
 
 // this is ugly, only for 4d
-template <class InDesc, class WeiDesc, class Strides>
-constexpr auto get_convolution_output_default_4d_tensor_descriptor(InDesc, WeiDesc, Strides)
+template <class InDesc, class WeiDesc, class Strides, class Dilations>
+constexpr auto
+    get_convolution_output_default_4d_tensor_descriptor(InDesc, WeiDesc, Strides, Dilations)
 {
     constexpr auto in_desc  = InDesc{};
     constexpr auto wei_desc = WeiDesc{};
@@ -26,11 +27,14 @@ constexpr auto get_convolution_output_default_4d_tensor_descriptor(InDesc, WeiDe
     constexpr auto Y = wei_desc.GetLength(I2);
     constexpr auto X = wei_desc.GetLength(I3);
 
-    constexpr index_t U = Strides{}.Get(I0);
-    constexpr index_t V = Strides{}.Get(I1);
+    constexpr index_t stride_h = Strides{}.Get(I0);
+    constexpr index_t stride_w = Strides{}.Get(I1);
 
-    constexpr auto HO = (HI - Y) / U + 1;
-    constexpr auto WO = (WI - X) / V + 1;
+    constexpr index_t dilation_h = Dilations{}.Get(I0);
+    constexpr index_t dilation_w = Dilations{}.Get(I1);
+
+    constexpr auto HO = (HI - Y - (Y - 1) * (dilation_h - 1)) / stride_h + 1;
+    constexpr auto WO = (WI - X - (X - 1) * (dilation_w - 1)) / stride_w + 1;
 
     return make_ConstantTensorDescriptor_packed(Sequence<N, K, HO, WO>{});
 }
