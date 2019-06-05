@@ -5,12 +5,13 @@
 #include "gridwise_convolution_implicit_gemm_v4_nchw_kcyx_nkhw.hip.hpp"
 #include "gridwise_convolution_implicit_gemm_v4_lds_double_buffer_nchw_kcyx_nkhw.hip.hpp"
 
-template <class T, class InDesc, class WeiDesc, class OutDesc>
+template <class T, class InDesc, class WeiDesc, class OutDesc, class Strides>
 void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
                                                         const Tensor<T>& in_nchw,
                                                         WeiDesc,
                                                         const Tensor<T>& wei_kcyx,
                                                         OutDesc,
+                                                        Strides,
                                                         Tensor<T>& out_nkhw,
                                                         index_t nrepeat)
 {
@@ -100,6 +101,7 @@ void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
 #endif
             <GridSize,
              BlockSize,
+             Strides,
              T,
              decltype(in_nchw_desc),
              decltype(wei_kcyx_desc),
