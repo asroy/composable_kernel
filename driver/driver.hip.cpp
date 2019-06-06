@@ -110,7 +110,7 @@ template <class TIn,
           class UpperPads,
           class Strides,
           class Dilations>
-void host_direct_convolution(const Tensor<TIn>& in_nchw,
+void host_direct_convolution_forw(const Tensor<TIn>& in_nchw,
                              const Tensor<TWei>& wei_kcyx,
                              Tensor<TOut>& out_nkhw,
                              LowerPads,
@@ -156,6 +156,66 @@ void host_direct_convolution(const Tensor<TIn>& in_nchw,
                                             out_nkhw.mDesc.GetLengths()[1],
                                             out_nkhw.mDesc.GetLengths()[2],
                                             out_nkhw.mDesc.GetLengths()[3]);
+
+    f_par(std::thread::hardware_concurrency());
+}
+
+template <class TIn,
+          class TWei,
+          class TOut,
+          class LowerPads,
+          class UpperPads,
+          class Strides,
+          class Dilations>
+void host_direct_convolution_back(Tensor<TOut>& in_nchw,
+                             const Tensor<TWei>& wei_kcyx,
+                             const Tensor<TIn>& out_nkhw,
+                             LowerPads,
+                             UpperPads,
+                             Strides,
+                             Dilations
+                             )
+{
+    index_t h_pad_low = LowerPads{}.Get(Number<0>{});
+    index_t w_pad_low = LowerPads{}.Get(Number<1>{});
+
+    index_t h_pad_up = UpperPads{}.Get(Number<0>{});
+    index_t w_pad_up = UpperPads{}.Get(Number<1>{});
+
+    index_t stride_h = Strides{}.Get(Number<0>{});
+    index_t stride_w = Strides{}.Get(Number<1>{});
+
+    index_t dilation_h = Dilations{}.Get(Number<0>{});
+    index_t dilation_w = Dilations{}.Get(Number<1>{});
+
+    //loop n,c,hi,wi
+    auto f = [&](auto n, auto c, auto hi, auto wi) {
+        double v = 0;
+        //loop k,y,x
+        for(int k = 0; k < wei_kcyx.mDesc.GetLengths()[0]; ++k)
+        {
+            for(int y = 0; y < wei_kcyx.mDesc.GetLengths()[2]; ++y)
+            {
+                int ho = (hi - y * dilation_h + h_pad_low) / stride_h;
+                for(int x = 0; x < wei_kcyx.mDesc.GetLengths()[3]; ++x)
+                {
+                    int wo = (wi - x * dilation_w + w_pad_low) / stride_w;
+                    if(ho >= 0 && hi < out_nkhw.mDesc.GetLengths()[2] && wo >= 0 &&
+                       wo < out_nkhw.mDesc.GetLengths()[3] && ho % stride_h == 0 && wo % stride_w == 0)
+                    {
+                        v += double(out_nkhw(n, k, ho, wo)) * double(wei_kcyx(k, c, y, x));
+                    }
+                }
+            }
+        }
+        in_nchw(n, c, hi, wi) = v;
+    };
+
+    auto f_par = make_ParallelTensorFunctor(f,
+                                            in_nchw.mDesc.GetLengths()[0],
+                                            in_nchw.mDesc.GetLengths()[1],
+                                            in_nchw.mDesc.GetLengths()[2],
+                                            in_nchw.mDesc.GetLengths()[3]);
 
     f_par(std::thread::hardware_concurrency());
 }
@@ -422,16 +482,18 @@ void check_error(const Tensor<T>& ref, const Tensor<T>& result)
 
 int main(int argc, char* argv[])
 {
-    constexpr index_t U = 1;
-    constexpr index_t V = 1;
+    constexpr index_t HStride = 2;
+    constexpr index_t WStride = 2;
 
-    constexpr index_t Dh = 2;
-    constexpr index_t Dw = 2;
-#if 0
+    constexpr index_t HDilation = 1;
+    constexpr index_t WDilation = 1;
+
+    constexpr index_t Direction = 2; //1: Forward; 2:Backward
+#if 1
     constexpr index_t N  = 8;
-    constexpr index_t C  = 16;
-    constexpr index_t HI = 20;
-    constexpr index_t WI = 20;
+    constexpr index_t C  = 128;
+    constexpr index_t HI = 16;
+    constexpr index_t WI = 16;
     constexpr index_t K  = 128;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
@@ -462,7 +524,7 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
-#elif 1
+#elif 0
     // 3x3 filter, 28x28 image
     constexpr index_t N  = 128;
     constexpr index_t C  = 256;
@@ -474,7 +536,7 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
-#elif 0
+#elif 1
     // 1x1 filter, 28x28 image
     constexpr index_t N  = 128;
     constexpr index_t C  = 512;
@@ -599,13 +661,15 @@ int main(int argc, char* argv[])
     auto lower_pads = Sequence<HPad, WPad>{};
     auto upper_pads = Sequence<HPad, WPad>{};
 
-    auto strides   = Sequence<U, V>{};
-    auto dilations = Sequence<Dh, Dw>{};
+    auto strides   = Sequence<HStride, WStride>{};
+    auto dilations = Sequence<HDilation, WDilation>{};
 
     auto in_nchw_desc  = make_ConstantTensorDescriptor_packed(Sequence<N, C, HI, WI>{});
     auto wei_kcyx_desc = make_ConstantTensorDescriptor_packed(Sequence<K, C, Y, X>{});
     auto out_nkhw_desc = get_convolution_output_default_4d_tensor_descriptor(
         in_nchw_desc, wei_kcyx_desc, strides, dilations);
+
+    auto wei_ckyx_back_desc = wei_kcyx_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
 
     ostream_ConstantTensorDescriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
     ostream_ConstantTensorDescriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
@@ -614,9 +678,10 @@ int main(int argc, char* argv[])
     using in_data_t  = float;
     using out_data_t = float;
     Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
-    Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
-    Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
+    Tensor<in_data_t> out_nkhw(make_TensorDescriptor(out_nkhw_desc));
+    Tensor<in_data_t> in_nchw_device(make_TensorDescriptor(in_nchw_desc));
     Tensor<out_data_t> out_nkhw_device(make_TensorDescriptor(out_nkhw_desc));
+    Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
@@ -642,6 +707,7 @@ int main(int argc, char* argv[])
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 1
         in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        out_nkhw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_2{1, 5}, num_thread);
@@ -673,15 +739,16 @@ int main(int argc, char* argv[])
 #elif 1
     device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw
 #endif
-    (in_nchw_desc,
-     in_nchw,
-     wei_kcyx_desc,
+    (out_nkhw_desc,
+     out_nkhw,
+     wei_ckyx_back_desc,
      wei_kcyx,
-     out_nkhw_desc,
+     in_nchw_desc,
      strides,
      dilations,
-     out_nkhw_device,
-     nrepeat);
+     in_nchw_device,
+     nrepeat
+     );
 
 #elif 1
     device_implicit_gemm_convolution_1_chwn_cyxk_khwn_padded(in_nchw_desc,
@@ -704,11 +771,18 @@ int main(int argc, char* argv[])
         }
         else
 #endif
+        if(Direction == 1)
         {
-            host_direct_convolution(
-                in_nchw, wei_kcyx, out_nkhw_host, lower_pads, upper_pads, strides, dilations);
+            host_direct_convolution_forw(
+                in_nchw, wei_kcyx, out_nkhw, lower_pads, upper_pads, strides, dilations);
+            check_error(out_nkhw, out_nkhw_device);
         }
-        check_error(out_nkhw_host, out_nkhw_device);
+        else
+        {
+            host_direct_convolution_back(
+                in_nchw, wei_kcyx, out_nkhw, lower_pads, upper_pads, strides, dilations);
+            check_error(in_nchw, in_nchw_device);
+        }
 
 #if 0
         LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
