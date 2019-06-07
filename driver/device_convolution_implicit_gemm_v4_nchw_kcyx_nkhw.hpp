@@ -88,7 +88,7 @@ void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
 #endif
 
     constexpr index_t GridSize =
-        ((B + BPerBlock - 1) / BPerBlock) * ((K + KPerBlock - 1) / KPerBlock);
+        ((B + BPerBlock - 1) / BPerBlock) * ((K + KPerBlock - 1) / KPerBlock) / (Strides{}.Get(I1) * Strides{}.Get(I0));
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
