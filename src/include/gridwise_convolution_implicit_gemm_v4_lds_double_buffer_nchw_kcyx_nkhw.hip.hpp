@@ -269,7 +269,7 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
 
         // choose GEMM implementation here
         const auto run_blockwise_gemm = [&](auto... Xs) {
-#if 0
+#if 1
             return blockwise_gemm.Run(Xs...);
 #else
             return blockwise_gemm.Run_asm(Xs...);
@@ -441,8 +441,6 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
                 out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetStride(I7) * Strides{}.Get(I1)
                 >{};
 
-
-
             constexpr auto out_n0_n1_n2_k0_k1_k2_h_w_new_global_mem_desc = make_ConstantTensorDescriptor(
                     out_lengths_new, out_strides_new
                     );
@@ -473,6 +471,15 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
                 out_k_n1_b_n2_global_merged_desc.GetOffsetFromMultiIndex(
                     k_thread_data_on_global, 0, b_thread_data_on_global, 0);
 
+#if 1
+            if(get_block_1d_id() == 0 && get_thread_local_1d_id() == 0)
+            {
+                print_ConstantTensorDescriptor("out_n0_n1_n2_k0_k1_k2_h_w_new_global_mem_desc", out_n0_n1_n2_k0_k1_k2_h_w_new_global_mem_desc);
+                print_ConstantTensorDescriptor("out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc", out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc);
+            }
+#endif
+
+#if 0
             threadwise_generic_tensor_slice_copy_v1(
                 out_n0_n1_n2_k0_k1_k2_h_w_thread_desc,
                 p_out_thread,
@@ -483,6 +490,7 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
                 out_n0_n1_n2_k0_k1_k2_h_w_thread_desc.GetLengths(),
                 arithmetic_sequence_gen<0, 8, 1>::SeqType{},
                 Number<1>{});
+#endif
         }
     }
 };
