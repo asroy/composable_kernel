@@ -18,17 +18,21 @@ struct Array
 
     __host__ __device__ constexpr index_t GetSize() const { return NSize; }
 
-    __host__ __device__ constexpr TData operator[](index_t i) const { return mData[i]; }
-
-    __host__ __device__ TData& operator[](index_t i) { return mData[i]; }
-
     template <index_t I>
-    __host__ __device__ constexpr TData Get(Number<I>) const
+    __host__ __device__ constexpr TData operator[](Number<I>) const
     {
-        static_assert(I < NSize, "wrong!");
-
         return mData[I];
     }
+
+    __host__ __device__ constexpr TData operator[](index_t i) const { return mData[i]; }
+
+    template <index_t I>
+    __host__ __device__ TData& operator()(Number<I>)
+    {
+        return mData[I];
+    }
+
+    __host__ __device__ TData& operator()(index_t i) { return mData[i]; }
 
     template <index_t I>
     __host__ __device__ constexpr void Set(Number<I>, TData x)
@@ -38,16 +42,33 @@ struct Array
         mData[I] = x;
     }
 
+    __host__ __device__ constexpr void Set(index_t I, TData x) { mData[I] = x; }
+
+    struct lambda_PushBack // emulate constexpr lambda
+    {
+        const Array<TData, NSize>& old_array;
+        Array<TData, NSize + 1>& new_array;
+
+        __host__ __device__ constexpr lambda_PushBack(const Array<TData, NSize>& old_array_,
+                                                      Array<TData, NSize + 1>& new_array_)
+            : old_array(old_array_), new_array(new_array_)
+        {
+        }
+
+        template <index_t I>
+        __host__ __device__ constexpr void operator()(Number<I>) const
+        {
+            new_array.Set(Number<I>{}, old_array[I]);
+        }
+    };
+
     __host__ __device__ constexpr auto PushBack(TData x) const
     {
         Array<TData, NSize + 1> new_array;
 
-        static_for<0, NSize, 1>{}([&](auto I) {
-            constexpr index_t i = I.Get();
-            new_array[i]        = mData[i];
-        });
+        static_for<0, NSize, 1>{}(lambda_PushBack(*this, new_array));
 
-        new_array[NSize] = x;
+        new_array.Set(Number<NSize>{}, x);
 
         return new_array;
     }
@@ -62,93 +83,60 @@ __host__ __device__ constexpr auto sequence2array(Sequence<Is...>)
 template <class TData, index_t NSize>
 __host__ __device__ constexpr auto make_zero_array()
 {
-#if 0
-    Array<TData, NSize> a;
-
-    static_for<0, NSize, 1>{}([&](auto I) {
-        constexpr index_t i = I.Get();
-        a[i]                = static_cast<TData>(0);
-    });
-
-    return a;
-#else
     constexpr auto zero_sequence = typename uniform_sequence_gen<NSize, 0>::SeqType{};
     constexpr auto zero_array    = sequence2array(zero_sequence);
     return zero_array;
-#endif
 }
 
 template <class TData, index_t NSize, index_t... IRs>
 __host__ __device__ constexpr auto reorder_array_given_new2old(const Array<TData, NSize>& old_array,
-                                                               Sequence<IRs...> new2old)
+                                                               Sequence<IRs...> /*new2old*/)
 {
-    Array<TData, NSize> new_array;
-
     static_assert(NSize == sizeof...(IRs), "NSize not consistent");
 
-    static_for<0, NSize, 1>{}([&](auto IDim) {
-        constexpr index_t idim = IDim.Get();
-        new_array[idim]        = old_array[new2old.Get(IDim)];
-    });
+    static_assert(is_valid_sequence_map<Sequence<IRs...>>::value, "wrong! invalid reorder map");
 
-    return new_array;
+    return Array<TData, NSize>{old_array.mSize[IRs]...};
 }
 
-#if 0
-template <class TData, index_t NSize, index_t... IRs>
-__host__ __device__ constexpr auto reorder_array_given_old2new(const Array<TData, NSize>& old_array,
-                                                               Sequence<IRs...> old2new)
-{
-    Array<TData, NSize> new_array;
-
-    static_assert(NSize == sizeof...(IRs), "NSize not consistent");
-
-    static_for<0, NSize, 1>{}([&](auto IDim) {
-        constexpr index_t idim       = IDim.Get();
-        new_array[old2new.Get(IDim)] = old_array[idim];
-    });
-
-    return new_array;
-}
-#else
 template <class TData, index_t NSize, class MapOld2New>
-struct reorder_array_given_old2new_impl
+struct lambda_reorder_array_given_old2new
 {
-    const Array<TData, NSize>& old_array_ref;
-    Array<TData, NSize>& new_array_ref;
+    const Array<TData, NSize>& old_array;
+    Array<TData, NSize>& new_array;
 
-    __host__
-        __device__ constexpr reorder_array_given_old2new_impl(const Array<TData, NSize>& old_array,
-                                                              Array<TData, NSize>& new_array)
-        : old_array_ref(old_array), new_array_ref(new_array)
+    __host__ __device__ constexpr lambda_reorder_array_given_old2new(
+        const Array<TData, NSize>& old_array_, Array<TData, NSize>& new_array_)
+        : old_array(old_array_), new_array(new_array_)
     {
     }
 
     template <index_t IOldDim>
     __host__ __device__ constexpr void operator()(Number<IOldDim>) const
     {
-        TData old_data = old_array_ref.Get(Number<IOldDim>{});
+        TData old_data = old_array[IOldDim];
 
         constexpr index_t INewDim = MapOld2New::Get(Number<IOldDim>{});
 
-        new_array_ref.Set(Number<INewDim>{}, old_data);
+        new_array.Set(Number<INewDim>{}, old_data);
     }
 };
 
 template <class TData, index_t NSize, index_t... IRs>
 __host__ __device__ constexpr auto reorder_array_given_old2new(const Array<TData, NSize>& old_array,
-                                                               Sequence<IRs...> old2new)
+                                                               Sequence<IRs...> /*old2new*/)
 {
     Array<TData, NSize> new_array;
 
     static_assert(NSize == sizeof...(IRs), "NSize not consistent");
 
+    static_assert(is_valid_sequence_map<Sequence<IRs...>>::value, "wrong! invalid reorder map");
+
     static_for<0, NSize, 1>{}(
-        reorder_array_given_old2new_impl<TData, NSize, Sequence<IRs...>>(old_array, new_array));
+        lambda_reorder_array_given_old2new<TData, NSize, Sequence<IRs...>>(old_array, new_array));
 
     return new_array;
 }
-#endif
 
 template <class TData, index_t NSize, class ExtractSeq>
 __host__ __device__ constexpr auto extract_array(const Array<TData, NSize>& old_array, ExtractSeq)
@@ -159,13 +147,32 @@ __host__ __device__ constexpr auto extract_array(const Array<TData, NSize>& old_
 
     static_assert(new_size <= NSize, "wrong! too many extract");
 
-    static_for<0, new_size, 1>{}([&](auto I) {
-        constexpr index_t i = I.Get();
-        new_array[i]        = old_array[ExtractSeq::Get(I)];
-    });
+    static_for<0, new_size, 1>{}([&](auto I) { new_array(I) = old_array[ExtractSeq::Get(I)]; });
 
     return new_array;
 }
+
+template <class F, class X, class Y, class Z> // emulate constepxr lambda for array math
+struct lambda_array_math
+{
+    const F& f;
+    const X& x;
+    const Y& y;
+    Z& z;
+
+    __host__ __device__ constexpr lambda_array_math(const F& f_, const X& x_, const Y& y_, Z& z_)
+        : f(f_), x(x_), y(y_), z(z_)
+    {
+    }
+
+    template <index_t IDim_>
+    __host__ __device__ constexpr void operator()(Number<IDim_>) const
+    {
+        constexpr auto IDim = Number<IDim_>{};
+
+        z.Set(IDim, f(x[IDim], y[IDim]));
+    }
+};
 
 // Array = Array + Array
 template <class TData, index_t NSize>
@@ -173,11 +180,11 @@ __host__ __device__ constexpr auto operator+(Array<TData, NSize> a, Array<TData,
 {
     Array<TData, NSize> result;
 
-    static_for<0, NSize, 1>{}([&](auto I) {
-        constexpr index_t i = I.Get();
+    auto f = mod_conv::plus<index_t>{};
 
-        result[i] = a[i] + b[i];
-    });
+    static_for<0, NSize, 1>{}(
+        lambda_array_math<decltype(f), decltype(a), decltype(b), decltype(result)>(
+            f, a, b, result));
 
     return result;
 }
@@ -188,11 +195,11 @@ __host__ __device__ constexpr auto operator-(Array<TData, NSize> a, Array<TData,
 {
     Array<TData, NSize> result;
 
-    static_for<0, NSize, 1>{}([&](auto I) {
-        constexpr index_t i = I.Get();
+    auto f = mod_conv::minus<index_t>{};
 
-        result[i] = a[i] - b[i];
-    });
+    static_for<0, NSize, 1>{}(
+        lambda_array_math<decltype(f), decltype(a), decltype(b), decltype(result)>(
+            f, a, b, result));
 
     return result;
 }
@@ -205,11 +212,11 @@ __host__ __device__ constexpr auto operator+(Array<TData, NSize> a, Sequence<Is.
 
     Array<TData, NSize> result;
 
-    static_for<0, NSize, 1>{}([&](auto I) {
-        constexpr index_t i = I.Get();
+    auto f = mod_conv::plus<index_t>{};
 
-        result[i] = a[i] + b.Get(I);
-    });
+    static_for<0, NSize, 1>{}(
+        lambda_array_math<decltype(f), decltype(a), decltype(b), decltype(result)>(
+            f, a, b, result));
 
     return result;
 }
@@ -222,11 +229,11 @@ __host__ __device__ constexpr auto operator-(Array<TData, NSize> a, Sequence<Is.
 
     Array<TData, NSize> result;
 
-    static_for<0, NSize, 1>{}([&](auto I) {
-        constexpr index_t i = I.Get();
+    auto f = mod_conv::minus<index_t>{};
 
-        result[i] = a[i] - b.Get(I);
-    });
+    static_for<0, NSize, 1>{}(
+        lambda_array_math<decltype(f), decltype(a), decltype(b), decltype(result)>(
+            f, a, b, result));
 
     return result;
 }
@@ -239,11 +246,11 @@ __host__ __device__ constexpr auto operator*(Array<TData, NSize> a, Sequence<Is.
 
     Array<TData, NSize> result;
 
-    static_for<0, NSize, 1>{}([&](auto I) {
-        constexpr index_t i = I.Get();
+    auto f = mod_conv::multiplies<index_t>{};
 
-        result[i] = a[i] * b.Get(I);
-    });
+    static_for<0, NSize, 1>{}(
+        lambda_array_math<decltype(f), decltype(a), decltype(b), decltype(result)>(
+            f, a, b, result));
 
     return result;
 }
@@ -256,11 +263,11 @@ __host__ __device__ constexpr auto operator-(Sequence<Is...> a, Array<TData, NSi
 
     Array<TData, NSize> result;
 
-    static_for<0, NSize, 1>{}([&](auto I) {
-        constexpr index_t i = I.Get();
+    auto f = mod_conv::minus<index_t>{};
 
-        result[i] = a.Get(I) - b[i];
-    });
+    static_for<0, NSize, 1>{}(
+        lambda_array_math<decltype(f), decltype(a), decltype(b), decltype(result)>(
+            f, a, b, result));
 
     return result;
 }
@@ -273,10 +280,7 @@ accumulate_on_array(const Array<TData, NSize>& a, Reduce f, TData init)
 
     static_assert(NSize > 0, "wrong");
 
-    static_for<0, NSize, 1>{}([&](auto I) {
-        constexpr index_t i = I.Get();
-        result              = f(result, a[i]);
-    });
+    static_for<0, NSize, 1>{}([&](auto I) { result = f(result, a[I]); });
 
     return result;
 }

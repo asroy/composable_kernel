@@ -122,7 +122,7 @@ struct BlockwiseGenericTensorSliceCopy_v1
             constexpr auto src_partial_original_desc =
                 SrcDesc::GetOriginalTensorDescriptor().Extract(src_partial_original_dims);
 
-            mThreadSrcPartialOffsets[idim] = src_partial_original_desc.GetOffsetFromMultiIndex(
+            mThreadSrcPartialOffsets(idim) = src_partial_original_desc.GetOffsetFromMultiIndex(
                 extract_array(mThreadSrcOriginalMultiId, src_partial_original_dims));
         });
 
@@ -136,7 +136,7 @@ struct BlockwiseGenericTensorSliceCopy_v1
             constexpr auto dst_partial_original_desc =
                 DstDesc::GetOriginalTensorDescriptor().Extract(dst_partial_original_dims);
 
-            mThreadDstPartialOffsets[idim] = dst_partial_original_desc.GetOffsetFromMultiIndex(
+            mThreadDstPartialOffsets(idim) = dst_partial_original_desc.GetOffsetFromMultiIndex(
                 extract_array(mThreadDstOriginalMultiId, dst_partial_original_dims));
         });
 
@@ -206,18 +206,16 @@ struct BlockwiseGenericTensorSliceCopy_v1
 #if 0
             constexpr auto repeat_multi_id = sequence2array(decltype(repeat_multi_id_){});
 
-            const auto src_thread_data_multi_id_begin =
-                repeat_multi_id * data_per_cluster_per_dims; // cannot not constexpr, why?
+            const auto src_thread_data_multi_id_begin = repeat_multi_id * data_per_cluster_per_dims;
 
-            const auto clipboard_data_multi_id_begin =
-                repeat_multi_id * thread_sub_tensor_lengths; // cannot not constexpr, why?
+            const auto clipboard_data_multi_id_begin = repeat_multi_id * thread_sub_tensor_lengths;
 
-            const index_t src_offset = SrcDesc{}.GetOffsetFromMultiIndex(
-                src_thread_data_multi_id_begin); // cannot not constexpr, why?
+            const index_t src_offset =
+                SrcDesc{}.GetOffsetFromMultiIndex(src_thread_data_multi_id_begin);
 
-            const index_t clipboard_offset = thread_tensor_desc.GetOffsetFromMultiIndex(
-                clipboard_data_multi_id_begin); // cannot not constexpr, why?
-#else
+            const index_t clipboard_offset =
+                thread_tensor_desc.GetOffsetFromMultiIndex(clipboard_data_multi_id_begin);
+#else // HIP compiler performs better with these codes
             constexpr auto repeat_multi_id = decltype(repeat_multi_id_){};
 
             constexpr auto src_thread_data_multi_id_begin =
@@ -261,18 +259,15 @@ struct BlockwiseGenericTensorSliceCopy_v1
 #if 0
             constexpr auto repeat_multi_id = sequence2array(decltype(repeat_multi_id_){});
 
-            const auto clipboard_data_multi_id_begin =
-                repeat_multi_id * thread_sub_tensor_lengths; // cannot not constexpr, why?
+            const auto clipboard_data_multi_id_begin = repeat_multi_id * thread_sub_tensor_lengths;
 
-            const auto dst_data_multi_id_begin =
-                repeat_multi_id * data_per_cluster_per_dims; // cannot not constexpr, why?
+            const auto dst_data_multi_id_begin = repeat_multi_id * data_per_cluster_per_dims;
 
-            const index_t clipboard_offset = thread_tensor_desc.GetOffsetFromMultiIndex(
-                clipboard_data_multi_id_begin); // cannot not constexpr, why?
+            const index_t clipboard_offset =
+                thread_tensor_desc.GetOffsetFromMultiIndex(clipboard_data_multi_id_begin);
 
-            const index_t dst_offset = DstDesc{}.GetOffsetFromMultiIndex(
-                dst_data_multi_id_begin); // cannot not constexpr, why?
-#else
+            const index_t dst_offset = DstDesc{}.GetOffsetFromMultiIndex(dst_data_multi_id_begin);
+#else // HIP compiler performs better with these codes
             constexpr auto repeat_multi_id = decltype(repeat_multi_id_){};
 
             constexpr auto clipboard_data_multi_id_begin =
@@ -343,33 +338,12 @@ struct BlockwiseGenericTensorSliceCopy_v1
                 src_partial_original_desc.UpdateMultiIndexGivenStepSizeOf1dIndex(
                     old_src_partial_original_multi_id, StepSize, direction);
 
-#if 0
-            {
-                if(debug_flag && get_block_1d_id() == 0)
-                {
-                    printf("id %5u %5u: "
-                           "old_src_partial_original_multi_id %u %u %u, "
-                           "new_src_partial_original_multi_id %u %u %u, "
-                           "mThreadSrcOffset %u, mThreadDstOffset %u \n",
-                           get_block_1d_id(),
-                           get_thread_local_1d_id(),
-                           old_src_partial_original_multi_id[0],
-                           old_src_partial_original_multi_id[1],
-                           old_src_partial_original_multi_id[2],
-                           new_src_partial_original_multi_id[0],
-                           new_src_partial_original_multi_id[1],
-                           new_src_partial_original_multi_id[2]
-                           );
-                }
-            }
-#endif
-
             // update "mThreadSrcOriginalMultiId"
             static_for<0, decltype(src_partial_original_dims)::GetSize(), 1>{}([&](auto I_) {
                 constexpr auto I                = decltype(I_){};
                 constexpr index_t idim_original = src_partial_original_dims.Get(I);
 
-                mThreadSrcOriginalMultiId[idim_original] =
+                mThreadSrcOriginalMultiId(idim_original) =
                     new_src_partial_original_multi_id[I.Get()];
             });
 
@@ -381,7 +355,7 @@ struct BlockwiseGenericTensorSliceCopy_v1
                     new_src_partial_original_multi_id);
 
             // update "mThreadSrcPartialOffsets"
-            mThreadSrcPartialOffsets[idim] = new_src_partial_offset;
+            mThreadSrcPartialOffsets(idim) = new_src_partial_offset;
 
             // update "mThreadSrcOffset", do "+" before "-" to avoid underflow
             mThreadSrcOffset = (mThreadSrcOffset + new_src_partial_offset) - old_src_partial_offset;
@@ -401,15 +375,15 @@ struct BlockwiseGenericTensorSliceCopy_v1
             static_if<PositiveDirection>{}([&](auto fwd) {
                 mThreadSrcOffset += StepSize * fwd(SrcDesc{}).GetStride(IDim);
 
-                mThreadSrcOriginalMultiId[idim_original] += StepSize;
+                mThreadSrcOriginalMultiId(idim_original) += StepSize;
 
-                mThreadSrcPartialOffsets[idim] += StepSize * fwd(SrcDesc{}).GetStride(IDim);
+                mThreadSrcPartialOffsets(idim) += StepSize * fwd(SrcDesc{}).GetStride(IDim);
             }).Else([&](auto fwd) {
                 mThreadSrcOffset -= StepSize * fwd(SrcDesc{}).GetStride(IDim);
 
-                mThreadSrcOriginalMultiId[idim_original] -= StepSize;
+                mThreadSrcOriginalMultiId(idim_original) -= StepSize;
 
-                mThreadSrcPartialOffsets[idim] -= StepSize * fwd(SrcDesc{}).GetStride(IDim);
+                mThreadSrcPartialOffsets(idim) -= StepSize * fwd(SrcDesc{}).GetStride(IDim);
             });
         });
     }
