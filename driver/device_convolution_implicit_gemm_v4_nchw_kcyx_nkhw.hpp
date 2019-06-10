@@ -49,7 +49,7 @@ void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t N1 = 2;
     constexpr index_t N2 = 4;
 
-    constexpr index_t B = (N * Ho * Wo) / (N1 * N2);
+    constexpr index_t B = (N * (Ho/Strides::Get(I0)) * (Wo/Strides::Get(I1))) / (N1 * N2);
 
 #if 1
     constexpr index_t BlockSize = 256;
@@ -88,7 +88,7 @@ void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
 #endif
 
     constexpr index_t GridSize =
-        ((B + BPerBlock - 1) / BPerBlock) * ((K + KPerBlock - 1) / KPerBlock) / (Strides{}.Get(I1) * Strides{}.Get(I0));
+        ((B + BPerBlock - 1) / BPerBlock) * ((K + KPerBlock - 1) / KPerBlock);
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
