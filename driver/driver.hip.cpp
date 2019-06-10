@@ -25,8 +25,6 @@ struct GeneratorTensor_0
     }
 };
 
-
-
 struct GeneratorTensor_1
 {
     template <class... Is>
@@ -122,12 +120,12 @@ template <class TIn,
           class Strides,
           class Dilations>
 void host_direct_convolution_forw(const Tensor<TIn>& in_nchw,
-                             const Tensor<TWei>& wei_kcyx,
-                             Tensor<TOut>& out_nkhw,
-                             LowerPads,
-                             UpperPads,
-                             Strides,
-                             Dilations)
+                                  const Tensor<TWei>& wei_kcyx,
+                                  Tensor<TOut>& out_nkhw,
+                                  LowerPads,
+                                  UpperPads,
+                                  Strides,
+                                  Dilations)
 {
     index_t h_pad_low = LowerPads{}.Get(Number<0>{});
     index_t w_pad_low = LowerPads{}.Get(Number<1>{});
@@ -179,13 +177,12 @@ template <class TIn,
           class Strides,
           class Dilations>
 void host_direct_convolution_back(Tensor<TOut>& in_nchw,
-                             const Tensor<TWei>& wei_kcyx,
-                             const Tensor<TIn>& out_nkhw,
-                             LowerPads,
-                             UpperPads,
-                             Strides,
-                             Dilations
-                             )
+                                  const Tensor<TWei>& wei_kcyx,
+                                  const Tensor<TIn>& out_nkhw,
+                                  LowerPads,
+                                  UpperPads,
+                                  Strides,
+                                  Dilations)
 {
     index_t h_pad_low = LowerPads{}.Get(Number<0>{});
     index_t w_pad_low = LowerPads{}.Get(Number<1>{});
@@ -199,22 +196,23 @@ void host_direct_convolution_back(Tensor<TOut>& in_nchw,
     index_t dilation_h = Dilations{}.Get(Number<0>{});
     index_t dilation_w = Dilations{}.Get(Number<1>{});
 
-    //loop n,c,hi,wi
+    // loop n,c,hi,wi
     auto f = [&](auto n, auto c, auto hi, auto wi) {
         double v = 0;
-        //loop k,y,x
+        // loop k,y,x
         for(int k = 0; k < wei_kcyx.mDesc.GetLengths()[0]; ++k)
         {
             for(int y = 0; y < wei_kcyx.mDesc.GetLengths()[2]; ++y)
             {
                 int ho_ = (hi - y * dilation_h + h_pad_low);
-                int ho = ho_ / stride_h; 
+                int ho  = ho_ / stride_h;
                 for(int x = 0; x < wei_kcyx.mDesc.GetLengths()[3]; ++x)
                 {
                     int wo_ = (wi - x * dilation_w + w_pad_low);
-                    int wo = wo_ / stride_w;
+                    int wo  = wo_ / stride_w;
                     if(ho >= 0 && ho < out_nkhw.mDesc.GetLengths()[2] && wo >= 0 &&
-                       wo < out_nkhw.mDesc.GetLengths()[3] && ho_ % stride_h == 0 && wo_ % stride_w == 0)
+                       wo < out_nkhw.mDesc.GetLengths()[3] && ho_ % stride_h == 0 &&
+                       wo_ % stride_w == 0)
                     {
                         v += double(out_nkhw(n, k, ho, wo)) * double(wei_kcyx(k, c, y, x));
                     }
@@ -501,7 +499,7 @@ int main(int argc, char* argv[])
     constexpr index_t HDilation = 1;
     constexpr index_t WDilation = 1;
 
-    constexpr index_t Direction = 2; //1: Forward; 2:Backward
+    constexpr index_t Direction = 1; // 1: Forward; 2:Backward
 #if 0
     constexpr index_t N  = 32;
     constexpr index_t C  = 128;
@@ -553,8 +551,8 @@ int main(int argc, char* argv[])
     // 1x1 filter, 28x28 image
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;
-    constexpr index_t HI = 28;
-    constexpr index_t WI = 28;
+    constexpr index_t HI = 7;
+    constexpr index_t WI = 7;
     constexpr index_t K  = 128;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
@@ -716,8 +714,8 @@ int main(int argc, char* argv[])
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_0{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-      //out_nkhw.GenerateTensorValue(GeneratorTensor_Checkboard{}, num_thread);
-      //out_nkhw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        // out_nkhw.GenerateTensorValue(GeneratorTensor_Checkboard{}, num_thread);
+        // out_nkhw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         out_nkhw.GenerateTensorValue(GeneratorTensor_4{}, num_thread);
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_3{}, num_thread);
@@ -764,8 +762,7 @@ int main(int argc, char* argv[])
      strides,
      dilations,
      in_nchw_device,
-     nrepeat
-     );
+     nrepeat);
 
 #elif 1
     device_implicit_gemm_convolution_1_chwn_cyxk_khwn_padded(in_nchw_desc,

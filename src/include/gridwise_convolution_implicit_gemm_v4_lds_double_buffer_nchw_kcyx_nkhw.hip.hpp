@@ -112,27 +112,28 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
 
         // input tensor
         //     tensor descriptor in device memory [N0, N1, N2, Ho, Wo]
-        constexpr auto in_n0_n1_n2_h_w_global_desc = in_n_c_h_w_global_desc.Slice(I2,
-                Number<Ho/Strides::Get(I0)>{})
-            .Slice(I3, Number<Wo/Strides::Get(I1)>{})
-            .Fold(I0, Number<N1>{}, Number<N2>{})
-            .Extract(Sequence<0, 1, 2, 4, 5>{});
+        constexpr auto in_n0_n1_n2_h_w_global_desc =
+            in_n_c_h_w_global_desc
+                .Slice(I2, Number<mod_conv::integer_divide_ceil(Ho, Strides::Get(I0))>{})
+                .Slice(I3, Number<mod_conv::integer_divide_ceil(Wo, Strides::Get(I1))>{})
+                .Fold(I0, Number<N1>{}, Number<N2>{})
+                .Extract(Sequence<0, 1, 2, 4, 5>{});
 
-        //constexpr auto in_n0_n1_n2_h_w_global_desc =
-            //in_n_c_h_w_global_desc.Fold(I0, Number<N1>{}, Number<N2>{})
-                //.Extract(Sequence<0, 1, 2, 4, 5>{});
+        // constexpr auto in_n0_n1_n2_h_w_global_desc =
+        // in_n_c_h_w_global_desc.Fold(I0, Number<N1>{}, Number<N2>{})
+        //.Extract(Sequence<0, 1, 2, 4, 5>{});
 
-        //constexpr auto in_lengths_new = Sequence<N0, N1, N2, Ho, Wo>{};
+        // constexpr auto in_lengths_new = Sequence<N0, N1, N2, Ho, Wo>{};
 
-        //constexpr auto in_strides_new =
-            //Sequence<in_n0_n1_n2_h_w_global_desc.GetStride(I0),
-                     //in_n0_n1_n2_h_w_global_desc.GetStride(I1),
-                     //in_n0_n1_n2_h_w_global_desc.GetStride(I2),
-                     //in_n0_n1_n2_h_w_global_desc.GetStride(I3),
-                     //in_n0_n1_n2_h_w_global_desc.GetStride(I4)>{};
+        // constexpr auto in_strides_new =
+        // Sequence<in_n0_n1_n2_h_w_global_desc.GetStride(I0),
+        // in_n0_n1_n2_h_w_global_desc.GetStride(I1),
+        // in_n0_n1_n2_h_w_global_desc.GetStride(I2),
+        // in_n0_n1_n2_h_w_global_desc.GetStride(I3),
+        // in_n0_n1_n2_h_w_global_desc.GetStride(I4)>{};
 
-        //constexpr auto in_n0_n1_n2_h_w_new_global_desc =
-            //make_ConstantTensorDescriptor(in_lengths_new, in_strides_new);
+        // constexpr auto in_n0_n1_n2_h_w_new_global_desc =
+        // make_ConstantTensorDescriptor(in_lengths_new, in_strides_new);
         constexpr auto in_n0_n1_n2_h_w_new_global_desc = in_n0_n1_n2_h_w_global_desc;
 
         //     batch descritpor for device memory
@@ -140,17 +141,17 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
         constexpr auto in_c_y_x_global_desc = in_n_c_h_w_global_desc.Slice(I2, Number<Y>{})
                                                   .Slice(I3, Number<X>{})
                                                   .Extract(Sequence<1, 2, 3>{});
-        //constexpr auto in_win_lengths_new = Sequence<in_c_y_x_global_desc.GetLength(I0),
-                                                     //in_c_y_x_global_desc.GetLength(I1),
-                                                     //in_c_y_x_global_desc.GetLength(I2)>{};
+        // constexpr auto in_win_lengths_new = Sequence<in_c_y_x_global_desc.GetLength(I0),
+        // in_c_y_x_global_desc.GetLength(I1),
+        // in_c_y_x_global_desc.GetLength(I2)>{};
 
-        //constexpr auto in_win_strides_new =
-            //Sequence<in_c_y_x_global_desc.GetStride(I0),
-                     //in_c_y_x_global_desc.GetStride(I1),
-                     //in_c_y_x_global_desc.GetStride(I2)>{};
+        // constexpr auto in_win_strides_new =
+        // Sequence<in_c_y_x_global_desc.GetStride(I0),
+        // in_c_y_x_global_desc.GetStride(I1),
+        // in_c_y_x_global_desc.GetStride(I2)>{};
 
-        //constexpr auto in_c_y_x_new_global_desc =
-            //make_ConstantTensorDescriptor(in_win_lengths_new, in_win_strides_new);
+        // constexpr auto in_c_y_x_new_global_desc =
+        // make_ConstantTensorDescriptor(in_win_lengths_new, in_win_strides_new);
 
         //     merged tensor descriptor in device memory [E, N1, B, N2], src of blockwise copy
         constexpr auto in_e_n1_b_n2_global_merged_desc = make_ConstantMergedTensorDescriptor(
@@ -189,16 +190,14 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
                                                InBlockCopyDstDataPerWrite_N2>(
                 {0, 0, b_block_data_on_global, 0}, {0, 0, 0, 0});
 
-        // weight tensor
-        //     tensor descriptor in device memory, src of blockwise copy
+// weight tensor
+//     tensor descriptor in device memory, src of blockwise copy
 #if 0
         constexpr auto wei_e_k_global_desc =
             wei_k_c_y_x_global_desc.Unfold(I1, I3).ReorderGivenNew2Old(Sequence<1, 0>{});
 #else
-        constexpr auto wei_e_k_global_desc =
-            make_ConstantMergedTensorDescriptor(wei_k_c_y_x_global_desc,
-                    Sequence<1, 2, 3>{},
-                    Sequence<0>{});
+        constexpr auto wei_e_k_global_desc = make_ConstantMergedTensorDescriptor(
+            wei_k_c_y_x_global_desc, Sequence<1, 2, 3>{}, Sequence<0>{});
 #endif
 
         //     tensor descriptor in LDS, dst of blockwise copy
@@ -426,9 +425,10 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
                 out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetLength(I3),
                 out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetLength(I4),
                 out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetLength(I5),
-                out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetLength(I6) / Strides{}.Get(I0),
-                out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetLength(I7) / Strides{}.Get(I1)
-                >{};
+                mod_conv::integer_divide_ceil(
+                    out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetLength(I6), Strides{}.Get(I0)),
+                mod_conv::integer_divide_ceil(
+                    out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetLength(I7), Strides{}.Get(I1))>{};
 
             constexpr auto out_strides_new = Sequence<
                 out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetStride(I0),
@@ -438,12 +438,10 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
                 out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetStride(I4),
                 out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetStride(I5),
                 out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetStride(I6) * Strides{}.Get(I0),
-                out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetStride(I7) * Strides{}.Get(I1)
-                >{};
+                out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.GetStride(I7) * Strides{}.Get(I1)>{};
 
-            constexpr auto out_n0_n1_n2_k0_k1_k2_h_w_new_global_mem_desc = make_ConstantTensorDescriptor(
-                    out_lengths_new, out_strides_new
-                    );
+            constexpr auto out_n0_n1_n2_k0_k1_k2_h_w_new_global_mem_desc =
+                make_ConstantTensorDescriptor(out_lengths_new, out_strides_new);
 
             // calculate origin of thread output tensor on global memory
             //     blockwise GEMM c matrix starting index
