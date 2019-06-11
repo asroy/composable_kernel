@@ -13,7 +13,7 @@ template <class T,
           class Dilations,
           index_t Direction>
 void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
-                                                        const Tensor<T>& in_nchw,
+                                                        Tensor<T>& in_nchw,
                                                         WeiDesc,
                                                         const Tensor<T>& wei_kcyx,
                                                         OutDesc,
@@ -56,8 +56,9 @@ void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t N1 = 2;
     constexpr index_t N2 = 4;
 
-    constexpr index_t B = N * mod_conv::integer_divide_ceil(Ho, Strides::Get(I0)) *
-                          mod_conv::integer_divide_ceil(Wo, Strides::Get(I1)) / (N1 * N2);
+    //constexpr index_t B = N * mod_conv::integer_divide_ceil(Ho, Strides::Get(I0)) *
+    //mod_conv::integer_divide_ceil(Wo, Strides::Get(I1)) / (N1 * N2);
+    constexpr index_t B = (N * Ho * Wo) / (N1 * N2);
 
 #if 1
     constexpr index_t BlockSize = 256;
@@ -160,5 +161,8 @@ void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
         usleep(std::min(time * 1000, float(10000)));
     }
 
-    out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
+    if(Direction == 1)
+        out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
+    else
+        in_nchw_device_buf.FromDevice(in_nchw.mData.data());
 }

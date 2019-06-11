@@ -754,15 +754,15 @@ int main(int argc, char* argv[])
 #elif 1
     device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw
 #endif
-    (out_nkhw_desc,
-     out_nkhw,
+    (in_nchw_desc,
+     in_nchw_device,
      wei_kcyx_desc,
      wei_kcyx,
-     in_nchw_desc,
+     out_nkhw_desc,
      strides,
      dilations,
      Number<Direction>{},
-     in_nchw_device,
+     out_nkhw,
      nrepeat);
 
 #elif 1
