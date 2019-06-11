@@ -56,8 +56,8 @@ void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t N1 = 2;
     constexpr index_t N2 = 4;
 
-    //constexpr index_t B = N * mod_conv::integer_divide_ceil(Ho, Strides::Get(I0)) *
-    //mod_conv::integer_divide_ceil(Wo, Strides::Get(I1)) / (N1 * N2);
+    // constexpr index_t B = N * mod_conv::integer_divide_ceil(Ho, Strides::Get(I0)) *
+    // mod_conv::integer_divide_ceil(Wo, Strides::Get(I1)) / (N1 * N2);
     constexpr index_t B = (N * Ho * Wo) / (N1 * N2);
 
 #if 1
@@ -113,6 +113,7 @@ void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
              BlockSize,
              Strides,
              Dilations,
+             Direction,
              T,
              decltype(in_nchw_desc),
              decltype(wei_kcyx_desc),

@@ -493,13 +493,13 @@ void check_error(const Tensor<T>& ref, const Tensor<T>& result)
 
 int main(int argc, char* argv[])
 {
-    constexpr index_t HStride = 2;
-    constexpr index_t WStride = 2;
+    constexpr index_t HStride = 1;
+    constexpr index_t WStride = 1;
 
     constexpr index_t HDilation = 1;
     constexpr index_t WDilation = 1;
 
-    constexpr index_t Direction = 2; // 1: Forward; 2:Backward
+    constexpr index_t Direction = 1; // 1: Forward; 2:Backward
 #if 0
     constexpr index_t N  = 32;
     constexpr index_t C  = 128;
