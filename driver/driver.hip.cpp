@@ -493,13 +493,13 @@ void check_error(const Tensor<T>& ref, const Tensor<T>& result)
 
 int main(int argc, char* argv[])
 {
-    constexpr index_t HStride = 1;
-    constexpr index_t WStride = 1;
+    constexpr index_t HStride = 2;
+    constexpr index_t WStride = 2;
 
     constexpr index_t HDilation = 1;
     constexpr index_t WDilation = 1;
 
-    constexpr index_t Direction = 1; // 1: Forward; 2:Backward
+    constexpr index_t Direction = 2; // 1: Forward; 0:Backward
 #if 0
     constexpr index_t N  = 32;
     constexpr index_t C  = 128;
@@ -551,8 +551,8 @@ int main(int argc, char* argv[])
     // 1x1 filter, 28x28 image
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;
-    constexpr index_t HI = 7;
-    constexpr index_t WI = 7;
+    constexpr index_t HI = 13;
+    constexpr index_t WI = 13;
     constexpr index_t K  = 128;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
