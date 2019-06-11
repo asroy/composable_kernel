@@ -5,7 +5,13 @@
 #include "gridwise_convolution_implicit_gemm_v4_nchw_kcyx_nkhw.hip.hpp"
 #include "gridwise_convolution_implicit_gemm_v4_lds_double_buffer_nchw_kcyx_nkhw.hip.hpp"
 
-template <class T, class InDesc, class WeiDesc, class OutDesc, class Strides, class Dilations>
+template <class T,
+          class InDesc,
+          class WeiDesc,
+          class OutDesc,
+          class Strides,
+          class Dilations,
+          index_t Direction>
 void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
                                                         const Tensor<T>& in_nchw,
                                                         WeiDesc,
@@ -13,6 +19,7 @@ void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
                                                         OutDesc,
                                                         Strides,
                                                         Dilations,
+                                                        Number<Direction>,
                                                         Tensor<T>& out_nkhw,
                                                         index_t nrepeat)
 {

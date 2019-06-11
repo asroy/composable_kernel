@@ -71,7 +71,7 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
 
         constexpr auto in_n_c_h_w_global_desc = InGlobalDesc{};
         // to-do: backward data: 1) ckyx: yx unfold, 2) merge cyx = e, 3 out = ek
-        constexpr auto wei_k_c_y_x_global_desc = WeiGlobalDesc{};
+        constexpr auto wei_k_c_1_1_global_desc = WeiGlobalDesc{};
         constexpr auto out_n_k_h_w_global_desc = OutGlobalDesc{};
 
         constexpr index_t N  = in_n_c_h_w_global_desc.GetLength(I0);
@@ -83,8 +83,8 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
         constexpr index_t Ho = out_n_k_h_w_global_desc.GetLength(I2);
         constexpr index_t Wo = out_n_k_h_w_global_desc.GetLength(I3);
 
-        constexpr index_t Y = wei_k_c_y_x_global_desc.GetLength(I2);
-        constexpr index_t X = wei_k_c_y_x_global_desc.GetLength(I3);
+        constexpr index_t Y = wei_k_c_1_1_global_desc.GetLength(I2);
+        constexpr index_t X = wei_k_c_1_1_global_desc.GetLength(I3);
 
         static_assert(N % (N1 * N2) == 0, "wrong! cannot divice N evenly among thread");
 
@@ -192,12 +192,11 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
 
 // weight tensor
 //     tensor descriptor in device memory, src of blockwise copy
-#if 0
-        constexpr auto wei_e_k_global_desc =
-            wei_k_c_y_x_global_desc.Unfold(I1, I3).ReorderGivenNew2Old(Sequence<1, 0>{});
+#if 1 // backward
+        constexpr auto wei_e_k_global_desc = wei_k_c_1_1_global_desc.Unfold(I1, I3);
 #else
-        constexpr auto wei_e_k_global_desc = make_ConstantMergedTensorDescriptor(
-            wei_k_c_y_x_global_desc, Sequence<1, 2, 3>{}, Sequence<0>{});
+        constexpr auto wei_e_k_global_desc =
+            wei_k_c_y_x_global_desc.Unfold(I1, I3).ReorderGivenNew2Old(Sequence<1, 0>{})
 #endif
 
         //     tensor descriptor in LDS, dst of blockwise copy

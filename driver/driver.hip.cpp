@@ -499,7 +499,7 @@ int main(int argc, char* argv[])
     constexpr index_t HDilation = 1;
     constexpr index_t WDilation = 1;
 
-    constexpr index_t Direction = 1; // 1: Forward; 2:Backward
+    constexpr index_t Direction = 2; // 1: Forward; 2:Backward
 #if 0
     constexpr index_t N  = 32;
     constexpr index_t C  = 128;
@@ -680,7 +680,7 @@ int main(int argc, char* argv[])
     auto out_nkhw_desc = get_convolution_output_default_4d_tensor_descriptor(
         in_nchw_desc, wei_kcyx_desc, strides, dilations);
 
-    auto wei_ckyx_back_desc = wei_kcyx_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
+    // auto wei_ckyx_back_desc = wei_kcyx_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
 
     ostream_ConstantTensorDescriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
     ostream_ConstantTensorDescriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
@@ -756,11 +756,12 @@ int main(int argc, char* argv[])
 #endif
     (out_nkhw_desc,
      out_nkhw,
-     wei_ckyx_back_desc,
+     wei_kcyx_desc,
      wei_kcyx,
      in_nchw_desc,
      strides,
      dilations,
+     Number<Direction>{},
      in_nchw_device,
      nrepeat);
 
