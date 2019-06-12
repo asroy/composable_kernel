@@ -12,24 +12,26 @@ template <class T,
           class Strides,
           class Dilations,
           index_t Direction>
-void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
-                                                        Tensor<T>& in_nchw,
-                                                        WeiDesc,
-                                                        const Tensor<T>& wei_kcyx,
-                                                        OutDesc,
-                                                        Strides,
-                                                        Dilations,
-                                                        Number<Direction>,
-                                                        Tensor<T>& out_nkhw,
-                                                        index_t nrepeat)
+void device_convolution_implicit_gemm_v4_nchw_kc1x1_nkhw(InDesc,
+                                                         Tensor<T>& in_nchw,
+                                                         WeiDesc,
+                                                         const Tensor<T>& wei_kc,
+                                                         OutDesc,
+                                                         Strides,
+                                                         Dilations,
+                                                         Number<Direction>,
+                                                         Tensor<T>& out_nkhw,
+                                                         index_t nrepeat)
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
     constexpr auto I2 = Number<2>{};
     constexpr auto I3 = Number<3>{};
 
-    constexpr auto in_nchw_desc  = InDesc{};
-    constexpr auto wei_kcyx_desc = WeiDesc{};
+    constexpr auto in_nchw_desc = InDesc{};
+    static_assert(WeiDesc{}.GetLength(I2) == 1, "1x1 filter only");
+    static_assert(WeiDesc{}.GetLength(I3) == 1, "1x1 filter only");
+    constexpr auto wei_kc_desc   = WeiDesc{}.Extract(Sequence<0, 1>{});
     constexpr auto out_nkhw_desc = OutDesc{};
 
     constexpr index_t Hi = in_nchw_desc.GetLength(I2);
@@ -39,18 +41,16 @@ void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t Ho = out_nkhw_desc.GetLength(I2);
     constexpr index_t Wo = out_nkhw_desc.GetLength(I3);
 
-    constexpr index_t K = wei_kcyx_desc.GetLength(I0);
-    constexpr index_t C = wei_kcyx_desc.GetLength(I1);
-    constexpr index_t Y = wei_kcyx_desc.GetLength(I2);
-    constexpr index_t X = wei_kcyx_desc.GetLength(I3);
+    constexpr index_t K = wei_kc_desc.GetLength(I0);
+    constexpr index_t C = wei_kc_desc.GetLength(I1);
 
     std::size_t data_sz = sizeof(T);
     DeviceMem in_nchw_device_buf(data_sz * in_nchw.mDesc.GetElementSpace());
-    DeviceMem wei_kcyx_device_buf(data_sz * wei_kcyx.mDesc.GetElementSpace());
+    DeviceMem wei_kc_device_buf(data_sz * wei_kc.mDesc.GetElementSpace());
     DeviceMem out_nkhw_device_buf(data_sz * out_nkhw.mDesc.GetElementSpace());
 
     in_nchw_device_buf.ToDevice(in_nchw.mData.data());
-    wei_kcyx_device_buf.ToDevice(wei_kcyx.mData.data());
+    wei_kc_device_buf.ToDevice(wei_kc.mData.data());
     out_nkhw_device_buf.ToDevice(out_nkhw.mData.data());
 
     constexpr index_t N1 = 2;
@@ -104,55 +104,51 @@ void device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(InDesc,
     for(index_t i = 0; i < nrepeat; ++i)
     {
         constexpr auto gridwise_conv =
-#if 0
-            GridwiseConvolutionImplicitGemm_v4_nchw_kcyx_nkhw
-#else
-            GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kcyx_nkhw
-#endif
-            <GridSize,
-             BlockSize,
-             Strides,
-             Dilations,
-             Direction,
-             T,
-             decltype(in_nchw_desc),
-             decltype(wei_kcyx_desc),
-             decltype(out_nkhw_desc),
-             BPerBlock,
-             KPerBlock,
-             CPerBlock,
-             N1,
-             N2,
-             GemmMPerThreadSubC,
-             GemmNPerThreadSubC,
-             GemmMLevel0Cluster,
-             GemmNLevel0Cluster,
-             GemmMLevel1Cluster,
-             GemmNLevel1Cluster,
-             GemmKPerThreadLoop,
-             GemmDataPerReadA,
-             GemmDataPerReadB,
-             InBlockCopySubLengths_E_N1_B_N2,
-             InBlockCopyClusterLengths_E_N1_B_N2,
-             InBlockCopyThreadClusterArrangeOrder,
-             InBlockCopySrcAccessOrder,
-             InBlockCopyDstAccessOrder,
-             InBlockCopySrcDataPerRead_B,
-             InBlockCopyDstDataPerWrite_N2,
-             WeiBlockCopySubLengths_E_K,
-             WeiBlockCopyClusterLengths_E_K,
-             WeiBlockCopyThreadClusterArrangeOrder,
-             WeiBlockCopySrcAccessOrder,
-             WeiBlockCopyDstAccessOrder,
-             WeiBlockCopySrcDataPerRead_E,
-             WeiBlockCopyDstDataPerWrite_K>{};
+            GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kc1x1_nkhw<
+                GridSize,
+                BlockSize,
+                Strides,
+                Dilations,
+                Direction,
+                T,
+                decltype(in_nchw_desc),
+                decltype(wei_kc_desc),
+                decltype(out_nkhw_desc),
+                BPerBlock,
+                KPerBlock,
+                CPerBlock,
+                N1,
+                N2,
+                GemmMPerThreadSubC,
+                GemmNPerThreadSubC,
+                GemmMLevel0Cluster,
+                GemmNLevel0Cluster,
+                GemmMLevel1Cluster,
+                GemmNLevel1Cluster,
+                GemmKPerThreadLoop,
+                GemmDataPerReadA,
+                GemmDataPerReadB,
+                InBlockCopySubLengths_E_N1_B_N2,
+                InBlockCopyClusterLengths_E_N1_B_N2,
+                InBlockCopyThreadClusterArrangeOrder,
+                InBlockCopySrcAccessOrder,
+                InBlockCopyDstAccessOrder,
+                InBlockCopySrcDataPerRead_B,
+                InBlockCopyDstDataPerWrite_N2,
+                WeiBlockCopySubLengths_E_K,
+                WeiBlockCopyClusterLengths_E_K,
+                WeiBlockCopyThreadClusterArrangeOrder,
+                WeiBlockCopySrcAccessOrder,
+                WeiBlockCopyDstAccessOrder,
+                WeiBlockCopySrcDataPerRead_E,
+                WeiBlockCopyDstDataPerWrite_K>{};
 
         float time = launch_kernel(run_gridwise_convolution<decltype(gridwise_conv), T>,
                                    dim3(GridSize),
                                    dim3(BlockSize),
                                    0,
                                    static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-                                   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                                   static_cast<T*>(wei_kc_device_buf.GetDeviceBuffer()),
                                    static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
 
         printf("Elapsed time : %f ms, %f TFlop/s\n",
