@@ -29,8 +29,7 @@ void device_convolution_implicit_gemm_v4_nchw_kc1x1_nkhw(InDesc,
     constexpr auto I3 = Number<3>{};
 
     constexpr auto in_nchw_desc = InDesc{};
-    static_assert(WeiDesc{}.GetLength(I2) == 1, "1x1 filter only");
-    static_assert(WeiDesc{}.GetLength(I3) == 1, "1x1 filter only");
+    static_assert(WeiDesc{}.GetLength(I2) == 1 && WeiDesc{}.GetLength(I3) == 1, "1x1 filter only");
     constexpr auto wei_kc_desc   = WeiDesc{}.Extract(Sequence<0, 1>{});
     constexpr auto out_nkhw_desc = OutDesc{};
 
