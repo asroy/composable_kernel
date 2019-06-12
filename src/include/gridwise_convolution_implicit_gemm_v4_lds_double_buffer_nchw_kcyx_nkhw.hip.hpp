@@ -460,6 +460,7 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kc1x1_nkhw
             blockwise_wei_copy.RunLoadRegisterClipboard(p_wei_block_on_global,
                                                         p_wei_register_clipboard);
 
+            // vmcnt(0);
             blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard, p_in_block_double);
             blockwise_wei_copy.RunStoreRegisterClipboard(p_wei_register_clipboard,
                                                          p_wei_block_double);
@@ -504,6 +505,7 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kc1x1_nkhw
                 // LDS double buffer: GEMM on current data
                 run_blockwise_gemm(p_wei_block_now, p_in_block_now, p_out_thread);
 
+                // vmcnt(0);
                 // LDS double buffer: store next data to LDS
                 blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard,
                                                             p_in_block_next);
@@ -535,6 +537,7 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kc1x1_nkhw
             // LDS double buffer: GEMM on current data
             run_blockwise_gemm(p_wei_block_double, p_in_block_double, p_out_thread);
 
+            // vmcnt(0);
             // LDS double buffer: store next data to LDS
             blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard,
                                                         p_in_block_double + in_block_space);
