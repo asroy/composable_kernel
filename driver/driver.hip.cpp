@@ -499,7 +499,7 @@ int main(int argc, char* argv[])
     constexpr index_t HDilation = 1;
     constexpr index_t WDilation = 1;
 
-    constexpr index_t Direction = 2; // 1: Forward; 0:Backward
+    constexpr index_t Direction = 1; // 1: Forward; 0:Backward
 #if 0
     constexpr index_t N  = 32;
     constexpr index_t C  = 128;
@@ -550,10 +550,10 @@ int main(int argc, char* argv[])
 #elif 1
     // 1x1 filter, 28x28 image
     constexpr index_t N  = 128;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 56;
-    constexpr index_t WI = 56;
-    constexpr index_t K  = 256;
+    constexpr index_t C  = 512;
+    constexpr index_t HI = 28;
+    constexpr index_t WI = 28;
+    constexpr index_t K  = 512;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
 
@@ -721,7 +721,7 @@ int main(int argc, char* argv[])
         in_nchw.GenerateTensorValue(GeneratorTensor_3{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 1
-        in_nchw.GenerateTensorValue(GeneratorTensor_0{}, num_thread);
+        in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         out_nkhw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
 #elif 0
@@ -734,49 +734,33 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 1
-#if 0
-    device_direct_convolution_1
-#elif 0
-    device_convolution_direct_v2_nchw_kcyx_nkhw
-#elif 0
-    device_direct_convolution_2_vectorized_nchw_kcyx_nkhw
-#elif 0
-    device_convolution_implicit_gemm_v1_chwn_cyxk_khwn
-#elif 0
-    device_convolution_implicit_gemm_v1_nchw_cyxk_khwn
-#elif 0
-    device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw
-#elif 0
-    device_convolution_implicit_gemm_v2_chwn_cyxk_khwn
-#elif 0
-    device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw
-#elif 1
-    device_convolution_implicit_gemm_v4_nchw_kc1x1_nkhw
-#endif
-    (in_nchw_desc,
-     in_nchw_device,
-     wei_kcyx_desc,
-     wei_kcyx,
-     out_nkhw_desc,
-     strides,
-     dilations,
-     Number<Direction>{},
-     out_nkhw,
-     nrepeat);
+    if(Direction == 1)
+    {
 
-#elif 1
-    device_implicit_gemm_convolution_1_chwn_cyxk_khwn_padded(in_nchw_desc,
-                                                             in_nchw,
-                                                             wei_kcyx_desc,
-                                                             wei_kcyx,
-                                                             out_nkhw_desc,
-                                                             out_nkhw_device,
-                                                             lower_pads,
-                                                             upper_pads,
-                                                             nrepeat);
-#endif
-
+        device_convolution_implicit_gemm_v4_nchw_kc1x1_nkhw(in_nchw_desc,
+                                                            in_nchw,
+                                                            wei_kcyx_desc,
+                                                            wei_kcyx,
+                                                            out_nkhw_desc,
+                                                            strides,
+                                                            dilations,
+                                                            Number<Direction>{},
+                                                            out_nkhw_device,
+                                                            nrepeat);
+    }
+    else
+    {
+        device_convolution_implicit_gemm_v4_nchw_kc1x1_nkhw(in_nchw_desc,
+                                                            in_nchw_device,
+                                                            wei_kcyx_desc,
+                                                            wei_kcyx,
+                                                            out_nkhw_desc,
+                                                            strides,
+                                                            dilations,
+                                                            Number<Direction>{},
+                                                            out_nkhw,
+                                                            nrepeat);
+    }
     if(do_verification)
     {
 #if 0
@@ -800,10 +784,13 @@ int main(int argc, char* argv[])
         }
 
 #if 0
-        LogRange(std::cout << "out_nkhw: ", out_nkhw.mData, ",") << std::endl;
-        LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
-        LogRange(std::cout << "in_nchw_host  : ", in_nchw.mData, ",") << std::endl;
-        LogRange(std::cout << "in_nchw_device: ", in_nchw_device.mData, ",") << std::endl;
+        //LogRange(std::cout << "out_nkhw: ", out_nkhw.mData, ",") << std::endl;
+        //LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
+        //LogRange(std::cout << "in_nchw_host  : ", in_nchw.mData, ",") << std::endl;
+        //LogRange(std::cout << "in_nchw_device: ", in_nchw_device.mData, ",") << std::endl;
+
+        //LogRange(std::cout << "out_nkhw_host  : ", out_nkhw.mData, ",") << std::endl;
+        LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
 #endif
     }
 }

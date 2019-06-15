@@ -27,7 +27,7 @@ template <bool isForw,
           index_t Wo,
           class Strides,
           class Dilations>
-struct GetInGlobalMergeDesc;
+struct GetInGlobalFinalDesc;
 
 template <class InType,
           index_t N1,
@@ -36,7 +36,7 @@ template <class InType,
           index_t Wo,
           class Strides,
           class Dilations>
-struct GetInGlobalMergeDesc<true, InType, N1, N2, Ho, Wo, Strides, Dilations>
+struct GetInGlobalFinalDesc<true, InType, N1, N2, Ho, Wo, Strides, Dilations>
 {
     __host__ __device__ constexpr auto GetDesc()
     {
@@ -102,7 +102,7 @@ template <class InType,
           index_t Wo,
           class Strides,
           class Dilations>
-struct GetInGlobalMergeDesc<false, InType, N1, N2, Ho, Wo, Strides, Dilations>
+struct GetInGlobalFinalDesc<false, InType, N1, N2, Ho, Wo, Strides, Dilations>
 {
     __host__ __device__ constexpr auto GetDesc()
     {
@@ -141,17 +141,17 @@ struct GetInGlobalMergeDesc<false, InType, N1, N2, Ho, Wo, Strides, Dilations>
 };
 
 template <bool isForw, class OutType, class Strides>
-struct GetOutGlobalMergeDesc;
+struct GetOutGlobalFinalDesc;
 
 template <class OutType, class Strides>
-struct GetOutGlobalMergeDesc<true, OutType, Strides>
+struct GetOutGlobalFinalDesc<true, OutType, Strides>
 {
 
     __host__ __device__ constexpr auto GetDesc() { return OutType{}; }
 };
 
 template <class OutType, class Strides>
-struct GetOutGlobalMergeDesc<false, OutType, Strides>
+struct GetOutGlobalFinalDesc<false, OutType, Strides>
 {
     __host__ __device__ constexpr auto GetDesc()
     {
@@ -193,6 +193,24 @@ struct GetOutGlobalMergeDesc<false, OutType, Strides>
 
         return out_n0_n1_n2_k0_k1_k2_h_w_new_global_mem_desc;
     }
+};
+
+template <bool isForw, class WeiType>
+struct GetWeiFinalDesc;
+
+template <class WeiType>
+struct GetWeiFinalDesc<true, WeiType>
+{
+    __host__ __device__ constexpr auto GetDesc()
+    {
+        return WeiType{}.ReorderGivenNew2Old(Sequence<1, 0>{});
+    }
+};
+
+template <class WeiType>
+struct GetWeiFinalDesc<false, WeiType>
+{
+    __host__ __device__ constexpr auto GetDesc() { return WeiType{}; }
 };
 
 // define B = merge(N0, Ho, Wo)
@@ -311,7 +329,7 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kc1x1_nkhw
                                               .Extract(Sequence<1, 2, 3>{});
         constexpr bool fwd = Direction == 1;
         constexpr auto in_e_n1_b_n2_global_merged_desc =
-            GetInGlobalMergeDesc<fwd,
+            GetInGlobalFinalDesc<fwd,
                                  decltype(in_n_c_h_w_global_desc),
                                  N1,
                                  N2,
@@ -352,7 +370,8 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kc1x1_nkhw
 
         // weight tensor
         //     tensor descriptor in device memory, src of blockwise copy
-        constexpr auto wei_e_k_global_desc = wei_k_c_global_desc;
+        constexpr auto wei_e_k_global_desc =
+            GetWeiFinalDesc<fwd, decltype(wei_k_c_global_desc)>{}.GetDesc();
 
         //     tensor descriptor in LDS, dst of blockwise copy
         //     be careful of LDS alignment
@@ -576,7 +595,7 @@ struct GridwiseConvolutionImplicitGemm_v4_lds_double_buffer_nchw_kc1x1_nkhw
                     .Fold(I0, Number<N1>{}, Number<N2>{});
 
             constexpr auto out_n0_n1_n2_k0_k1_k2_h_w_new_global_mem_desc =
-                GetOutGlobalMergeDesc<fwd,
+                GetOutGlobalFinalDesc<fwd,
                                       decltype(out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc),
                                       Strides>{}
                     .GetDesc();
