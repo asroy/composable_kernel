@@ -6,6 +6,7 @@
 #include "config.hpp"
 #include "ConstantTensorDescriptor.hpp"
 #include "device.hpp"
+#include "tensor.hpp"
 #include "conv_common.hpp"
 #include "device_convolution_direct_v2_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v1_chwn_cyxk_khwn.hpp"
@@ -64,44 +65,6 @@ struct GeneratorTensor_Checkboard
                    : -1;
     }
 };
-
-// this is ugly, only for 4d
-template <class TConstTensorDesc>
-void ostream_ConstantTensorDescriptor(TConstTensorDesc, std::ostream& os = std::cout)
-{
-    static_assert(TConstTensorDesc::nDim == 4, "nDim is not 4");
-
-    constexpr auto I0   = Number<0>{};
-    constexpr auto I1   = Number<1>{};
-    constexpr auto I2   = Number<2>{};
-    constexpr auto I3   = Number<3>{};
-    constexpr auto desc = TConstTensorDesc{};
-
-    os << "Lengths: {" << desc.GetLength(I0) << ", " << desc.GetLength(I1) << ", "
-       << desc.GetLength(I2) << ", " << desc.GetLength(I3) << "}, "
-       << "Strides: {" << desc.GetStride(I0) << ", " << desc.GetStride(I1) << ", "
-       << desc.GetStride(I2) << ", " << desc.GetStride(I3) << "}" << std::endl;
-}
-
-// this is ugly, only for 4d
-template <class TConstTensorDesc>
-auto make_TensorDescriptor(TConstTensorDesc)
-{
-    static_assert(TConstTensorDesc::nDim == 4, "nDim is not 4");
-
-    constexpr auto I0   = Number<0>{};
-    constexpr auto I1   = Number<1>{};
-    constexpr auto I2   = Number<2>{};
-    constexpr auto I3   = Number<3>{};
-    constexpr auto desc = TConstTensorDesc{};
-
-    std::initializer_list<index_t> lengths = {
-        desc.GetLength(I0), desc.GetLength(I1), desc.GetLength(I2), desc.GetLength(I3)};
-    std::initializer_list<index_t> strides = {
-        desc.GetStride(I0), desc.GetStride(I1), desc.GetStride(I2), desc.GetStride(I3)};
-
-    return TensorDescriptor(lengths, strides);
-}
 
 template <class TIn,
           class TWei,
@@ -460,7 +423,7 @@ int main(int argc, char* argv[])
     constexpr index_t C  = 256;
     constexpr index_t HI = 28;
     constexpr index_t WI = 28;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 512;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -651,30 +614,31 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 1
 #if 0
-    device_convolution_direct_v2_nchw_kcyx_nkhw
+    device_convolution_direct_v2_nchw_kcyx_nkhw(
+        in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
 #elif 0
-    device_convolution_implicit_gemm_v1_chwn_cyxk_khwn
+    device_convolution_implicit_gemm_v1_chwn_cyxk_khwn(
+        in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
 #elif 0
-    device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw
+    device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw(
+        in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
 #elif 0
-    device_convolution_implicit_gemm_v2_chwn_cyxk_khwn
+    device_convolution_implicit_gemm_v2_chwn_cyxk_khwn(
+        in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
 #elif 0
-    device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw
+    device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw(
+        in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
 #elif 1
-    device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw
-#endif
-    (in_nchw_desc,
-     in_nchw,
-     wei_kcyx_desc,
-     wei_kcyx,
-     out_nkhw_desc,
-     out_nkhw_device,
-     ConvStrides{},
-     ConvDilations{},
-     nrepeat);
-
+    device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(in_nchw_desc,
+                                                       in_nchw,
+                                                       wei_kcyx_desc,
+                                                       wei_kcyx,
+                                                       out_nkhw_desc,
+                                                       out_nkhw_device,
+                                                       ConvStrides{},
+                                                       ConvDilations{},
+                                                       nrepeat);
 #elif 0
     device_implicit_gemm_convolution_1_chwn_cyxk_khwn_padded(in_nchw_desc,
                                                              in_nchw,

@@ -64,6 +64,11 @@ struct vector_type<float, 4>
     }
 };
 
+__device__ void fused_multiply_accumulate(float& d, const float& s0, const float& s1)
+{
+    d += s0 * s1;
+}
+
 } // namespace ck
 
 #endif
