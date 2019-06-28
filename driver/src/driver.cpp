@@ -7,11 +7,6 @@
 #include "ConstantTensorDescriptor.hpp"
 #include "device.hpp"
 #include "conv_common.hpp"
-#include "device_convolution_direct_v2_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v1_chwn_cyxk_khwn.hpp"
-#include "device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v2_chwn_cyxk_khwn.hpp"
-#include "device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw.hpp"
 
 using namespace ck;
@@ -417,185 +412,6 @@ void check_error(const Tensor<T>& ref, const Tensor<T>& result)
 int main(int argc, char* argv[])
 {
 #if 0
-    constexpr index_t N  = 8;
-    constexpr index_t C  = 16;
-    constexpr index_t HI = 3;
-    constexpr index_t WI = 18;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 3x3, 34x34
-    constexpr index_t N  = 128;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 34;
-    constexpr index_t WI = 34;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    using ConvStrides   = Sequence<2, 2>;
-    using ConvDilations = Sequence<1, 1>;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 3x3, 56x56
-    constexpr index_t N  = 64;
-    constexpr index_t C  = 64;
-    constexpr index_t HI = 56;
-    constexpr index_t WI = 56;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 3x3 filter, 28x28 image
-    constexpr index_t N  = 128;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 28;
-    constexpr index_t WI = 28;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    using ConvStrides   = Sequence<1, 1>;
-    using ConvDilations = Sequence<1, 1>;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 1x1 filter, 28x28 image
-    constexpr index_t N  = 128;
-    constexpr index_t C  = 512;
-    constexpr index_t HI = 28;
-    constexpr index_t WI = 28;
-    constexpr index_t K  = 512;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
-
-    using ConvStrides   = Sequence<1, 1>;
-    using ConvDilations = Sequence<1, 1>;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 3x3 filter, 20x84 image, 1x1 padding
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 20;
-    constexpr index_t WI = 84;
-    constexpr index_t K  = 256;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    constexpr index_t HPad = 1;
-    constexpr index_t WPad = 1;
-#elif 0
-    // 3x3 filter, 112x112 image, 1x1 padding
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 64;
-    constexpr index_t HI = 112;
-    constexpr index_t WI = 112;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    constexpr index_t HPad = 1;
-    constexpr index_t WPad = 1;
-#elif 0
-    // 5x5 filter, 20x86 image
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 20;
-    constexpr index_t WI = 86;
-    constexpr index_t K  = 512;
-    constexpr index_t Y  = 5;
-    constexpr index_t X  = 5;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 5x5 filter, 20x86 image, 1x1 padding
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 20;
-    constexpr index_t WI = 86;
-    constexpr index_t K  = 512;
-    constexpr index_t Y  = 5;
-    constexpr index_t X  = 5;
-
-    constexpr index_t HPad = 1;
-    constexpr index_t WPad = 1;
-#elif 0
-    // 5x5 filter, 28x28 image, 2x2 padding
-    constexpr index_t N  = 16;
-    constexpr index_t C  = 192;
-    constexpr index_t HI = 28;
-    constexpr index_t WI = 28;
-    constexpr index_t K  = 32;
-    constexpr index_t Y  = 5;
-    constexpr index_t X  = 5;
-
-    constexpr index_t HPad = 2;
-    constexpr index_t WPad = 2;
-#elif 0
-    // 3x3 filter, 14x14 image
-    constexpr index_t N  = 128;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 14;
-    constexpr index_t WI = 14;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 1x1 filter, 14x14 image
-    constexpr index_t N  = 128;
-    constexpr index_t C  = 512;
-    constexpr index_t HI = 14;
-    constexpr index_t WI = 14;
-    constexpr index_t K  = 512;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
-
-    using ConvStrides   = Sequence<1, 1>;
-    using ConvDilations = Sequence<1, 1>;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 1x1 filter, 7x7 image
-    constexpr index_t N  = 128;
-    constexpr index_t C  = 512;
-    constexpr index_t HI = 7;
-    constexpr index_t WI = 7;
-    constexpr index_t K  = 2048;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
-    // 1x1 filter, 73x73 image
-    constexpr index_t N  = 128;
-    constexpr index_t C  = 512;
-    constexpr index_t HI = 73;
-    constexpr index_t WI = 73;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
-
-    constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
-#elif 0
     // 1x1 filter, 8x8 image
     // cudnn@V100 68%, ck@V100 72%, ck@P100 52%, ck@VII 42%
     constexpr index_t N  = 64;
@@ -611,7 +427,7 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
-#elif 0
+#elif 1
     // 1x1 filter, 8x8 image
     // cudnn@V100 77%, ck@V100 76%, ck@P100 79%, ck@VII 51%
     constexpr index_t N  = 128;
@@ -837,63 +653,19 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 0
-        in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-        wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-#elif 0
-        in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-        wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-#elif 0
-        in_nchw.GenerateTensorValue(GeneratorTensor_3{}, num_thread);
-        wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-#elif 1
         in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-#elif 0
-        in_nchw.GenerateTensorValue(GeneratorTensor_2{1, 5}, num_thread);
-
-        auto gen_wei = [](auto... is) {
-            return GeneratorTensor_2{1, 5}(is...) * GeneratorTensor_Checkboard{}(is...);
-        };
-        wei_kcyx.GenerateTensorValue(gen_wei, num_thread);
-#endif
     }
 
-#if 1
-#if 0
-    device_convolution_direct_v2_nchw_kcyx_nkhw
-#elif 0
-    device_convolution_implicit_gemm_v1_chwn_cyxk_khwn
-#elif 0
-    device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw
-#elif 0
-    device_convolution_implicit_gemm_v2_chwn_cyxk_khwn
-#elif 0
-    device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw
-#elif 1
-    device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw
-#endif
-    (in_nchw_desc,
-     in_nchw,
-     wei_kcyx_desc,
-     wei_kcyx,
-     out_nkhw_desc,
-     out_nkhw_device,
-     ConvStrides{},
-     ConvDilations{},
-     nrepeat);
-
-#elif 0
-    device_implicit_gemm_convolution_1_chwn_cyxk_khwn_padded(in_nchw_desc,
-                                                             in_nchw,
-                                                             wei_kcyx_desc,
-                                                             wei_kcyx,
-                                                             out_nkhw_desc,
-                                                             out_nkhw_device,
-                                                             lower_pads,
-                                                             upper_pads,
-                                                             nrepeat);
-#endif
+    device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw(in_nchw_desc,
+                                                       in_nchw,
+                                                       wei_kcyx_desc,
+                                                       wei_kcyx,
+                                                       out_nkhw_desc,
+                                                       out_nkhw_device,
+                                                       ConvStrides{},
+                                                       ConvDilations{},
+                                                       nrepeat);
 
     if(do_verification)
     {
@@ -915,12 +687,5 @@ int main(int argc, char* argv[])
                                     upper_pads);
         }
         check_error(out_nkhw_host, out_nkhw_device);
-
-#if 0
-        LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
-        LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
-        LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
-        LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
-#endif
     }
 }
