@@ -9,11 +9,11 @@ using namespace ck;
 
 template <class T, class InDesc, class WeiDesc, class OutDesc>
 void device_convolution_direct_v2_nchw_kcyx_nkhw(InDesc,
-                                                 const Tensor<T>& in,
+                                                 const HostTensor<T>& in,
                                                  WeiDesc,
-                                                 const Tensor<T>& wei,
+                                                 const HostTensor<T>& wei,
                                                  OutDesc,
-                                                 Tensor<T>& out,
+                                                 HostTensor<T>& out,
                                                  index_t nrepeat)
 {
     std::size_t data_sz = sizeof(T);

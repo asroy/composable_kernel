@@ -2,7 +2,7 @@
 #define CK_THREADWISE_GEMM_HPP
 
 #include "common_header.hpp"
-#include "ConstantMatrixDescriptor.hpp"
+#include "constant_matrix_descriptor.hpp"
 
 namespace ck {
 

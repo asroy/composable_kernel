@@ -2,7 +2,7 @@
 #define CK_FUNCTIONAL_HPP
 
 #include "integral_constant.hpp"
-#include "Sequence.hpp"
+#include "sequence.hpp"
 
 namespace ck {
 

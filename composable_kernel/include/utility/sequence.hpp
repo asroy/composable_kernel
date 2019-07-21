@@ -433,7 +433,7 @@ __host__ __device__ void print_Sequence(const char* s, Sequence<Xs...>)
 {
     constexpr index_t nsize = Sequence<Xs...>::GetSize();
 
-    static_assert(nsize <= 10, "wrong!");
+    static_assert(nsize <= 12, "wrong!");
 
     static_if<nsize == 0>{}([&](auto) { printf("%s size %u, {}\n", s, nsize, Xs...); });
 
@@ -462,6 +462,13 @@ __host__ __device__ void print_Sequence(const char* s, Sequence<Xs...>)
 
     static_if<nsize == 10>{}(
         [&](auto) { printf("%s size %u, {%u %u %u %u %u %u %u %u %u %u}\n", s, nsize, Xs...); });
+
+    static_if<nsize == 11>{}(
+        [&](auto) { printf("%s size %u, {%u %u %u %u %u %u %u %u %u %u %u}\n", s, nsize, Xs...); });
+
+    static_if<nsize == 12>{}([&](auto) {
+        printf("%s size %u, {%u %u %u %u %u %u %u %u %u %u %u %u}\n", s, nsize, Xs...);
+    });
 }
 
 } // namespace ck

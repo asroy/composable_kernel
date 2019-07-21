@@ -2,7 +2,7 @@
 #define CK_BLOCKWISE_BATCHED_GEMM_HPP
 
 #include "common_header.hpp"
-#include "ConstantMatrixDescriptor.hpp"
+#include "constant_matrix_descriptor.hpp"
 #include "threadwise_gemm.hpp"
 
 namespace ck {

@@ -2,9 +2,9 @@
 #define CK_GRIDWISE_CONVOLUTION_IMPLICIT_GEMM_V3_NCHW_CYXK_NKHW
 
 #include "common_header.hpp"
-#include "ConstantTensorDescriptor.hpp"
-#include "ConstantMergedTensorDescriptor.hpp"
-#include "ConstantMatrixDescriptor.hpp"
+#include "constant_tensor_descriptor.hpp"
+#include "constant_merged_tensor_descriptor.hpp"
+#include "constant_matrix_descriptor.hpp"
 #include "blockwise_generic_tensor_slice_copy.hpp"
 #include "blockwise_gemm.hpp"
 

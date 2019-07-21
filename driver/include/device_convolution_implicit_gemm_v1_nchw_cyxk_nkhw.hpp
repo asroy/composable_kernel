@@ -10,11 +10,11 @@ using namespace ck;
 
 template <class T, class InDesc, class WeiDesc, class OutDesc>
 void device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw(InDesc,
-                                                        const Tensor<T>& in_nchw,
+                                                        const HostTensor<T>& in_nchw,
                                                         WeiDesc,
-                                                        const Tensor<T>& wei_kcyx,
+                                                        const HostTensor<T>& wei_kcyx,
                                                         OutDesc,
-                                                        Tensor<T>& out_nkhw,
+                                                        HostTensor<T>& out_nkhw,
                                                         index_t nrepeat)
 {
     constexpr auto I0 = Number<0>{};
@@ -42,7 +42,7 @@ void device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw(InDesc,
     auto wei_cyxk_desc = make_ConstantTensorDescriptor_packed(Sequence<C, Y, X, K>{});
     ostream_ConstantTensorDescriptor(wei_cyxk_desc, std::cout << "wei_cyxk_desc: ");
 
-    Tensor<T> wei_cyxk(make_TensorDescriptor(wei_cyxk_desc));
+    HostTensor<T> wei_cyxk(make_TensorDescriptor(wei_cyxk_desc));
 
     auto f_reorder_kcyx2cyxk = [&](auto k, auto c, auto y, auto x) {
         wei_cyxk(c, y, x, k) = wei_kcyx(k, c, y, x);

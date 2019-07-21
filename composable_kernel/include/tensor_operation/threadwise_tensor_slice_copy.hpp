@@ -2,7 +2,7 @@
 #define CK_THREADWISE_TENSOR_SLICE_COPY_HPP
 
 #include "common_header.hpp"
-#include "ConstantTensorDescriptor.hpp"
+#include "constant_tensor_descriptor.hpp"
 
 namespace ck {
 

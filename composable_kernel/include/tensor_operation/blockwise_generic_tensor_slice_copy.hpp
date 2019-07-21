@@ -2,8 +2,8 @@
 #define CK_BLOCKWISE_GENERIC_TENSOR_SLICE_COPY_HPP
 
 #include "common_header.hpp"
-#include "ConstantTensorDescriptor.hpp"
-#include "ConstantMergedTensorDescriptor.hpp"
+#include "constant_tensor_descriptor.hpp"
+#include "constant_merged_tensor_descriptor.hpp"
 #include "threadwise_generic_tensor_slice_copy.hpp"
 
 #ifndef CK_EXPERIMENTAL_USE_MORE_COMPILE_STATIC_BLOCKWISE_GENERIC_SLICE_COPY_V1
@@ -214,7 +214,7 @@ struct BlockwiseGenericTensorSliceCopy_v1
             // By setting SubLengths = 1 at the merged dimension, this is always true;
             // If in the future, you want to enable SubLengths > 1 at the merged dimension,
             // special care in implementation is needed
-            threadwise_generic_tensor_slice_copy_v1(SrcDesc{},
+            threadwise_generic_tensor_slice_copy_v2(SrcDesc{},
                                                     p_src + src_offset + mThreadSrcOffset,
                                                     make_zero_array<index_t, nDim>(),
                                                     thread_tensor_desc,
@@ -269,7 +269,7 @@ struct BlockwiseGenericTensorSliceCopy_v1
             // By setting SubLengths = 1 at the merged dimension, this is always true;
             // If in the future, you want to enable SubLengths > 1 at the merged dimension,
             // special care in implementation is needed
-            threadwise_generic_tensor_slice_copy_v1(thread_tensor_desc,
+            threadwise_generic_tensor_slice_copy_v2(thread_tensor_desc,
                                                     p_clipboard + clipboard_offset,
                                                     make_zero_array<index_t, nDim>(),
                                                     DstDesc{},
@@ -373,6 +373,37 @@ struct BlockwiseGenericTensorSliceCopy_v1
     }
 };
 
-} // namespace ck
+template <index_t BlockSize,
+          class SrcDesc,
+          class DstDesc,
+          class SubLengths,
+          class DataClusterLengths,
+          class ThreadClusterArrangeOrder,
+          class SrcAccessOrder,
+          class DstAccessOrder,
+          index_t SrcDataPerAccess,
+          index_t DstDataPerAccess>
+struct BlockwiseTensorCopy_v2
+{
+    static constexpr index_t nDim = SliceLengths::GetSize();
 
+    using ThreadwiseSliceCopy = GetThreadwiseTensorCopyOperator();
+
+    __device__ BlockwiseTensorCopy_v2(SrcTensor src_tensor, DstTensor dst_tensor)
+    {
+        // initialize threadwise-copy
+    }
+
+    __device__ void RunRead(const Float* __restrict__ p_src) {}
+
+    __device__ void RunWrite(Float* __restrict__ p_dst) const {}
+
+    __device__ void Run(const Float* __restrict__ p_src, Float* __restrict__ p_dst) const
+    {
+        RunRead(p_src);
+        RunWrite(p_dst);
+    }
+};
+
+} // namespace ck
 #endif

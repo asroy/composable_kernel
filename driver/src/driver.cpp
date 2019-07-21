@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <stdlib.h>
 #include "config.hpp"
-#include "ConstantTensorDescriptor.hpp"
+#include "constant_tensor_descriptor.hpp"
 #include "device.hpp"
 #include "conv_common.hpp"
 #include "host_conv.hpp"
@@ -473,10 +473,10 @@ int main(int argc, char* argv[])
 
     using in_data_t  = float;
     using out_data_t = float;
-    Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
-    Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
-    Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
-    Tensor<out_data_t> out_nkhw_device(make_TensorDescriptor(out_nkhw_desc));
+    HostTensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
+    HostTensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
+    HostTensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
+    HostTensor<out_data_t> out_nkhw_device(make_TensorDescriptor(out_nkhw_desc));
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
@@ -491,7 +491,7 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 1
+#if 0
         in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 0
@@ -503,6 +503,9 @@ int main(int argc, char* argv[])
 #elif 1
         in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+#elif 0
+        in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        wei_kcyx.GenerateTensorValue(GeneratorTensor_3{}, num_thread);
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_2{1, 5}, num_thread);
 

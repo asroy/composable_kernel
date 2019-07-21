@@ -1,5 +1,5 @@
-#ifndef TENSOR_HPP
-#define TENSOR_HPP
+#ifndef HOST_TENSOR_HPP
+#define HOST_TENSOR_HPP
 
 #include <thread>
 #include <vector>
@@ -65,24 +65,24 @@ auto construct_f_unpack_args(F, T args)
     return construct_f_unpack_args_impl<F>(args, std::make_index_sequence<N>{});
 }
 
-struct TensorDescriptor
+struct HostTensorDescriptor
 {
-    TensorDescriptor() = delete;
-    TensorDescriptor(std::initializer_list<std::size_t> lens);
-    TensorDescriptor(std::initializer_list<std::size_t> lens,
-                     std::initializer_list<std::size_t> strides);
-    TensorDescriptor(std::vector<std::size_t> lens, std::vector<std::size_t> strides);
+    HostTensorDescriptor() = delete;
+    HostTensorDescriptor(std::initializer_list<std::size_t> lens);
+    HostTensorDescriptor(std::initializer_list<std::size_t> lens,
+                         std::initializer_list<std::size_t> strides);
+    HostTensorDescriptor(std::vector<std::size_t> lens, std::vector<std::size_t> strides);
 
     void CalculateStrides();
 
     template <class Range>
-    TensorDescriptor(const Range& lens) : mLens(lens.begin(), lens.end())
+    HostTensorDescriptor(const Range& lens) : mLens(lens.begin(), lens.end())
     {
         this->CalculateStrides();
     }
 
     template <class Range1, class Range2>
-    TensorDescriptor(const Range1& lens, const Range2& strides)
+    HostTensorDescriptor(const Range1& lens, const Range2& strides)
         : mLens(lens.begin(), lens.end()), mStrides(strides.begin(), strides.end())
     {
     }
@@ -185,25 +185,25 @@ auto make_ParallelTensorFunctor(F f, Xs... xs)
 }
 
 template <class T>
-struct Tensor
+struct HostTensor
 {
     template <class X>
-    Tensor(std::initializer_list<X> lens) : mDesc(lens), mData(mDesc.GetElementSpace())
+    HostTensor(std::initializer_list<X> lens) : mDesc(lens), mData(mDesc.GetElementSpace())
     {
     }
 
     template <class X>
-    Tensor(std::vector<X> lens) : mDesc(lens), mData(mDesc.GetElementSpace())
+    HostTensor(std::vector<X> lens) : mDesc(lens), mData(mDesc.GetElementSpace())
     {
     }
 
     template <class X, class Y>
-    Tensor(std::vector<X> lens, std::vector<Y> strides)
+    HostTensor(std::vector<X> lens, std::vector<Y> strides)
         : mDesc(lens, strides), mData(mDesc.GetElementSpace())
     {
     }
 
-    Tensor(const TensorDescriptor& desc) : mDesc(desc), mData(mDesc.GetElementSpace()) {}
+    HostTensor(const HostTensorDescriptor& desc) : mDesc(desc), mData(mDesc.GetElementSpace()) {}
 
     template <class G>
     void GenerateTensorValue(G g, std::size_t num_thread = 1)
@@ -265,7 +265,7 @@ struct Tensor
 
     typename std::vector<T>::const_iterator end() const { return mData.end(); }
 
-    TensorDescriptor mDesc;
+    HostTensorDescriptor mDesc;
     std::vector<T> mData;
 };
 

@@ -10,11 +10,11 @@ using namespace ck;
 
 template <class T, class InDesc, class WeiDesc, class OutDesc>
 void device_convolution_implicit_gemm_v2_chwn_cyxk_khwn(InDesc,
-                                                        const Tensor<T>& in_nchw,
+                                                        const HostTensor<T>& in_nchw,
                                                         WeiDesc,
-                                                        const Tensor<T>& wei_kcyx,
+                                                        const HostTensor<T>& wei_kcyx,
                                                         OutDesc,
-                                                        Tensor<T>& out_nkhw,
+                                                        HostTensor<T>& out_nkhw,
                                                         index_t nrepeat)
 {
     constexpr auto I0 = Number<0>{};
@@ -44,7 +44,7 @@ void device_convolution_implicit_gemm_v2_chwn_cyxk_khwn(InDesc,
     auto in_chwn_desc = make_ConstantTensorDescriptor(Sequence<C, Hi, Wi, N>{});
     ostream_ConstantTensorDescriptor(in_chwn_desc, std::cout << "in_chwn_desc: ");
 
-    Tensor<T> in_chwn(make_TensorDescriptor(in_chwn_desc));
+    HostTensor<T> in_chwn(make_TensorDescriptor(in_chwn_desc));
 
     make_ParallelTensorFunctor(
         [&](auto n, auto c, auto hi, auto wi) { in_chwn(c, hi, wi, n) = in_nchw(n, c, hi, wi); },
@@ -57,7 +57,7 @@ void device_convolution_implicit_gemm_v2_chwn_cyxk_khwn(InDesc,
     auto wei_cyxk_desc = make_ConstantTensorDescriptor(Sequence<C, Y, X, K>{});
     ostream_ConstantTensorDescriptor(wei_cyxk_desc, std::cout << "wei_cyxk_desc: ");
 
-    Tensor<T> wei_cyxk(make_TensorDescriptor(wei_cyxk_desc));
+    HostTensor<T> wei_cyxk(make_TensorDescriptor(wei_cyxk_desc));
 
     make_ParallelTensorFunctor(
         [&](auto k, auto c, auto y, auto x) { wei_cyxk(c, y, x, k) = wei_kcyx(k, c, y, x); },
@@ -70,7 +70,7 @@ void device_convolution_implicit_gemm_v2_chwn_cyxk_khwn(InDesc,
     auto out_khwn_desc = make_ConstantTensorDescriptor(Sequence<K, Ho, Wo, N>{});
     ostream_ConstantTensorDescriptor(out_khwn_desc, std::cout << "out_khwn_desc: ");
 
-    Tensor<T> out_khwn(make_TensorDescriptor(out_khwn_desc));
+    HostTensor<T> out_khwn(make_TensorDescriptor(out_khwn_desc));
 
 #if 0
     // 3x3, 34x34

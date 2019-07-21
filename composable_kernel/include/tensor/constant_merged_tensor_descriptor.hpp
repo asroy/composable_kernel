@@ -2,7 +2,7 @@
 #define CK_CONSTANT_MERGED_TENSOR_DESCRIPTOR_HPP
 
 #include "common_header.hpp"
-#include "ConstantTensorDescriptor.hpp"
+#include "constant_tensor_descriptor.hpp"
 
 namespace ck {
 

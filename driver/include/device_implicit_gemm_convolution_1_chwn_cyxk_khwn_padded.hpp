@@ -8,11 +8,11 @@ using namespace ck;
 
 template <class T, class InDesc, class WeiDesc, class OutDesc, class LowerPads, class UpperPads>
 void device_implicit_gemm_convolution_1_chwn_cyxk_khwn_padded(InDesc,
-                                                              const Tensor<T>& in_nchw,
+                                                              const HostTensor<T>& in_nchw,
                                                               WeiDesc,
-                                                              const Tensor<T>& wei_kcyx,
+                                                              const HostTensor<T>& wei_kcyx,
                                                               OutDesc,
-                                                              Tensor<T>& out_nkhw,
+                                                              HostTensor<T>& out_nkhw,
                                                               LowerPads,
                                                               UpperPads,
                                                               index_t nrepeat)
@@ -42,7 +42,7 @@ void device_implicit_gemm_convolution_1_chwn_cyxk_khwn_padded(InDesc,
     auto wei_cyxk_desc = make_ConstantTensorDescriptor(Sequence<C, Y, X, K>{});
     ostream_ConstantTensorDescriptor(wei_cyxk_desc, std::cout << "wei_cyxk_desc: ");
 
-    Tensor<T> wei_cyxk(make_TensorDescriptor(wei_cyxk_desc));
+    HostTensor<T> wei_cyxk(make_TensorDescriptor(wei_cyxk_desc));
 
     auto f_reorder_kcyx2cyxk = [&](auto k, auto c, auto y, auto x) {
         wei_cyxk(c, y, x, k) = wei_kcyx(k, c, y, x);
@@ -55,7 +55,7 @@ void device_implicit_gemm_convolution_1_chwn_cyxk_khwn_padded(InDesc,
     auto in_chwn_desc = make_ConstantTensorDescriptor(Sequence<C, Hi, Wi, N>{});
     ostream_ConstantTensorDescriptor(in_chwn_desc, std::cout << "in_chwn_desc: ");
 
-    Tensor<T> in_chwn(make_TensorDescriptor(in_chwn_desc));
+    HostTensor<T> in_chwn(make_TensorDescriptor(in_chwn_desc));
 
     auto f_reorder_nchw2chwn = [&](auto n, auto c, auto hi, auto wi) {
         in_chwn(c, hi, wi, n) = in_nchw(n, c, hi, wi);
@@ -68,7 +68,7 @@ void device_implicit_gemm_convolution_1_chwn_cyxk_khwn_padded(InDesc,
     auto out_khwn_desc = make_ConstantTensorDescriptor(Sequence<K, Ho, Wo, N>{});
     ostream_ConstantTensorDescriptor(out_khwn_desc, std::cout << "out_khwn_desc: ");
 
-    Tensor<T> out_khwn(make_TensorDescriptor(out_khwn_desc));
+    HostTensor<T> out_khwn(make_TensorDescriptor(out_khwn_desc));
 
     std::size_t data_sz = sizeof(T);
     DeviceMem in_chwn_device_buf(data_sz * in_chwn.mDesc.GetElementSpace());

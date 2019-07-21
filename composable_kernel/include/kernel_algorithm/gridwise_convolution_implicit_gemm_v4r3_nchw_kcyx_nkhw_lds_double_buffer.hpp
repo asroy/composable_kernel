@@ -2,9 +2,9 @@
 #define CK_GRIDWISE_CONVOLUTION_IMPLICIT_GEMM_V4R3_NCHW_KCYX_NKHW_LDS_DOUBLE_BUFFER
 
 #include "common_header.hpp"
-#include "ConstantTensorDescriptor.hpp"
-#include "ConstantMergedTensorDescriptor.hpp"
-#include "ConstantMatrixDescriptor.hpp"
+#include "constant_tensor_descriptor.hpp"
+#include "constant_merged_tensor_descriptor.hpp"
+#include "constant_matrix_descriptor.hpp"
 #include "blockwise_generic_tensor_slice_copy.hpp"
 #include "blockwise_gemm.hpp"
 #include "threadwise_generic_tensor_slice_copy.hpp"
@@ -296,7 +296,16 @@ struct GridwiseConvolutionImplicitGemm_v4r3_nchw_kcyx_nkhw_lds_double_buffer
 
         // LDS double buffer: preload data into LDS
         {
+#if 0
             blockwise_in_copy.Run(p_in_global, p_in_block_double);
+#endif
+
+#if 1
+            if(get_block_1d_id() == 0 && get_thread_local_1d_id() == 0)
+            {
+                printf("blockwise_wei_copy.Run \n");
+            }
+#endif
             blockwise_wei_copy.Run(p_wei_global, p_wei_block_double);
         }
 
@@ -327,12 +336,36 @@ struct GridwiseConvolutionImplicitGemm_v4r3_nchw_kcyx_nkhw_lds_double_buffer
 
                 __syncthreads();
 
-                // LDS doubel buffer: load next data from device mem
+#if 0
+                if(get_block_1d_id() == 0 && get_thread_local_1d_id() == 0)
+                {
+                    for(index_t i = 0; i < wei_e_k_block_desc.GetLengths()[0]; ++i)
+                    {
+                        for(index_t j = 0; j < wei_e_k_block_desc.GetLengths()[1]; ++j)
+                        {
+                            printf("%d %d %f, ", i, j, p_wei_block_now[wei_e_k_block_desc.GetOffsetFromMultiIndex(i, j)]);
+                        }
+                    }
+                    printf("\n");
+                }
+#endif
+
+// LDS doubel buffer: load next data from device mem
+#if 0
                 blockwise_in_copy.RunLoadRegisterClipboard(p_in_global, p_in_register_clipboard);
+#endif
+
+#if 1
+                if(get_block_1d_id() == 0 && get_thread_local_1d_id() == 0)
+                {
+                    printf("blockwise_wei_copy.RunLoad \n");
+                }
+#endif
+
                 blockwise_wei_copy.RunLoadRegisterClipboard(p_wei_block_on_global,
                                                             p_wei_register_clipboard);
 
-#if 1
+#if 0
                 if(get_block_1d_id() == 0)
                 {
                     printf("tid (%d %d), %f %f %f %f\n",
@@ -348,9 +381,18 @@ struct GridwiseConvolutionImplicitGemm_v4r3_nchw_kcyx_nkhw_lds_double_buffer
                 // LDS double buffer: GEMM on current data
                 blockwise_gemm.Run(p_wei_block_now, p_in_block_now, p_out_thread);
 
-                // LDS double buffer: store next data to LDS
+// LDS double buffer: store next data to LDS
+#if 0
                 blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard,
                                                             p_in_block_next);
+#endif
+
+#if 1
+                if(get_block_1d_id() == 0 && get_thread_local_1d_id() == 0)
+                {
+                    printf("blockwise_wei_copy.RunStore \n");
+                }
+#endif
                 blockwise_wei_copy.RunStoreRegisterClipboard(p_wei_register_clipboard,
                                                              p_wei_block_next);
             }
@@ -367,17 +409,33 @@ struct GridwiseConvolutionImplicitGemm_v4r3_nchw_kcyx_nkhw_lds_double_buffer
 
             __syncthreads();
 
-            // LDS doubel buffer: load next data from device mem
+// LDS doubel buffer: load next data from device mem
+#if 0
             blockwise_in_copy.RunLoadRegisterClipboard(p_in_global, p_in_register_clipboard);
+#endif
+#if 1
+            if(get_block_1d_id() == 0 && get_thread_local_1d_id() == 0)
+            {
+                printf("blockwise_wei_copy.RunLoad \n");
+            }
+#endif
             blockwise_wei_copy.RunLoadRegisterClipboard(p_wei_block_on_global,
                                                         p_wei_register_clipboard);
 
             // LDS double buffer: GEMM on current data
             blockwise_gemm.Run(p_wei_block_double, p_in_block_double, p_out_thread);
 
-            // LDS double buffer: store next data to LDS
+// LDS double buffer: store next data to LDS
+#if 0
             blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard,
                                                         p_in_block_double + in_block_space);
+#endif
+#if 1
+            if(get_block_1d_id() == 0 && get_thread_local_1d_id() == 0)
+            {
+                printf("blockwise_wei_copy.RunStore \n");
+            }
+#endif
             blockwise_wei_copy.RunStoreRegisterClipboard(p_wei_register_clipboard,
                                                          p_wei_block_double + wei_block_space);
 
@@ -444,6 +502,7 @@ struct GridwiseConvolutionImplicitGemm_v4r3_nchw_kcyx_nkhw_lds_double_buffer
                 out_k_n1_ho1_wo1_b_n2_ho2_wo2_global_merged_desc.GetOffsetFromMultiIndex(
                     k_thread_data_on_global, 0, 0, 0, b_thread_data_on_global, 0, 0, 0);
 
+#if 0
             threadwise_generic_tensor_slice_copy_v1(
                 out_n0_n1_n2_k0_k1_k2_ho0_ho1_ho2_wo0_wo1_wo2_thread_desc,
                 p_out_thread,
@@ -454,6 +513,7 @@ struct GridwiseConvolutionImplicitGemm_v4r3_nchw_kcyx_nkhw_lds_double_buffer
                 out_n0_n1_n2_k0_k1_k2_ho0_ho1_ho2_wo0_wo1_wo2_thread_desc.GetLengths(),
                 arithmetic_sequence_gen<0, 12, 1>::type{},
                 Number<1>{});
+#endif
         }
     }
 };

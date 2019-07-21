@@ -8,11 +8,11 @@ using namespace ck;
 
 template <class TInWei, class TOut, class InDesc, class WeiDesc, class OutDesc>
 void device_direct_convolution_2_vectorized_nchw_kcyx_nkhw(InDesc,
-                                                           const Tensor<TInWei>& in_nchw,
+                                                           const HostTensor<TInWei>& in_nchw,
                                                            WeiDesc,
-                                                           const Tensor<TInWei>& wei_kcyx,
+                                                           const HostTensor<TInWei>& wei_kcyx,
                                                            OutDesc,
-                                                           Tensor<TOut>& out_nkhw,
+                                                           HostTensor<TOut>& out_nkhw,
                                                            index_t nrepeat)
 {
     // this suppose in / wei data type is int8x4
@@ -46,7 +46,7 @@ void device_direct_convolution_2_vectorized_nchw_kcyx_nkhw(InDesc,
     auto in_nchw_vec_desc = make_ConstantTensorDescriptor(Sequence<N, C / NVector, Hi, Wi>{});
     ostream_ConstantTensorDescriptor(in_nchw_vec_desc, std::cout << "in_nchw_vec_desc: ");
 
-    Tensor<vector_mem_t> in_nchw_vec(make_TensorDescriptor(in_nchw_vec_desc));
+    HostTensor<vector_mem_t> in_nchw_vec(make_TensorDescriptor(in_nchw_vec_desc));
 
     auto f_vectorized_nchw = [&](auto n, auto c, auto h, auto w) {
 #if 0
@@ -69,7 +69,7 @@ void device_direct_convolution_2_vectorized_nchw_kcyx_nkhw(InDesc,
     auto wei_kcyx_vec_desc = make_ConstantTensorDescriptor(Sequence<K, C / NVector, Y, X>{});
     ostream_ConstantTensorDescriptor(wei_kcyx_vec_desc, std::cout << "wei_kcyx_vec_desc: ");
 
-    Tensor<vector_mem_t> wei_kcyx_vec(make_TensorDescriptor(wei_kcyx_vec_desc));
+    HostTensor<vector_mem_t> wei_kcyx_vec(make_TensorDescriptor(wei_kcyx_vec_desc));
 
     auto f_vectorized_kcyx = [&](auto k, auto c, auto y, auto x) {
 #if 0

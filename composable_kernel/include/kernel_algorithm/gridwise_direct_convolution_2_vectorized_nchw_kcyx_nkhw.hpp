@@ -1,6 +1,6 @@
 #pragma once
 #include "common_header.hpp"
-#include "ConstantTensorDescriptor.hpp"
+#include "constant_tensor_descriptor.hpp"
 #include "blockwise_2d_tensor_op.hpp"
 #include "blockwise_4d_tensor_op.hpp"
 #include "blockwise_direct_convolution.hpp"

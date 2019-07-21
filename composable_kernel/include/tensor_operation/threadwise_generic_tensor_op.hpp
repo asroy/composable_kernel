@@ -2,8 +2,8 @@
 #define CK_THREADWISE_GENERIC_TENSOR_OP_HPP
 
 #include "common_header.hpp"
-#include "ConstantTensorDescriptor.hpp"
-#include "ConstantMergedTensorDescriptor.hpp"
+#include "constant_tensor_descriptor.hpp"
+#include "constant_merged_tensor_descriptor.hpp"
 
 namespace ck {
 template <class Float, class TDesc>

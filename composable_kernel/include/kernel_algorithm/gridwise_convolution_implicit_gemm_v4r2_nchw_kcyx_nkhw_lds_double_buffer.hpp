@@ -2,9 +2,9 @@
 #define CK_GRIDWISE_CONVOLUTION_IMPLICIT_GEMM_V4R2_NCHW_KCYX_NKHW_LDS_DOUBLE_BUFFER
 
 #include "common_header.hpp"
-#include "ConstantTensorDescriptor.hpp"
-#include "ConstantMergedTensorDescriptor.hpp"
-#include "ConstantMatrixDescriptor.hpp"
+#include "constant_tensor_descriptor.hpp"
+#include "constant_merged_tensor_descriptor.hpp"
+#include "constant_matrix_descriptor.hpp"
 #include "blockwise_generic_tensor_slice_copy.hpp"
 #include "blockwise_gemm.hpp"
 #include "threadwise_generic_tensor_slice_copy.hpp"
@@ -180,12 +180,6 @@ struct GridwiseConvolutionImplicitGemm_v4r2_nchw_kcyx_nkhw_lds_double_buffer
             InBlockCopyDataPerAccess_W2,
             InBlockCopyDataPerAccess_W2>({0, 0, 0, 0, b_block_data_on_global, 0, 0, 0},
                                          {0, 0, 0, 0, 0, 0, 0, 0});
-
-#if 0
-        {
-            printf("id (%d %d), in offset: %d %d\n", get_block_1d_id(), get_thread_local_1d_id(),  blockwise_in_copy.mThreadSrcOffset, blockwise_in_copy.mThreadDstOffset);
-        }
-#endif
 
         // weight tensor
         //     tensor descriptor in device memory, src of blockwise copy

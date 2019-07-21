@@ -1,7 +1,7 @@
 #pragma once
 #include "tensor.hpp"
 #include "common_header.hpp"
-#include "ConstantTensorDescriptor.hpp"
+#include "constant_tensor_descriptor.hpp"
 
 // this is ugly, only for 4d
 template <class TConstTensorDesc>
@@ -42,7 +42,7 @@ auto make_TensorDescriptor(TConstTensorDesc)
     std::initializer_list<index_t> strides = {
         desc.GetStride(I0), desc.GetStride(I1), desc.GetStride(I2), desc.GetStride(I3)};
 
-    return TensorDescriptor(lengths, strides);
+    return HostTensorDescriptor(lengths, strides);
 }
 
 template <class TIn,
@@ -52,9 +52,9 @@ template <class TIn,
           class ConvDilations,
           class LowerPads,
           class UpperPads>
-void host_direct_convolution(const Tensor<TIn>& in_nchw,
-                             const Tensor<TWei>& wei_kcyx,
-                             Tensor<TOut>& out_nkhw,
+void host_direct_convolution(const HostTensor<TIn>& in_nchw,
+                             const HostTensor<TWei>& wei_kcyx,
+                             HostTensor<TOut>& out_nkhw,
                              ConvStrides,
                              ConvDilations,
                              LowerPads,
@@ -99,9 +99,9 @@ void host_direct_convolution(const Tensor<TIn>& in_nchw,
 }
 
 template <class TIn, class TWei, class TOut, class LowerPads, class UpperPads>
-void host_winograd_3x3_convolution(const Tensor<TIn>& in_nchw,
-                                   const Tensor<TWei>& wei_kcyx,
-                                   Tensor<TOut>& out_nkhw,
+void host_winograd_3x3_convolution(const HostTensor<TIn>& in_nchw,
+                                   const HostTensor<TWei>& wei_kcyx,
+                                   HostTensor<TOut>& out_nkhw,
                                    LowerPads,
                                    UpperPads)
 {
@@ -134,11 +134,11 @@ void host_winograd_3x3_convolution(const Tensor<TIn>& in_nchw,
     std::size_t HTile = (HO + HoPerTile - 1) / HoPerTile;
     std::size_t WTile = (WO + WoPerTile - 1) / WoPerTile;
 
-    Tensor<double> in_hold({N, C, HTile, WTile, HiPerTile, WiPerTile});
-    Tensor<double> in_transform({N, C, HTile, WTile, HiPerTile, WiPerTile});
-    Tensor<double> wei_transform({K, C, HiPerTile, WiPerTile});
-    Tensor<double> out_transform({N, K, HTile, WTile, HiPerTile, HiPerTile});
-    Tensor<double> out_hold({N, K, HTile, WTile, HoPerTile, WoPerTile});
+    HostTensor<double> in_hold({N, C, HTile, WTile, HiPerTile, WiPerTile});
+    HostTensor<double> in_transform({N, C, HTile, WTile, HiPerTile, WiPerTile});
+    HostTensor<double> wei_transform({K, C, HiPerTile, WiPerTile});
+    HostTensor<double> out_transform({N, K, HTile, WTile, HiPerTile, HiPerTile});
+    HostTensor<double> out_hold({N, K, HTile, WTile, HoPerTile, WoPerTile});
 
     auto f_in_hold = [&](auto n, auto c, auto htile, auto wtile) {
         for(int j = 0; j < HiPerTile; ++j)
@@ -339,7 +339,7 @@ void host_winograd_3x3_convolution(const Tensor<TIn>& in_nchw,
 }
 
 template <class T>
-void check_error(const Tensor<T>& ref, const Tensor<T>& result)
+void check_error(const HostTensor<T>& ref, const HostTensor<T>& result)
 {
     float error     = 0;
     float max_diff  = -1;

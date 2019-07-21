@@ -2,7 +2,7 @@
 #define CK_BLOCKWISE_4D_TENSOR_OP_HPP
 
 #include "common_header.hpp"
-#include "ConstantTensorDescriptor.hpp"
+#include "constant_tensor_descriptor.hpp"
 #include "threadwise_tensor_slice_copy.hpp"
 
 namespace ck {

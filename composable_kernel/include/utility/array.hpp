@@ -1,7 +1,7 @@
 #ifndef CK_ARRAY_HPP
 #define CK_ARRAY_HPP
 
-#include "Sequence.hpp"
+#include "sequence.hpp"
 #include "functional2.hpp"
 
 namespace ck {
