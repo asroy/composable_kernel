@@ -142,47 +142,80 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
         constexpr index_t MPerLevel1Cluster = MPerThreadSubC * MLevel0Cluster * MLevel1Cluster;
         constexpr index_t NPerLevel1Cluster = NPerThreadSubC * NLevel0Cluster * NLevel1Cluster;
 
-        // assertion for inline asm
-        static_assert(is_same<FloatA, float>{} && is_same<FloatB, float>{} &&
-                          is_same<FloatC, float>{},
-                      "Run_amd_asm only deal with float");
-
         static_assert(MPerThreadSubC == 4 && NPerThreadSubC == 4 && KPerThreadLoop == 1 &&
                           MPerThread == 8 && NPerThread == 8,
                       "Run_amd_asm cannot deal with this GEMM shape yet");
 
         static_assert(DataPerReadA == 4 && DataPerReadB == 4, "Run_amd_asm only do float4 read");
 
-        using Float4 = vector_type<float, 4>::MemoryType;
+        // If A and B datatype is float
+        static_if<std::is_same<FloatA, float>::value &&
+                  std::is_same<FloatB, float>::value>{}([&](auto) {
+            using Float4 = vector_type<float, 4>::MemoryType;
 
-        Float4* reg_a = reinterpret_cast<Float4*>(p_a_thread);
-        Float4* reg_b = reinterpret_cast<Float4*>(p_b_thread);
-        Float4* reg_c = reinterpret_cast<Float4*>(p_c_thread);
+            Float4* reg_a = reinterpret_cast<Float4*>(p_a_thread);
+            Float4* reg_b = reinterpret_cast<Float4*>(p_b_thread);
+            Float4* reg_c = reinterpret_cast<Float4*>(p_c_thread);
 
-        reg_a[0] = *reinterpret_cast<const Float4*>(&p_a_block[mMyThreadOffsetA]);
-        reg_b[0] = *reinterpret_cast<const Float4*>(&p_b_block[mMyThreadOffsetB]);
-        reg_b[1] =
-            *reinterpret_cast<const Float4*>(&p_b_block[mMyThreadOffsetB + NPerLevel1Cluster]);
-        reg_a[1] =
-            *reinterpret_cast<const Float4*>(&p_a_block[mMyThreadOffsetA + MPerLevel1Cluster]);
-        outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
-        outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
-#pragma unroll
-        for(index_t k = 1; k < K; ++k)
-        {
-            reg_a[0] = *reinterpret_cast<const Float4*>(&p_a_block[mMyThreadOffsetA + k * M]);
-            outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
-            reg_b[0] = *reinterpret_cast<const Float4*>(&p_b_block[mMyThreadOffsetB + k * N]);
-            outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
-            reg_b[1] = *reinterpret_cast<const Float4*>(
-                &p_b_block[mMyThreadOffsetB + k * N + NPerLevel1Cluster]);
-            reg_a[1] = *reinterpret_cast<const Float4*>(
-                &p_a_block[mMyThreadOffsetA + k * M + MPerLevel1Cluster]);
+            reg_a[0] = *reinterpret_cast<const Float4*>(&p_a_block[mMyThreadOffsetA]);
+            reg_b[0] = *reinterpret_cast<const Float4*>(&p_b_block[mMyThreadOffsetB]);
+            reg_b[1] =
+                *reinterpret_cast<const Float4*>(&p_b_block[mMyThreadOffsetB + NPerLevel1Cluster]);
+            reg_a[1] =
+                *reinterpret_cast<const Float4*>(&p_a_block[mMyThreadOffsetA + MPerLevel1Cluster]);
             outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
             outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
-        }
-        outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
-        outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
+#pragma unroll
+            for(index_t k = 1; k < K; ++k)
+            {
+                reg_a[0] = *reinterpret_cast<const Float4*>(&p_a_block[mMyThreadOffsetA + k * M]);
+                outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
+                reg_b[0] = *reinterpret_cast<const Float4*>(&p_b_block[mMyThreadOffsetB + k * N]);
+                outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
+                reg_b[1] = *reinterpret_cast<const Float4*>(
+                    &p_b_block[mMyThreadOffsetB + k * N + NPerLevel1Cluster]);
+                reg_a[1] = *reinterpret_cast<const Float4*>(
+                    &p_a_block[mMyThreadOffsetA + k * M + MPerLevel1Cluster]);
+                outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
+                outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
+            }
+            outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
+            outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
+
+        }).Else([&](auto) { // If A and B datatype is bfloat16/float16
+            using Half4x4 = vector_type<vector_type<half, 4>, 4>;
+            using Float4  = vector_type<float, 4>::MemoryType;
+
+            Half4x4* reg_a = reinterpret_cast<Half4x4*>(p_a_thread);
+            Half4x4* reg_b = reinterpret_cast<Half4x4*>(p_b_thread);
+            Float4* reg_c  = reinterpret_cast<Float4*>(p_c_thread);
+
+            reg_a[0] = *reinterpret_cast<const Half4x4*>(&p_a_block[mMyThreadOffsetA]);
+            reg_b[0] = *reinterpret_cast<const Half4x4*>(&p_b_block[mMyThreadOffsetB]);
+            reg_b[1] =
+                *reinterpret_cast<const Half4x4*>(&p_b_block[mMyThreadOffsetB + NPerLevel1Cluster]);
+            reg_a[1] =
+                *reinterpret_cast<const Half4x4*>(&p_a_block[mMyThreadOffsetA + MPerLevel1Cluster]);
+            outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
+            outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
+
+#pragma unroll
+            for(index_t k = 1; k < K; ++k)
+            {
+                reg_a[0] = *reinterpret_cast<const Half4x4*>(&p_a_block[mMyThreadOffsetA + k * M]);
+                outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
+                reg_b[0] = *reinterpret_cast<const Half4x4*>(&p_b_block[mMyThreadOffsetB + k * N]);
+                outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
+                reg_b[1] = *reinterpret_cast<const Half4x4*>(
+                    &p_b_block[mMyThreadOffsetB + k * N + NPerLevel1Cluster]);
+                reg_a[1] = *reinterpret_cast<const Half4x4*>(
+                    &p_a_block[mMyThreadOffsetA + k * M + MPerLevel1Cluster]);
+                outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
+                outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
+            }
+            outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
+            outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
+        });
     }
 #endif
 
@@ -204,11 +237,11 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
         constexpr index_t NPerThread = c_thread_mtx.NCol();
 
         // thread A, B for GEMM
-        constexpr auto a_thread_mtx =
-            make_ConstantMatrixDescriptor(Number<KPerThreadLoop>{}, Number<MPerThread>{});
+        constexpr auto a_thread_mtx = make_ConstantMatrixDescriptor(
+            Number<KPerThreadLoop>{}, Number<MPerThread>{}, Number<MPerThread>{});
 
-        constexpr auto b_thread_mtx =
-            make_ConstantMatrixDescriptor(Number<KPerThreadLoop>{}, Number<NPerThread>{});
+        constexpr auto b_thread_mtx = make_ConstantMatrixDescriptor(
+            Number<KPerThreadLoop>{}, Number<NPerThread>{}, Number<NPerThread>{});
 
         // thread A-sub, B-sub for copy
         constexpr auto a_thread_sub_mtx = make_ConstantMatrixDescriptor(
@@ -415,7 +448,11 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
 
     {
 #if CK_USE_AMD_INLINE_ASM && CK_BLOCKWISE_GEMM_USE_AMD_INLINE_ASM
-        Run_amd_asm(p_a_block, p_b_block, p_c_thread);
+        static_if<std::is_same<FloatA, ushort>::value && std::is_same<FloatB, ushort>::value>{}(
+            [&](auto) { Run_source(p_a_block, p_b_block, p_c_thread); })
+            .Else([&](auto) { // If A and B datatype is bfloat16/float16
+                Run_amd_asm(p_a_block, p_b_block, p_c_thread);
+            });
 #else
         Run_source(p_a_block, p_b_block, p_c_thread);
 #endif

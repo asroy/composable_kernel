@@ -790,13 +790,13 @@ int main(int argc, char* argv[])
 #elif 1
     // 1x1 filter, 7x7 image
     // cudnn@V100 49%, ck@V100 50%, ck@P100 61%, ck@VII 52%
-    constexpr index_t N  = 128;
-    constexpr index_t C  = 832;
-    constexpr index_t HI = 7;
-    constexpr index_t WI = 7;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
+    constexpr index_t N  = 32;
+    constexpr index_t C  = 128;
+    constexpr index_t HI = 28;
+    constexpr index_t WI = 28;
+    constexpr index_t K  = 192;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
 
     using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;
@@ -817,8 +817,8 @@ int main(int argc, char* argv[])
     ostream_ConstantTensorDescriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
     ostream_ConstantTensorDescriptor(out_nkhw_desc, std::cout << "out_nkhw_desc: ");
 
-    using in_data_t  = float;
-    using out_data_t = float;
+    using in_data_t  = half;
+    using out_data_t = half;
     Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
     Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
     Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
