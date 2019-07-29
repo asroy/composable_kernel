@@ -308,9 +308,23 @@ struct GridwiseConvolutionImplicitGemm_v4_fp16_bfp16_nchw_kcyx_nkhw_lds_double_b
                 blockwise_wei_copy.RunLoadRegisterClipboard(p_wei_block_on_global,
                                                             p_wei_register_clipboard);
 
-                // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(p_wei_block_now, p_in_block_now, p_out_thread);
+                // If src/dst matrix datatype is bfloat16/float16 (vector size 2/4 respectively)
+                static_if<std::is_same<Float, half>::value>{}([&](auto) {
+                    using vector_t = typename vector_type<half, 4>::MemoryType;
+                    vector_t* vec_wei_block_now = reinterpret_cast<vector_t*>(p_wei_block_now);
+                    vector_t* vec_in_block_now = reinterpret_cast<vector_t*>(p_in_block_now);
+                    // LDS double buffer: GEMM on current data
+                    blockwise_gemm.Run(vec_wei_block_now, vec_in_block_now, p_out_thread);
 
+                }).Else([&](auto) {
+                    using vector_t = typename vector_type<ushort, 2>::MemoryType;    
+                    vector_t* vec_wei_block_now = reinterpret_cast<vector_t*>(p_wei_block_now);
+                    vector_t* vec_in_block_now = reinterpret_cast<vector_t*>(p_in_block_now);
+
+                    // LDS double buffer: GEMM on current data
+                    blockwise_gemm.Run(vec_wei_block_now, vec_in_block_now, p_out_thread);
+                });        
+                
                 // LDS double buffer: store next data to LDS
                 blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard,
                                                             p_in_block_next);
@@ -336,7 +350,22 @@ struct GridwiseConvolutionImplicitGemm_v4_fp16_bfp16_nchw_kcyx_nkhw_lds_double_b
                                                         p_wei_register_clipboard);
 
             // LDS double buffer: GEMM on current data
-            blockwise_gemm.Run(p_wei_block_double, p_in_block_double, p_out_thread);
+            // If src/dst matrix datatype is bfloat16/float16 (vector size 2/4 respectively)
+            static_if<std::is_same<Float, half>::value>{}([&](auto) {
+                using vector_t = typename vector_type<half, 4>::MemoryType;
+                vector_t* vec_wei_block_now = reinterpret_cast<vector_t*>(p_wei_block_double);
+                vector_t* vec_in_block_now = reinterpret_cast<vector_t*>(p_in_block_double);
+                // LDS double buffer: GEMM on current data
+                blockwise_gemm.Run(vec_wei_block_now, vec_in_block_now, p_out_thread);
+
+            }).Else([&](auto) {
+                using vector_t = typename vector_type<ushort, 2>::MemoryType;    
+                vector_t* vec_wei_block_now = reinterpret_cast<vector_t*>(p_wei_block_double);
+                vector_t* vec_in_block_now = reinterpret_cast<vector_t*>(p_in_block_double);
+
+                // LDS double buffer: GEMM on current data
+                blockwise_gemm.Run(vec_wei_block_now, vec_in_block_now, p_out_thread);
+            });        
 
             // LDS double buffer: store next data to LDS
             blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard,
@@ -348,9 +377,22 @@ struct GridwiseConvolutionImplicitGemm_v4_fp16_bfp16_nchw_kcyx_nkhw_lds_double_b
             __syncthreads();
 
             // LDS double buffer: GEMM on current data
-            blockwise_gemm.Run(p_wei_block_double + wei_block_space,
-                               p_in_block_double + in_block_space,
-                               p_out_thread);
+            // If src/dst matrix datatype is bfloat16/float16 (vector size 2/4 respectively)
+            static_if<std::is_same<Float, half>::value>{}([&](auto) {
+                using vector_t = typename vector_type<half, 4>::MemoryType;
+                vector_t* vec_wei_block_now = reinterpret_cast<vector_t*>(p_wei_block_double + wei_block_space);
+                vector_t* vec_in_block_now = reinterpret_cast<vector_t*>(p_in_block_double + in_block_space);
+                // LDS double buffer: GEMM on current data
+                blockwise_gemm.Run(vec_wei_block_now, vec_in_block_now, p_out_thread);
+
+            }).Else([&](auto) {
+                using vector_t = typename vector_type<ushort, 2>::MemoryType;    
+                vector_t* vec_wei_block_now = reinterpret_cast<vector_t*>(p_wei_block_double + wei_block_space);
+                vector_t* vec_in_block_now = reinterpret_cast<vector_t*>(p_in_block_double + in_block_space);
+
+                // LDS double buffer: GEMM on current data
+                blockwise_gemm.Run(vec_wei_block_now, vec_in_block_now, p_out_thread);
+            });     
         }
 
         // copy output: register to global memory

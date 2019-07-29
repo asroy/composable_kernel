@@ -138,11 +138,21 @@ void host_direct_convolution(const Tensor<TIn>& in_nchw,
                        wi < in_nchw.mDesc.GetLengths()[3])
                     {
                         v += double(in_nchw(n, c, hi, wi)) * double(wei_kcyx(k, c, y, x));
+                        if(n == 0 && k == 0 &&  ho == 0 && wo == 0)
+                        {
+                            //std::cout << "cpu " << c << "," << hi << "," << wi << " * " << 
+                            //          << c << "," << y << "," << x << " = "
+                            //          << in_nchw(n,c,hi,wi) << " * " << wei_kcyx(k, c, y, x) << std::endl;
+                           // printf(" cpu %d,%d,%d * %d,%d,%d = %f * %f\n", 
+                           //         c, hi, wi, c, y, x, double(in_nchw(n,c,hi,wi)), double(wei_kcyx(k, c, y, x)));
+                        }
                     }
                 }
             }
         }
         out_nkhw(n, k, ho, wo) = v;
+        if(n == 0 && k == 0 && ho == 0 && wo == 0)
+        printf("cpu %d,%d,%d,%d = %f", n,k, ho,wo,v);
     };
 
     auto f_par = make_ParallelTensorFunctor(f,
@@ -787,9 +797,8 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
-#elif 1
+#elif 0
     // 1x1 filter, 7x7 image
-    // cudnn@V100 49%, ck@V100 50%, ck@P100 61%, ck@VII 52%
     constexpr index_t N  = 32;
     constexpr index_t C  = 128;
     constexpr index_t HI = 28;
@@ -803,6 +812,20 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
+#elif 1
+    constexpr index_t N  = 8;
+    constexpr index_t C  = 64;
+    constexpr index_t HI = 4;
+    constexpr index_t WI = 4;
+    constexpr index_t K  = 64;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    constexpr index_t HPad = 0;
+    constexpr index_t WPad = 0;    
 #endif
 
     auto lower_pads = Sequence<HPad, WPad>{};
@@ -897,7 +920,7 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 1
+#if 0
         if(Y == 3 && X == 3 && ConvStrides{}[0] == 1 && ConvStrides{}[1] == 1 &&
            ConvDilations{}[0] == 1 && ConvDilations{}[1] == 1)
         {
@@ -915,6 +938,7 @@ int main(int argc, char* argv[])
                                     upper_pads);
         }
         check_error(out_nkhw_host, out_nkhw_device);
+        printf("gpu value %f", double(out_nkhw_device.mData[0]));
 
 #if 0
         LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;

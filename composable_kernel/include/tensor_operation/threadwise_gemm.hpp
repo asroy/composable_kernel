@@ -57,37 +57,18 @@ __device__ void threadwise_matrix_copy(SrcMatrix,
         }
 
     }).Else([&](auto) {
-        static_if<std::is_same<Float, half>::value>{}([&](auto) {
-            // If src/dst matrix datatype is bfloat16/float16 (vector size 2/4 respectively)
-            using vector_t = typename vector_type<Float, 4>::MemoryType;
-
-            for(index_t i = 0; i < NRow; ++i)
+        // For half/bfloat16, Float type is half4/bfloat2 respectively.
+        for(index_t i = 0; i < NRow; ++i)
+        {
+            for(index_t j = 0; j < NCol; ++j)
             {
-                for(index_t j = 0; j < NCol; ++j)
-                {
-                    const index_t src_index = src_mtx.GetOffsetFromMultiIndex(i, j);
-                    const index_t dst_index = dst_mtx.GetOffsetFromMultiIndex(i, j);
+                const index_t src_index = src_mtx.GetOffsetFromMultiIndex(i, j);
+                const index_t dst_index = dst_mtx.GetOffsetFromMultiIndex(i, j);
 
-                    *reinterpret_cast<vector_t*>(&p_dst[dst_index*4]) =
-                        *reinterpret_cast<const vector_t*>(&p_src[src_index*4]);
-                }
+                *reinterpret_cast<Float*>(&p_dst[dst_index]) =
+                    *reinterpret_cast<const Float*>(&p_src[src_index]);
             }
-
-        }).Else([&](auto) {
-            using vector_t = typename vector_type<Float, 2>::MemoryType;
-
-            for(index_t i = 0; i < NRow; ++i)
-            {
-                for(index_t j = 0; j < NCol; ++j)
-                {
-                    const index_t src_index = src_mtx.GetOffsetFromMultiIndex(i, j);
-                    const index_t dst_index = dst_mtx.GetOffsetFromMultiIndex(i, j);
-
-                    *reinterpret_cast<vector_t*>(&p_dst[dst_index*2]) =
-                        *reinterpret_cast<const vector_t*>(&p_src[src_index*2]);
-                }
-            }
-        });
+        }
     });
 }
 
@@ -129,32 +110,26 @@ __device__ void threadwise_gemm(MatrixA,
                     const index_t bindex = b_mtx.GetOffsetFromMultiIndex(k, j);
                     const index_t cindex = c_mtx.GetOffsetFromMultiIndex(i, j);
 
-                    static_if<std::is_same<FloatA, float>::value>{}([&](auto) {
-                        p_c_thread[cindex] += CVT_FLOAT2ACCUM(p_a_thread[aindex]) *
-                                              CVT_FLOAT2ACCUM(p_b_thread[bindex]);
-                    }).Else([&](auto) {
-                        static_if<std::is_same<FloatA, half>::value>{}([&](auto) {
-                            // If src/dst matrix datatype is bfloat16/float16 (vector size 2/4
-                            // respectively)
-                            float acc = 0.0;
-                            for(index_t v = 0; v < 4; ++v)
-                            {
-                                acc += CVT_FLOAT2ACCUM(p_a_thread[aindex*4 + v]) *
-                                       CVT_FLOAT2ACCUM(p_b_thread[bindex*4 + v]);
-                            }
-                            p_c_thread[cindex] = acc;
-                        }).Else([&](auto) {
-                            // If src/dst matrix datatype is bfloat16/float16 (vector size 2/4
-                            // respectively)
-                            float acc = 0.0;
-                            for(index_t v = 0; v < 2; ++v)
-                            {
-                                acc += CVT_FLOAT2ACCUM(p_a_thread[aindex*2 + v]) *
-                                       CVT_FLOAT2ACCUM(p_b_thread[bindex*2 + v]);
-                            }
-                            p_c_thread[cindex] += acc;
-                        });
-                    });
+                    //static_if<std::is_same<FloatA, float>::value>{}([&](auto) {
+                    //    p_c_thread[cindex] += 
+                    //            CVT_FLOAT2ACCUM(p_a_thread[aindex]) * CVT_FLOAT2ACCUM(p_b_thread[bindex]);
+                    //}).Else([&](auto) {                        
+                        static_if<std::is_same<FloatA, ck::vector_type<half, 4>::MemoryType>::value>{}([&](auto) {
+                            const half* s0_half = reinterpret_cast<const half*>(&p_a_thread[aindex]);
+                            const half* s1_half = reinterpret_cast<const half*>(&p_b_thread[bindex]);
+                            p_c_thread[cindex] += 
+                                    CVT_FLOAT2ACCUM(s0_half[0]) * CVT_FLOAT2ACCUM(s1_half[0]) +
+                                    CVT_FLOAT2ACCUM(s0_half[1]) * CVT_FLOAT2ACCUM(s1_half[1]) +
+                                    CVT_FLOAT2ACCUM(s0_half[2]) * CVT_FLOAT2ACCUM(s1_half[2]) +
+                                    CVT_FLOAT2ACCUM(s0_half[3]) * CVT_FLOAT2ACCUM(s1_half[3]);
+                        }).Else([&](auto) {     
+                            const ushort* s0_ushort = reinterpret_cast<const ushort*>(&p_a_thread[aindex]);
+                            const ushort* s1_ushort = reinterpret_cast<const ushort*>(&p_b_thread[bindex]);
+                            p_c_thread[cindex] +=  
+                                    CVT_FLOAT2ACCUM(s0_ushort[0]) * CVT_FLOAT2ACCUM(s1_ushort[0]) +
+                                    CVT_FLOAT2ACCUM(s0_ushort[1]) * CVT_FLOAT2ACCUM(s1_ushort[1]);   
+                        });             
+                   // });        
                 }
             }
         }

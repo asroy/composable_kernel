@@ -112,7 +112,6 @@ __device__ void threadwise_generic_tensor_slice_copy_v1(
         static_if<std::is_same<vector_src_t, vector_dest_t>::value>{}([&](auto) {
             *reinterpret_cast<vector_dest_t*>(&p_dst[dst_index]) =
                 *reinterpret_cast<const vector_src_t*>(&p_src[src_index]);
-            //printf("%f ", static_cast<float>(p_dst[dst_index]));
         }).Else([&](auto) {
             for(unsigned int data_idx = 0; data_idx < DataPerAccess; ++data_idx)
             {
