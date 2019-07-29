@@ -1,6 +1,12 @@
 #ifndef CK_COMMON_HEADER_HPP
 #define CK_COMMON_HEADER_HPP
 
+#define MIOPEN_USE_FP16 1
+#define MIOPEN_USE_BFP16 0
+#define MIOPEN_USE_FP32 0
+
+#define __HIP_PLATFORM_HCC__ 1
+
 #include "config.hpp"
 #include "utility.hpp"
 #include "integral_constant.hpp"

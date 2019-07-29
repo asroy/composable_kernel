@@ -787,14 +787,27 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
-#elif 1
+#elif 0
     // 1x1 filter, 7x7 image
-    // cudnn@V100 49%, ck@V100 50%, ck@P100 61%, ck@VII 52%
-    constexpr index_t N  = 128;
-    constexpr index_t C  = 832;
-    constexpr index_t HI = 7;
-    constexpr index_t WI = 7;
-    constexpr index_t K  = 128;
+    constexpr index_t N  = 32;
+    constexpr index_t C  = 128;
+    constexpr index_t HI = 28;
+    constexpr index_t WI = 28;
+    constexpr index_t K  = 192;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    constexpr index_t HPad = 0;
+    constexpr index_t WPad = 0;
+#elif 1
+    constexpr index_t N  = 8;
+    constexpr index_t C  = 64;
+    constexpr index_t HI = 4;
+    constexpr index_t WI = 4;
+    constexpr index_t K  = 64;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
 
@@ -802,7 +815,7 @@ int main(int argc, char* argv[])
     using ConvDilations = Sequence<1, 1>;
 
     constexpr index_t HPad = 0;
-    constexpr index_t WPad = 0;
+    constexpr index_t WPad = 0;    
 #endif
 
     auto lower_pads = Sequence<HPad, WPad>{};
@@ -817,8 +830,8 @@ int main(int argc, char* argv[])
     ostream_ConstantTensorDescriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
     ostream_ConstantTensorDescriptor(out_nkhw_desc, std::cout << "out_nkhw_desc: ");
 
-    using in_data_t  = float;
-    using out_data_t = float;
+    using in_data_t  = half;
+    using out_data_t = half;
     Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
     Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
     Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
@@ -897,7 +910,7 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 1
+#if 0
         if(Y == 3 && X == 3 && ConvStrides{}[0] == 1 && ConvStrides{}[1] == 1 &&
            ConvDilations{}[0] == 1 && ConvDilations{}[1] == 1)
         {
@@ -915,7 +928,6 @@ int main(int argc, char* argv[])
                                     upper_pads);
         }
         check_error(out_nkhw_host, out_nkhw_device);
-
 #if 0
         LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
         LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
