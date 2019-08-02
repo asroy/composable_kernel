@@ -803,6 +803,22 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
+#elif 0
+    // 1x1 filter, 7x7 image
+    // cudnn@V100 49%, ck@V100 50%, ck@P100 61%, ck@VII 52%
+    constexpr index_t N  = 8;
+    constexpr index_t C  = 64;
+    constexpr index_t HI = 4;
+    constexpr index_t WI = 4;
+    constexpr index_t K  = 64;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    constexpr index_t HPad = 0;
+    constexpr index_t WPad = 0;
 #endif
 
     auto lower_pads = Sequence<HPad, WPad>{};
@@ -897,7 +913,7 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 1
+#if 0
         if(Y == 3 && X == 3 && ConvStrides{}[0] == 1 && ConvStrides{}[1] == 1 &&
            ConvDilations{}[0] == 1 && ConvDilations{}[1] == 1)
         {

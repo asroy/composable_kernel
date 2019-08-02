@@ -19,6 +19,19 @@ namespace ck {
 //   instruction,
 using float2_t = float2;
 using float4_t = float4;
+typedef half2 half2_t;
+typedef struct
+{
+    half2 vector[2];
+} half4_t;
+typedef struct
+{
+    ushort vector[2];
+} ushort2_t;
+typedef struct
+{
+    ushort2_t vector[2];
+} ushort4_t;
 
 using index_t = uint32_t;
 

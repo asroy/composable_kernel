@@ -266,8 +266,8 @@ struct GridwiseConvolutionImplicitGemm_v4_fp16_bfp16_nchw_kcyx_nkhw_lds_double_b
 
         // LDS double buffer: preload data into LDS
         {
-           blockwise_in_copy.Run(p_in_global, p_in_block_double);
-           blockwise_wei_copy.Run(p_wei_global, p_wei_block_double);
+            blockwise_in_copy.Run(p_in_global, p_in_block_double);
+            blockwise_wei_copy.Run(p_wei_global, p_wei_block_double);
         }
 
         // LDS double buffer: main body

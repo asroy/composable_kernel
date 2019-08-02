@@ -147,23 +147,26 @@ __device__ void outerProduct1x4(const half2* a, const half2* b, float* c)
                    "3"(c[3])); // 3rd Src Acc registers for 2 half2 registers
 }
 
-__device__ void outerProduct1x4Half(const vector_type<half, 4>& a,
-                                    const vector_type<vector_type<half, 4>, 4>& b,
-                                    vector_type<float, 4>::MemoryType& c)
+__device__ void
+outerProduct1x4Half(const vector_type<half, 4>::MemoryType& a,
+                    const vector_type<vector_type<half, 4>::MemoryType, 4>::MemoryType& b,
+                    vector_type<float, 4>::MemoryType& c)
 {
     outerProduct1x4(reinterpret_cast<const half2*>(&a),
                     reinterpret_cast<const half2*>(&b),
                     reinterpret_cast<float*>(&c));
 }
 
-__device__ void outerProduct4x4(const vector_type<vector_type<half, 4>, 4>& a,
-                                const vector_type<vector_type<half, 4>, 4>& b,
-                                vector_type<float, 4>::MemoryType& c0,
-                                vector_type<float, 4>::MemoryType& c1,
-                                vector_type<float, 4>::MemoryType& c2,
-                                vector_type<float, 4>::MemoryType& c3)
+__device__ void
+outerProduct4x4(const vector_type<vector_type<half, 4>::MemoryType, 4>::MemoryType& a,
+                const vector_type<vector_type<half, 4>::MemoryType, 4>::MemoryType& b,
+                vector_type<float, 4>::MemoryType& c0,
+                vector_type<float, 4>::MemoryType& c1,
+                vector_type<float, 4>::MemoryType& c2,
+                vector_type<float, 4>::MemoryType& c3)
 {
-    const vector_type<half, 4>* reg_a = reinterpret_cast<const vector_type<half, 4>*>(&a);
+    const vector_type<half, 4>::MemoryType* reg_a =
+        reinterpret_cast<const vector_type<half, 4>::MemoryType*>(&a);
     outerProduct1x4Half(reg_a[0], b, c0);
     outerProduct1x4Half(reg_a[1], b, c1);
     outerProduct1x4Half(reg_a[2], b, c2);
