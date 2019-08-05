@@ -175,8 +175,11 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 
         // weight tensor
         //     tensor descriptor in device memory, src of blockwise copy
-        constexpr auto wei_e_k_global_desc =
-            wei_k_c_y_x_global_desc.Unfold(I1, I3).ReorderGivenNew2Old(Sequence<1, 0>{});
+	// JD: we can no longer unfold because the tensor will not be contiguus for wrw
+        // constexpr auto wei_e_k_global_desc =
+        //     wei_k_c_y_x_global_desc.Unfold(I1, I3).ReorderGivenNew2Old(Sequence<1, 0>{});
+	constexpr auto	  wei_e_k_global_merged_desc = make_ConstantMergedTensorDescriptor(
+	wei_k_c_y_x_global_desc, Sequence<1, 2, 3>{}, Sequence<0>{});
 
         //     tensor descriptor in LDS, dst of blockwise copy
         //     be careful of LDS alignment
@@ -190,7 +193,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
         auto blockwise_wei_copy =
             BlockwiseGenericTensorSliceCopy_v1<BlockSize,
                                                Float,
-                                               decltype(wei_e_k_global_desc),
+                                               decltype(wei_e_k_global_merged_desc),
                                                decltype(wei_e_k_block_desc),
                                                decltype(wei_e_k_block_desc.GetLengths()),
                                                WeiBlockCopySubLengths_E_K,
@@ -295,7 +298,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                 Float p_wei_register_clipboard[blockwise_wei_copy.GetRegisterClipboardSize()];
 
                 blockwise_in_copy.MoveSlicingWindowOnSourceTensor(I0, Number<EPerBlock>{}, True);
-                p_wei_block_on_global += EPerBlock * wei_e_k_global_desc.GetStride(I0);
+		blockwise_wei_copy.MoveSlicingWindowOnSourceTensor(I0, Number<EPerBlock>{}, True);
 
                 __syncthreads();
 
@@ -309,9 +312,9 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 
                 // LDS double buffer: store next data to LDS
                 blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard,
-                                                            p_in_block_next);
+                                                           p_in_block_next);
                 blockwise_wei_copy.RunStoreRegisterClipboard(p_wei_register_clipboard,
-                                                             p_wei_block_next);
+                                                            p_wei_block_next);
             }
         }
 
@@ -322,13 +325,15 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 
             // even iteration
             blockwise_in_copy.MoveSlicingWindowOnSourceTensor(I0, Number<EPerBlock>{}, True);
-            p_wei_block_on_global += EPerBlock * wei_e_k_global_desc.GetStride(I0);
+	    blockwise_wei_copy.MoveSlicingWindowOnSourceTensor(I0, Number<EPerBlock>{}, True);
+	// JD, the following no longer applies since the tensor is a merged tesnor ( not contiguous)
+     //       p_wei_block_on_global += EPerBlock * wei_e_k_global_desc.GetStride(I0);
 
             __syncthreads();
 
             // LDS doubel buffer: load next data from device mem
             blockwise_in_copy.RunLoadRegisterClipboard(p_in_global, p_in_register_clipboard);
-            blockwise_wei_copy.RunLoadRegisterClipboard(p_wei_block_on_global,
+             blockwise_wei_copy.RunLoadRegisterClipboard(p_wei_block_on_global,
                                                         p_wei_register_clipboard);
 
             // LDS double buffer: GEMM on current data
@@ -338,7 +343,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
             blockwise_in_copy.RunStoreRegisterClipboard(p_in_register_clipboard,
                                                         p_in_block_double + in_block_space);
             blockwise_wei_copy.RunStoreRegisterClipboard(p_wei_register_clipboard,
-                                                         p_wei_block_double + wei_block_space);
+                                                        p_wei_block_double + wei_block_space);
 
             // odd iteration
             __syncthreads();
@@ -395,7 +400,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                 p_out_global +
                 out_k_n1_b_n2_global_merged_desc.GetOffsetFromMultiIndex(
                     k_thread_data_on_global, 0, b_thread_data_on_global, 0);
-
+#if 1
             threadwise_generic_tensor_slice_copy_v1(
                 out_n0_n1_n2_k0_k1_k2_h_w_thread_desc,
                 p_out_thread,
@@ -406,6 +411,9 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                 out_n0_n1_n2_k0_k1_k2_h_w_thread_desc.GetLengths(),
                 arithmetic_sequence_gen<0, 8, 1>::type{},
                 Number<1>{});
+#elif 0
+	p_out_global[0] = p_out_thread[0];
+#endif
         }
     }
 };

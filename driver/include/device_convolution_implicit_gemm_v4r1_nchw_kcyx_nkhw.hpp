@@ -13,6 +13,9 @@ template <class T,
           class ConvStrides,
           class ConvDilations>
 void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
+// the input desc needs to be reordered for wrw : cnhw would be the new order
+// the forward kernel always assumes red on the second dim and this would make it reduce on the n dimension due to the switchibng we did
+
                                                           const Tensor<T>& in_nchw,
                                                           WeiDesc,
                                                           const Tensor<T>& wei_kcyx,
@@ -54,12 +57,60 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     wei_kcyx_device_buf.ToDevice(wei_kcyx.mData.data());
     out_nkhw_device_buf.ToDevice(out_nkhw.mData.data());
 
-    constexpr index_t N1 = 2;
-    constexpr index_t N2 = 4;
+     constexpr index_t N1 = 2;
+     constexpr index_t N2 = 4;
 
     constexpr index_t B = (N * Ho * Wo) / (N1 * N2);
-
 #if 1
+    // JD: New params for wrw 
+    // each thread hold 64 data
+    constexpr index_t BlockSize = 256;
+
+    constexpr index_t BPerBlock = 16;
+    constexpr index_t KPerBlock = 128;
+    constexpr index_t EPerBlock = 8;
+
+    constexpr index_t GemmMPerThreadSubC = 4; 
+    constexpr index_t GemmNPerThreadSubC = 4;//~  Must be equal to N2 above for implicit_gemm_v4r1_lds
+    // The fgollowign is not a tuning partam, thisnis related to the block size and the size of the gemm 
+    constexpr index_t GemmMLevel0Cluster = 4;
+    constexpr index_t GemmNLevel0Cluster = 4;
+    constexpr index_t GemmMLevel1Cluster = 4;
+    constexpr index_t GemmNLevel1Cluster = 4;
+    // how much E do we read for each thread, since in GEMM K is the reduction dimensikon not the output channels in convolution 
+    constexpr index_t GemmKPerThreadLoop = 1;
+    // The width of the vector load for GEMM, for mat A and B 
+    constexpr index_t GemmDataPerReadA   = 1;
+    constexpr index_t GemmDataPerReadB   = 1;// changed from 4
+    // copy related (input)
+    // this is a general tensor API for any number of dims and in this case thje tensor has 4 dims 
+    // sublength times cluster length shoudl equal blockwise slice length
+    using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 1, 1, 4>;
+    using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<8, 2, 16, 1>;
+    // the arrange order describes which dim changes the thread id quickest
+    // also important for accessing contiguous memory 
+    using InBlockCopyThreadClusterArrangeOrder = Sequence<0, 1, 3, 2>; // [E, N1, N2, B]
+    // the implication of this is only performance not correctness
+    using InBlockCopySrcAccessOrder            = Sequence<0, 1, 3, 2>; // [E, N1, N2, B]
+    using InBlockCopyDstAccessOrder            = Sequence<0, 1, 2, 3>; // [E, N1, B, N2]
+    
+    // width of the vector read/write if we wish to read float1 ,float2/4
+    constexpr index_t InBlockCopySrcDataPerRead_B   = 1;
+    constexpr index_t InBlockCopyDstDataPerWrite_N2 = 1;
+
+    // copy related (weights)
+    using WeiBlockCopySubLengths_E_K            = Sequence<4, 1>;
+    using WeiBlockCopyClusterLengths_E_K        = Sequence<2, 128>;
+    using WeiBlockCopyThreadClusterArrangeOrder = Sequence<1, 0>; // [K, E]
+    using WeiBlockCopySrcAccessOrder            = Sequence<1, 0>; // [K, E]
+    using WeiBlockCopyDstAccessOrder            = Sequence<0, 1>; // [E, K]
+
+    // width of the vector read/write if we wish to read float1 ,float2/4
+    constexpr index_t WeiBlockCopySrcDataPerRead_E  = 1;
+    constexpr index_t WeiBlockCopyDstDataPerWrite_K = 1;
+
+#elif 0
+    //JD: Original params from chao
     // each thread hold 64 data
     constexpr index_t BlockSize = 256;
 
@@ -147,11 +198,15 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
             <GridSize,
              BlockSize,
              T,
-             decltype(in_nchw_desc),
+		// pass in rthe reordered desc
+             decltype(in_nchw_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{})),
+             decltype(out_nkhw_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{})),
+		// pass in the output instead of the weight, also reordered to knhw
              decltype(wei_kcyx_desc),
-             decltype(out_nkhw_desc),
-             ConvStrides,
-             ConvDilations,
+		// the output would be the weights, which would not be reordered
+// as discussed in the morning for wrw strides and dilation switch positions
+             ConvDilations, // wrw: becomes stride
+             ConvStrides,// wrw: becomes dilation
              BPerBlock,
              KPerBlock,
              EPerBlock,
@@ -186,8 +241,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
                                    dim3(BlockSize),
                                    0,
                                    static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-                                   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
                                    static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+                                   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
 
         printf("Elapsed time : %f ms, %f TFlop/s\n",
                time,

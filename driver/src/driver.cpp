@@ -71,8 +71,8 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 0
-    constexpr index_t N  = 64;
+#if 1
+    constexpr index_t N  = 128;
     constexpr index_t C  = 1536;
     constexpr index_t HI = 8;
     constexpr index_t WI = 8;
@@ -533,6 +533,8 @@ int main(int argc, char* argv[])
     device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw(
         (in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
 #elif 1
+// this is the same as MIOpen
+// I should modify this one 
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
@@ -562,7 +564,7 @@ int main(int argc, char* argv[])
                                                          ConvStrides{},
                                                          ConvDilations{},
                                                          nrepeat);
-#elif 1
+#elif 0
     device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
