@@ -241,8 +241,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
                                    dim3(BlockSize),
                                    0,
                                    static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-                                   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
-                                   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                                   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()),
+                                   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()));
 
         printf("Elapsed time : %f ms, %f TFlop/s\n",
                time,
