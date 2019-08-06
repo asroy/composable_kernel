@@ -388,6 +388,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 
             //     output merged global tensor descriptor, for calculating origin of thread tensor
             //     in global memory
+            // JD: Even thought we changecd ghe layut of the output for wrw we dont need to change the following unfold to merge because the unfloded dimension is alredy contiguous
             constexpr auto out_k_n1_b_n2_global_merged_desc = make_ConstantMergedTensorDescriptor(
                 out_n0_n1_n2_k0_k1_k2_h_w_global_mem_desc.Unfold(I3, I5),
                 Sequence<3>{},
@@ -411,7 +412,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                 out_n0_n1_n2_k0_k1_k2_h_w_thread_desc.GetLengths(),
                 arithmetic_sequence_gen<0, 8, 1>::type{},
                 Number<1>{});
-#elif 1
+#elif 0
 	p_out_global[0] = p_out_thread[0];
 #endif
         }

@@ -62,7 +62,7 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t B = (N * Ho * Wo) / (N1 * N2);
 #if 1
-    // JD: New params for wrw 
+    // JD: New params for wrw for debugging the out ptr seg fault
     // each thread hold 64 data
     constexpr index_t BlockSize = 256;
 
@@ -125,8 +125,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 4;
     constexpr index_t GemmNLevel1Cluster = 4;
     constexpr index_t GemmKPerThreadLoop = 1;
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA   = 1;
+    constexpr index_t GemmDataPerReadB   = 1;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 1, 1, 4>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<8, 2, 16, 1>;
@@ -135,7 +135,7 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     using InBlockCopyDstAccessOrder            = Sequence<0, 1, 2, 3>; // [E, N1, B, N2]
 
     constexpr index_t InBlockCopySrcDataPerRead_B   = 1;
-    constexpr index_t InBlockCopyDstDataPerWrite_N2 = 4;
+    constexpr index_t InBlockCopyDstDataPerWrite_N2 = 1;
 
     using WeiBlockCopySubLengths_E_K            = Sequence<4, 1>;
     using WeiBlockCopyClusterLengths_E_K        = Sequence<2, 128>;
@@ -143,7 +143,7 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     using WeiBlockCopySrcAccessOrder            = Sequence<1, 0>; // [K, E]
     using WeiBlockCopyDstAccessOrder            = Sequence<0, 1>; // [E, K]
 
-    constexpr index_t WeiBlockCopySrcDataPerRead_E  = 4;
+    constexpr index_t WeiBlockCopySrcDataPerRead_E  = 1;
     constexpr index_t WeiBlockCopyDstDataPerWrite_K = 1;
 #elif 0
     // each thread hold 32 data
@@ -202,7 +202,7 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
              decltype(in_nchw_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{})),
              decltype(out_nkhw_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{})),
 		// pass in the output instead of the weight, also reordered to knhw
-             decltype(wei_kcyx_desc),
+             decltype(wei_kcyx_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{})),
 		// the output would be the weights, which would not be reordered
 // as discussed in the morning for wrw strides and dilation switch positions
              ConvDilations, // wrw: becomes stride
