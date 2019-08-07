@@ -3,6 +3,8 @@
 
 #include "ConstantTensorDescriptor.hpp"
 
+
+typedef enum ConvolutionDir{ Forward=0, BackwardData=1, BackwardWeights=2};
 // this is ugly, only for 4d
 template <class InDesc, class WeiDesc>
 constexpr auto get_convolution_output_default_4d_tensor_descriptor(InDesc, WeiDesc)

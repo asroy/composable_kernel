@@ -333,8 +333,8 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 
             // LDS doubel buffer: load next data from device mem
             blockwise_in_copy.RunLoadRegisterClipboard(p_in_global, p_in_register_clipboard);
-             blockwise_wei_copy.RunLoadRegisterClipboard(p_wei_block_on_global,
-                                                        p_wei_register_clipboard);
+            blockwise_wei_copy.RunLoadRegisterClipboard(p_wei_block_on_global,
+                                                       p_wei_register_clipboard);
 
             // LDS double buffer: GEMM on current data
             blockwise_gemm.Run(p_wei_block_double, p_in_block_double, p_out_thread);
@@ -399,8 +399,8 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
             //     origin of dst in device memory
             Float* p_out_thread_on_global =
                 p_out_global  +
-                 out_k_n1_b_n2_global_merged_desc.GetOffsetFromMultiIndex(
-                     k_thread_data_on_global, 0, b_thread_data_on_global, 0);
+                out_k_n1_b_n2_global_merged_desc.GetOffsetFromMultiIndex(
+                    k_thread_data_on_global, 0, b_thread_data_on_global, 0);
 #if 1
             threadwise_generic_tensor_slice_copy_v1(
                 out_n0_n1_n2_k0_k1_k2_h_w_thread_desc,
@@ -412,8 +412,6 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                 out_n0_n1_n2_k0_k1_k2_h_w_thread_desc.GetLengths(),
                 arithmetic_sequence_gen<0, 8, 1>::type{},
                 Number<1>{});
-#elif 0
-	p_out_global[0] = p_out_thread[0];
 #endif
         }
     }

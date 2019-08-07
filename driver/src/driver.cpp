@@ -67,12 +67,14 @@ struct GeneratorTensor_Checkboard
     }
 };
 
+
 int main(int argc, char* argv[])
 {
     using namespace ck;
+    ConvolutionDir dir = Forward;
 
 #if 1
-    constexpr index_t N  = 128;
+    constexpr index_t N  = 64;
     constexpr index_t C  = 1536;
     constexpr index_t HI = 8;
     constexpr index_t WI = 8;
@@ -85,6 +87,7 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
+    dir = BackwardWeights;
 #elif 0
     // 3x3, 34x34
     constexpr index_t N  = 128;
@@ -477,8 +480,10 @@ int main(int argc, char* argv[])
 
     using in_data_t  = float;
     using out_data_t = float;
-    Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
-    Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
+    Tensor<in_data_t> in_nchw_device(make_TensorDescriptor(in_nchw_desc));
+    Tensor<in_data_t> wei_kcyx_device(make_TensorDescriptor(wei_kcyx_desc));
+    Tensor<in_data_t> in_nchw_host(make_TensorDescriptor(in_nchw_desc));
+    Tensor<in_data_t> wei_kcyx_host(make_TensorDescriptor(wei_kcyx_desc));
     Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
     Tensor<out_data_t> out_nkhw_device(make_TensorDescriptor(out_nkhw_desc));
 
@@ -505,8 +510,24 @@ int main(int argc, char* argv[])
         in_nchw.GenerateTensorValue(GeneratorTensor_3{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 1
-        in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-        wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        in_nchw_device.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        assert(in_nchw_device.mData.size() == in_nchw_host.mData.size());
+        for(auto i = 0; i < in_nchw_device.mData.size(); ++i)
+        {
+            in_nchw_host.mData[i] = in_nchw_device.mData[i];
+        }
+        wei_kcyx_device.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        assert(wei_kcyx_device.mData.size() == wei_kcyx_host.mData.size());
+        for(auto i =0; i < wei_kcyx_device.mData.size(); ++i)
+        {
+            wei_kcyx_host.mData[i] = wei_kcyx_device.mData[i];
+        }
+        out_nkhw_device.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        assert(out_nkhw_device.mData.size() == out_nkhw_host.mData.size());
+        for(auto i = 0; i < out_nkhw_device.mData.size(); ++i)
+        {
+            out_nkhw_host.mData[i] = out_nkhw_device.mData[i];
+        }
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_2{1, 5}, num_thread);
 
@@ -536,9 +557,9 @@ int main(int argc, char* argv[])
 // this is the same as MIOpen
 // I should modify this one 
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
-                                                         in_nchw,
+                                                         in_nchw_device,
                                                          wei_kcyx_desc,
-                                                         wei_kcyx,
+                                                         wei_kcyx_device,
                                                          out_nkhw_desc,
                                                          out_nkhw_device,
                                                          ConvStrides{},
@@ -588,7 +609,7 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 1
+#if 0
         if(Y == 3 && X == 3 && ConvStrides{}[0] == 1 && ConvStrides{}[1] == 1 &&
            ConvDilations{}[0] == 1 && ConvDilations{}[1] == 1)
         {
@@ -597,15 +618,18 @@ int main(int argc, char* argv[])
         else
 #endif
         {
-            host_direct_convolution(in_nchw,
-                                    wei_kcyx,
+            host_direct_convolution(in_nchw_host,
                                     out_nkhw_host,
-                                    ConvStrides{},
+                                    wei_kcyx_host,
                                     ConvDilations{},
+                                    ConvStrides{},
                                     lower_pads,
-                                    upper_pads);
+                                    upper_pads, dir);
         }
-        check_error(out_nkhw_host, out_nkhw_device);
+        if(dir == Forward)
+            check_error(out_nkhw_host, out_nkhw_device);
+        else
+            check_error(wei_kcyx_host, wei_kcyx_device);
 
 #if 0
         LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;

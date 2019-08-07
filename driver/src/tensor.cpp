@@ -7,6 +7,10 @@ TensorDescriptor::TensorDescriptor(std::initializer_list<std::size_t> lens) : mL
 {
     this->CalculateStrides();
 }
+TensorDescriptor::TensorDescriptor(std::initializer_list<std::size_t> lens, std::initializer_list<std::size_t> strides)
+    : mLens(lens), mStrides(strides)
+{
+}
 
 TensorDescriptor::TensorDescriptor(std::vector<std::size_t> lens, std::vector<std::size_t> strides)
     : mLens(lens), mStrides(strides)

@@ -101,6 +101,22 @@ struct TensorDescriptor
         std::initializer_list<std::size_t> iss{static_cast<std::size_t>(is)...};
         return std::inner_product(iss.begin(), iss.end(), mStrides.begin(), std::size_t{0});
     }
+    void ReorderGivenNew2Old(std::vector<std::size_t> is)
+    {
+        assert(mLens.size() == is.size());
+        assert(mStrides.size() == is.size());
+        std::vector<std::size_t> newLens(mLens.size());
+        std::vector<std::size_t> newStrides(mStrides.size());
+        auto cnt = 0;
+        for(auto& idx : is)
+        {
+            newLens[cnt] = mLens[idx];
+            newStrides[cnt] = mStrides[idx];
+            ++cnt;
+        }
+        mLens= newLens;
+        mStrides = newStrides;
+    }
 
     private:
     std::vector<std::size_t> mLens;

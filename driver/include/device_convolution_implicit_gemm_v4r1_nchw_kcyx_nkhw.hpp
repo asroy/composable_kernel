@@ -16,9 +16,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 // the input desc needs to be reordered for wrw : cnhw would be the new order
 // the forward kernel always assumes red on the second dim and this would make it reduce on the n dimension due to the switchibng we did
 
-                                                          const Tensor<T>& in_nchw,
+                                                          Tensor<T>& in_nchw,
                                                           WeiDesc,
-                                                          const Tensor<T>& wei_kcyx,
+                                                          Tensor<T>& wei_kcyx,
                                                           OutDesc,
                                                           Tensor<T>& out_nkhw,
                                                           ConvStrides,
@@ -252,4 +252,6 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     }
 
     out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
+    in_nchw_device_buf.FromDevice(in_nchw.mData.data());
+    wei_kcyx_device_buf.FromDevice(wei_kcyx.mData.data());
 }

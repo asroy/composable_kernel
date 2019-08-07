@@ -1,6 +1,7 @@
 #pragma once
 #include "tensor.hpp"
 #include "common_header.hpp"
+#include "conv_common.hpp"
 #include "ConstantTensorDescriptor.hpp"
 
 // this is ugly, only for 4d
@@ -52,15 +53,26 @@ template <class TIn,
           class ConvDilations,
           class LowerPads,
           class UpperPads>
-void host_direct_convolution(const Tensor<TIn>& in_nchw,
-                             const Tensor<TWei>& wei_kcyx,
+void host_direct_convolution(Tensor<TIn>& in_nchw,
+                             Tensor<TWei>& wei_kcyx,
                              Tensor<TOut>& out_nkhw,
                              ConvStrides,
                              ConvDilations,
                              LowerPads,
-                             UpperPads)
+                             UpperPads,
+                             ConvolutionDir dir)
 {
     using namespace ck;
+    constexpr auto I0   = Number<0>{};
+    constexpr auto I1   = Number<1>{};
+    constexpr auto I2   = Number<2>{};
+    constexpr auto I3   = Number<3>{};
+#if 1
+    // wrw
+    in_nchw.mDesc.ReorderGivenNew2Old({1, 0, 2, 3});
+    wei_kcyx.mDesc.ReorderGivenNew2Old({1, 0, 2, 3});
+    out_nkhw.mDesc.ReorderGivenNew2Old({1, 0, 2, 3});
+#endif
 
     index_t h_pad_low = LowerPads{}.Get(Number<0>{});
     index_t w_pad_low = LowerPads{}.Get(Number<1>{});
@@ -81,7 +93,7 @@ void host_direct_convolution(const Tensor<TIn>& in_nchw,
                     if(hi >= 0 && hi < in_nchw.mDesc.GetLengths()[2] && wi >= 0 &&
                        wi < in_nchw.mDesc.GetLengths()[3])
                     {
-                        v += double(in_nchw(n, c, hi, wi)) * double(wei_kcyx(k, c, y, x));
+                        v += double(in_nchw(n, c, hi, wi))  /*double(wei_kcyx(k, c, y, x))*/;
                     }
                 }
             }
