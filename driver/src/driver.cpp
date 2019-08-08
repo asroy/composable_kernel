@@ -72,8 +72,22 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
     ConvolutionDir dir = Forward;
-
 #if 1
+    constexpr index_t N  = 64;
+    constexpr index_t C  = 384;
+    constexpr index_t HI = 8;
+    constexpr index_t WI = 8;
+    constexpr index_t K  = 128;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    constexpr index_t HPad = 0;
+    constexpr index_t WPad = 0;
+    dir = BackwardWeights;
+#elif 0
     constexpr index_t N  = 64;
     constexpr index_t C  = 1536;
     constexpr index_t HI = 8;
@@ -632,10 +646,10 @@ int main(int argc, char* argv[])
             check_error(wei_kcyx_host, wei_kcyx_device);
 
 #if 0
-        LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
-        LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
-        LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
+        LogRange(std::cout << "in_nchw : ", in_nchw_device.mData, ",") << std::endl;
         LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
+        LogRange(std::cout << "wei_kcyx_device: ", wei_kcyx_device.mData, ",") << std::endl;
+        LogRange(std::cout << "wei_kcyx_host: ", wei_kcyx_host.mData, ",") << std::endl;
 #endif
     }
 }
