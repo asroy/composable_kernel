@@ -72,15 +72,15 @@ int main(int argc, char* argv[])
     using namespace ck;
 
 #if 1
-    constexpr index_t N  = 64;
-    constexpr index_t C  = 1536;
-    constexpr index_t HI = 8;
-    constexpr index_t WI = 8;
-    constexpr index_t K  = 256;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
+    constexpr index_t N  = 128;
+    constexpr index_t C  = 256;
+    constexpr index_t HI = 35;
+    constexpr index_t WI = 35;
+    constexpr index_t K  = 384;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
 
-    using ConvStrides   = Sequence<1, 1>;
+    using ConvStrides   = Sequence<2, 2>;
     using ConvDilations = Sequence<1, 1>;
 
     constexpr index_t HPad = 0;
@@ -322,12 +322,21 @@ int main(int argc, char* argv[])
     ostream_ConstantTensorDescriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
     ostream_ConstantTensorDescriptor(out_nkhw_desc, std::cout << "out_nkhw_desc: ");
 
+    // for backward weight
+    auto in_nchw_wrw_desc  = in_nchw_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
+    auto wei_kcyx_wrw_desc = out_nkhw_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
+    auto out_nkhw_wrw_desc = wei_kcyx_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
+
+    ostream_ConstantTensorDescriptor(in_nchw_wrw_desc, std::cout << "in_nchw_wrw_desc: ");
+    ostream_ConstantTensorDescriptor(wei_kcyx_wrw_desc, std::cout << "wei_kcyx_wrw_desc: ");
+    ostream_ConstantTensorDescriptor(out_nkhw_wrw_desc, std::cout << "out_nkhw_wrw_desc: ");
+
     using in_data_t  = float;
     using out_data_t = float;
-    Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
-    Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
-    Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
-    Tensor<out_data_t> out_nkhw_device(make_TensorDescriptor(out_nkhw_desc));
+    Tensor<in_data_t> in_nchw_wrw(make_TensorDescriptor(in_nchw_wrw_desc));
+    Tensor<in_data_t> wei_kcyx_wrw(make_TensorDescriptor(wei_kcyx_wrw_desc));
+    Tensor<out_data_t> out_nkhw_wrw_host(make_TensorDescriptor(out_nkhw_wrw_desc));
+    Tensor<out_data_t> out_nkhw_wrw_device(make_TensorDescriptor(out_nkhw_wrw_desc));
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
@@ -343,8 +352,8 @@ int main(int argc, char* argv[])
     if(do_verification)
     {
 #if 0
-        in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-        wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        in_nchw_wrw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        wei_kcyx_wrw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
@@ -352,8 +361,8 @@ int main(int argc, char* argv[])
         in_nchw.GenerateTensorValue(GeneratorTensor_3{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 1
-        in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-        wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        in_nchw_wrw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        wei_kcyx_wrw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_2{1, 5}, num_thread);
 
@@ -379,16 +388,17 @@ int main(int argc, char* argv[])
 #elif 0
     device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw(
         (in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
-#elif 0
-    device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
-                                                         in_nchw,
-                                                         wei_kcyx_desc,
-                                                         wei_kcyx,
-                                                         out_nkhw_desc,
-                                                         out_nkhw_device,
-                                                         ConvStrides{},
-                                                         ConvDilations{},
-                                                         nrepeat);
+#elif 1
+    device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(
+        in_nchw_wrw_desc,
+        in_nchw_wrw,
+        wei_kcyx_wrw_desc,
+        wei_kcyx_wrw,
+        out_nkhw_wrw_desc,
+        out_nkhw_wrw_device,
+        ConvDilations{}, // exchange dilation and strides
+        ConvStrides{},
+        nrepeat);
 #elif 0
     device_convolution_implicit_gemm_v4r2_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
@@ -433,7 +443,7 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 1
+#if 0
         if(Y == 3 && X == 3 && ConvStrides{}[0] == 1 && ConvStrides{}[1] == 1 &&
            ConvDilations{}[0] == 1 && ConvDilations{}[1] == 1)
         {
@@ -442,21 +452,21 @@ int main(int argc, char* argv[])
         else
 #endif
         {
-            host_direct_convolution(in_nchw,
-                                    wei_kcyx,
-                                    out_nkhw_host,
-                                    ConvStrides{},
+            host_direct_convolution(in_nchw_wrw,
+                                    wei_kcyx_wrw,
+                                    out_nkhw_wrw_host,
                                     ConvDilations{},
+                                    ConvStrides{},
                                     lower_pads,
                                     upper_pads);
         }
-        check_error(out_nkhw_host, out_nkhw_device);
+        check_error(out_nkhw_wrw_host, out_nkhw_wrw_device);
 
 #if 0
-        LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
-        LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
-        LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
-        LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
+        LogRange(std::cout << "in_nchw_wrw : ", in_nchw_wrw.mData, ",") << std::endl;
+        LogRange(std::cout << "wei_kcyx_wrw: ", wei_kcyx_wrw.mData, ",") << std::endl;
+        LogRange(std::cout << "out_nkhw_wrw_host  : ", out_nkhw_wrw_host.mData, ",") << std::endl;
+        LogRange(std::cout << "out_nkhw_wrw_device: ", out_nkhw_wrw_device.mData, ",") << std::endl;
 #endif
     }
 }

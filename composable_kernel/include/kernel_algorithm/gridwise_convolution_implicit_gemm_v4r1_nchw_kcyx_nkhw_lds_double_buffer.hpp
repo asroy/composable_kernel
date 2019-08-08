@@ -156,7 +156,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
         static_assert(in_e_n1_b_n2_block_desc.GetStride(I1) % GemmDataPerReadB == 0,
                       "GemmDataPerReadB alignment requirement is not satisfied");
 
-#if 0
+#if 1
         // input blockwise copy
         //     slice a merged tensor, reorder and copy to a normal tensor
         //     this copy operator already has blockwise offset built-in
@@ -196,8 +196,8 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 
         // weight tensor
         //     tensor descriptor in device memory, src of blockwise copy
-        constexpr auto wei_e_k_global_desc =
-            wei_k_c_y_x_global_desc.Unfold(I1, I3).ReorderGivenNew2Old(Sequence<1, 0>{});
+        constexpr auto wei_e_k_global_merged_desc = make_ConstantMergedTensorDescriptor(
+            wei_k_c_y_x_global_desc.Unfold(I2, I3), Sequence<1, 2>{}, Sequence<0>{});
 
         //     tensor descriptor in LDS, dst of blockwise copy
         //     be careful of LDS alignment
@@ -205,13 +205,13 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
             Sequence<EPerBlock, KPerBlock>{},
             Number<math::lcm(WeiBlockCopyDstDataPerWrite_K, GemmDataPerReadA)>{});
 
-#if 0
+#if 1
         // operator for blockwise copy of weight into LDS
         //     slice a tensor, and copy it into another tensor
         //     this copy operator already have blockwise offset built-in
         auto blockwise_wei_copy =
             BlockwiseGenericTensorSliceCopy_v1<BlockSize,
-                                               decltype(wei_e_k_global_desc),
+                                               decltype(wei_e_k_global_merged_desc),
                                                decltype(wei_e_k_block_desc),
                                                decltype(wei_e_k_block_desc.GetLengths()),
                                                WeiBlockCopySubLengths_E_K,
@@ -336,7 +336,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                 Float p_wei_register_buffer[blockwise_wei_copy.GetRegisterBufferSize()];
 
                 blockwise_in_copy.MoveSrcSlicingWindow(Sequence<EPerBlock, 0, 0, 0>{}, True);
-                p_wei_block_on_global += EPerBlock * wei_e_k_global_desc.GetStride(I0);
+                blockwise_wei_copy.MoveSrcSlicingWindow(Sequence<EPerBlock, 0>{}, True);
 
                 __syncthreads();
 
@@ -361,7 +361,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
             Float p_wei_register_buffer[blockwise_wei_copy.GetRegisterBufferSize()];
 
             blockwise_in_copy.MoveSrcSlicingWindow(Sequence<EPerBlock, 0, 0, 0>{}, True);
-            p_wei_block_on_global += EPerBlock * wei_e_k_global_desc.GetStride(I0);
+            blockwise_wei_copy.MoveSrcSlicingWindow(Sequence<EPerBlock, 0>{}, True);
 
             __syncthreads();
 
