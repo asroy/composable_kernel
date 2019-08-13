@@ -217,7 +217,7 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
              WeiBlockCopyDstAccessOrder,
              WeiBlockCopySrcDataPerRead_E,
              WeiBlockCopyDstDataPerWrite_K,
-             OutThreadCopyDataPerAccess_W>{};
+             OutThreadCopyDataPerAccess_W, ConvolutionDirection::BackwardWeights>{};
 
         float time = launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
                                    dim3(GridSize),
