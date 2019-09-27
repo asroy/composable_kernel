@@ -6,7 +6,7 @@
 namespace ck {
 
 template <class Lengths>
-__host__ __device__ constexpr auto calculate_tensor_strides_packed(Lengths)
+__host__ __device__ constexpr auto calculate_tensor_strides_packed_old(Lengths)
 {
     return reverse_inclusive_scan_sequence(
                Lengths{}.PopFront(), math::multiplies<index_t>{}, Number<1>{})
@@ -14,12 +14,12 @@ __host__ __device__ constexpr auto calculate_tensor_strides_packed(Lengths)
 }
 
 template <class Lengths, index_t Align>
-__host__ __device__ constexpr auto calculate_tensor_strides_aligned(Lengths, Number<Align>)
+__host__ __device__ constexpr auto calculate_tensor_strides_aligned_old(Lengths, Number<Align>)
 {
     constexpr index_t L_back_align =
         Align * math::integer_divide_ceiler<index_t>{}(Lengths{}.Back(), Align);
 
-    return calculate_tensor_strides_packed(
+    return calculate_tensor_strides_packed_old(
         Lengths{}.Modify(Number<Lengths{}.GetSize() - 1>{}, Number<L_back_align>{}));
 }
 
@@ -96,13 +96,12 @@ struct ConstantTensorDescriptor
 
     __host__ __device__ static constexpr auto GetElementSize()
     {
-        return Number<accumulate_on_sequence(
-            Lengths{}, math::multiplies<index_t>{}, Number<1>{})>{};
+        return Number<reduce_on_sequence(Lengths{}, math::multiplies<index_t>{}, Number<1>{})>{};
     }
 
     __host__ __device__ static constexpr auto GetElementSpace()
     {
-        constexpr index_t element_space_unaligned = accumulate_on_sequence(
+        constexpr index_t element_space_unaligned = reduce_on_sequence(
             (GetLengths() - Number<1>{}) * GetStrides(), math::plus<index_t>{}, Number<1>{});
 
         return Number<element_space_unaligned>{};
@@ -155,7 +154,7 @@ struct ConstantTensorDescriptor
 
         constexpr auto multi_id = Sequence<Is...>{};
 
-        return Number<accumulate_on_sequence(
+        return Number<reduce_on_sequence(
             multi_id * GetStrides(), math::plus<index_t>{}, Number<0>{})>{};
     }
 
@@ -178,7 +177,7 @@ struct ConstantTensorDescriptor
         {
             constexpr auto IDim      = IDim_{};
             constexpr index_t stride = PackedStrides::Get(IDim);
-            multi_id.Set(IDim, id / stride);
+            multi_id(IDim)           = id / stride;
             id -= multi_id[IDim] * stride;
         }
     };
@@ -187,12 +186,12 @@ struct ConstantTensorDescriptor
     {
         Array<index_t, nDim> multi_id;
 
-        using PackedStrides = decltype(calculate_tensor_strides_packed(GetLengths()));
+        using PackedStrides = decltype(calculate_tensor_strides_packed_old(GetLengths()));
 
         // calculate index in each of the dimensions in the order of their dimension
         static_for<0, nDim - 1, 1>{}(lambda_GetMultiIndexFrom1dIndex<PackedStrides>(id, multi_id));
 
-        multi_id.Set(Number<nDim - 1>{}, id / PackedStrides::Get(Number<nDim - 1>{}));
+        multi_id(Number<nDim - 1>{}) = id / PackedStrides::Get(Number<nDim - 1>{});
 
         return multi_id;
     }
@@ -204,7 +203,7 @@ struct ConstantTensorDescriptor
     }
 
     // This function doesn't do carry check on the highest dimension for positive stepping (or
-    // borrow check on the lowest dimension for negative stepping) , for performance reason. It is
+    // borrow check on the highest dimension for negative stepping) , for performance reason. It is
     // the user's responsibility to make sure the result "new_mutli_id" is not out-of-bound on the
     // highest dimension for positive stepping (or on the lowest dimension for negative stepping)
     template <bool PositiveDirection>
@@ -304,12 +303,71 @@ struct ConstantTensorDescriptor
                                             GetStrides().PushBack(leaf_tensor::GetStrides()))>{};
     }
 
+    template <index_t IDimVector, index_t DataPerVector>
+    struct lambda_IsVectorizationAllowed
+    {
+        bool& is_allowed;
+
+        __host__ __device__ constexpr lambda_IsVectorizationAllowed(bool& is_allowed_)
+            : is_allowed(is_allowed_)
+        {
+        }
+
+        template <index_t IDim_>
+        __host__ __device__ constexpr void operator()(Number<IDim_>) const
+        {
+            constexpr auto IDim = Number<IDim_>{};
+
+            if(IDimVector != IDim && Strides::Get(IDim) % DataPerVector != 0)
+            {
+                is_allowed = false;
+            }
+        }
+    };
+
+    template <index_t IDimVector, index_t DataPerVector>
+    __host__ __device__ static constexpr bool IsVectorizationAllowed(Number<IDimVector>,
+                                                                     Number<DataPerVector>)
+    {
+        bool is_allowed = (Strides{}[IDimVector] == 1 || DataPerVector == 1) &&
+                          Lengths{}[IDimVector] % DataPerVector == 0;
+
+        static_for<0, nDim, 1>{}(
+            lambda_IsVectorizationAllowed<IDimVector, DataPerVector>{is_allowed});
+
+        return is_allowed;
+    }
+
+    template <index_t IDim, index_t DataPerVector>
+    __host__ __device__ static constexpr auto Vectorize(Number<IDim>, Number<DataPerVector>)
+    {
+        constexpr auto idim            = Number<IDim>{};
+        constexpr auto data_per_vector = Number<DataPerVector>{};
+
+        static_assert(IsVectorizationAllowed(idim, data_per_vector), "wrong!");
+
+        using vectorized_lengths =
+            decltype(Lengths::Modify(Number<IDim>{}, Number<Lengths{}[IDim] / DataPerVector>{}));
+        using vectorized_strides =
+            decltype((Strides{} / Number<DataPerVector>{}).Modify(Number<IDim>{}, Number<1>{}));
+
+        return ConstantTensorDescriptor<vectorized_lengths, vectorized_strides>{};
+    }
+
     template <index_t IDim, index_t SliceLen>
     __host__ __device__ static constexpr auto Slice(Number<IDim>, Number<SliceLen>)
     {
-        using slice_lengths = decltype(Lengths{}.Modify(Number<IDim>{}, Number<SliceLen>{}));
+        using slice_lengths = decltype(Lengths::Modify(Number<IDim>{}, Number<SliceLen>{}));
 
         return ConstantTensorDescriptor<slice_lengths, Strides>{};
+    }
+
+    template <index_t... Is>
+    __host__ __device__ static constexpr auto Slice(Sequence<Is...> slice_lengths)
+    {
+        static_assert(slice_lengths.GetSize() == nDim, "wrong!");
+
+        return ConstantTensorDescriptor<decltype(slice_lengths), Strides>{};
     }
 
     template <index_t IDim, index_t SliceLength, index_t SliceStride>
@@ -330,7 +388,7 @@ struct ConstantTensorDescriptor
         constexpr auto fold_intervals = Sequence<FoldIntervals...>{};
 
         constexpr index_t fold_intervals_product =
-            accumulate_on_sequence(fold_intervals, math::multiplies<index_t>{}, Number<1>{});
+            reduce_on_sequence(fold_intervals, math::multiplies<index_t>{}, Number<1>{});
 
         constexpr auto unfold_length = GetLength(Number<IDim>{});
         constexpr auto unfold_stride = GetStride(Number<IDim>{});
@@ -388,7 +446,7 @@ struct ConstantTensorDescriptor
         static_assert(Type::Extract(middle).AreDimensionsContinuous(), "wrong! not unfoldable");
 
         // unfolded length, stride
-        constexpr index_t unfold_length = accumulate_on_sequence(
+        constexpr index_t unfold_length = reduce_on_sequence(
             GetLengths().Extract(middle), math::multiplies<index_t>{}, Number<1>{});
 
         constexpr index_t unfold_stride = GetStride(Number<LastUnfoldDim>{});
@@ -409,7 +467,7 @@ struct ConstantTensorDescriptor
 
     __host__ __device__ static constexpr auto Pack()
     {
-        using packed_strides = decltype(calculate_tensor_strides_packed(Lengths{}));
+        using packed_strides = decltype(calculate_tensor_strides_packed_old(Lengths{}));
         return ConstantTensorDescriptor<Lengths, packed_strides>{};
     }
 
@@ -431,7 +489,7 @@ struct ConstantTensorDescriptor
 template <class Lengths>
 __host__ __device__ constexpr auto make_ConstantTensorDescriptor_packed(Lengths)
 {
-    using Strides = decltype(calculate_tensor_strides_packed(Lengths{}));
+    using Strides = decltype(calculate_tensor_strides_packed_old(Lengths{}));
     return ConstantTensorDescriptor<Lengths, Strides>{};
 }
 
@@ -444,7 +502,7 @@ __host__ __device__ constexpr auto make_ConstantTensorDescriptor(Lengths, Stride
 template <class Lengths, index_t Align>
 __host__ __device__ constexpr auto make_ConstantTensorDescriptor_aligned(Lengths, Number<Align>)
 {
-    using Strides = decltype(calculate_tensor_strides_aligned(Lengths{}, Number<Align>{}));
+    using Strides = decltype(calculate_tensor_strides_aligned_old(Lengths{}, Number<Align>{}));
     return ConstantTensorDescriptor<Lengths, Strides>{};
 }
 
