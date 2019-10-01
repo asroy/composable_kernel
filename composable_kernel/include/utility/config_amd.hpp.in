@@ -16,10 +16,10 @@
 
 namespace ck {
 
-enum address_space_t
+enum AddressSpace_t
 {
-    generic = 0,
-    global  = 3
+    generic,
+    global
 };
 
 #if CK_UNSIGNED_INDEX_TYPE

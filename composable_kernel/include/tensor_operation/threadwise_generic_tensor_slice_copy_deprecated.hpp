@@ -539,8 +539,8 @@ struct ThreadwiseGenericTensorSliceCopy_v2r1
 
     template <typename SrcData,
               typename DstData,
-              address_space_t SrcAddressSpace = address_space_t::generic,
-              address_space_t DstAddressSpace = address_space_t::generic>
+              AddressSpace_t SrcAddressSpace = AddressSpace_t::generic,
+              AddressSpace_t DstAddressSpace = AddressSpace_t::generic>
     __device__ void Run(const SrcData* p_src, DstData* p_dst) const
     {
         constexpr auto buffer_desc = make_ConstantTensorDescriptor_packed(SliceLengths{});
@@ -613,7 +613,7 @@ struct ThreadwiseGenericTensorSliceCopy_v2r1
                         //     2. src_normal_offset must be calculatd at compile time (guaranteed by
                         //        algorithm)
                         //     3. src_merged_offset can be runtime value (no assumption imposed)
-                        static_if<SrcAddressSpace == address_space_t::global>{}([&](auto) {
+                        static_if<SrcAddressSpace == AddressSpace_t::global>{}([&](auto) {
 #if CK_USE_AMD_INTRINSIC && CK_USE_AMD_INTRINSIC_BUFFER_LOAD_STORE
                             vector_data = __buffer_load<SrcData, SrcDataPerAccess>(
                                 p_src, src_merged_offset, src_normal_offset);
@@ -722,7 +722,7 @@ struct ThreadwiseGenericTensorSliceCopy_v2r1
                     //     2. dst_normal_offset must be calculatd at compile time (guaranteed by
                     //        algorithm)
                     //     3. dst_merged_offset can be runtime value (no assumption imposed)
-                    static_if<DstAddressSpace == address_space_t::global>{}([&](auto) {
+                    static_if<DstAddressSpace == AddressSpace_t::global>{}([&](auto) {
 #if CK_USE_AMD_INTRINSIC && CK_USE_AMD_INTRINSIC_BUFFER_LOAD_STORE
                         __buffer_store<SrcData, DstDataPerAccess>(
                             vector_data, p_dst, dst_merged_offset, dst_normal_offset);
