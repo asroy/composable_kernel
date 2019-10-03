@@ -41,7 +41,8 @@ using index_t = int32_t;
 #endif
 
 // For some reason, HIP compiler need this definition to generate optimal load and store
-// instruction
+//   instruction
+// float
 typedef float float2_t __attribute__((ext_vector_type(2)));
 typedef float float4_t __attribute__((ext_vector_type(4)));
 typedef float float32_t __attribute__((ext_vector_type(32)));

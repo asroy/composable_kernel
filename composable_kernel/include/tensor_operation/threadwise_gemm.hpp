@@ -99,7 +99,7 @@ struct ThreadwiseGemmTransANormalBNormalC
         constexpr index_t N = MatrixC::NCol();
         constexpr index_t K = MatrixA::NRow(); // A is transposed
 
-        static_assert(N == 4 || N == 2, "wrong! not supported by asm yet");
+        static_assert(N == 4 || N == 2, "wrong! this config not supported by asm yet");
 
         for(index_t k = 0; k < K; ++k)
         {

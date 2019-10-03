@@ -7,7 +7,9 @@
 
 namespace ck {
 
-// if following number are power of 2, index calculation shall be greatly reduced:
+// blockwise GEMM: C += transpose(A) * B
+// A and B are visable to the whole block, C is distributed among each thread
+// If following number are power of 2, index calculation shall be greatly reduced:
 //    MPerThreadSubC, NPerThreadSubC, MLevel0ThreadCluster, NLevel0ThreadCluster,
 //    MLevel1ThreadCluster, NLevel1ThreadCluster
 template <index_t BlockSize,
@@ -117,9 +119,6 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
     __device__ void
     Run_naive(const FloatA* p_a_block, const FloatB* p_b_block, FloatC* p_c_thread) const
     {
-        constexpr auto True  = integral_constant<bool, true>{};
-        constexpr auto False = integral_constant<bool, false>{};
-
         constexpr auto a_block_mtx  = BlockMatrixA{};
         constexpr auto b_block_mtx  = BlockMatrixB{};
         constexpr auto c_thread_mtx = ThreadMatrixC{};
