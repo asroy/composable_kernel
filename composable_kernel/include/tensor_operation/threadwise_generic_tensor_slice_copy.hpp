@@ -10,8 +10,8 @@
 #define CK_USE_AMD_INTRINSIC 1
 #endif
 
-#ifndef CK_USE_AMD_INTRINSIC_BUFFER_LOAD_STORE
-#define CK_USE_AMD_INTRINSIC_BUFFER_LOAD_STORE 1
+#ifndef CK_BUFFER_LOAD_STORE_USE_AMD_INTRINSIC
+#define CK_BUFFER_LOAD_STORE_USE_AMD_INTRINSIC 1
 #endif
 
 namespace ck {
@@ -76,8 +76,8 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     // Will do padding check on dst data: No write if dst data is in paddin area.
     template <typename SrcData,
               typename DstData,
-              AddressSpace_t SrcAddressSpace = AddressSpace_t::generic,
-              AddressSpace_t DstAddressSpace = AddressSpace_t::generic>
+              AddressSpace SrcAddressSpace = AddressSpace::generic,
+              AddressSpace DstAddressSpace = AddressSpace::generic>
     __device__ void Run(const SrcData* p_src, DstData* p_dst) const
     {
         using src_vector_t = typename vector_type<SrcData, SrcDataPerAccess>::MemoryType;
@@ -126,8 +126,8 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                 //   the same padding situation
                 if(src_coord.IsUpperIndexMappedToValidOffset())
                 {
-                    static_if<SrcAddressSpace == AddressSpace_t::global>{}([&](auto) {
-#if CK_USE_AMD_INTRINSIC && CK_USE_AMD_INTRINSIC_BUFFER_LOAD_STORE
+                    static_if<SrcAddressSpace == AddressSpace::global>{}([&](auto) {
+#if CK_USE_AMD_INTRINSIC && CK_BUFFER_LOAD_STORE_USE_AMD_INTRINSIC
                         *reinterpret_cast<src_vector_t*>(&p_src_long_vector[buffer_offset]) =
                             __buffer_load<SrcData, SrcDataPerAccess>(
                                 p_src, src_coord.GetOffset(), 0);
@@ -167,8 +167,8 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                 //   the same padding situation
                 if(dst_coord.IsUpperIndexMappedToValidOffset())
                 {
-                    static_if<DstAddressSpace == AddressSpace_t::global>{}([&](auto) {
-#if CK_USE_AMD_INTRINSIC && CK_USE_AMD_INTRINSIC_BUFFER_LOAD_STORE
+                    static_if<DstAddressSpace == AddressSpace::global>{}([&](auto) {
+#if CK_USE_AMD_INTRINSIC && CK_BUFFER_LOAD_STORE_USE_AMD_INTRINSIC
                         __buffer_store<DstData, DstDataPerAccess>(
                             *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]),
                             p_dst,
@@ -204,8 +204,8 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     // This version is optimized for address calculation of src tensor
     template <typename SrcData,
               typename DstData,
-              AddressSpace_t SrcAddressSpace = AddressSpace_t::generic,
-              AddressSpace_t DstAddressSpace = AddressSpace_t::generic>
+              AddressSpace SrcAddressSpace = AddressSpace::generic,
+              AddressSpace DstAddressSpace = AddressSpace::generic>
     __device__ void Run_optimized_src_address_calculation(const SrcData* p_src,
                                                           DstData* p_dst) const
     {
@@ -302,8 +302,8 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                     //   the src vector has the same padding situation
                     if(src_coord.IsUpperIndexMappedToValidOffset())
                     {
-                        static_if<SrcAddressSpace == AddressSpace_t::global>{}([&](auto) {
-#if CK_USE_AMD_INTRINSIC && CK_USE_AMD_INTRINSIC_BUFFER_LOAD_STORE
+                        static_if<SrcAddressSpace == AddressSpace::global>{}([&](auto) {
+#if CK_USE_AMD_INTRINSIC && CK_BUFFER_LOAD_STORE_USE_AMD_INTRINSIC
                             *reinterpret_cast<src_vector_t*>(&p_src_long_vector[buffer_offset]) =
                                 __buffer_load<SrcData, SrcDataPerAccess>(
                                     p_src, src_nonlinear_coord.GetOffset(), src_linear_offset);
@@ -362,8 +362,8 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     // This version is optimized for address calculation of dst tensor
     template <typename SrcData,
               typename DstData,
-              AddressSpace_t SrcAddressSpace = AddressSpace_t::generic,
-              AddressSpace_t DstAddressSpace = AddressSpace_t::generic>
+              AddressSpace SrcAddressSpace = AddressSpace::generic,
+              AddressSpace DstAddressSpace = AddressSpace::generic>
     __device__ void Run_optimized_dst_address_calculation(const SrcData* p_src,
                                                           DstData* p_dst) const
     {
@@ -491,8 +491,8 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                     //   the dst vector has the same padding situation
                     if(dst_coord.IsUpperIndexMappedToValidOffset())
                     {
-                        static_if<DstAddressSpace == AddressSpace_t::global>{}([&](auto) {
-#if CK_USE_AMD_INTRINSIC && CK_USE_AMD_INTRINSIC_BUFFER_LOAD_STORE
+                        static_if<DstAddressSpace == AddressSpace::global>{}([&](auto) {
+#if CK_USE_AMD_INTRINSIC && CK_BUFFER_LOAD_STORE_USE_AMD_INTRINSIC
                             __buffer_store<DstData, DstDataPerAccess>(
                                 *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]),
                                 p_dst,

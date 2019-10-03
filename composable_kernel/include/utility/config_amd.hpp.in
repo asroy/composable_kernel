@@ -12,12 +12,31 @@
 #define CK_DEVICE_BACKEND_AMD 1
 
 // AMD inline asm
+#ifndef CK_USE_AMD_INLINE_ASM
 #define CK_USE_AMD_INLINE_ASM 1
-#define CK_THREADWISE_GEMM_USE_AMD_INLINE_ASM 1
+#endif
 
-// AMD intrinsic
+#ifndef CK_THREADWISE_GEMM_USE_AMD_INLINE_ASM
+#define CK_THREADWISE_GEMM_USE_AMD_INLINE_ASM 1
+#endif
+
+// AMD XDLOPS
+#ifndef CK_USE_AMD_XDLOPS
+#define CK_USE_AMD_XDLOPS 1
+#endif
+
+#ifndef CK_USE_AMD_XDLOPS_INLINE_ASM
+#define CK_USE_AMD_XDLOPS_INLINE_ASM 1
+#endif
+
+// AMD llvm intrinsic
+#ifndef CK_USE_AMD_INTRINSIC
 #define CK_USE_AMD_INTRINSIC 1
-#define CK_USE_AMD_INTRINSIC_BUFFER_LOAD_STORE 1
+#endif
+
+#ifndef CK_BUFFER_LOAD_STORE_USE_AMD_INTRINSIC
+#define CK_BUFFER_LOAD_STORE_USE_AMD_INTRINSIC 1
+#endif
 
 // experimental implementation
 #define CK_EXPERIMENTAL_BLOCKWISE_GEMM_USE_PIPELINE 1
@@ -26,9 +45,12 @@
 #define CK_EXPERIMENTAL_USE_MORE_COMPILE_STATIC_THREADWISE_GENERIC_TENSOR_SLICE_COPY_V1R2 0
 #define CK_EXPERIMENTAL_USE_MORE_COMPILE_STATIC_THREADWISE_GENERIC_TENSOR_SLICE_COPY_V2R1 0
 
+// workaround
+#define CK_WORKAROUND_SWDEV_202749 1
+
 namespace ck {
 
-enum AddressSpace_t
+enum AddressSpace
 {
     generic,
     global
@@ -40,41 +62,28 @@ using index_t = uint32_t;
 using index_t = int32_t;
 #endif
 
-// For some reason, HIP compiler need this definition to generate optimal load and store
-//   instruction
+// For some reason, HIP compiler need this definition to generate optimal ISA
 // float
 typedef float float2_t __attribute__((ext_vector_type(2)));
 typedef float float4_t __attribute__((ext_vector_type(4)));
 typedef float float32_t __attribute__((ext_vector_type(32)));
 
+// float16
+typedef _Float16 half2_t __attribute__((ext_vector_type(2)));
+typedef _Float16 half4_t __attribute__((ext_vector_type(4)));
+
+// bfloat16
+typedef ushort ushort2_t __attribute__((ext_vector_type(2)));
+typedef ushort ushort4_t __attribute__((ext_vector_type(4)));
+
+// int
 typedef int32_t int32x4_t __attribute__((ext_vector_type(4)));
 
-// half
-typedef half2 half2_t;
-
-typedef struct
-{
-    // TODO: why not use "half scalar[4]"?
-    half2_t scalar[2];
-} half4_t;
-
-// bfloat16: use ushort
-typedef struct
-{
-    ushort scalar[2];
-} ushort2_t;
-
-typedef struct
-{
-    // TODO: why not use "ushort scalar[4]"?
-    ushort2_t scalar[2];
-} ushort4_t;
-
 // data type conversion
-template <class T>
+template <typename T>
 struct type_convert
 {
-    template <class X>
+    template <typename X>
     __device__ T operator()(X x) const
     {
         return static_cast<T>(x);
@@ -96,5 +105,4 @@ __device__ ushort type_convert<ushort>::operator()<float>(float x) const
 }
 
 } // namespace ck
-
 #endif

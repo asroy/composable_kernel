@@ -7,10 +7,6 @@
 #include "tensor_coordinate_deprecated.hpp"
 #include "threadwise_generic_tensor_slice_copy_deprecated.hpp"
 
-#ifndef CK_EXPERIMENTAL_USE_MORE_COMPILE_STATIC_BLOCKWISE_GENERIC_SLICE_COPY_V1
-#define CK_EXPERIMENTAL_USE_MORE_COMPILE_STATIC_BLOCKWISE_GENERIC_SLICE_COPY_V1 1
-#endif
-
 namespace ck {
 
 // Slice a (normal or merged) tensor, and copy it into another (normal or merged) tensor
@@ -480,8 +476,8 @@ struct BlockwiseGenericTensorSliceCopy_v2
 
     template <typename SrcData,
               typename DstData,
-              AddressSpace_t BlockSrcAddressSpace     = AddressSpace_t::generic,
-              AddressSpace_t ThreadBufferAddressSpace = AddressSpace_t::generic>
+              AddressSpace BlockSrcAddressSpace     = AddressSpace::generic,
+              AddressSpace ThreadBufferAddressSpace = AddressSpace::generic>
     __device__ void RunLoadThreadBuffer(const SrcData* p_block_src, DstData* p_thread_buffer) const
     {
         mThreadwiseLoad
@@ -491,8 +487,8 @@ struct BlockwiseGenericTensorSliceCopy_v2
 
     template <typename SrcData,
               typename DstData,
-              AddressSpace_t ThreadBufferAddressSpace = AddressSpace_t::generic,
-              AddressSpace_t BlockDstAddressSpace     = AddressSpace_t::generic>
+              AddressSpace ThreadBufferAddressSpace = AddressSpace::generic,
+              AddressSpace BlockDstAddressSpace     = AddressSpace::generic>
     __device__ void RunStoreThreadBuffer(const SrcData* p_thread_buffer, DstData* p_block_dst) const
     {
         mThreadwiseStore
@@ -502,17 +498,17 @@ struct BlockwiseGenericTensorSliceCopy_v2
 
     template <typename SrcData,
               typename DstData,
-              AddressSpace_t BlockSrcAddressSpace = AddressSpace_t::generic,
-              AddressSpace_t BlockDstAddressSpace = AddressSpace_t::generic>
+              AddressSpace BlockSrcAddressSpace = AddressSpace::generic,
+              AddressSpace BlockDstAddressSpace = AddressSpace::generic>
     __device__ void Run(const SrcData* p_block_src, DstData* p_block_dst) const
     {
         SrcData p_thread_buffer[GetThreadBufferSize()];
 
-        RunLoadThreadBuffer<SrcData, SrcData, BlockSrcAddressSpace, AddressSpace_t::generic>(
+        RunLoadThreadBuffer<SrcData, SrcData, BlockSrcAddressSpace, AddressSpace::generic>(
             p_block_src, p_thread_buffer);
 
         // if there is type conversion, it's done during store
-        RunStoreThreadBuffer<SrcData, DstData, AddressSpace_t::generic, BlockDstAddressSpace>(
+        RunStoreThreadBuffer<SrcData, DstData, AddressSpace::generic, BlockDstAddressSpace>(
             p_thread_buffer, p_block_dst);
     }
 

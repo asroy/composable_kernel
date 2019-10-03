@@ -68,8 +68,8 @@ struct BlockwiseGenericTensorSliceCopy_v4
 
     template <typename BlockSrcData,
               typename ThreadBufferData,
-              AddressSpace_t BlockSrcAddressSpace     = AddressSpace_t::generic,
-              AddressSpace_t ThreadBufferAddressSpace = AddressSpace_t::generic>
+              AddressSpace BlockSrcAddressSpace     = AddressSpace::generic,
+              AddressSpace ThreadBufferAddressSpace = AddressSpace::generic>
     __device__ void RunLoadThreadBuffer(const BlockSrcData* p_block_src,
                                         ThreadBufferData* p_thread_buffer) const
     {
@@ -89,8 +89,8 @@ struct BlockwiseGenericTensorSliceCopy_v4
 
     template <typename ThreadBufferData,
               typename BlockDstData,
-              AddressSpace_t ThreadBufferAddressSpace = AddressSpace_t::generic,
-              AddressSpace_t BlockDstAddressSpace     = AddressSpace_t::generic>
+              AddressSpace ThreadBufferAddressSpace = AddressSpace::generic,
+              AddressSpace BlockDstAddressSpace     = AddressSpace::generic>
     __device__ void RunStoreThreadBuffer(const ThreadBufferData* p_thread_buffer,
                                          BlockDstData* p_block_dst) const
     {
@@ -110,8 +110,8 @@ struct BlockwiseGenericTensorSliceCopy_v4
 
     template <typename BlockSrcData,
               typename BlockDstData,
-              AddressSpace_t BlockSrcAddressSpace = AddressSpace_t::generic,
-              AddressSpace_t BlockDstAddressSpace = AddressSpace_t::generic>
+              AddressSpace BlockSrcAddressSpace = AddressSpace::generic,
+              AddressSpace BlockDstAddressSpace = AddressSpace::generic>
     __device__ void Run(const BlockSrcData* p_block_src, BlockDstData* p_block_dst) const
     {
         BlockSrcData p_thread_buffer[GetThreadBufferSize()];
@@ -119,12 +119,12 @@ struct BlockwiseGenericTensorSliceCopy_v4
         RunLoadThreadBuffer<BlockSrcData,
                             BlockSrcData,
                             BlockSrcAddressSpace,
-                            AddressSpace_t::generic>(p_block_src, p_thread_buffer);
+                            AddressSpace::generic>(p_block_src, p_thread_buffer);
 
         // if there is type conversion, it's done during store
         RunStoreThreadBuffer<BlockSrcData,
                              BlockDstData,
-                             AddressSpace_t::generic,
+                             AddressSpace::generic,
                              BlockDstAddressSpace>(p_thread_buffer, p_block_dst);
     }
 
