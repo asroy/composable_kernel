@@ -32,6 +32,11 @@ struct ConstantMatrixDescriptor
         return irow * RowStride_ + icol;
     }
 
+    __host__ __device__ static index_t CalculateOffset(index_t irow, index_t icol)
+    {
+        return GetOffsetFromMultiIndex(irow, icol);
+    }
+
     template <index_t SubNRow, index_t SubNCol>
     __host__ __device__ static constexpr auto MakeSubMatrixDescriptor(Number<SubNRow>,
                                                                       Number<SubNCol>)
