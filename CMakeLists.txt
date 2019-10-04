@@ -47,6 +47,7 @@ include_directories(BEFORE
     ${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_description
     ${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_operation
     ${PROJECT_SOURCE_DIR}/composable_kernel/include/kernel_algorithm
+    ${PROJECT_SOURCE_DIR}/external/include
     ${PROJECT_SOURCE_DIR}/driver/include
     ${PROJECT_BINARY_DIR}/composable_kernel/include/utility
 )
