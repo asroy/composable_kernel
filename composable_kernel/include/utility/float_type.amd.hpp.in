@@ -1,8 +1,6 @@
 #ifndef CK_FLOAT_TYPE_AMD_HPP
 #define CK_FLOAT_TYPE_AMD_HPP
 
-#include "bfloat16_dev.hpp"
-
 namespace ck {
 
 // For some reason, HIP compiler need this definition to generate optimal ISA

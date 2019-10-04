@@ -14,12 +14,12 @@
 //#include "device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v2_chwn_cyxk_khwn.hpp"
 //#include "device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw.hpp"
+#include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_deprecated.hpp"
 #include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_padded.hpp"
 //#include "device_convolution_implicit_gemm_v4r2_nchw_kcyx_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v4r3_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_deprecated.hpp"
 #include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_padded.hpp"
 
 struct GeneratorTensor_1
 {
@@ -326,7 +326,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<2, 2>;
     using RightPads = Sequence<2, 2>;
-#elif 0
+#elif 1
     // 7x1 filter, 3x0 pad, 17x17 input
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;
@@ -341,7 +341,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<3, 0>;
     using RightPads = Sequence<3, 0>;
-#elif 1
+#elif 0
     // 1x7 filter, 0x3 pad, 17x17 input
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;
@@ -439,6 +439,16 @@ int main(int argc, char* argv[])
     device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw(
         (in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
 #elif 0
+    device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_deprecated(in_nchw_desc,
+                                                                    in_nchw,
+                                                                    wei_kcyx_desc,
+                                                                    wei_kcyx,
+                                                                    out_nkhw_desc,
+                                                                    out_nkhw_device,
+                                                                    ConvStrides{},
+                                                                    ConvDilations{},
+                                                                    nrepeat);
+#elif 1
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
@@ -447,19 +457,9 @@ int main(int argc, char* argv[])
                                                          out_nkhw_device,
                                                          ConvStrides{},
                                                          ConvDilations{},
+                                                         LeftPads{},
+                                                         RightPads{},
                                                          nrepeat);
-#elif 1
-    device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_padded(in_nchw_desc,
-                                                                in_nchw,
-                                                                wei_kcyx_desc,
-                                                                wei_kcyx,
-                                                                out_nkhw_desc,
-                                                                out_nkhw_device,
-                                                                ConvStrides{},
-                                                                ConvDilations{},
-                                                                LeftPads{},
-                                                                RightPads{},
-                                                                nrepeat);
 #elif 0
     device_convolution_implicit_gemm_v4r2_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
@@ -481,6 +481,16 @@ int main(int argc, char* argv[])
                                                          ConvDilations{},
                                                          nrepeat);
 #elif 0
+    device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_deprecated(in_nchw_desc,
+                                                                    in_nchw,
+                                                                    wei_kcyx_desc,
+                                                                    wei_kcyx,
+                                                                    out_nkhw_desc,
+                                                                    out_nkhw_device,
+                                                                    ConvStrides{},
+                                                                    ConvDilations{},
+                                                                    nrepeat);
+#elif 1
     device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
@@ -489,19 +499,9 @@ int main(int argc, char* argv[])
                                                          out_nkhw_device,
                                                          ConvStrides{},
                                                          ConvDilations{},
+                                                         LeftPads{},
+                                                         RightPads{},
                                                          nrepeat);
-#elif 1
-    device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_padded(in_nchw_desc,
-                                                                in_nchw,
-                                                                wei_kcyx_desc,
-                                                                wei_kcyx,
-                                                                out_nkhw_desc,
-                                                                out_nkhw_device,
-                                                                ConvStrides{},
-                                                                ConvDilations{},
-                                                                LeftPads{},
-                                                                RightPads{},
-                                                                nrepeat);
 #endif
 
     if(do_verification)
