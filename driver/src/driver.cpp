@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <stdlib.h>
 #include "config.hpp"
-#include "ConstantTensorDescriptor.hpp"
+#include "ConstantTensorDescriptor_deprecated.hpp"
 #include "device.hpp"
 #include "conv_common.hpp"
 #include "host_conv.hpp"

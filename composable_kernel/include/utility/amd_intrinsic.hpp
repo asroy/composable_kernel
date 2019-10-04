@@ -11,19 +11,17 @@ __device__ float __llvm_amdgcn_buffer_load(int32x4_t rsrc,
                                            bool glc,
                                            bool slc) __asm("llvm.amdgcn.buffer.load");
 
-__device__ vector_type<float, 2>::MemoryType
-__llvm_amdgcn_buffer_loadx2(int32x4_t rsrc,
-                            uint32_t vindex,
-                            uint32_t offset,
-                            bool glc,
-                            bool slc) __asm("llvm.amdgcn.buffer.load.dwordx2");
+__device__ float2_t __llvm_amdgcn_buffer_loadx2(int32x4_t rsrc,
+                                                uint32_t vindex,
+                                                uint32_t offset,
+                                                bool glc,
+                                                bool slc) __asm("llvm.amdgcn.buffer.load.dwordx2");
 
-__device__ vector_type<float, 4>::MemoryType
-__llvm_amdgcn_buffer_loadx4(int32x4_t rsrc,
-                            uint32_t vindex,
-                            uint32_t offset,
-                            bool glc,
-                            bool slc) __asm("llvm.amdgcn.buffer.load.dwordx4");
+__device__ float4_t __llvm_amdgcn_buffer_loadx4(int32x4_t rsrc,
+                                                uint32_t vindex,
+                                                uint32_t offset,
+                                                bool glc,
+                                                bool slc) __asm("llvm.amdgcn.buffer.load.dwordx4");
 
 __device__ void __llvm_amdgcn_buffer_store(float vdata,
                                            int32x4_t rsrc,
@@ -32,14 +30,14 @@ __device__ void __llvm_amdgcn_buffer_store(float vdata,
                                            bool glc,
                                            bool slc) __asm("llvm.amdgcn.buffer.store");
 
-__device__ void __llvm_amdgcn_buffer_storex2(vector_type<float, 2>::MemoryType vdata,
+__device__ void __llvm_amdgcn_buffer_storex2(float2_t vdata,
                                              int32x4_t rsrc,
                                              uint32_t vindex,
                                              uint32_t offset,
                                              bool glc,
                                              bool slc) __asm("llvm.amdgcn.buffer.store.dwordx2");
 
-__device__ void __llvm_amdgcn_buffer_storex4(vector_type<float, 4>::MemoryType vdata,
+__device__ void __llvm_amdgcn_buffer_storex4(float4_t vdata,
                                              int32x4_t rsrc,
                                              uint32_t vindex,
                                              uint32_t offset,
@@ -106,11 +104,12 @@ __device__ float __buffer_load<float, 1>(const float* p_src_block,
 }
 
 template <>
-__device__ vector_type<float, 2>::MemoryType __buffer_load<float, 2>(
-    const float* p_src_block, uint32_t src_thread_data_offset, uint32_t src_const_data_offset)
+__device__ float2_t __buffer_load<float, 2>(const float* p_src_block,
+                                            uint32_t src_thread_data_offset,
+                                            uint32_t src_const_data_offset)
 {
 #if 0
-    vector_type<float, 2>::MemoryType dst;
+    float2_t dst;
 
     uint32_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
     uint32_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
@@ -132,7 +131,7 @@ __device__ vector_type<float, 2>::MemoryType __buffer_load<float, 2>(
 
     return dst;
 #else
-    vector_type<float, 2>::MemoryType dst;
+    float2_t dst;
 
     uint32_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
     uint32_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
@@ -153,11 +152,12 @@ __device__ vector_type<float, 2>::MemoryType __buffer_load<float, 2>(
 }
 
 template <>
-__device__ vector_type<float, 4>::MemoryType __buffer_load<float, 4>(
-    const float* p_src_block, uint32_t src_thread_data_offset, uint32_t src_const_data_offset)
+__device__ float4_t __buffer_load<float, 4>(const float* p_src_block,
+                                            uint32_t src_thread_data_offset,
+                                            uint32_t src_const_data_offset)
 {
 #if 0
-    vector_type<float, 4>::MemoryType dst;
+    float4_t dst;
 
     uint32_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
     uint32_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
@@ -179,7 +179,7 @@ __device__ vector_type<float, 4>::MemoryType __buffer_load<float, 4>(
 
     return dst;
 #elif 1
-    vector_type<float, 4>::MemoryType dst;
+    float4_t dst;
 
     uint32_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
     uint32_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
@@ -243,7 +243,7 @@ __device__ void __buffer_store<float, 1>(const float& src,
 }
 
 template <>
-__device__ void __buffer_store<float, 2>(const vector_type<float, 2>::MemoryType& src,
+__device__ void __buffer_store<float, 2>(const float2_t& src,
                                          float* p_dst_block,
                                          uint32_t dst_thread_data_offset,
                                          uint32_t dst_const_data_offset)
@@ -286,7 +286,7 @@ __device__ void __buffer_store<float, 2>(const vector_type<float, 2>::MemoryType
 }
 
 template <>
-__device__ void __buffer_store<float, 4>(const vector_type<float, 4>::MemoryType& src,
+__device__ void __buffer_store<float, 4>(const float4_t& src,
                                          float* p_dst_block,
                                          uint32_t dst_thread_data_offset,
                                          uint32_t dst_const_data_offset)

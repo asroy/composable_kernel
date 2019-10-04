@@ -2,8 +2,8 @@
 #define CK_BLOCKWISE_GENERIC_TENSOR_SLICE_COPY_DEPRECATED_HPP
 
 #include "common_header.hpp"
-#include "ConstantTensorDescriptor.hpp"
-#include "ConstantMergedTensorDescriptor.hpp"
+#include "ConstantTensorDescriptor_deprecated.hpp"
+#include "ConstantMergedTensorDescriptor_deprecated.hpp"
 #include "tensor_coordinate_deprecated.hpp"
 #include "threadwise_generic_tensor_slice_copy_deprecated.hpp"
 
@@ -16,7 +16,7 @@ namespace ck {
 // that, on a merged dimension that constains multiple original dimensions, the length of
 // the last original dimension need to be evenly dividable by its sub-lengths. Also, the
 // repeat-length on the merged dimension need to be 1. These sanity checks are performed
-// in constructor of BlockwiseGenericTensorSliceCopy_v1
+// in constructor of BlockwiseGenericTensorSliceCopy_v1_deprecated
 template <index_t BlockSize,
           typename SrcDesc,
           typename DstDesc,
@@ -30,7 +30,7 @@ template <index_t BlockSize,
           index_t DstVectorAccessDim,
           index_t SrcDataPerAccess,
           index_t DstDataPerAccess>
-struct BlockwiseGenericTensorSliceCopy_v1
+struct BlockwiseGenericTensorSliceCopy_v1_deprecated
 {
     static constexpr index_t nDim = SrcDesc::GetNumOfDimension();
 
@@ -58,7 +58,8 @@ struct BlockwiseGenericTensorSliceCopy_v1
     Array<index_t, nOriginalDimSrc> mThreadSrcOriginalMultiId;
     Array<index_t, nOriginalDimDst> mThreadDstOriginalMultiId;
 
-    __device__ BlockwiseGenericTensorSliceCopy_v1(Array<index_t, nDim> src_block_data_id_begin,
+    __device__
+    BlockwiseGenericTensorSliceCopy_v1_deprecated(Array<index_t, nDim> src_block_data_id_begin,
                                                   Array<index_t, nDim> dst_block_data_id_begin)
     {
         // check NDim consistency
@@ -240,15 +241,15 @@ struct BlockwiseGenericTensorSliceCopy_v1
             // that constains multiple original dimensions, the length of the last original
             // dimension need to be evenly dividable by its sub-lengths. Also, the repeat-length on
             // the merged dimension need to be 1. These sanity checks are performed in constructor
-            // of BlockwiseGenericTensorSliceCopy_v1
-            ThreadwiseGenericTensorSliceCopy_v1r2<SrcDesc,
-                                                  decltype(thread_buffer_desc),
-                                                  SubLengths,
-                                                  SrcDimAccessOrder,
-                                                  SrcVectorAccessDim,
-                                                  SrcDataPerAccess,
-                                                  1>(make_zero_array<index_t, nDim>(),
-                                                     make_zero_array<index_t, nDim>())
+            // of BlockwiseGenericTensorSliceCopy_v1_deprecated
+            ThreadwiseGenericTensorSliceCopy_v1r2_deprecated<SrcDesc,
+                                                             decltype(thread_buffer_desc),
+                                                             SubLengths,
+                                                             SrcDimAccessOrder,
+                                                             SrcVectorAccessDim,
+                                                             SrcDataPerAccess,
+                                                             1>(make_zero_array<index_t, nDim>(),
+                                                                make_zero_array<index_t, nDim>())
                 .Run(p_src + src_offset + mThreadSrcOffset, p_buffer + buffer_offset);
         });
     }
@@ -295,14 +296,14 @@ struct BlockwiseGenericTensorSliceCopy_v1
             // that constains multiple original dimensions, the length of the last original
             // dimension need to be evenly dividable by its sub-lengths. Also, the repeat-length on
             // the merged dimension need to be 1. These sanity checks are performed in constructor
-            // of BlockwiseGenericTensorSliceCopy_v1
-            ThreadwiseGenericTensorSliceCopy_v1r2<decltype(thread_buffer_desc),
-                                                  DstDesc,
-                                                  SubLengths,
-                                                  DstDimAccessOrder,
-                                                  DstVectorAccessDim,
-                                                  1,
-                                                  DstDataPerAccess>(
+            // of BlockwiseGenericTensorSliceCopy_v1_deprecated
+            ThreadwiseGenericTensorSliceCopy_v1r2_deprecated<decltype(thread_buffer_desc),
+                                                             DstDesc,
+                                                             SubLengths,
+                                                             DstDimAccessOrder,
+                                                             DstVectorAccessDim,
+                                                             1,
+                                                             DstDataPerAccess>(
                 make_zero_array<index_t, nDim>(), make_zero_array<index_t, nDim>())
                 .Run(p_buffer + buffer_offset, p_dst + dst_offset + mThreadDstOffset);
         });
@@ -428,14 +429,14 @@ template <index_t BlockSize,
           index_t DstVectorAccessDim,
           index_t SrcDataPerAccess,
           index_t DstDataPerAccess>
-struct BlockwiseGenericTensorSliceCopy_v2
+struct BlockwiseGenericTensorSliceCopy_v2_deprecated
 {
     static constexpr index_t nDim = SrcDesc::GetNumOfDimension();
 
     using Index = MultiIndex<nDim>;
 
-    __device__ constexpr BlockwiseGenericTensorSliceCopy_v2(const Index& src_block_slice_origin,
-                                                            const Index& dst_block_slice_origin)
+    __device__ constexpr BlockwiseGenericTensorSliceCopy_v2_deprecated(
+        const Index& src_block_slice_origin, const Index& dst_block_slice_origin)
     {
         static_assert(
             nDim == SrcDesc::GetNumOfDimension() && nDim == DstDesc::GetNumOfDimension() &&
@@ -529,25 +530,25 @@ struct BlockwiseGenericTensorSliceCopy_v2
     private:
     using ThreadBufferDesc = decltype(make_ConstantTensorDescriptor_packed(SubLengths{}));
 
-    using ThreadwiseLoad = ThreadwiseGenericTensorSliceCopy_v2r1<SrcDesc,
-                                                                 ThreadBufferDesc,
-                                                                 SubLengths,
-                                                                 SrcDimAccessOrder,
-                                                                 SrcDimAccessOrder,
-                                                                 SrcVectorAccessDim,
-                                                                 SrcVectorAccessDim,
-                                                                 SrcDataPerAccess,
-                                                                 1>;
+    using ThreadwiseLoad = ThreadwiseGenericTensorSliceCopy_v2r1_deprecated<SrcDesc,
+                                                                            ThreadBufferDesc,
+                                                                            SubLengths,
+                                                                            SrcDimAccessOrder,
+                                                                            SrcDimAccessOrder,
+                                                                            SrcVectorAccessDim,
+                                                                            SrcVectorAccessDim,
+                                                                            SrcDataPerAccess,
+                                                                            1>;
 
-    using ThreadwiseStore = ThreadwiseGenericTensorSliceCopy_v2r1<ThreadBufferDesc,
-                                                                  DstDesc,
-                                                                  SubLengths,
-                                                                  DstDimAccessOrder,
-                                                                  DstDimAccessOrder,
-                                                                  DstVectorAccessDim,
-                                                                  DstVectorAccessDim,
-                                                                  1,
-                                                                  DstDataPerAccess>;
+    using ThreadwiseStore = ThreadwiseGenericTensorSliceCopy_v2r1_deprecated<ThreadBufferDesc,
+                                                                             DstDesc,
+                                                                             SubLengths,
+                                                                             DstDimAccessOrder,
+                                                                             DstDimAccessOrder,
+                                                                             DstVectorAccessDim,
+                                                                             DstVectorAccessDim,
+                                                                             1,
+                                                                             DstDataPerAccess>;
 
     ThreadwiseLoad mThreadwiseLoad;
     ThreadwiseStore mThreadwiseStore;

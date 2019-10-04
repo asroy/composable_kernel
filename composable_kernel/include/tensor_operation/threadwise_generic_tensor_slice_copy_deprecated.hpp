@@ -2,8 +2,8 @@
 #define CK_THREADWISE_GENERIC_TENSOR_SLICE_COPY_DEPRECATED_HPP
 
 #include "common_header.hpp"
-#include "ConstantTensorDescriptor.hpp"
-#include "ConstantMergedTensorDescriptor.hpp"
+#include "ConstantTensorDescriptor_deprecated.hpp"
+#include "ConstantMergedTensorDescriptor_deprecated.hpp"
 #include "tensor_coordinate_deprecated.hpp"
 
 namespace ck {
@@ -21,11 +21,11 @@ template <typename SrcDesc,
           index_t VectorAccessDim,
           index_t SrcDataPerAccess,
           index_t DstDataPerAccess>
-struct ThreadwiseGenericTensorSliceCopy_v1r2
+struct ThreadwiseGenericTensorSliceCopy_v1r2_deprecated
 {
     static constexpr index_t nDim = SliceLengths::GetSize();
 
-    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v1r2(
+    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v1r2_deprecated(
         Array<index_t, nDim> src_slice_origin, Array<index_t, nDim> dst_slice_origin)
         : mSrcSliceOrigin(src_slice_origin), mDstSliceOrigin(dst_slice_origin)
     {
@@ -64,9 +64,9 @@ struct ThreadwiseGenericTensorSliceCopy_v1r2
         });
     }
 
-    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v1r2()
-        : ThreadwiseGenericTensorSliceCopy_v1r2(make_zero_array<index_t, nDim>(),
-                                                make_zero_array<index_t, nDim>())
+    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v1r2_deprecated()
+        : ThreadwiseGenericTensorSliceCopy_v1r2_deprecated(make_zero_array<index_t, nDim>(),
+                                                           make_zero_array<index_t, nDim>())
     {
     }
 
@@ -204,7 +204,7 @@ template <typename SrcDesc,
           index_t DstVectorAccessDim,
           index_t SrcDataPerAccess,
           index_t DstDataPerAccess>
-struct ThreadwiseGenericTensorSliceCopy_v2r1
+struct ThreadwiseGenericTensorSliceCopy_v2r1_deprecated
 {
     static constexpr index_t nDim = SliceLengths::GetSize();
 
@@ -213,8 +213,8 @@ struct ThreadwiseGenericTensorSliceCopy_v2r1
     using SrcCoordinate = typename TensorCoordinate_deprecated<SrcDesc>::type;
     using DstCoordinate = typename TensorCoordinate_deprecated<DstDesc>::type;
 
-    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v2r1(const Index& src_slice_origin,
-                                                               const Index& dst_slice_origin)
+    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v2r1_deprecated(
+        const Index& src_slice_origin, const Index& dst_slice_origin)
         : mSrcSliceOrigin(src_slice_origin), mDstSliceOrigin(dst_slice_origin)
     {
         static_assert(nDim == SrcDesc::GetNumOfDimension() &&
@@ -262,9 +262,9 @@ struct ThreadwiseGenericTensorSliceCopy_v2r1
             });
     }
 
-    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v2r1()
-        : ThreadwiseGenericTensorSliceCopy_v2r1(make_zero_array<index_t, nDim>(),
-                                                make_zero_array<index_t, nDim>())
+    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v2r1_deprecated()
+        : ThreadwiseGenericTensorSliceCopy_v2r1_deprecated(make_zero_array<index_t, nDim>(),
+                                                           make_zero_array<index_t, nDim>())
     {
     }
 
