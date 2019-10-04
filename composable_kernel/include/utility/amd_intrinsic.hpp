@@ -6,65 +6,65 @@
 namespace ck {
 
 __device__ float __llvm_amdgcn_buffer_load(int32x4_t rsrc,
-                                           uint32_t vindex,
-                                           uint32_t offset,
+                                           index_t vindex,
+                                           index_t offset,
                                            bool glc,
                                            bool slc) __asm("llvm.amdgcn.buffer.load");
 
 __device__ float2_t __llvm_amdgcn_buffer_loadx2(int32x4_t rsrc,
-                                                uint32_t vindex,
-                                                uint32_t offset,
+                                                index_t vindex,
+                                                index_t offset,
                                                 bool glc,
                                                 bool slc) __asm("llvm.amdgcn.buffer.load.dwordx2");
 
 __device__ float4_t __llvm_amdgcn_buffer_loadx4(int32x4_t rsrc,
-                                                uint32_t vindex,
-                                                uint32_t offset,
+                                                index_t vindex,
+                                                index_t offset,
                                                 bool glc,
                                                 bool slc) __asm("llvm.amdgcn.buffer.load.dwordx4");
 
 __device__ void __llvm_amdgcn_buffer_store(float vdata,
                                            int32x4_t rsrc,
-                                           uint32_t vindex,
-                                           uint32_t offset,
+                                           index_t vindex,
+                                           index_t offset,
                                            bool glc,
                                            bool slc) __asm("llvm.amdgcn.buffer.store");
 
 __device__ void __llvm_amdgcn_buffer_storex2(float2_t vdata,
                                              int32x4_t rsrc,
-                                             uint32_t vindex,
-                                             uint32_t offset,
+                                             index_t vindex,
+                                             index_t offset,
                                              bool glc,
                                              bool slc) __asm("llvm.amdgcn.buffer.store.dwordx2");
 
 __device__ void __llvm_amdgcn_buffer_storex4(float4_t vdata,
                                              int32x4_t rsrc,
-                                             uint32_t vindex,
-                                             uint32_t offset,
+                                             index_t vindex,
+                                             index_t offset,
                                              bool glc,
                                              bool slc) __asm("llvm.amdgcn.buffer.store.dwordx4");
 
 // buffer_load and buffer_store
 template <typename T, index_t VectorSize>
-__device__ typename vector_type<T, VectorSize>::MemoryType __buffer_load(
-    const T* p_src_block, uint32_t src_thread_data_offset, uint32_t src_const_data_offset);
+__device__ typename vector_type<T, VectorSize>::MemoryType
+__buffer_load(const T* p_src_block, index_t src_thread_data_offset, index_t src_const_data_offset);
 
 template <typename T, index_t VectorSize>
 __device__ void __buffer_store(const typename vector_type<T, VectorSize>::MemoryType& src,
                                T* p_dst_block,
-                               uint32_t dst_thread_data_offset,
-                               uint32_t dst_const_data_offset);
+                               index_t dst_thread_data_offset,
+                               index_t dst_const_data_offset);
 
 template <>
 __device__ float __buffer_load<float, 1>(const float* p_src_block,
-                                         uint32_t src_thread_data_offset,
-                                         uint32_t src_const_data_offset)
+                                         index_t src_thread_data_offset,
+                                         index_t src_const_data_offset)
 {
 #if 0
     float dst;
 
-    uint32_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
-    uint32_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
+    index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
+    index_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
 
     int32x4_t src_block_setting{0};
     // fill in byte 0 - 1
@@ -85,8 +85,8 @@ __device__ float __buffer_load<float, 1>(const float* p_src_block,
 #else
     float dst;
 
-    uint32_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
-    uint32_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
+    index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
+    index_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
 
     int32x4_t src_block_setting{0};
     // fill in byte 0 - 1
@@ -105,14 +105,14 @@ __device__ float __buffer_load<float, 1>(const float* p_src_block,
 
 template <>
 __device__ float2_t __buffer_load<float, 2>(const float* p_src_block,
-                                            uint32_t src_thread_data_offset,
-                                            uint32_t src_const_data_offset)
+                                            index_t src_thread_data_offset,
+                                            index_t src_const_data_offset)
 {
 #if 0
     float2_t dst;
 
-    uint32_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
-    uint32_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
+    index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
+    index_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
 
     int32x4_t src_block_setting{0};
     // fill in byte 0 - 1
@@ -133,8 +133,8 @@ __device__ float2_t __buffer_load<float, 2>(const float* p_src_block,
 #else
     float2_t dst;
 
-    uint32_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
-    uint32_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
+    index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
+    index_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
 
     int32x4_t src_block_setting{0};
     // fill in byte 0 - 1
@@ -153,14 +153,14 @@ __device__ float2_t __buffer_load<float, 2>(const float* p_src_block,
 
 template <>
 __device__ float4_t __buffer_load<float, 4>(const float* p_src_block,
-                                            uint32_t src_thread_data_offset,
-                                            uint32_t src_const_data_offset)
+                                            index_t src_thread_data_offset,
+                                            index_t src_const_data_offset)
 {
 #if 0
     float4_t dst;
 
-    uint32_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
-    uint32_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
+    index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
+    index_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
 
     int32x4_t src_block_setting{0};
     // fill in byte 0 - 1
@@ -181,8 +181,8 @@ __device__ float4_t __buffer_load<float, 4>(const float* p_src_block,
 #elif 1
     float4_t dst;
 
-    uint32_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
-    uint32_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
+    index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
+    index_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
 
     int32x4_t src_block_setting{0};
     // fill in byte 0 - 1
@@ -202,12 +202,12 @@ __device__ float4_t __buffer_load<float, 4>(const float* p_src_block,
 template <>
 __device__ void __buffer_store<float, 1>(const float& src,
                                          float* p_dst_block,
-                                         uint32_t dst_thread_data_offset,
-                                         uint32_t dst_const_data_offset)
+                                         index_t dst_thread_data_offset,
+                                         index_t dst_const_data_offset)
 {
 #if 0
-    uint32_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
-    uint32_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
+    index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
+    index_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
 
     int32x4_t dst_block_setting{0};
     // fill in byte 0 - 1
@@ -226,8 +226,8 @@ __device__ void __buffer_store<float, 1>(const float& src,
                    "v"(dst_thread_addr_offset),
                    "s"(dst_const_addr_offset));
 #else
-    uint32_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
-    uint32_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
+    index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
+    index_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
 
     int32x4_t dst_block_setting{0};
     // fill in byte 0 - 1
@@ -245,12 +245,12 @@ __device__ void __buffer_store<float, 1>(const float& src,
 template <>
 __device__ void __buffer_store<float, 2>(const float2_t& src,
                                          float* p_dst_block,
-                                         uint32_t dst_thread_data_offset,
-                                         uint32_t dst_const_data_offset)
+                                         index_t dst_thread_data_offset,
+                                         index_t dst_const_data_offset)
 {
 #if 0
-    uint32_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
-    uint32_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
+    index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
+    index_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
 
     int32x4_t dst_block_setting{0};
     // fill in byte 0 - 1
@@ -269,8 +269,8 @@ __device__ void __buffer_store<float, 2>(const float2_t& src,
                    "v"(dst_thread_addr_offset),
                    "s"(dst_const_addr_offset));
 #else
-    uint32_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
-    uint32_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
+    index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
+    index_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
 
     int32x4_t dst_block_setting{0};
     // fill in byte 0 - 1
@@ -288,12 +288,12 @@ __device__ void __buffer_store<float, 2>(const float2_t& src,
 template <>
 __device__ void __buffer_store<float, 4>(const float4_t& src,
                                          float* p_dst_block,
-                                         uint32_t dst_thread_data_offset,
-                                         uint32_t dst_const_data_offset)
+                                         index_t dst_thread_data_offset,
+                                         index_t dst_const_data_offset)
 {
 #if 0
-    uint32_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
-    uint32_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
+    index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
+    index_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
 
     int32x4_t dst_block_setting{0};
     // fill in byte 0 - 1
@@ -312,8 +312,8 @@ __device__ void __buffer_store<float, 4>(const float4_t& src,
                    "v"(dst_thread_addr_offset),
                    "s"(dst_const_addr_offset));
 #else
-    uint32_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
-    uint32_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
+    index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
+    index_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
 
     int32x4_t dst_block_setting{0};
     // fill in byte 0 - 1
