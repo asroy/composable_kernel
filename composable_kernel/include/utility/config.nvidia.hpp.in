@@ -6,11 +6,22 @@
 #include "nvToolsExt.h"
 #include "helper_cuda.h"
 
+// index type: unsigned or signed
 #define CK_UNSIGNED_INDEX_TYPE 0
+
+// device backend
 #define CK_DEVICE_BACKEND_NVIDIA 1
-#define CK_USE_AMD_INTRINSIC 0
+
+// disable AMD inline asm and intrinsic
 #define CK_USE_AMD_INLINE_ASM 0
+#define CK_THREADWISE_GEMM_USE_AMD_INLINE_ASM 0
+#define CK_USE_AMD_XDLOPS 0
+#define CK_USE_AMD_XDLOPS_INLINE_ASM 0
+#define CK_USE_AMD_INTRINSIC 0
 #define CK_BUFFER_LOAD_STORE_USE_AMD_INTRINSIC 0
+
+// experimental implementation
+#define CK_EXPERIMENTAL_BLOCKWISE_GEMM_USE_PIPELINE 0
 #define CK_EXPERIMENTAL_USE_MORE_COMPILE_STATIC_BLOCKWISE_GENERIC_SLICE_COPY_V1 0
 #define CK_EXPERIMENTAL_USE_MORE_COMPILE_STATIC_THREADWISE_GENERIC_TENSOR_SLICE_COPY_V1R1 0
 #define CK_EXPERIMENTAL_USE_MORE_COMPILE_STATIC_THREADWISE_GENERIC_TENSOR_SLICE_COPY_V1R2 0
@@ -30,24 +41,5 @@ using index_t = uint32_t;
 using index_t = int32_t;
 #endif
 
-// For some reason, CUDA need this definition, otherwise
-//   compiler won't generate optimal load and store instruction, and
-//   kernel would produce wrong result, indicating the compiler fail to generate correct
-//   instruction,
-using float2_t = float2;
-using float4_t = float4;
-
-// data type conversion
-template <typename T>
-struct type_convert
-{
-    template <typename X>
-    __device__ T operator()(const X& x) const
-    {
-        return static_cast<T>(x);
-    }
-};
-
 } // namespace ck
-
 #endif

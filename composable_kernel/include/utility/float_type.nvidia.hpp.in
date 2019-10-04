@@ -1,0 +1,51 @@
+#ifndef CK_FLOAT_TYPE_NVIDIA_HPP
+#define CK_FLOAT_TYPE_NVIDIA_HPP
+
+namespace ck {
+
+// For some reason, CUDA need this definition, otherwise
+//   compiler won't generate optimal load and store instruction, and
+//   kernel would produce wrong result, indicating the compiler fail to generate correct
+//   instruction,
+// float
+using float2_t = float2;
+using float4_t = float4;
+
+// float16
+using half2_t = half2;
+
+// data type conversion
+template <typename T>
+struct type_convert
+{
+    template <typename X>
+    __device__ T operator()(const X& x) const
+    {
+        return static_cast<T>(x);
+    }
+};
+
+template <typename T>
+struct inner_product_with_conversion
+{
+    static constexpr auto convert = type_convert<T>();
+
+    __device__ T operator()(float a, float b) const { return convert(a) * convert(b); }
+
+    __device__ T operator()(half2_t a, half2_t b) const
+    {
+        const half* p_a_half = reinterpret_cast<const half*>(&a);
+        const half* p_b_half = reinterpret_cast<const half*>(&b);
+
+        T acc = 0;
+        for(index_t v = 0; v < 2; ++v)
+        {
+            acc += convert(p_a_half[v]) * convert(p_b_half[v]);
+        }
+
+        return acc;
+    }
+};
+
+} // namespace ck
+#endif

@@ -2,6 +2,7 @@
 #define CK_COMMON_HEADER_HPP
 
 #include "config.hpp"
+#include "float_type.hpp"
 #include "utility.hpp"
 #include "integral_constant.hpp"
 #include "number.hpp"
