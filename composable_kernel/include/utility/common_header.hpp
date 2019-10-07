@@ -2,14 +2,13 @@
 #define CK_COMMON_HEADER_HPP
 
 #include "config.hpp"
-#include "float_type.hpp"
 #include "utility.hpp"
 #include "integral_constant.hpp"
 #include "number.hpp"
+#include "float_type.hpp"
 #include "type.hpp"
 #include "tuple.hpp"
 #include "math.hpp"
-#include "vector_type.hpp"
 #include "sequence.hpp"
 #include "sequence_helper.hpp"
 #include "array.hpp"
