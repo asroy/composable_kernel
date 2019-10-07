@@ -326,7 +326,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<2, 2>;
     using RightPads = Sequence<2, 2>;
-#elif 1
+#elif 0
     // 7x1 filter, 3x0 pad, 17x17 input
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;
@@ -341,7 +341,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<3, 0>;
     using RightPads = Sequence<3, 0>;
-#elif 0
+#elif 1
     // 1x7 filter, 0x3 pad, 17x17 input
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;
