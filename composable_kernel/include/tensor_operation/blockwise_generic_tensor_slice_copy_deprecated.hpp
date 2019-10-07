@@ -193,14 +193,14 @@ struct BlockwiseGenericTensorSliceCopy_v1_deprecated
         return make_ConstantTensorDescriptor_packed(SubLengths{} * repeat_lengths);
     }
 
-    __device__ static constexpr index_t GetRegisterBufferSize()
+    __device__ static constexpr index_t GetThreadBufferSize()
     {
         return GetRegisterBufferDescriptor().GetElementSpace();
     }
 
     template <typename TData>
-    __device__ void RunLoadRegisterBuffer(const TData* __restrict__ p_src,
-                                          TData* __restrict__ p_buffer) const
+    __device__ void RunLoadThreadBuffer(const TData* __restrict__ p_src,
+                                        TData* __restrict__ p_buffer) const
     {
         constexpr auto thread_sub_tensor_lengths = SubLengths{};
 
@@ -255,8 +255,8 @@ struct BlockwiseGenericTensorSliceCopy_v1_deprecated
     }
 
     template <typename TData>
-    __device__ void RunStoreRegisterBuffer(const TData* __restrict__ p_buffer,
-                                           TData* __restrict__ p_dst) const
+    __device__ void RunStoreThreadBuffer(const TData* __restrict__ p_buffer,
+                                         TData* __restrict__ p_dst) const
     {
         constexpr auto thread_sub_tensor_lengths = SubLengths{};
 
@@ -312,10 +312,10 @@ struct BlockwiseGenericTensorSliceCopy_v1_deprecated
     template <typename TData>
     __device__ void Run(const TData* __restrict__ p_src, TData* __restrict__ p_dst) const
     {
-        TData p_buffer[GetRegisterBufferSize()];
+        TData p_buffer[GetThreadBufferSize()];
 
-        RunLoadRegisterBuffer(p_src, p_buffer);
-        RunStoreRegisterBuffer(p_buffer, p_dst);
+        RunLoadThreadBuffer(p_src, p_buffer);
+        RunStoreThreadBuffer(p_buffer, p_dst);
     }
 
     // When moving the slicing windows along a merged dimension, if the strides of the

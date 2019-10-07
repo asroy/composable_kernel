@@ -6,14 +6,6 @@
 #include "tensor_descriptor_helper.hpp"
 #include "tensor_coordinate.hpp"
 
-#ifndef CK_USE_AMD_INTRINSIC
-#define CK_USE_AMD_INTRINSIC 1
-#endif
-
-#ifndef CK_BUFFER_LOAD_STORE_USE_AMD_INTRINSIC
-#define CK_BUFFER_LOAD_STORE_USE_AMD_INTRINSIC 1
-#endif
-
 namespace ck {
 
 // This version use multi-index transformation

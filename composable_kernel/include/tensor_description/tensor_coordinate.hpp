@@ -1,5 +1,5 @@
-#ifndef CK_TENSOR_COORDINATE_V2_HPP
-#define CK_TENSOR_COORDINATE_V2_HPP
+#ifndef CK_TENSOR_COORDINATE_HPP
+#define CK_TENSOR_COORDINATE_HPP
 
 #include "common_header.hpp"
 #include "dimension.hpp"

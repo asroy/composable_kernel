@@ -8,13 +8,14 @@
 #include "blockwise_generic_tensor_slice_copy.hpp"
 #include "threadwise_generic_tensor_slice_copy.hpp"
 #include "blockwise_gemm.hpp"
+#include "convolution_common.hpp"
 
 namespace ck {
 
-// define B = merge(N0, Ho, Wo)
 template <index_t GridSize,
           index_t BlockSize,
           typename Float,
+          typename AccDataType,
           typename InGlobalDesc,
           typename WeiGlobalDesc,
           typename OutGlobalDesc,
@@ -22,6 +23,7 @@ template <index_t GridSize,
           typename ConvDilations,
           typename LeftPads,
           typename RightPads,
+          ConvolutionDirection ConvDirection,
           index_t BPerBlock,
           index_t KPerBlock,
           index_t EPerBlock,
@@ -51,10 +53,57 @@ template <index_t GridSize,
           index_t WeiBlockCopyDstDataPerWrite_K>
 struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 {
+    template <ConvolutionDirection>
+    struct make_wei_e_k_global_desc;
+
+    template <>
+    struct make_wei_e_k_global_desc<ConvolutionDirection::Forward>
+    {
+        template <typename WeiDesc>
+        __device__ constexpr auto operator()(WeiDesc) const
+        {
+            constexpr auto I1 = Number<1>{};
+            constexpr auto I3 = Number<3>{};
+
+            return reorder_tensor_descriptor_given_upper2lower(
+                unfold_tensor_descriptor(WeiDesc{}, I1, I3), Sequence<1, 0>{});
+        }
+    };
+
+    template <>
+    struct make_wei_e_k_global_desc<ConvolutionDirection::BackwardWeight>
+    {
+        template <typename WeiDesc>
+        __device__ constexpr auto operator()(WeiDesc) const
+        {
+            constexpr auto I0 = Number<0>{};
+            constexpr auto I1 = Number<1>{};
+            constexpr auto I2 = Number<2>{};
+            constexpr auto I3 = Number<3>{};
+
+            constexpr auto wei_k_c_y_x_global_desc = WeiDesc{};
+
+            constexpr index_t K = wei_k_c_y_x_global_desc.GetLength(I0);
+            constexpr index_t C = wei_k_c_y_x_global_desc.GetLength(I1);
+            constexpr index_t Y = wei_k_c_y_x_global_desc.GetLength(I2);
+            constexpr index_t X = wei_k_c_y_x_global_desc.GetLength(I3);
+
+            return transform_tensor_descriptor(
+                unfold_tensor_descriptor(wei_k_c_y_x_global_desc, I2, I3),
+                make_tuple(Merge<Sequence<C, Y * X>>{}, PassThrough<K>{}),
+                make_tuple(Sequence<1, 2>{}, Sequence<0>{}),
+                make_tuple(Sequence<0>{}, Sequence<1>{}));
+        }
+    };
+
     __device__ void Run(const Float* const __restrict__ p_in_global,
                         const Float* const __restrict__ p_wei_global,
                         Float* const __restrict__ p_out_global) const
     {
+        static_assert(ConvDirection == ConvolutionDirection::Forward ||
+                          ConvDirection == ConvolutionDirection::BackwardWeight,
+                      "wrong! this kernel only support convolution forward and backward-weight");
+
         // this is a mess
         // TODO: find more elegent way of specifying (or calculating) performance parameters
         constexpr index_t N1 = GemmNRepeat;
@@ -181,9 +230,11 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                 {0, 0, b_block_data_on_global, 0}, {0, 0, 0, 0});
 
         // weight tensor
-        //     tensor descriptor in device memory, src of blockwise copy
-        constexpr auto wei_e_k_global_desc = reorder_tensor_descriptor_given_upper2lower(
-            unfold_tensor_descriptor(wei_k_c_y_x_global_desc, I1, I3), Sequence<1, 0>{});
+        //     Tensor descriptor in device memory, src of blockwise copy
+        //     It is constructed differently, depending on whether forward or backward weight
+        //       convolution
+        constexpr auto wei_e_k_global_desc =
+            make_wei_e_k_global_desc<ConvDirection>{}(wei_k_c_y_x_global_desc);
 
         //     tensor descriptor in LDS, dst of blockwise copy
         //     be careful of LDS alignment
@@ -274,7 +325,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
         __shared__ Float p_wei_block_double[2 * wei_block_space];
 
         // register allocation for output
-        Float p_out_thread[c_k0k2_n1n2_thread_mtx_desc.GetElementSpace()];
+        AccDataType p_out_thread[c_k0k2_n1n2_thread_mtx_desc.GetElementSpace()];
 
         // zero out threadwise output
         threadwise_matrix_set_zero(c_k0k2_n1n2_thread_mtx_desc, p_out_thread);
@@ -424,15 +475,8 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                                                       0,
                                                       b_thread_data_on_global,
                                                       0})
-#if 1
-                .template Run<Float, Float, AddressSpace::generic, AddressSpace::global>
-#else // tweaking
-                .template Run_optimized_dst_address_calculation<Float,
-                                                                Float,
-                                                                AddressSpace::generic,
-                                                                AddressSpace::global>
-#endif
-                (p_out_thread, p_out_global);
+                .template Run<AccDataType, Float, AddressSpace::generic, AddressSpace::global>(
+                    p_out_thread, p_out_global);
         }
     }
 };

@@ -97,16 +97,17 @@ struct NormalTensorCoordinate_deprecated
 
 // TensorDesc is ConstantMergedTensorDescriptor_deprecated
 template <class TensorDesc>
-struct MergedTensorCoordinate
+struct MergedTensorCoordinate_deprecated
 {
-    using type             = MergedTensorCoordinate;
+    using type             = MergedTensorCoordinate_deprecated;
     using tensor_desc_type = TensorDesc;
 
     static constexpr index_t nDim = tensor_desc_type::GetNumOfDimension();
     static constexpr index_t nOriginalDim =
         tensor_desc_type::GetOriginalTensorDescriptor().GetNumOfDimension();
 
-    __host__ __device__ constexpr MergedTensorCoordinate(Array<index_t, nDim> tensor_index)
+    __host__
+        __device__ constexpr MergedTensorCoordinate_deprecated(Array<index_t, nDim> tensor_index)
         : mOriginalIndex{tensor_desc_type::GetOriginalMultiIndexFromMultiIndex(tensor_index)}
     {
         // partial offset on each dimension
@@ -127,8 +128,8 @@ struct MergedTensorCoordinate
     }
 
     template <class... Xs>
-    __host__ __device__ constexpr MergedTensorCoordinate(Xs... xs)
-        : MergedTensorCoordinate(Array<index_t, nDim>{xs...})
+    __host__ __device__ constexpr MergedTensorCoordinate_deprecated(Xs... xs)
+        : MergedTensorCoordinate_deprecated(Array<index_t, nDim>{xs...})
     {
     }
 
@@ -335,7 +336,8 @@ struct TensorCoordinate_deprecated
     __host__ __device__ static constexpr auto
         MakeDummyTensorCoordinate(ConstantMergedTensorDescriptor_deprecated<Ts...>)
     {
-        return MergedTensorCoordinate<ConstantMergedTensorDescriptor_deprecated<Ts...>>();
+        return MergedTensorCoordinate_deprecated<
+            ConstantMergedTensorDescriptor_deprecated<Ts...>>();
     }
 
     public:
