@@ -8,6 +8,7 @@
 #include "device.hpp"
 #include "conv_common.hpp"
 #include "host_conv.hpp"
+#include "host_redux.hpp"
 #include "device_convolution_direct_v2_nchw_kcyx_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v1_chwn_cyxk_khwn.hpp"
 //#include "device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw.hpp"
@@ -17,6 +18,8 @@
 //#include "device_convolution_implicit_gemm_v4r2_nchw_kcyx_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v4r3_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
+
+#include "device_tensor_redux.hpp"
 
 struct GeneratorTensor_1
 {
@@ -70,8 +73,13 @@ struct GeneratorTensor_Checkboard
 int main(int argc, char* argv[])
 {
     using namespace ck;
-
 #if 1
+    constexpr index_t N = 4;
+    constexpr index_t C = 1;
+    constexpr index_t H = 16;
+    constexpr index_t W = 16;
+
+#elif 0
     constexpr index_t N  = 128;
     constexpr index_t C  = 256;
     constexpr index_t HI = 35;
@@ -310,33 +318,17 @@ int main(int argc, char* argv[])
     constexpr index_t WPad = 0;
 #endif
 
-    auto lower_pads = Sequence<HPad, WPad>{};
-    auto upper_pads = Sequence<HPad, WPad>{};
-
-    auto in_nchw_desc  = make_ConstantTensorDescriptor_packed(Sequence<N, C, HI, WI>{});
-    auto wei_kcyx_desc = make_ConstantTensorDescriptor_packed(Sequence<K, C, Y, X>{});
-    auto out_nkhw_desc = get_convolution_with_padding_output_default_4d_tensor_descriptor(
-        in_nchw_desc, wei_kcyx_desc, ConvStrides{}, ConvDilations{}, lower_pads, upper_pads);
+    auto in_nchw_desc  = make_ConstantTensorDescriptor_packed(Sequence<N, C, H, W>{});
+    auto out_nchw_desc  = make_ConstantTensorDescriptor_packed(Sequence<N, C, H, W>{});
 
     ostream_ConstantTensorDescriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
-    ostream_ConstantTensorDescriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
-    ostream_ConstantTensorDescriptor(out_nkhw_desc, std::cout << "out_nkhw_desc: ");
-
-    // for backward weight
-    auto in_nchw_wrw_desc  = in_nchw_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
-    auto wei_kcyx_wrw_desc = out_nkhw_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
-    auto out_nkhw_wrw_desc = wei_kcyx_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
-
-    ostream_ConstantTensorDescriptor(in_nchw_wrw_desc, std::cout << "in_nchw_wrw_desc: ");
-    ostream_ConstantTensorDescriptor(wei_kcyx_wrw_desc, std::cout << "wei_kcyx_wrw_desc: ");
-    ostream_ConstantTensorDescriptor(out_nkhw_wrw_desc, std::cout << "out_nkhw_wrw_desc: ");
+    ostream_ConstantTensorDescriptor(out_nchw_desc, std::cout << "out_nchw_desc: ");
 
     using in_data_t  = float;
     using out_data_t = float;
-    Tensor<in_data_t> in_nchw_wrw(make_TensorDescriptor(in_nchw_wrw_desc));
-    Tensor<in_data_t> wei_kcyx_wrw(make_TensorDescriptor(wei_kcyx_wrw_desc));
-    Tensor<out_data_t> out_nkhw_wrw_host(make_TensorDescriptor(out_nkhw_wrw_desc));
-    Tensor<out_data_t> out_nkhw_wrw_device(make_TensorDescriptor(out_nkhw_wrw_desc));
+    Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
+    Tensor<out_data_t> out_nchw_host(make_TensorDescriptor(out_nchw_desc));
+    Tensor<out_data_t> out_nchw_device(make_TensorDescriptor(out_nchw_desc));
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
@@ -351,7 +343,10 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 0
+#if 1
+    in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+    out_nchw_host.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+#elif 0
         in_nchw_wrw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
         wei_kcyx_wrw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 0
@@ -373,7 +368,9 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 0
+#if 1
+    device_tensor_redux(in_nchw_desc, in_nchw, out_nchw_desc, out_nchw_device, nrepeat);
+#elif 0
     device_convolution_direct_v2_nchw_kcyx_nkhw
         (in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
 #elif 0
@@ -443,14 +440,18 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 0
+#if 1
+        // host_redux(in_nchw, out_nchw_host);
+        // check_error(out_nchw_host, out_nchw_device);
+        std::cout << "skipping host verification" << std::endl;
+#elif 0
         if(Y == 3 && X == 3 && ConvStrides{}[0] == 1 && ConvStrides{}[1] == 1 &&
            ConvDilations{}[0] == 1 && ConvDilations{}[1] == 1)
         {
             host_winograd_3x3_convolution(in_nchw, wei_kcyx, out_nkhw_host, lower_pads, upper_pads);
         }
         else
-#endif
+#elif 1
         {
             host_direct_convolution(in_nchw_wrw,
                                     wei_kcyx_wrw,
@@ -461,6 +462,7 @@ int main(int argc, char* argv[])
                                     upper_pads);
         }
         check_error(out_nkhw_wrw_host, out_nkhw_wrw_device);
+#endif
 
 #if 0
         LogRange(std::cout << "in_nchw_wrw : ", in_nchw_wrw.mData, ",") << std::endl;
