@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include "config.hpp"
 #include "ConstantTensorDescriptor_deprecated.hpp"
+#include "print_array.hpp"
+#include "print_sequence.hpp"
 #include "device.hpp"
 #include "conv_common.hpp"
 #include "host_conv.hpp"

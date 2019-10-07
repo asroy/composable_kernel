@@ -1,9 +1,18 @@
 #ifndef CK_AMD_INTRINSIC_HPP
 #define CK_AMD_INTRINSIC_HPP
 
-#include "vector_type.hpp"
+#include "float_type.hpp"
 
 namespace ck {
+
+// for buffer_load and buffer_store
+template <typename T>
+union BufferLoadStoreDwordConfig
+{
+    int32x4_t data;
+    T* address[2];
+    int32_t range[4];
+};
 
 __device__ float __llvm_amdgcn_buffer_load(int32x4_t rsrc,
                                            index_t vindex,
@@ -66,20 +75,22 @@ __device__ float __buffer_load<float, 1>(const float* p_src_block,
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
     index_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
 
-    int32x4_t src_block_setting{0};
-    // fill in byte 0 - 1
-    *reinterpret_cast<float**>(&src_block_setting) = const_cast<float*>(p_src_block);
-    // fill in byte 2
-    reinterpret_cast<int32_t*>(&src_block_setting)[2] = -1;
-    // fill in byte 3
-    reinterpret_cast<int32_t*>(&src_block_setting)[3] = 0x00027000;
+    BufferLoadStoreDwordConfig<float> src_block_config;
 
-    asm volatile("\n \
+    // fill in byte 0 - 1
+    src_block_config.address[0] = const_cast<float*>(p_src_block);
+    // fill in byte 2
+    src_block_config.range[2] = -1;
+    // fill in byte 3
+    src_block_config.range[3] = 0x00027000;
+
+    asm volatile(
+        "\n \
     buffer_load_dword %0, %1, %2, %3 offen offset:0 \n \
     s_waitcnt 0 \n \
     "
-                 : "=v"(dst)
-                 : "v"(src_thread_addr_offset), "s"(src_block_setting), "s"(src_const_addr_offset));
+        : "=v"(dst)
+        : "v"(src_thread_addr_offset), "s"(src_block_config.data), "s"(src_const_addr_offset));
 
     return dst;
 #else
@@ -88,16 +99,17 @@ __device__ float __buffer_load<float, 1>(const float* p_src_block,
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
     index_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
 
-    int32x4_t src_block_setting{0};
+    BufferLoadStoreDwordConfig<float> src_block_config;
+
     // fill in byte 0 - 1
-    *reinterpret_cast<float**>(&src_block_setting) = const_cast<float*>(p_src_block);
+    src_block_config.address[0] = const_cast<float*>(p_src_block);
     // fill in byte 2
-    reinterpret_cast<int32_t*>(&src_block_setting)[2] = -1;
+    src_block_config.range[2] = -1;
     // fill in byte 3
-    reinterpret_cast<int32_t*>(&src_block_setting)[3] = 0x00027000;
+    src_block_config.range[3] = 0x00027000;
 
     dst = __llvm_amdgcn_buffer_load(
-        src_block_setting, 0, src_thread_addr_offset + src_const_addr_offset, false, false);
+        src_block_config.data, 0, src_thread_addr_offset + src_const_addr_offset, false, false);
 
     return dst;
 #endif
@@ -114,20 +126,22 @@ __device__ float2_t __buffer_load<float, 2>(const float* p_src_block,
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
     index_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
 
-    int32x4_t src_block_setting{0};
-    // fill in byte 0 - 1
-    *reinterpret_cast<float**>(&src_block_setting) = const_cast<float*>(p_src_block);
-    // fill in byte 2
-    reinterpret_cast<int32_t*>(&src_block_setting)[2] = -1;
-    // fill in byte 3
-    reinterpret_cast<int32_t*>(&src_block_setting)[3] = 0x00027000;
+    BufferLoadStoreDwordConfig<float> src_block_config;
 
-    asm volatile("\n \
+    // fill in byte 0 - 1
+    src_block_config.address[0] = const_cast<float*>(p_src_block);
+    // fill in byte 2
+    src_block_config.range[2] = -1;
+    // fill in byte 3
+    src_block_config.range[3] = 0x00027000;
+
+    asm volatile(
+        "\n \
     buffer_load_dwordx2 %0, %1, %2, %3 offen offset:0 \n \
     s_waitcnt 0 \n \
     "
-                 : "=v"(dst)
-                 : "v"(src_thread_addr_offset), "s"(src_block_setting), "s"(src_const_addr_offset));
+        : "=v"(dst)
+        : "v"(src_thread_addr_offset), "s"(src_block_config.data), "s"(src_const_addr_offset));
 
     return dst;
 #else
@@ -136,16 +150,17 @@ __device__ float2_t __buffer_load<float, 2>(const float* p_src_block,
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
     index_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
 
-    int32x4_t src_block_setting{0};
+    BufferLoadStoreDwordConfig<float> src_block_config;
+
     // fill in byte 0 - 1
-    *reinterpret_cast<float**>(&src_block_setting) = const_cast<float*>(p_src_block);
+    src_block_config.address[0] = const_cast<float*>(p_src_block);
     // fill in byte 2
-    reinterpret_cast<int32_t*>(&src_block_setting)[2] = -1;
+    src_block_config.range[2] = -1;
     // fill in byte 3
-    reinterpret_cast<int32_t*>(&src_block_setting)[3] = 0x00027000;
+    src_block_config.range[3] = 0x00027000;
 
     dst = __llvm_amdgcn_buffer_loadx2(
-        src_block_setting, 0, src_thread_addr_offset + src_const_addr_offset, false, false);
+        src_block_config.data, 0, src_thread_addr_offset + src_const_addr_offset, false, false);
 
     return dst;
 #endif
@@ -162,38 +177,41 @@ __device__ float4_t __buffer_load<float, 4>(const float* p_src_block,
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
     index_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
 
-    int32x4_t src_block_setting{0};
-    // fill in byte 0 - 1
-    *reinterpret_cast<float**>(&src_block_setting) = const_cast<float*>(p_src_block);
-    // fill in byte 2
-    reinterpret_cast<int32_t*>(&src_block_setting)[2] = -1;
-    // fill in byte 3
-    reinterpret_cast<int32_t*>(&src_block_setting)[3] = 0x00027000;
+    BufferLoadStoreDwordConfig<float> src_block_config;
 
-    asm volatile("\n \
+    // fill in byte 0 - 1
+    src_block_config.address[0] = const_cast<float*>(p_src_block);
+    // fill in byte 2
+    src_block_config.range[2] = -1;
+    // fill in byte 3
+    src_block_config.range[3] = 0x00027000;
+
+    asm volatile(
+        "\n \
     buffer_load_dwordx4 %0, %1, %2, %3 offen offset:0 \n \
     s_waitcnt 0 \n \
     "
-                 : "=v"(dst)
-                 : "v"(src_thread_addr_offset), "s"(src_block_setting), "s"(src_const_addr_offset));
+        : "=v"(dst)
+        : "v"(src_thread_addr_offset), "s"(src_block_config.data), "s"(src_const_addr_offset));
 
     return dst;
-#elif 1
+#else
     float4_t dst;
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
     index_t src_const_addr_offset  = src_const_data_offset * sizeof(float);
 
-    int32x4_t src_block_setting{0};
+    BufferLoadStoreDwordConfig<float> src_block_config;
+
     // fill in byte 0 - 1
-    *reinterpret_cast<float**>(&src_block_setting) = const_cast<float*>(p_src_block);
+    src_block_config.address[0] = const_cast<float*>(p_src_block);
     // fill in byte 2
-    reinterpret_cast<int32_t*>(&src_block_setting)[2] = -1;
+    src_block_config.range[2] = -1;
     // fill in byte 3
-    reinterpret_cast<int32_t*>(&src_block_setting)[3] = 0x00027000;
+    src_block_config.range[3] = 0x00027000;
 
     dst = __llvm_amdgcn_buffer_loadx4(
-        src_block_setting, 0, src_thread_addr_offset + src_const_addr_offset, false, false);
+        src_block_config.data, 0, src_thread_addr_offset + src_const_addr_offset, false, false);
 
     return dst;
 #endif
@@ -209,19 +227,20 @@ __device__ void __buffer_store<float, 1>(const float& src,
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
     index_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
 
-    int32x4_t dst_block_setting{0};
+    BufferLoadStoreDwordConfig<float> dst_block_config;
+
     // fill in byte 0 - 1
-    *reinterpret_cast<float**>(&dst_block_setting) = p_dst_block;
+    dst_block_config.address[0] = p_dst_block;
     // fill in byte 2
-    reinterpret_cast<int32_t*>(&dst_block_setting)[2] = -1;
+    dst_block_config.range[2] = -1;
     // fill in byte 3
-    reinterpret_cast<int32_t*>(&dst_block_setting)[3] = 0x00027000;
+    dst_block_config.range[3] = 0x00027000;
 
     asm volatile("\n \
     buffer_store_dword %1, %2, %0, %3 offen offset:0 \n \
     "
                  :
-                 : "s"(dst_block_setting),
+                 : "s"(dst_block_config.data),
                    "v"(src),
                    "v"(dst_thread_addr_offset),
                    "s"(dst_const_addr_offset));
@@ -229,16 +248,21 @@ __device__ void __buffer_store<float, 1>(const float& src,
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
     index_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
 
-    int32x4_t dst_block_setting{0};
-    // fill in byte 0 - 1
-    *reinterpret_cast<float**>(&dst_block_setting) = p_dst_block;
-    // fill in byte 2
-    reinterpret_cast<int32_t*>(&dst_block_setting)[2] = -1;
-    // fill in byte 3
-    reinterpret_cast<int32_t*>(&dst_block_setting)[3] = 0x00027000;
+    BufferLoadStoreDwordConfig<float> dst_block_config;
 
-    __llvm_amdgcn_buffer_store(
-        src, dst_block_setting, 0, dst_thread_addr_offset + dst_const_addr_offset, false, false);
+    // fill in byte 0 - 1
+    dst_block_config.address[0] = p_dst_block;
+    // fill in byte 2
+    dst_block_config.range[2] = -1;
+    // fill in byte 3
+    dst_block_config.range[3] = 0x00027000;
+
+    __llvm_amdgcn_buffer_store(src,
+                               dst_block_config.data,
+                               0,
+                               dst_thread_addr_offset + dst_const_addr_offset,
+                               false,
+                               false);
 #endif
 }
 
@@ -252,19 +276,20 @@ __device__ void __buffer_store<float, 2>(const float2_t& src,
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
     index_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
 
-    int32x4_t dst_block_setting{0};
+    BufferLoadStoreDwordConfig<float> dst_block_config;
+
     // fill in byte 0 - 1
-    *reinterpret_cast<float**>(&dst_block_setting) = p_dst_block;
+    dst_block_config.address[0] = p_dst_block;
     // fill in byte 2
-    reinterpret_cast<int32_t*>(&dst_block_setting)[2] = -1;
+    dst_block_config.range[2] = -1;
     // fill in byte 3
-    reinterpret_cast<int32_t*>(&dst_block_setting)[3] = 0x00027000;
+    dst_block_config.range[3] = 0x00027000;
 
     asm volatile("\n \
     buffer_store_dwordx2 %1, %2, %0, %3 offen offset:0 \n \
     "
                  :
-                 : "s"(dst_block_setting),
+                 : "s"(dst_block_config.data),
                    "v"(src),
                    "v"(dst_thread_addr_offset),
                    "s"(dst_const_addr_offset));
@@ -272,16 +297,21 @@ __device__ void __buffer_store<float, 2>(const float2_t& src,
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
     index_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
 
-    int32x4_t dst_block_setting{0};
-    // fill in byte 0 - 1
-    *reinterpret_cast<float**>(&dst_block_setting) = p_dst_block;
-    // fill in byte 2
-    reinterpret_cast<int32_t*>(&dst_block_setting)[2] = -1;
-    // fill in byte 3
-    reinterpret_cast<int32_t*>(&dst_block_setting)[3] = 0x00027000;
+    BufferLoadStoreDwordConfig<float> dst_block_config;
 
-    __llvm_amdgcn_buffer_storex2(
-        src, dst_block_setting, 0, dst_thread_addr_offset + dst_const_addr_offset, false, false);
+    // fill in byte 0 - 1
+    dst_block_config.address[0] = p_dst_block;
+    // fill in byte 2
+    dst_block_config.range[2] = -1;
+    // fill in byte 3
+    dst_block_config.range[3] = 0x00027000;
+
+    __llvm_amdgcn_buffer_storex2(src,
+                                 dst_block_config.data,
+                                 0,
+                                 dst_thread_addr_offset + dst_const_addr_offset,
+                                 false,
+                                 false);
 #endif
 }
 
@@ -295,19 +325,20 @@ __device__ void __buffer_store<float, 4>(const float4_t& src,
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
     index_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
 
-    int32x4_t dst_block_setting{0};
+    BufferLoadStoreDwordConfig<float> dst_block_config;
+
     // fill in byte 0 - 1
-    *reinterpret_cast<float**>(&dst_block_setting) = p_dst_block;
+    dst_block_config.address[0] = p_dst_block;
     // fill in byte 2
-    reinterpret_cast<int32_t*>(&dst_block_setting)[2] = -1;
+    dst_block_config.range[2] = -1;
     // fill in byte 3
-    reinterpret_cast<int32_t*>(&dst_block_setting)[3] = 0x00027000;
+    dst_block_config.range[3] = 0x00027000;
 
     asm volatile("\n \
     buffer_store_dwordx4 %1, %2, %0, %3 offen offset:0 \n \
     "
                  :
-                 : "s"(dst_block_setting),
+                 : "s"(dst_block_config.data),
                    "v"(src),
                    "v"(dst_thread_addr_offset),
                    "s"(dst_const_addr_offset));
@@ -315,16 +346,21 @@ __device__ void __buffer_store<float, 4>(const float4_t& src,
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
     index_t dst_const_addr_offset  = dst_const_data_offset * sizeof(float);
 
-    int32x4_t dst_block_setting{0};
-    // fill in byte 0 - 1
-    *reinterpret_cast<float**>(&dst_block_setting) = p_dst_block;
-    // fill in byte 2
-    reinterpret_cast<int32_t*>(&dst_block_setting)[2] = -1;
-    // fill in byte 3
-    reinterpret_cast<int32_t*>(&dst_block_setting)[3] = 0x00027000;
+    BufferLoadStoreDwordConfig<float> dst_block_config;
 
-    __llvm_amdgcn_buffer_storex4(
-        src, dst_block_setting, 0, dst_thread_addr_offset + dst_const_addr_offset, false, false);
+    // fill in byte 0 - 1
+    dst_block_config.address[0] = p_dst_block;
+    // fill in byte 2
+    dst_block_config.range[2] = -1;
+    // fill in byte 3
+    dst_block_config.range[3] = 0x00027000;
+
+    __llvm_amdgcn_buffer_storex4(src,
+                                 dst_block_config.data,
+                                 0,
+                                 dst_thread_addr_offset + dst_const_addr_offset,
+                                 false,
+                                 false);
 #endif
 }
 
