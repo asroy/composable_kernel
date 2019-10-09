@@ -26,6 +26,8 @@
 #ifndef BFLOAT16_DEVICE_HPP
 #define BFLOAT16_DEVICE_HPP
 
+#define __HIP_PLATFORM_HCC__ 1
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -6,7 +6,7 @@
 #include "threadwise_gemm.hpp"
 
 #ifndef CK_BLOCKWISE_GEMM_USE_AMD_INLINE_ASM
-#define CK_BLOCKWISE_GEMM_USE_AMD_INLINE_ASM 1
+#define CK_BLOCKWISE_GEMM_USE_AMD_INLINE_ASM 0
 #endif
 
 namespace ck {
@@ -14,6 +14,7 @@ namespace ck {
 // if following number are power of 2, index calculation shall be greatly reduced:
 //    MPerThreadSubC, NPerThreadSubC, MLevel0Cluster, NLevel0Cluster, MLevel1Cluster, NLevel1Cluster
 template <index_t BlockSize,
+          index_t EPack,
           class BlockMatrixA,
           class BlockMatrixB,
           class ThreadMatrixC,
@@ -113,6 +114,151 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
     }
 
 #if CK_USE_AMD_INLINE_ASM
+
+    // 1 in specialized template represent pack size. fp32 = 1
+    template <index_t PACKSIZE>
+    __device__ void outerProduct(const typename vector_type<float, 4>::MemoryType& a,
+                                 const typename vector_type<float, 4>::MemoryType& b,
+                                 typename vector_type<float, 4>::MemoryType* c) const
+    {
+        static_assert(1 == PACKSIZE, "only packsize of 1 is supported with float datatype!");
+        constexpr index_t NRepeat = 2;
+
+        outerProduct1x4(a.x, b, c[0 * NRepeat]);
+        outerProduct1x4(a.y, b, c[1 * NRepeat]);
+        outerProduct1x4(a.z, b, c[2 * NRepeat]);
+        outerProduct1x4(a.w, b, c[3 * NRepeat]);
+    }
+
+    // 1 in specialized template represent pack size. fp32 = 1
+    template <index_t PACKSIZE>
+    __device__ void outerProduct(const typename vector_type<float, 2>::MemoryType& a,
+                                 const typename vector_type<float, 4>::MemoryType& b,
+                                 typename vector_type<float, 4>::MemoryType* c) const
+    {
+        static_assert(1 == PACKSIZE, "only packsize of 1 is supported with float datatype!");
+        constexpr index_t NRepeat = 2;
+
+        outerProduct1x4(a.x, b, c[0 * NRepeat]);
+        outerProduct1x4(a.y, b, c[1 * NRepeat]);
+    }
+
+    // 1 in specialized template represent pack size. fp32 = 1
+    template <index_t PACKSIZE>
+    __device__ void outerProduct(const typename vector_type<float, 4>::MemoryType& a,
+                                 const typename vector_type<float, 2>::MemoryType& b,
+                                 typename vector_type<float, 2>::MemoryType* c) const
+    {
+        static_assert(1 == PACKSIZE, "only packsize of 1 is supported with float datatype!");
+        constexpr index_t NRepeat = 2;
+
+        outerProduct1x2(a.x, b, c[0 * NRepeat]);
+        outerProduct1x2(a.y, b, c[1 * NRepeat]);
+        outerProduct1x2(a.z, b, c[2 * NRepeat]);
+        outerProduct1x2(a.w, b, c[3 * NRepeat]);
+    }
+
+    // 1 in specialized template represent pack size. fp32 = 1
+    template <index_t PACKSIZE>
+    __device__ void outerProduct(const typename vector_type<float, 2>::MemoryType& a,
+                                 const typename vector_type<float, 2>::MemoryType& b,
+                                 typename vector_type<float, 2>::MemoryType* c) const
+    {
+        static_assert(1 == PACKSIZE, "only packsize of 1 is supported with float datatype!");
+        constexpr index_t NRepeat = 2;
+
+        outerProduct1x2(a.x, b, c[0 * NRepeat]);
+        outerProduct1x2(a.y, b, c[1 * NRepeat]);
+    }
+
+    // PACKSIZE for fp16 could be 4 or 2
+    template <index_t PACKSIZE>
+    __device__ void
+    outerProduct(const typename vector_type<typename vector_type<half, PACKSIZE>::MemoryType,
+                                            4>::MemoryType& a,
+                 const typename vector_type<typename vector_type<half, PACKSIZE>::MemoryType,
+                                            4>::MemoryType& b,
+                 typename vector_type<float, 4>::MemoryType* c) const
+    {
+        static_assert(2 == PACKSIZE || 4 == PACKSIZE,
+                      "only packsize of 2,4 is supported with float datatype!");
+        constexpr index_t NRepeat = 2;
+
+        const typename vector_type<half, PACKSIZE>::MemoryType* reg_a =
+            reinterpret_cast<const typename vector_type<half, PACKSIZE>::MemoryType*>(&a);
+        outerProduct1x4Half<PACKSIZE>(reg_a[0], b, c[0 * NRepeat]);
+        outerProduct1x4Half<PACKSIZE>(reg_a[1], b, c[1 * NRepeat]);
+        outerProduct1x4Half<PACKSIZE>(reg_a[2], b, c[2 * NRepeat]);
+        outerProduct1x4Half<PACKSIZE>(reg_a[3], b, c[3 * NRepeat]);
+    }
+
+    // PACKSIZE for fp16 could be 4 or 2
+    template <index_t PACKSIZE>
+    __device__ void
+    outerProduct(const typename vector_type<typename vector_type<half, PACKSIZE>::MemoryType,
+                                            2>::MemoryType& a,
+                 const typename vector_type<typename vector_type<half, PACKSIZE>::MemoryType,
+                                            2>::MemoryType& b,
+                 typename vector_type<float, 2>::MemoryType* c) const
+    {
+        static_assert(2 == PACKSIZE || 4 == PACKSIZE,
+                      "only packsize of 2,4 is supported with float datatype!");
+        constexpr index_t NRepeat = 2;
+
+        const typename vector_type<half, PACKSIZE>::MemoryType* reg_a =
+            reinterpret_cast<const typename vector_type<half, PACKSIZE>::MemoryType*>(&a);
+        outerProduct1x2Half<PACKSIZE>(reg_a[0], b, c[0 * NRepeat]);
+        outerProduct1x2Half<PACKSIZE>(reg_a[1], b, c[1 * NRepeat]);
+    }
+
+    // PACKSIZE for fp16 could be 4 or 2
+    template <index_t PACKSIZE>
+    __device__ void
+    outerProduct1x4Half(const typename vector_type<half, PACKSIZE>::MemoryType& a,
+                        const typename vector_type<typename vector_type<half, PACKSIZE>::MemoryType,
+                                                   4>::MemoryType& b,
+                        vector_type<float, 4>::MemoryType& c) const
+    {
+        static_if<PACKSIZE == 4>{}([&](auto) {
+            outerProduct1x4dot2TwoTimes(reinterpret_cast<const half2*>(&a),
+                                        reinterpret_cast<const half2*>(&b),
+                                        reinterpret_cast<float*>(&c));
+        }).Else([&](auto) {
+            static_if<PACKSIZE == 2>{}([&](auto) {
+                outerProduct1x4dot2(reinterpret_cast<const half2*>(&a),
+                                    reinterpret_cast<const half2*>(&b),
+                                    reinterpret_cast<float*>(&c));
+            }).Else([&](auto fwd) {
+                // not implemented
+                static_assert(fwd(false), "wrong! packsize = 1 for fp16 is insensible.");
+            });
+        });
+    }
+
+    // PACKSIZE for fp16 could be 4 or 2
+    template <index_t PACKSIZE>
+    __device__ void
+    outerProduct1x2Half(const typename vector_type<half, PACKSIZE>::MemoryType& a,
+                        const typename vector_type<typename vector_type<half, PACKSIZE>::MemoryType,
+                                                   2>::MemoryType& b,
+                        vector_type<float, 2>::MemoryType& c) const
+    {
+        static_if<PACKSIZE == 4>{}([&](auto) {
+            outerProduct1x2dot2TwoTimes(reinterpret_cast<const half2*>(&a),
+                                        reinterpret_cast<const half2*>(&b),
+                                        reinterpret_cast<float*>(&c));
+        }).Else([&](auto) {
+            static_if<PACKSIZE == 2>{}([&](auto) {
+                outerProduct1x2dot2(reinterpret_cast<const half2*>(&a),
+                                    reinterpret_cast<const half2*>(&b),
+                                    reinterpret_cast<float*>(&c));
+            }).Else([&](auto fwd) {
+                // not implemented
+                static_assert(fwd(false), "wrong! packsize = 1 for fp16 is insensible.");
+            });
+        });
+    }
+
     template <class FloatA, class FloatB, class FloatC>
     __device__ void Run_amd_asm(const FloatA* __restrict__ p_a_block,
                                 const FloatB* __restrict__ p_b_block,
@@ -131,91 +277,60 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
 
         // thread A, B for GEMM
         constexpr auto a_thread_mtx =
-            make_ConstantMatrixDescriptor(Number<KPerThreadLoop>{}, Number<MPerThread>{});
+            make_ConstantMatrixDescriptor_packed(Number<KPerThreadLoop>{}, Number<MPerThread>{});
 
         constexpr auto b_thread_mtx =
-            make_ConstantMatrixDescriptor(Number<KPerThreadLoop>{}, Number<NPerThread>{});
-
-        FloatA p_a_thread[a_thread_mtx.GetElementSpace()];
-        FloatB p_b_thread[b_thread_mtx.GetElementSpace()];
+            make_ConstantMatrixDescriptor_packed(Number<KPerThreadLoop>{}, Number<NPerThread>{});
 
         constexpr index_t MPerLevel1Cluster = MPerThreadSubC * MLevel0Cluster * MLevel1Cluster;
         constexpr index_t NPerLevel1Cluster = NPerThreadSubC * NLevel0Cluster * NLevel1Cluster;
 
-        static_assert(MPerThreadSubC == 4 && NPerThreadSubC == 4 && KPerThreadLoop == 1 &&
-                          MPerThread == 8 && NPerThread == 8,
-                      "Run_amd_asm cannot deal with this GEMM shape yet");
+        static_assert((MPerThreadSubC == 4 || MPerThreadSubC == 2) &&
+                          (NPerThreadSubC == 4 || NPerThreadSubC == 2) && KPerThreadLoop == 1,
+                      "M/NPerThreadSubC wrong!");
 
-        static_assert(DataPerReadA == 4 && DataPerReadB == 4, "Run_amd_asm only do float4 read");
+        static_assert(MPerThread % 4 == 0 && NPerThread % 4 == 0, "M/NPerThread % 4 != 0");
 
-        // If A and B datatype is float
-        static_if<std::is_same<FloatA, float>::value &&
-                  std::is_same<FloatB, float>::value>{}([&](auto) {
-            using Float4 = vector_type<float, 4>::MemoryType;
+        constexpr index_t MRepeat = M / (MPerThreadSubC * MLevel0Cluster * MLevel1Cluster);
+        constexpr index_t NRepeat = N / (NPerThreadSubC * NLevel0Cluster * NLevel1Cluster);
 
-            Float4* reg_a = reinterpret_cast<Float4*>(p_a_thread);
-            Float4* reg_b = reinterpret_cast<Float4*>(p_b_thread);
-            Float4* reg_c = reinterpret_cast<Float4*>(p_c_thread);
+        static_assert(MRepeat == 2 && NRepeat == 2, "M/NRepeat != 2");
 
-            reg_a[0] = *reinterpret_cast<const Float4*>(&p_a_block[mMyThreadOffsetA]);
-            reg_b[0] = *reinterpret_cast<const Float4*>(&p_b_block[mMyThreadOffsetB]);
-            reg_b[1] =
-                *reinterpret_cast<const Float4*>(&p_b_block[mMyThreadOffsetB + NPerLevel1Cluster]);
-            reg_a[1] =
-                *reinterpret_cast<const Float4*>(&p_a_block[mMyThreadOffsetA + MPerLevel1Cluster]);
-            outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
-            outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
+        using typeA = typename vector_type<FloatA, MPerThreadSubC>::MemoryType;
+        using typeB = typename vector_type<FloatB, NPerThreadSubC>::MemoryType;
+        using typeC = typename vector_type<FloatC, NPerThreadSubC>::MemoryType;
+
+        FloatA p_a_thread[a_thread_mtx.GetElementSpace()];
+        FloatB p_b_thread[b_thread_mtx.GetElementSpace()];
+
+        typeA* reg_a = reinterpret_cast<typeA*>(p_a_thread);
+        typeB* reg_b = reinterpret_cast<typeB*>(p_b_thread);
+        typeC* reg_c = reinterpret_cast<typeC*>(p_c_thread);
+
+        reg_a[0] = *reinterpret_cast<const typeA*>(&p_a_block[mMyThreadOffsetA]);
+        reg_b[0] = *reinterpret_cast<const typeB*>(&p_b_block[mMyThreadOffsetB]);
+        reg_b[1] =
+            *reinterpret_cast<const typeB*>(&p_b_block[(mMyThreadOffsetB + NPerLevel1Cluster)]);
+        reg_a[1] =
+            *reinterpret_cast<const typeA*>(&p_a_block[(mMyThreadOffsetA + MPerLevel1Cluster)]);
+        outerProduct<EPack>(reg_a[0], reg_b[0], &reg_c[0]);
+        outerProduct<EPack>(reg_a[0], reg_b[1], &reg_c[1]);
 #pragma unroll
-            for(index_t k = 1; k < K; ++k)
-            {
-                reg_a[0] = *reinterpret_cast<const Float4*>(&p_a_block[mMyThreadOffsetA + k * M]);
-                outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
-                reg_b[0] = *reinterpret_cast<const Float4*>(&p_b_block[mMyThreadOffsetB + k * N]);
-                outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
-                reg_b[1] = *reinterpret_cast<const Float4*>(
-                    &p_b_block[mMyThreadOffsetB + k * N + NPerLevel1Cluster]);
-                reg_a[1] = *reinterpret_cast<const Float4*>(
-                    &p_a_block[mMyThreadOffsetA + k * M + MPerLevel1Cluster]);
-                outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
-                outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
-            }
-            outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
-            outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
-
-        }).Else([&](auto) { // If A and B datatype is bfloat16/float16
-            using Half4x4 = vector_type<vector_type<half, 4>, 4>;
-            using Float4  = vector_type<float, 4>::MemoryType;
-
-            Half4x4* reg_a = reinterpret_cast<Half4x4*>(p_a_thread);
-            Half4x4* reg_b = reinterpret_cast<Half4x4*>(p_b_thread);
-            Float4* reg_c  = reinterpret_cast<Float4*>(p_c_thread);
-
-            reg_a[0] = *reinterpret_cast<const Half4x4*>(&p_a_block[mMyThreadOffsetA]);
-            reg_b[0] = *reinterpret_cast<const Half4x4*>(&p_b_block[mMyThreadOffsetB]);
-            reg_b[1] =
-                *reinterpret_cast<const Half4x4*>(&p_b_block[mMyThreadOffsetB + NPerLevel1Cluster]);
-            reg_a[1] =
-                *reinterpret_cast<const Half4x4*>(&p_a_block[mMyThreadOffsetA + MPerLevel1Cluster]);
-            outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
-            outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
-
-#pragma unroll
-            for(index_t k = 1; k < K; ++k)
-            {
-                reg_a[0] = *reinterpret_cast<const Half4x4*>(&p_a_block[mMyThreadOffsetA + k * M]);
-                outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
-                reg_b[0] = *reinterpret_cast<const Half4x4*>(&p_b_block[mMyThreadOffsetB + k * N]);
-                outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
-                reg_b[1] = *reinterpret_cast<const Half4x4*>(
-                    &p_b_block[mMyThreadOffsetB + k * N + NPerLevel1Cluster]);
-                reg_a[1] = *reinterpret_cast<const Half4x4*>(
-                    &p_a_block[mMyThreadOffsetA + k * M + MPerLevel1Cluster]);
-                outerProduct4x4(reg_a[0], reg_b[0], reg_c[0], reg_c[2], reg_c[4], reg_c[6]);
-                outerProduct4x4(reg_a[0], reg_b[1], reg_c[1], reg_c[3], reg_c[5], reg_c[7]);
-            }
-            outerProduct4x4(reg_a[1], reg_b[0], reg_c[8], reg_c[10], reg_c[12], reg_c[14]);
-            outerProduct4x4(reg_a[1], reg_b[1], reg_c[9], reg_c[11], reg_c[13], reg_c[15]);
-        });
+        for(index_t k = 1; k < K; ++k)
+        {
+            reg_a[0] = *reinterpret_cast<const typeA*>(&p_a_block[(mMyThreadOffsetA + k * M)]);
+            outerProduct<EPack>(reg_a[1], reg_b[0], &reg_c[NRepeat * MPerThreadSubC]);
+            reg_b[0] = *reinterpret_cast<const typeB*>(&p_b_block[(mMyThreadOffsetB + k * N)]);
+            outerProduct<EPack>(reg_a[1], reg_b[1], &reg_c[NRepeat * MPerThreadSubC + 1]);
+            reg_b[1] = *reinterpret_cast<const typeB*>(
+                &p_b_block[(mMyThreadOffsetB + k * N + NPerLevel1Cluster)]);
+            reg_a[1] = *reinterpret_cast<const typeA*>(
+                &p_a_block[(mMyThreadOffsetA + k * M + MPerLevel1Cluster)]);
+            outerProduct<EPack>(reg_a[0], reg_b[0], &reg_c[0]);
+            outerProduct<EPack>(reg_a[0], reg_b[1], &reg_c[1]);
+        }
+        outerProduct<EPack>(reg_a[1], reg_b[0], &reg_c[NRepeat * MPerThreadSubC]);
+        outerProduct<EPack>(reg_a[1], reg_b[1], &reg_c[NRepeat * MPerThreadSubC + 1]);
     }
 #endif
 
@@ -250,8 +365,8 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
         constexpr auto b_thread_sub_mtx = make_ConstantMatrixDescriptor(
             Number<KPerThreadLoop>{}, Number<NPerThreadSubC>{}, Number<NPerThread>{});
 
-        FloatA p_a_thread[a_thread_mtx.GetElementSpace()*4];
-        FloatB p_b_thread[b_thread_mtx.GetElementSpace()*4];
+        FloatA p_a_thread[a_thread_mtx.GetElementSpace()];
+        FloatB p_b_thread[b_thread_mtx.GetElementSpace()];
 
         constexpr index_t MPerLevel1Cluster = MPerThreadSubC * MLevel0Cluster * MLevel1Cluster;
         constexpr index_t NPerLevel1Cluster = NPerThreadSubC * NLevel0Cluster * NLevel1Cluster;
@@ -270,10 +385,10 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
                 threadwise_matrix_copy(
                     a_block_mtx,
                     p_a_block +
-                        (a_block_mtx.GetOffsetFromMultiIndex(k_begin, m_repeat * MPerLevel1Cluster) +
-                        mMyThreadOffsetA)*4,
+                        a_block_mtx.GetOffsetFromMultiIndex(k_begin, m_repeat * MPerLevel1Cluster) +
+                        mMyThreadOffsetA,
                     a_thread_mtx,
-                    p_a_thread + (a_thread_mtx.GetOffsetFromMultiIndex(0, m_repeat * MPerThreadSubC))*4,
+                    p_a_thread + a_thread_mtx.GetOffsetFromMultiIndex(0, m_repeat * MPerThreadSubC),
                     a_thread_sub_mtx.GetLengths(),
                     Number<DataPerReadA>{});
             }
@@ -285,10 +400,10 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
                 threadwise_matrix_copy(
                     b_block_mtx,
                     p_b_block +
-                        (b_block_mtx.GetOffsetFromMultiIndex(k_begin, n_repeat * NPerLevel1Cluster) +
-                        mMyThreadOffsetB)*4,
+                        b_block_mtx.GetOffsetFromMultiIndex(k_begin, n_repeat * NPerLevel1Cluster) +
+                        mMyThreadOffsetB,
                     b_thread_mtx,
-                    p_b_thread + (b_thread_mtx.GetOffsetFromMultiIndex(0, n_repeat * NPerThreadSubC))*4,
+                    p_b_thread + b_thread_mtx.GetOffsetFromMultiIndex(0, n_repeat * NPerThreadSubC),
                     b_thread_sub_mtx.GetLengths(),
                     Number<DataPerReadB>{});
             }
@@ -307,155 +422,20 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
     }
 
     template <class FloatA, class FloatB, class FloatC>
-    __device__ void RunRegisterDoubleBuffer_source(FloatA* const p_a_block,
-                                                   FloatB* const p_b_block,
-                                                   FloatC* p_c_thread) const
-    {
-        constexpr auto True  = integral_constant<bool, true>{};
-        constexpr auto False = integral_constant<bool, false>{};
-
-        constexpr auto a_block_mtx  = BlockMatrixA{};
-        constexpr auto b_block_mtx  = BlockMatrixB{};
-        constexpr auto c_thread_mtx = ThreadMatrixC{};
-
-        constexpr index_t K = a_block_mtx.NRow();
-
-        constexpr index_t MPerThread = c_thread_mtx.NRow();
-        constexpr index_t NPerThread = c_thread_mtx.NCol();
-
-        // thread A, B for GEMM
-        constexpr auto a_thread_mtx =
-            make_ConstantMatrixDescriptor(Number<KPerThreadLoop>{}, Number<MPerThread>{});
-
-        constexpr auto b_thread_mtx =
-            make_ConstantMatrixDescriptor(Number<KPerThreadLoop>{}, Number<NPerThread>{});
-
-        // thread A-sub, B-sub for copy
-        constexpr auto a_thread_sub_mtx = make_ConstantMatrixDescriptor(
-            Number<KPerThreadLoop>{}, Number<MPerThreadSubC>{}, Number<MPerThread>{});
-
-        constexpr auto b_thread_sub_mtx = make_ConstantMatrixDescriptor(
-            Number<KPerThreadLoop>{}, Number<NPerThreadSubC>{}, Number<NPerThread>{});
-
-        // register
-        FloatA p_a_thread_0[a_thread_mtx.GetElementSpace()];
-        FloatB p_b_thread_0[b_thread_mtx.GetElementSpace()];
-
-        FloatA p_a_thread_1[a_thread_mtx.GetElementSpace()];
-        FloatB p_b_thread_1[b_thread_mtx.GetElementSpace()];
-
-        constexpr index_t MPerLevel1Cluster = MPerThreadSubC * MLevel0Cluster * MLevel1Cluster;
-        constexpr index_t NPerLevel1Cluster = NPerThreadSubC * NLevel0Cluster * NLevel1Cluster;
-
-        constexpr index_t MRepeat = MPerThread / MPerThreadSubC;
-        constexpr index_t NRepeat = NPerThread / NPerThreadSubC;
-
-// preload A, B
-#pragma unroll
-        for(index_t m_repeat = 0; m_repeat < MRepeat; ++m_repeat)
-        { // copy A-sub to form A
-            threadwise_matrix_copy(a_block_mtx,
-                                   p_a_block + mMyThreadOffsetA + m_repeat * MPerLevel1Cluster,
-                                   a_thread_sub_mtx,
-                                   p_a_thread_0 + m_repeat * MPerThreadSubC,
-                                   a_thread_sub_mtx.GetLengths(),
-                                   Number<DataPerReadA>{});
-        }
-
-#pragma unroll
-        for(index_t n_repeat = 0; n_repeat < NRepeat; ++n_repeat)
-        { // copy B-sub to form B
-            threadwise_matrix_copy(b_block_mtx,
-                                   p_b_block + mMyThreadOffsetB + n_repeat * NPerLevel1Cluster,
-                                   b_thread_sub_mtx,
-                                   p_b_thread_0 + n_repeat * NPerThreadSubC,
-                                   b_thread_sub_mtx.GetLengths(),
-                                   Number<DataPerReadB>{});
-        }
-
-        bool even_loop = true;
-
-#pragma unroll
-        for(index_t k_begin = 0; k_begin + KPerThreadLoop < K;
-            k_begin += KPerThreadLoop, even_loop = !even_loop)
-        { // loop over k
-            FloatA* p_a_thread_now = even_loop ? p_a_thread_0 : p_a_thread_1;
-            FloatB* p_b_thread_now = even_loop ? p_b_thread_0 : p_b_thread_1;
-
-            FloatA* p_a_thread_next = even_loop ? p_a_thread_1 : p_a_thread_0;
-            FloatB* p_b_thread_next = even_loop ? p_b_thread_1 : p_b_thread_0;
-
-// preload next A, B
-#pragma unroll
-            for(index_t m_repeat = 0; m_repeat < MRepeat; ++m_repeat)
-            { // copy A-sub to form A
-                threadwise_matrix_copy(a_block_mtx,
-                                       p_a_block + mMyThreadOffsetA +
-                                           (k_begin + 1) * a_block_mtx.RowStride() +
-                                           m_repeat * MPerLevel1Cluster,
-                                       a_thread_sub_mtx,
-                                       p_a_thread_next + m_repeat * MPerThreadSubC,
-                                       a_thread_sub_mtx.GetLengths(),
-                                       Number<DataPerReadA>{});
-            }
-
-#pragma unroll
-            for(index_t n_repeat = 0; n_repeat < NRepeat; ++n_repeat)
-            { // copy B-sub to form B
-                threadwise_matrix_copy(b_block_mtx,
-                                       p_b_block + mMyThreadOffsetB +
-                                           (k_begin + 1) * b_block_mtx.RowStride() +
-                                           n_repeat * NPerLevel1Cluster,
-                                       b_thread_sub_mtx,
-                                       p_b_thread_next + n_repeat * NPerThreadSubC,
-                                       b_thread_sub_mtx.GetLengths(),
-                                       Number<DataPerReadB>{});
-            }
-
-            // C = A * B
-            threadwise_gemm(a_thread_mtx,
-                            True,
-                            p_a_thread_now,
-                            b_thread_mtx,
-                            False,
-                            p_b_thread_now,
-                            c_thread_mtx,
-                            False,
-                            p_c_thread);
-        }
-
-        // last loop
-        {
-            FloatA* p_a_thread_now = even_loop ? p_a_thread_0 : p_a_thread_1;
-            FloatB* p_b_thread_now = even_loop ? p_b_thread_0 : p_b_thread_1;
-
-            // C = A * B
-            threadwise_gemm(a_thread_mtx,
-                            True,
-                            p_a_thread_now,
-                            b_thread_mtx,
-                            False,
-                            p_b_thread_now,
-                            c_thread_mtx,
-                            False,
-                            p_c_thread);
-        }
-    }
-    template <class FloatA, class FloatB, class FloatC>
     __device__ void Run(const FloatA* __restrict__ p_a_block,
                         const FloatB* __restrict__ p_b_block,
                         FloatC* __restrict__ p_c_thread) const
-
     {
 #if CK_USE_AMD_INLINE_ASM && CK_BLOCKWISE_GEMM_USE_AMD_INLINE_ASM
-        static_if<std::is_same<FloatA, ushort>::value && std::is_same<FloatB, ushort>::value>{}(
-            [&](auto) { Run_source(p_a_block, p_b_block, p_c_thread); })
-            .Else([&](auto) { // If A and B datatype is bfloat16/float16
-                Run_amd_asm(p_a_block, p_b_block, p_c_thread);
-            });
+// The assembly path doesn't support bfloat16 using asm instructions
+#if MIOPEN_USE_BFP16 == 1
+        Run_source(p_a_block, p_b_block, p_c_thread);
+#else
+        Run_amd_asm(p_a_block, p_b_block, p_c_thread);
+#endif
 #else
         Run_source(p_a_block, p_b_block, p_c_thread);
-#endif
+#endif // CK_USE_AMD_INLINE_ASM
     }
 };
 

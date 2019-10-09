@@ -8,11 +8,12 @@
 #include "device.hpp"
 #include "conv_common.hpp"
 #include "device_convolution_direct_v2_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v1_chwn_cyxk_khwn.hpp"
-#include "device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v2_chwn_cyxk_khwn.hpp"
-#include "device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw.hpp"
+// #include "device_convolution_implicit_gemm_v1_chwn_cyxk_khwn.hpp"
+// #include "device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw.hpp"
+// #include "device_convolution_implicit_gemm_v2_chwn_cyxk_khwn.hpp"
+// #include "device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw.hpp"
+//#include "device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_implicit_gemm_v5_nchw_kcyx_nkhw.hpp"
 
 using namespace ck;
 
@@ -400,6 +401,7 @@ void check_error(const Tensor<T>& ref, const Tensor<T>& result)
     float ref_value = 0, result_value = 0;
     for(int i = 0; i < ref.mData.size(); ++i)
     {
+        std::cout << result.mData[i] << " ";
         error += std::abs(double(ref.mData[i]) - double(result.mData[i]));
         float diff = std::abs(double(ref.mData[i]) - double(result.mData[i]));
         if(max_diff < diff)
@@ -410,6 +412,7 @@ void check_error(const Tensor<T>& ref, const Tensor<T>& result)
         }
     }
 
+    std::cout << std::endl;
     std::cout << "error: " << error << std::endl;
     std::cout << "max_diff: " << max_diff << ", " << ref_value << ", " << result_value << std::endl;
 }
@@ -803,7 +806,7 @@ int main(int argc, char* argv[])
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;
 #elif 1
-    constexpr index_t N  = 8;
+    constexpr index_t N  = 32;
     constexpr index_t C  = 64;
     constexpr index_t HI = 4;
     constexpr index_t WI = 4;
@@ -830,8 +833,8 @@ int main(int argc, char* argv[])
     ostream_ConstantTensorDescriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
     ostream_ConstantTensorDescriptor(out_nkhw_desc, std::cout << "out_nkhw_desc: ");
 
-    using in_data_t  = half;
-    using out_data_t = half;
+    using in_data_t  = float;
+    using out_data_t = float;
     Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
     Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
     Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
@@ -850,7 +853,7 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 0
+#if 1
         in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 0
@@ -859,7 +862,7 @@ int main(int argc, char* argv[])
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_3{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-#elif 1
+#elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
 #elif 0
@@ -883,8 +886,10 @@ int main(int argc, char* argv[])
     device_convolution_implicit_gemm_v2_chwn_cyxk_khwn
 #elif 0
     device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw
-#elif 1
+#elif 0
     device_convolution_implicit_gemm_v4_nchw_kcyx_nkhw
+#elif 1
+    device_convolution_implicit_gemm_v5_nchw_kcyx_nkhw
 #endif
     (in_nchw_desc,
      in_nchw,

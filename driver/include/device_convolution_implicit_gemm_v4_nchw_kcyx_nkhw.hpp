@@ -1,9 +1,9 @@
 #pragma once
 #include <unistd.h>
 
-#define MIOPEN_USE_FP16 1
+#define MIOPEN_USE_FP16 0
 #define MIOPEN_USE_BFP16 0
-#define MIOPEN_USE_FP32 0
+#define MIOPEN_USE_FP32 1
 
 #define __HIP_PLATFORM_HCC__ 1
 

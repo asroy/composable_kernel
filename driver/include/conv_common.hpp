@@ -32,6 +32,7 @@ constexpr auto get_convolution_output_default_4d_tensor_descriptor(InDesc, WeiDe
 
     constexpr auto HO = HI + 1 - Y;
     constexpr auto WO = WI + 1 - X;
+    printf("H0=%d, W0=%d\n", HO, WO);
 
     return make_ConstantTensorDescriptor_packed(Sequence<N, K, HO, WO>{});
 }

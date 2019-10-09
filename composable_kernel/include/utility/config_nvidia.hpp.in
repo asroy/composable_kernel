@@ -6,8 +6,11 @@
 #include "nvToolsExt.h"
 #include "helper_cuda.h"
 
+#include "bfloat16_dev.hpp"
+
 #define CK_DEVICE_BACKEND_NVIDIA 1
 #define CK_USE_AMD_INLINE_ASM 0
+#define CK_BLOCKWISE_GEMM_USE_AMD_INLINE_ASM 0
 #define CK_EXPERIMENTAL_USE_MORE_COMPILE_STATIC_BLOCKWISE_GENERIC_SLICE_COPY_V1 0
 #define CK_EXPERIMENTAL_USE_MORE_COMPILE_STATIC_THREADWISE_GENERIC_TENSOR_SLICE_COPY_V1 0
 
@@ -21,6 +24,12 @@ using float2_t = float2;
 using float4_t = float4;
 
 using index_t = uint32_t;
+
+using half2_t = half2;
+typedef struct 
+{
+    half2 value[2];
+} half4_t;
 
 __device__ void fused_multiply_accumulate(float& d, const float& s0, const float& s1)
 {
@@ -50,6 +59,31 @@ __device__ void fused_multiply_accumulate(int32_t& d, const int32_t& s0, const i
     d = __dp4a(s0, s1, d);
 }
 #endif
+
+// data type conversion
+template <class T>
+struct type_convert
+{
+    template <class X>
+    __device__ T operator()(X x) const
+    {
+        return static_cast<T>(x);
+    }
+};
+
+template <>
+template <>
+__device__ float type_convert<float>::operator()<ushort>(ushort x) const
+{
+    return bfloat16_to_float(x);
+}
+
+template <>
+template <>
+__device__ ushort type_convert<ushort>::operator()<float>(float x) const
+{
+    return float_to_bfloat16(x);
+}
 
 } // namespace ck
 
