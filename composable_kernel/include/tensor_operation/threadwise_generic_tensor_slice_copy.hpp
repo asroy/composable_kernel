@@ -68,9 +68,12 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     // Will do padding check on dst data: No write if dst data is in paddin area.
     template <typename SrcData,
               typename DstData,
-              AddressSpace SrcAddressSpace = AddressSpace::generic,
-              AddressSpace DstAddressSpace = AddressSpace::generic>
-    __device__ void Run(const SrcData* p_src, DstData* p_dst) const
+              AddressSpace SrcAddressSpace,
+              AddressSpace DstAddressSpace>
+    __device__ void Run(const SrcData* p_src,
+                        DstData* p_dst,
+                        integral_constant<AddressSpace, SrcAddressSpace>,
+                        integral_constant<AddressSpace, DstAddressSpace>) const
     {
         using src_vector_t = typename vector_type<SrcData, SrcDataPerAccess>::MemoryType;
         using dst_vector_t = typename vector_type<DstData, DstDataPerAccess>::MemoryType;
@@ -178,6 +181,15 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                 }
             }
         });
+    }
+
+    template <typename SrcData, typename DstData>
+    __device__ void Run(const SrcData* p_src, DstData* p_dst) const
+    {
+        constexpr auto generic_address_space =
+            integral_constant<AddressSpace, AddressSpace::generic>{};
+
+        Run(p_src, p_dst, generic_address_space, generic_address_space);
     }
 
     // Modify Length to 1, if Mask is set to false

@@ -100,6 +100,18 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                         const Float* const __restrict__ p_wei_global,
                         Float* const __restrict__ p_out_global) const
     {
+        constexpr auto I0 = Number<0>{};
+        constexpr auto I1 = Number<1>{};
+        constexpr auto I2 = Number<2>{};
+        constexpr auto I3 = Number<3>{};
+
+        constexpr auto True = integral_constant<bool, true>{};
+
+        constexpr auto generic_address_space =
+            integral_constant<AddressSpace, AddressSpace::generic>{};
+        constexpr auto global_address_space =
+            integral_constant<AddressSpace, AddressSpace::global>{};
+
         static_assert(ConvDirection == ConvolutionDirection::Forward ||
                           ConvDirection == ConvolutionDirection::BackwardWeight,
                       "wrong! this kernel only support convolution forward and backward-weight");
@@ -113,13 +125,6 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                               (GemmNPerThreadSubC * GemmNLevel0Cluster * GemmNLevel1Cluster) ==
                           0,
                       "wrong!");
-
-        constexpr auto I0 = Number<0>{};
-        constexpr auto I1 = Number<1>{};
-        constexpr auto I2 = Number<2>{};
-        constexpr auto I3 = Number<3>{};
-
-        constexpr auto True = integral_constant<bool, true>{};
 
         constexpr auto in_n_c_hi_wi_global_desc  = InGlobalDesc{};
         constexpr auto wei_k_c_y_x_global_desc   = WeiGlobalDesc{};
@@ -329,10 +334,10 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 
         // LDS double buffer: preload data into LDS
         {
-            blockwise_in_copy.template Run<Float, Float, AddressSpace::global>(p_in_global,
-                                                                               p_in_block_double);
-            blockwise_wei_copy.template Run<Float, Float, AddressSpace::global>(p_wei_global,
-                                                                                p_wei_block_double);
+            blockwise_in_copy.Run(
+                p_in_global, p_in_block_double, global_address_space, generic_address_space);
+            blockwise_wei_copy.Run(
+                p_wei_global, p_wei_block_double, global_address_space, generic_address_space);
         }
 
         // LDS double buffer: main body
@@ -363,10 +368,10 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                 __syncthreads();
 
                 // LDS doubel buffer: load next data from device mem
-                blockwise_in_copy.template RunLoadThreadBuffer<Float, Float, AddressSpace::global>(
-                    p_in_global, p_in_thread_buffer);
-                blockwise_wei_copy.template RunLoadThreadBuffer<Float, Float, AddressSpace::global>(
-                    p_wei_global, p_wei_thread_buffer);
+                blockwise_in_copy.RunLoadThreadBuffer(
+                    p_in_global, p_in_thread_buffer, global_address_space, generic_address_space);
+                blockwise_wei_copy.RunLoadThreadBuffer(
+                    p_wei_global, p_wei_thread_buffer, global_address_space, generic_address_space);
 
                 // LDS double buffer: GEMM on current data
                 blockwise_gemm.Run(p_wei_block_now, p_in_block_now, p_out_thread);
@@ -392,10 +397,10 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                 __syncthreads();
 
                 // LDS double buffer: load last data from device mem
-                blockwise_in_copy.template RunLoadThreadBuffer<Float, Float, AddressSpace::global>(
-                    p_in_global, p_in_thread_buffer);
-                blockwise_wei_copy.template RunLoadThreadBuffer<Float, Float, AddressSpace::global>(
-                    p_wei_global, p_wei_thread_buffer);
+                blockwise_in_copy.RunLoadThreadBuffer(
+                    p_in_global, p_in_thread_buffer, global_address_space, generic_address_space);
+                blockwise_wei_copy.RunLoadThreadBuffer(
+                    p_wei_global, p_wei_thread_buffer, global_address_space, generic_address_space);
 
                 // LDS double buffer: GEMM on 2nd-last data
                 blockwise_gemm.Run(p_wei_block_double, p_in_block_double, p_out_thread);
@@ -482,8 +487,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                                                       0,
                                                       b_thread_data_on_global,
                                                       0})
-                .template Run<AccDataType, Float, AddressSpace::generic, AddressSpace::global>(
-                    p_out_thread, p_out_global);
+                .Run(p_out_thread, p_out_global, generic_address_space, global_address_space);
         }
     }
 };
