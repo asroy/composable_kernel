@@ -81,7 +81,11 @@ struct BlockwiseGenericTensorSliceCopy_v4
         constexpr auto thread_buffer_address_space =
             integral_constant<AddressSpace, ThreadBufferAddressSpace>{};
 
-        if(mThreadwiseStore.HasWorkingOptimizedAddressCalculation())
+        constexpr bool has_optimized_address_calculation =
+            decltype(mThreadwiseStore)::HasWorkingOptimizedAddressCalculation();
+
+        // TODO: threadwise copy is still being tweaked
+        if(has_optimized_address_calculation)
         {
             mThreadwiseLoad.Run_optimized_src_address_calculation(
                 p_block_src, p_thread_buffer, block_src_address_space, thread_buffer_address_space);
@@ -119,7 +123,11 @@ struct BlockwiseGenericTensorSliceCopy_v4
         constexpr auto block_dst_address_space =
             integral_constant<AddressSpace, BlockDstAddressSpace>{};
 
-        if(mThreadwiseStore.HasWorkingOptimizedAddressCalculation())
+        constexpr bool has_optimized_address_calculation =
+            decltype(mThreadwiseStore)::HasWorkingOptimizedAddressCalculation();
+
+        // TODO: threadwise copy is still being tweaked
+        if(has_optimized_address_calculation)
         {
             mThreadwiseStore.Run_optimized_dst_address_calculation(
                 p_thread_buffer, p_block_dst, thread_buffer_address_space, block_dst_address_space);
