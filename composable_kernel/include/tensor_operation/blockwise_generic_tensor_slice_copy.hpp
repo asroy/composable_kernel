@@ -76,22 +76,18 @@ struct BlockwiseGenericTensorSliceCopy_v4
                         integral_constant<AddressSpace, BlockSrcAddressSpace>,
                         integral_constant<AddressSpace, ThreadBufferAddressSpace>) const
     {
+        constexpr auto block_src_address_space =
+            integral_constant<AddressSpace, BlockSrcAddressSpace>{};
+        constexpr auto thread_buffer_address_space =
+            integral_constant<AddressSpace, ThreadBufferAddressSpace>{};
+
         if(mThreadwiseStore.HasWorkingOptimizedAddressCalculation())
         {
-            mThreadwiseLoad
-                .template Run_optimized_src_address_calculation<BlockSrcData,
-                                                                ThreadBufferData,
-                                                                BlockSrcAddressSpace,
-                                                                ThreadBufferAddressSpace>(
-                    p_block_src, p_thread_buffer);
+            mThreadwiseLoad.Run_optimized_src_address_calculation(
+                p_block_src, p_thread_buffer, block_src_address_space, thread_buffer_address_space);
         }
         else
         {
-            constexpr auto block_src_address_space =
-                integral_constant<AddressSpace, BlockSrcAddressSpace>{};
-            constexpr auto thread_buffer_address_space =
-                integral_constant<AddressSpace, ThreadBufferAddressSpace>{};
-
             mThreadwiseLoad.Run(
                 p_block_src, p_thread_buffer, block_src_address_space, thread_buffer_address_space);
         }
@@ -118,22 +114,18 @@ struct BlockwiseGenericTensorSliceCopy_v4
                          integral_constant<AddressSpace, ThreadBufferAddressSpace>,
                          integral_constant<AddressSpace, BlockDstAddressSpace>) const
     {
+        constexpr auto thread_buffer_address_space =
+            integral_constant<AddressSpace, ThreadBufferAddressSpace>{};
+        constexpr auto block_dst_address_space =
+            integral_constant<AddressSpace, BlockDstAddressSpace>{};
+
         if(mThreadwiseStore.HasWorkingOptimizedAddressCalculation())
         {
-            mThreadwiseStore
-                .template Run_optimized_dst_address_calculation<ThreadBufferData,
-                                                                BlockDstData,
-                                                                ThreadBufferAddressSpace,
-                                                                BlockDstAddressSpace>(
-                    p_thread_buffer, p_block_dst);
+            mThreadwiseStore.Run_optimized_dst_address_calculation(
+                p_thread_buffer, p_block_dst, thread_buffer_address_space, block_dst_address_space);
         }
         else
         {
-            constexpr auto thread_buffer_address_space =
-                integral_constant<AddressSpace, ThreadBufferAddressSpace>{};
-            constexpr auto block_dst_address_space =
-                integral_constant<AddressSpace, BlockDstAddressSpace>{};
-
             mThreadwiseStore.Run(
                 p_thread_buffer, p_block_dst, thread_buffer_address_space, block_dst_address_space);
         }

@@ -209,10 +209,13 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     // TODO: this function is not compiled to expected ISA
     template <typename SrcData,
               typename DstData,
-              AddressSpace SrcAddressSpace = AddressSpace::generic,
-              AddressSpace DstAddressSpace = AddressSpace::generic>
-    __device__ void Run_optimized_src_address_calculation(const SrcData* p_src,
-                                                          DstData* p_dst) const
+              AddressSpace SrcAddressSpace,
+              AddressSpace DstAddressSpace>
+    __device__ void
+    Run_optimized_src_address_calculation(const SrcData* p_src,
+                                          DstData* p_dst,
+                                          integral_constant<AddressSpace, SrcAddressSpace>,
+                                          integral_constant<AddressSpace, DstAddressSpace>) const
     {
         using src_vector_t = typename vector_type<SrcData, SrcDataPerAccess>::MemoryType;
         using dst_vector_t = typename vector_type<DstData, DstDataPerAccess>::MemoryType;
@@ -368,10 +371,13 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     // TODO: this function is not compiled to expected ISA
     template <typename SrcData,
               typename DstData,
-              AddressSpace SrcAddressSpace = AddressSpace::generic,
-              AddressSpace DstAddressSpace = AddressSpace::generic>
-    __device__ void Run_optimized_dst_address_calculation(const SrcData* p_src,
-                                                          DstData* p_dst) const
+              AddressSpace SrcAddressSpace,
+              AddressSpace DstAddressSpace>
+    __device__ void
+    Run_optimized_dst_address_calculation(const SrcData* p_src,
+                                          DstData* p_dst,
+                                          integral_constant<AddressSpace, SrcAddressSpace>,
+                                          integral_constant<AddressSpace, DstAddressSpace>) const
     {
         using src_vector_t = typename vector_type<SrcData, SrcDataPerAccess>::MemoryType;
         using dst_vector_t = typename vector_type<DstData, DstDataPerAccess>::MemoryType;
