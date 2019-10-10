@@ -6,7 +6,7 @@
 namespace ck {
 
 template <class Lengths>
-__host__ __device__ constexpr auto calculate_tensor_strides_packed_old(Lengths)
+__host__ __device__ constexpr auto calculate_tensor_strides_packed_deprecated(Lengths)
 {
     return reverse_inclusive_scan_sequence(
                Lengths{}.PopFront(), math::multiplies<index_t>{}, Number<1>{})
@@ -19,7 +19,7 @@ __host__ __device__ constexpr auto calculate_tensor_strides_aligned_old(Lengths,
     constexpr index_t L_back_align =
         Align * math::integer_divide_ceiler<index_t>{}(Lengths{}.Back(), Align);
 
-    return calculate_tensor_strides_packed_old(
+    return calculate_tensor_strides_packed_deprecated(
         Lengths{}.Modify(Number<Lengths{}.GetSize() - 1>{}, Number<L_back_align>{}));
 }
 
@@ -186,7 +186,7 @@ struct ConstantTensorDescriptor_deprecated
     {
         Array<index_t, nDim> multi_id;
 
-        using PackedStrides = decltype(calculate_tensor_strides_packed_old(GetLengths()));
+        using PackedStrides = decltype(calculate_tensor_strides_packed_deprecated(GetLengths()));
 
         // calculate index in each of the dimensions in the order of their dimension
         static_for<0, nDim - 1, 1>{}(lambda_GetMultiIndexFrom1dIndex<PackedStrides>(id, multi_id));
@@ -467,7 +467,7 @@ struct ConstantTensorDescriptor_deprecated
 
     __host__ __device__ static constexpr auto Pack()
     {
-        using packed_strides = decltype(calculate_tensor_strides_packed_old(Lengths{}));
+        using packed_strides = decltype(calculate_tensor_strides_packed_deprecated(Lengths{}));
         return ConstantTensorDescriptor_deprecated<Lengths, packed_strides>{};
     }
 
@@ -491,7 +491,7 @@ struct ConstantTensorDescriptor_deprecated
 template <class Lengths>
 __host__ __device__ constexpr auto make_ConstantTensorDescriptor_packed(Lengths)
 {
-    using Strides = decltype(calculate_tensor_strides_packed_old(Lengths{}));
+    using Strides = decltype(calculate_tensor_strides_packed_deprecated(Lengths{}));
     return ConstantTensorDescriptor_deprecated<Lengths, Strides>{};
 }
 

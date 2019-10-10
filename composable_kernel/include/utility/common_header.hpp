@@ -20,8 +20,8 @@
 #include "amd_inline_asm.hpp"
 #endif
 
-#if CK_USE_AMD_INTRINSIC
-#include "amd_intrinsic.hpp"
+#if CK_USE_AMD_BUFFER_ADDRESSING
+#include "amd_buffer_addressing.hpp"
 #endif
 
 #endif

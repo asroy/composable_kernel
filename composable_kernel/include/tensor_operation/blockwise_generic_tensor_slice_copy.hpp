@@ -73,18 +73,22 @@ struct BlockwiseGenericTensorSliceCopy_v4
     __device__ void RunLoadThreadBuffer(const BlockSrcData* p_block_src,
                                         ThreadBufferData* p_thread_buffer) const
     {
-#if 1
-        mThreadwiseLoad.template Run<BlockSrcData,
-                                     ThreadBufferData,
-                                     BlockSrcAddressSpace,
-                                     ThreadBufferAddressSpace>(p_block_src, p_thread_buffer);
-#else // tweaking
-        mThreadwiseLoad.template Run_optimized_src_address_calculation<BlockSrcData,
-                                                                       ThreadBufferData,
-                                                                       BlockSrcAddressSpace,
-                                                                       ThreadBufferAddressSpace>(
-            p_block_src, p_thread_buffer);
-#endif
+        if(mThreadwiseStore.HasWorkingOptimizedAddressCalculation())
+        {
+            mThreadwiseLoad
+                .template Run_optimized_src_address_calculation<BlockSrcData,
+                                                                ThreadBufferData,
+                                                                BlockSrcAddressSpace,
+                                                                ThreadBufferAddressSpace>(
+                    p_block_src, p_thread_buffer);
+        }
+        else
+        {
+            mThreadwiseLoad.template Run<BlockSrcData,
+                                         ThreadBufferData,
+                                         BlockSrcAddressSpace,
+                                         ThreadBufferAddressSpace>(p_block_src, p_thread_buffer);
+        }
     }
 
     template <typename ThreadBufferData,
@@ -94,18 +98,22 @@ struct BlockwiseGenericTensorSliceCopy_v4
     __device__ void RunStoreThreadBuffer(const ThreadBufferData* p_thread_buffer,
                                          BlockDstData* p_block_dst) const
     {
-#if 1
-        mThreadwiseStore.template Run<ThreadBufferData,
-                                      BlockDstData,
-                                      ThreadBufferAddressSpace,
-                                      BlockDstAddressSpace>(p_thread_buffer, p_block_dst);
-#else // tweaking
-        mThreadwiseStore.template Run_optimized_dst_address_calculation<ThreadBufferData,
-                                                                        BlockDstData,
-                                                                        ThreadBufferAddressSpace,
-                                                                        BlockDstAddressSpace>(
-            p_thread_buffer, p_block_dst);
-#endif
+        if(mThreadwiseStore.HasWorkingOptimizedAddressCalculation())
+        {
+            mThreadwiseStore
+                .template Run_optimized_dst_address_calculation<ThreadBufferData,
+                                                                BlockDstData,
+                                                                ThreadBufferAddressSpace,
+                                                                BlockDstAddressSpace>(
+                    p_thread_buffer, p_block_dst);
+        }
+        else
+        {
+            mThreadwiseStore.template Run<ThreadBufferData,
+                                          BlockDstData,
+                                          ThreadBufferAddressSpace,
+                                          BlockDstAddressSpace>(p_thread_buffer, p_block_dst);
+        }
     }
 
     template <typename BlockSrcData,
