@@ -96,7 +96,7 @@ void device_direct_convolution_2_vectorized_nchw_kcyx_nkhw(InDesc,
     in_nchw_vec_device_buf.ToDevice(in_nchw_vec.mData.data());
     wei_kcyx_vec_device_buf.ToDevice(wei_kcyx_vec.mData.data());
     out_nkhw_device_buf.ToDevice(out_nkhw.mData.data());
-
+    
 #if 0
     // 3x3, 34x34, 128 thread, fp32, vector = 1
     constexpr index_t NPerBlock  = 2;

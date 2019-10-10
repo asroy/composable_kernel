@@ -17,6 +17,10 @@
 
 using namespace ck;
 
+#define CONV_DIRECTION_FWD_DATA 0
+#define CONV_DIRECTION_BWD_DATA 0
+#define CONV_DIRECTION_BWD_WEIT 1
+
 struct GeneratorTensor_1
 {
     template <class... Is>
@@ -29,7 +33,7 @@ struct GeneratorTensor_1
 struct GeneratorTensor_2
 {
     int min_value = 0;
-    int max_value = 1;
+    int max_value = 16;
 
     template <class... Is>
     double operator()(Is...)
@@ -50,13 +54,27 @@ struct GeneratorTensor_3
         return std::accumulate(dims.begin(), dims.end(), index_t(0), f_acc);
     }
 };
+struct GeneratorTensor_fixed
+{
+    template <class... Is>
+    double operator()(Is... is)
+    {
+        std::array<index_t, sizeof...(Is)> dims = {{static_cast<index_t>(is)...}};
+
+        if(dims[0] == 0)
+            return (dims[1]*16 + dims[2]*4 + dims[3]);
+        else
+            return 1;
+    }
+};
+
 
 struct GeneratorTensor_Checkboard
 {
     template <class... Ts>
     double operator()(Ts... Xs) const
     {
-        std::array<index_t, sizeof...(Ts)> dims = {{Xs...}};
+        std::array<index_t, sizeof...(Ts)> dims = {{static_cast<index_t>(Xs)...}};
         return std::accumulate(dims.begin(),
                                dims.end(),
                                true,
@@ -401,7 +419,7 @@ void check_error(const Tensor<T>& ref, const Tensor<T>& result)
     float ref_value = 0, result_value = 0;
     for(int i = 0; i < ref.mData.size(); ++i)
     {
-        std::cout << result.mData[i] << " ";
+        std::cout << result.mData[i] << "," << ref.mData[i] << " ";
         error += std::abs(double(ref.mData[i]) - double(result.mData[i]));
         float diff = std::abs(double(ref.mData[i]) - double(result.mData[i]));
         if(max_diff < diff)
@@ -819,15 +837,24 @@ int main(int argc, char* argv[])
 
     constexpr index_t HPad = 0;
     constexpr index_t WPad = 0;    
+
+    constexpr index_t HO = 4;
+    constexpr index_t WO = 4;    
 #endif
 
     auto lower_pads = Sequence<HPad, WPad>{};
     auto upper_pads = Sequence<HPad, WPad>{};
 
+#if CONV_DIRECTION_FWD_DATA    
     auto in_nchw_desc  = make_ConstantTensorDescriptor_packed(Sequence<N, C, HI, WI>{});
     auto wei_kcyx_desc = make_ConstantTensorDescriptor_packed(Sequence<K, C, Y, X>{});
     auto out_nkhw_desc = get_convolution_with_padding_output_default_4d_tensor_descriptor(
         in_nchw_desc, wei_kcyx_desc, ConvStrides{}, ConvDilations{}, lower_pads, upper_pads);
+#elif CONV_DIRECTION_BWD_WEIT        
+    auto in_nchw_desc  = make_ConstantTensorDescriptor_packed(Sequence<C, N, HI, WI>{});
+    auto wei_kcyx_desc = make_ConstantTensorDescriptor_packed(Sequence<C, K, Y, X>{});
+    auto out_nkhw_desc = make_ConstantTensorDescriptor_packed(Sequence<K, N, HO, WO>{});
+#endif     
 
     ostream_ConstantTensorDescriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
     ostream_ConstantTensorDescriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
@@ -835,10 +862,19 @@ int main(int argc, char* argv[])
 
     using in_data_t  = float;
     using out_data_t = float;
+
+#if CONV_DIRECTION_FWD_DATA    
     Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
     Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
     Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
-    Tensor<out_data_t> out_nkhw_device(make_TensorDescriptor(out_nkhw_desc));
+    Tensor<out_data_t> out_nkhw_device(make_TensorDescriptor(out_nkhw_desc));  
+#elif CONV_DIRECTION_BWD_WEIT    
+    Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
+    Tensor<out_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
+    Tensor<out_data_t> wei_kcyx_host(make_TensorDescriptor(wei_kcyx_desc));  
+    Tensor<in_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
+    Tensor<in_data_t> out_nkhw(make_TensorDescriptor(out_nkhw_desc));
+#endif     
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
@@ -854,8 +890,14 @@ int main(int argc, char* argv[])
     if(do_verification)
     {
 #if 1
+#if CONV_DIRECTION_FWD_DATA // fwd data
         in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+#elif CONV_DIRECTION_BWD_WEIT // bwd wrw
+        in_nchw.GenerateTensorValue(GeneratorTensor_2{}, num_thread);
+        //out_nkhw_host.GenerateTensorValue(GeneratorTensor_2{}, num_thread);
+        out_nkhw.GenerateTensorValue(GeneratorTensor_2{}, num_thread);
+#endif         
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
@@ -891,6 +933,7 @@ int main(int argc, char* argv[])
 #elif 1
     device_convolution_implicit_gemm_v5_nchw_kcyx_nkhw
 #endif
+#if CONV_DIRECTION_FWD_DATA // fwd data
     (in_nchw_desc,
      in_nchw,
      wei_kcyx_desc,
@@ -900,6 +943,17 @@ int main(int argc, char* argv[])
      ConvStrides{},
      ConvDilations{},
      nrepeat);
+#elif CONV_DIRECTION_BWD_WEIT // bwd wrw
+    (in_nchw_desc,
+     in_nchw,
+     out_nkhw_desc,
+     out_nkhw,     
+     wei_kcyx_desc,
+     wei_kcyx,
+     ConvDilations{},
+     ConvStrides{},     
+     nrepeat);
+#endif 
 
 #elif 0
     device_implicit_gemm_convolution_1_chwn_cyxk_khwn_padded(in_nchw_desc,
@@ -924,6 +978,8 @@ int main(int argc, char* argv[])
         else
 #endif
         {
+
+#if CONV_DIRECTION_FWD_DATA // fwd data
             host_direct_convolution(in_nchw,
                                     wei_kcyx,
                                     out_nkhw_host,
@@ -931,8 +987,25 @@ int main(int argc, char* argv[])
                                     ConvDilations{},
                                     lower_pads,
                                     upper_pads);
+#elif CONV_DIRECTION_BWD_WEIT // bwd  wrw
+            host_direct_convolution(in_nchw,
+                                    out_nkhw,
+                                    wei_kcyx_host,
+                                    ConvDilations{},
+                                    ConvStrides{},
+                                    lower_pads,
+                                    upper_pads);
+#endif 
+
         }
+#if CONV_DIRECTION_FWD_DATA // fwd data
         check_error(out_nkhw_host, out_nkhw_device);
+#elif CONV_DIRECTION_BWD_WEIT // bwd  wrw
+        check_error(wei_kcyx_host, wei_kcyx);
+#endif 
+        LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;        
+        LogRange(std::cout << "out_nkhw_device  : ", out_nkhw.mData, ",") << std::endl;        
+        //LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
 #if 0
         LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
         LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;

@@ -16,13 +16,13 @@
 #include "gridwise_convolution_implicit_gemm_v4r4_xdlops_fp16_bfp16_nchw_kcyx_nkhw_lds_double_buffer.hpp"
 
 #define CK_ENABLE_XDLOPS 0
-#define CK_PARAM_PROBLEM_DIRECTION 0
+#define CK_PARAM_PROBLEM_DIRECTION 2
 #define CK_PARAM_EPACK_LENGTH 1
 #define CK_PARAM_TUNABLE_BLOCK_SIZE 64
 #define CK_PARAM_TUNABLE_K_PER_BLOCK 32
 #define CK_PARAM_TUNABLE_B_PER_BLOCK 64
 #define CK_PARAM_TUNABLE_E_PER_BLOCK 8
-#define CK_PARAM_DEPENDENT_GRID_SIZE 16
+#define CK_PARAM_DEPENDENT_GRID_SIZE 2
 #define CK_PARAM_GEMM_M_PER_WAVE 32
 #define CK_PARAM_GEMM_N_PER_WAVE 64
 #define CK_PARAM_IN_BLOCK_COPY_CLUSTER_LENGTHS_E 8
@@ -109,16 +109,20 @@ void device_convolution_implicit_gemm_v5_nchw_kcyx_nkhw(InDesc,
     // of the wrw convolution when used in a fwd context
     printf("backward weight is executed\n");
 
-    constexpr auto tmp_in_nchw_desc =
-        make_ConstantTensorDescriptor_packed(Sequence<N, C, Hi, Wi>{});
-    constexpr auto tmp_wei_kcyx_desc = make_ConstantTensorDescriptor_packed(Sequence<K, C, Y, X>{});
-    constexpr auto tmp_out_nkhw_desc =
-        make_ConstantTensorDescriptor_packed(Sequence<N, K, Ho, Wo>{});
-    constexpr auto in_nchw_desc = tmp_in_nchw_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
-    // wei and out are swapped in the solver
-    constexpr auto wei_kcyx_desc = tmp_out_nkhw_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
-    constexpr auto out_nkhw_desc = tmp_wei_kcyx_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
+    // constexpr auto tmp_in_nchw_desc =
+    //     make_ConstantTensorDescriptor_packed(Sequence<N, C, Hi, Wi>{});
+    // constexpr auto tmp_wei_kcyx_desc = make_ConstantTensorDescriptor_packed(Sequence<K, C, Y, X>{});
+    // constexpr auto tmp_out_nkhw_desc =
+    //     make_ConstantTensorDescriptor_packed(Sequence<N, K, Ho, Wo>{});
+    // constexpr auto in_nchw_desc = tmp_in_nchw_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
+    // // wei and out are swapped in the solver
+    // constexpr auto wei_kcyx_desc = tmp_out_nkhw_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
+    // constexpr auto out_nkhw_desc = tmp_wei_kcyx_desc.ReorderGivenNew2Old(Sequence<1, 0, 2, 3>{});
     constexpr auto dir           = ImplicitGemmDirection::BackwardWeight;
+
+    constexpr auto in_nchw_desc  = make_ConstantTensorDescriptor_packed(Sequence<N, C, Hi, Wi>{});
+    constexpr auto wei_kcyx_desc = make_ConstantTensorDescriptor_packed(Sequence<K, C, Y, X>{});
+    constexpr auto out_nkhw_desc = make_ConstantTensorDescriptor_packed(Sequence<N, K, Ho, Wo>{});
 
     // swap stride and dilation
     // using ConvDilations = Sequence<ConvStrideH, ConvStrideW>;
