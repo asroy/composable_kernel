@@ -117,15 +117,14 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
 
                 // Check src vector's padding situation, only check the first data in this src
                 //   vector. It's user's responsiblity to make sure all data in the src vector
-                //   has
-                //   the same padding situation
+                //   has the same padding situation
                 if(src_coord.IsUpperIndexMappedToValidOffset())
                 {
-                    static_if<SrcAddressSpace == AddressSpace::global>{}([&](auto) {
+                    static_if<SrcAddressSpace == AddressSpace::global>{}([&](auto fwd) {
 #if CK_USE_AMD_BUFFER_ADDRESSING
                         *reinterpret_cast<src_vector_t*>(&p_src_long_vector[buffer_offset]) =
                             __buffer_load<SrcData, SrcDataPerAccess>(
-                                p_src, src_coord.GetOffset(), 0);
+                                fwd(p_src), src_coord.GetOffset(), 0);
 #else
                         *reinterpret_cast<src_vector_t*>(&p_src_long_vector[buffer_offset]) =
                             *reinterpret_cast<const src_vector_t*>(&p_src[src_coord.GetOffset()]);
@@ -158,15 +157,14 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
 
                 // Check dst vector's padding situation, only check the first data in this dst
                 //   vector. It's user's responsiblity to make sure all data in the dst vector
-                //   has
-                //   the same padding situation
+                //   has the same padding situation
                 if(dst_coord.IsUpperIndexMappedToValidOffset())
                 {
-                    static_if<DstAddressSpace == AddressSpace::global>{}([&](auto) {
+                    static_if<DstAddressSpace == AddressSpace::global>{}([&](auto fwd) {
 #if CK_USE_AMD_BUFFER_ADDRESSING
                         __buffer_store<DstData, DstDataPerAccess>(
                             *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]),
-                            p_dst,
+                            fwd(p_dst),
                             dst_coord.GetOffset(),
                             0);
 #else
