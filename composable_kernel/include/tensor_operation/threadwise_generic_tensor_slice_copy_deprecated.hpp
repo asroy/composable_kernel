@@ -256,9 +256,12 @@ struct ThreadwiseGenericTensorSliceCopy_v2r1_deprecated
 
     template <typename SrcData,
               typename DstData,
-              AddressSpace SrcAddressSpace = AddressSpace::generic,
-              AddressSpace DstAddressSpace = AddressSpace::generic>
-    __device__ void Run(const SrcData* p_src, DstData* p_dst) const
+              AddressSpace SrcAddressSpace,
+              AddressSpace DstAddressSpace>
+    __device__ void Run(const SrcData* p_src,
+                        DstData* p_dst,
+                        integral_constant<AddressSpace, SrcAddressSpace>,
+                        integral_constant<AddressSpace, DstAddressSpace>) const
     {
         constexpr auto buffer_desc = make_ConstantTensorDescriptor_packed(SliceLengths{});
 
@@ -455,6 +458,15 @@ struct ThreadwiseGenericTensorSliceCopy_v2r1_deprecated
                 });
             });
         }
+    }
+
+    template <typename SrcData, typename DstData>
+    __device__ void Run(const SrcData* p_src, DstData* p_dst) const
+    {
+        constexpr auto generic_address_space =
+            integral_constant<AddressSpace, AddressSpace::generic>{};
+
+        Run(p_src, p_dst, generic_address_space, generic_address_space);
     }
 
     // T can be Sequence or Array

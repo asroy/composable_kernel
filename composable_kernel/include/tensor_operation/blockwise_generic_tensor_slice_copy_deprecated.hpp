@@ -475,42 +475,96 @@ struct BlockwiseGenericTensorSliceCopy_v2_deprecated
         return ThreadBufferDesc::GetElementSpace();
     }
 
-    template <typename SrcData,
-              typename DstData,
-              AddressSpace BlockSrcAddressSpace     = AddressSpace::generic,
-              AddressSpace ThreadBufferAddressSpace = AddressSpace::generic>
-    __device__ void RunLoadThreadBuffer(const SrcData* p_block_src, DstData* p_thread_buffer) const
+    template <typename BlockSrcData,
+              typename ThreadBufferData,
+              AddressSpace BlockSrcAddressSpace,
+              AddressSpace ThreadBufferAddressSpace>
+    __device__ void
+    RunLoadThreadBuffer(const BlockSrcData* p_block_src,
+                        ThreadBufferData* p_thread_buffer,
+                        integral_constant<AddressSpace, BlockSrcAddressSpace>,
+                        integral_constant<AddressSpace, ThreadBufferAddressSpace>) const
     {
-        mThreadwiseLoad
-            .template Run<SrcData, DstData, BlockSrcAddressSpace, ThreadBufferAddressSpace>(
-                p_block_src, p_thread_buffer);
+        constexpr auto block_src_address_space =
+            integral_constant<AddressSpace, BlockSrcAddressSpace>{};
+        constexpr auto thread_buffer_address_space =
+            integral_constant<AddressSpace, ThreadBufferAddressSpace>{};
+
+        mThreadwiseLoad.Run(
+            p_block_src, p_thread_buffer, block_src_address_space, thread_buffer_address_space);
     }
 
-    template <typename SrcData,
-              typename DstData,
-              AddressSpace ThreadBufferAddressSpace = AddressSpace::generic,
-              AddressSpace BlockDstAddressSpace     = AddressSpace::generic>
-    __device__ void RunStoreThreadBuffer(const SrcData* p_thread_buffer, DstData* p_block_dst) const
+    template <typename BlockSrcData, typename ThreadBufferData>
+    __device__ void RunLoadThreadBuffer(const BlockSrcData* p_block_src,
+                                        ThreadBufferData* p_thread_buffer) const
     {
-        mThreadwiseStore
-            .template Run<SrcData, DstData, ThreadBufferAddressSpace, BlockDstAddressSpace>(
-                p_thread_buffer, p_block_dst);
+        constexpr auto generic_address_space =
+            integral_constant<AddressSpace, AddressSpace::generic>{};
+
+        RunLoadThreadBuffer(
+            p_block_src, p_thread_buffer, generic_address_space, generic_address_space);
     }
 
-    template <typename SrcData,
-              typename DstData,
-              AddressSpace BlockSrcAddressSpace = AddressSpace::generic,
-              AddressSpace BlockDstAddressSpace = AddressSpace::generic>
-    __device__ void Run(const SrcData* p_block_src, DstData* p_block_dst) const
+    template <typename ThreadBufferData,
+              typename BlockDstData,
+              AddressSpace ThreadBufferAddressSpace,
+              AddressSpace BlockDstAddressSpace>
+    __device__ void
+    RunStoreThreadBuffer(const ThreadBufferData* p_thread_buffer,
+                         BlockDstData* p_block_dst,
+                         integral_constant<AddressSpace, ThreadBufferAddressSpace>,
+                         integral_constant<AddressSpace, BlockDstAddressSpace>) const
     {
-        SrcData p_thread_buffer[GetThreadBufferSize()];
+        constexpr auto thread_buffer_address_space =
+            integral_constant<AddressSpace, ThreadBufferAddressSpace>{};
+        constexpr auto block_dst_address_space =
+            integral_constant<AddressSpace, BlockDstAddressSpace>{};
 
-        RunLoadThreadBuffer<SrcData, SrcData, BlockSrcAddressSpace, AddressSpace::generic>(
-            p_block_src, p_thread_buffer);
+        mThreadwiseStore.Run(
+            p_thread_buffer, p_block_dst, thread_buffer_address_space, block_dst_address_space);
+    }
+
+    template <typename ThreadBufferData, typename BlockDstData>
+    __device__ void RunStoreThreadBuffer(const ThreadBufferData* p_thread_buffer,
+                                         BlockDstData* p_block_dst) const
+    {
+        constexpr auto generic_address_space =
+            integral_constant<AddressSpace, AddressSpace::generic>{};
+
+        RunStoreThreadBuffer(
+            p_thread_buffer, p_block_dst, generic_address_space, generic_address_space);
+    }
+
+    template <typename BlockSrcData,
+              typename BlockDstData,
+              AddressSpace BlockSrcAddressSpace,
+              AddressSpace BlockDstAddressSpace>
+    __device__ void
+    Run(const BlockSrcData* p_block_src,
+        BlockDstData* p_block_dst,
+        integral_constant<AddressSpace, BlockSrcAddressSpace> block_src_address_space,
+        integral_constant<AddressSpace, BlockDstAddressSpace> block_dst_address_space) const
+    {
+        BlockSrcData p_thread_buffer[GetThreadBufferSize()];
+
+        constexpr auto generic_address_space =
+            integral_constant<AddressSpace, AddressSpace::generic>{};
+
+        RunLoadThreadBuffer(
+            p_block_src, p_thread_buffer, block_src_address_space, generic_address_space);
 
         // if there is type conversion, it's done during store
-        RunStoreThreadBuffer<SrcData, DstData, AddressSpace::generic, BlockDstAddressSpace>(
-            p_thread_buffer, p_block_dst);
+        RunStoreThreadBuffer(
+            p_thread_buffer, p_block_dst, generic_address_space, block_dst_address_space);
+    }
+
+    template <typename BlockSrcData, typename BlockDstData>
+    __device__ void Run(const BlockSrcData* p_block_src, BlockDstData* p_block_dst) const
+    {
+        constexpr auto generic_address_space =
+            integral_constant<AddressSpace, AddressSpace::generic>{};
+
+        Rnun(p_block_src, p_block_dst, generic_address_space, generic_address_space);
     }
 
     template <typename T, bool PositiveDirection>

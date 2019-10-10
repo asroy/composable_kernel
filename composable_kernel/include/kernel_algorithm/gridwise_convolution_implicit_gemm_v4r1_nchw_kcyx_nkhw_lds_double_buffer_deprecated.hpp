@@ -8,18 +8,51 @@
 #include "blockwise_generic_tensor_slice_copy_deprecated.hpp"
 #include "blockwise_gemm.hpp"
 #include "threadwise_generic_tensor_slice_copy_deprecated.hpp"
+#include "convolution_common.hpp"
 
 namespace ck {
+
+template <ConvolutionDirection>
+struct make_wei_e_k_global_desc_v4r1_deprecated;
+
+template <>
+struct make_wei_e_k_global_desc_v4r1_deprecated<ConvolutionDirection::Forward>
+{
+    template <typename WeiDesc>
+    __device__ constexpr auto operator()(WeiDesc) const
+    {
+        constexpr auto I1 = Number<1>{};
+        constexpr auto I3 = Number<3>{};
+
+        return WeiDesc::Unfold(I1, I3).ReorderGivenNew2Old(Sequence<1, 0>{});
+    }
+};
+
+template <>
+struct make_wei_e_k_global_desc_v4r1_deprecated<ConvolutionDirection::BackwardWeight>
+{
+    template <typename WeiDesc>
+    __device__ constexpr auto operator()(WeiDesc) const
+    {
+        constexpr auto I2 = Number<2>{};
+        constexpr auto I3 = Number<3>{};
+
+        return make_ConstantMergedTensorDescriptor(
+            WeiDesc::Unfold(I2, I3), Sequence<1, 2>{}, Sequence<0>{});
+    }
+};
 
 // define B = merge(N0, Ho, Wo)
 template <index_t GridSize,
           index_t BlockSize,
           class Float,
+          class AccDataType,
           class InGlobalDesc,
           class WeiGlobalDesc,
           class OutGlobalDesc,
           class ConvStrides,
           class ConvDilations,
+          ConvolutionDirection ConvDirection,
           index_t BPerBlock,
           index_t KPerBlock,
           index_t EPerBlock,
@@ -53,6 +86,10 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_dep
                         const Float* const __restrict__ p_wei_global,
                         Float* const __restrict__ p_out_global) const
     {
+        static_assert(ConvDirection == ConvolutionDirection::Forward ||
+                          ConvDirection == ConvolutionDirection::BackwardWeight,
+                      "wrong! this kernel only support convolution forward and backward-weight");
+
         // this is a mess
         // TODO: find more elegent way of specifying (or calculating) performance parameters
         constexpr index_t N1 = GemmNRepeat;
@@ -172,9 +209,11 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_dep
             InBlockCopyDstDataPerWrite_N2>({0, 0, b_block_data_on_global, 0}, {0, 0, 0, 0});
 
         // weight tensor
-        //     tensor descriptor in device memory, src of blockwise copy
+        //     Iensor descriptor in device memory, src of blockwise copy
+        //     It is constructed differently, depending on whether forward or backward weight
+        //       convolution
         constexpr auto wei_e_k_global_desc =
-            wei_k_c_y_x_global_desc.Unfold(I1, I3).ReorderGivenNew2Old(Sequence<1, 0>{});
+            make_wei_e_k_global_desc_v4r1_deprecated<ConvDirection>{}(wei_k_c_y_x_global_desc);
 
         //     tensor descriptor in LDS, dst of blockwise copy
         //     be careful of LDS alignment
@@ -256,7 +295,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_dep
         __shared__ Float p_wei_block_double[2 * wei_block_space];
 
         // register allocation for output
-        Float p_out_thread[c_k0k1_n1n2_thread_mtx_desc.GetElementSpace()];
+        AccDataType p_out_thread[c_k0k1_n1n2_thread_mtx_desc.GetElementSpace()];
 
         // zero out threadwise output
         threadwise_matrix_set_zero(c_k0k1_n1n2_thread_mtx_desc, p_out_thread);
@@ -394,11 +433,11 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_dep
                     0,
                     b_thread_data_on_global,
                     0})
-                .template Run<Float, Float, AddressSpace::generic, AddressSpace::global>(
+                .template Run<AccDataType, Float, AddressSpace::generic, AddressSpace::global>(
                     p_out_thread, p_out_global);
         }
     }
 };
 
 } // namespace ck
-#endif // CK_GRIDWISE_CONVOLUTION_IMPLICIT_GEMM_V4R1_NCHW_KCYX_NKHW_LDS_DOUBLE_BUFFER_DEPRECATED_HPP
+#endif // CK_GRIDWISE_CONVOLUTION_IMPLICIT_GEMM_V4_NCHW_KCYX_NKHW_LDS_DOUBLE_BUFFER_DEPRECATED_HPP
