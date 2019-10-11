@@ -564,7 +564,7 @@ struct BlockwiseGenericTensorSliceCopy_v2_deprecated
         constexpr auto generic_address_space =
             integral_constant<AddressSpace, AddressSpace::generic>{};
 
-        Rnun(p_block_src, p_block_dst, generic_address_space, generic_address_space);
+        Run(p_block_src, p_block_dst, generic_address_space, generic_address_space);
     }
 
     template <typename T, bool PositiveDirection>

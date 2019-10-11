@@ -293,14 +293,14 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 
         // c_thread_mtx definition: this is a mess
         // TODO:: more elegent way of defining c_thread_mtx
-        constexpr auto c_k0k2_n1n2_thread_mtx_desc = make_ConstantMatrixDescriptor_packed(
-            Number<GemmMRepeat * GemmMPerThreadSubC>{}, Number<N1 * N2>{});
+        constexpr auto c_k0k1_n1n2_thread_mtx_desc = make_ConstantMatrixDescriptor_packed(
+            Number<GemmMRepeat * GemmMPerThreadSubC>{}, Number<GemmNRepeat * GemmNPerThreadSubC>{});
 
         const auto blockwise_gemm = BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2<
             BlockSize,
             decltype(a_e_k_block_mtx_desc),
             decltype(b_e_n1bn2_block_mtx_desc),
-            decltype(c_k0k2_n1n2_thread_mtx_desc),
+            decltype(c_k0k1_n1n2_thread_mtx_desc),
             GemmMPerThreadSubC,
             GemmNPerThreadSubC,
             GemmMLevel0Cluster,
@@ -327,10 +327,10 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
         __shared__ Float p_wei_block_double[2 * wei_block_space];
 
         // register allocation for output
-        AccDataType p_out_thread[c_k0k2_n1n2_thread_mtx_desc.GetElementSpace()];
+        AccDataType p_out_thread[c_k0k1_n1n2_thread_mtx_desc.GetElementSpace()];
 
         // zero out threadwise output
-        threadwise_matrix_set_zero(c_k0k2_n1n2_thread_mtx_desc, p_out_thread);
+        threadwise_matrix_set_zero(c_k0k1_n1n2_thread_mtx_desc, p_out_thread);
 
         // LDS double buffer: preload data into LDS
         {
