@@ -1000,12 +1000,14 @@ int main(int argc, char* argv[])
         }
 #if CONV_DIRECTION_FWD_DATA // fwd data
         check_error(out_nkhw_host, out_nkhw_device);
-#elif CONV_DIRECTION_BWD_WEIT // bwd  wrw
+//#elif CONV_DIRECTION_BWD_WEIT // bwd  wrw
+#elif CONV_DIRECTION_BWD_WEIT
         check_error(wei_kcyx_host, wei_kcyx);
 #endif 
         LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;        
         LogRange(std::cout << "out_nkhw_device  : ", out_nkhw.mData, ",") << std::endl;        
-        //LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
+        //LogRangeStrided(std::cout << "out_nkhw_device  : ", out_nkhw.mData, ",", 64) << std::endl;        
+        LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
 #if 0
         LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
         LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;

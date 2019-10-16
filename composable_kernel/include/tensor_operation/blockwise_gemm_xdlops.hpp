@@ -95,9 +95,21 @@ __device__ void WaveWiseGemmMx64(const FloatA* const __restrict__ p_a_wave,
                                          (mfma_info::group_size * mfma_info::num_blks_wave) +
                                      a_off; // A is transposed
                     index_t bindex = b_off + lane_b + n * mfma_info::num_threads_blk;
-                    p_c_thread[m + n * output_m + b * output_m * mfma_info::num_blks_wave] +=
-                        math::inner_product_with_conversion<FloatC>{}(p_a_wave[aindex],
-                                                                      p_b_wave[bindex]);
+                    // p_c_thread[m + n * output_m + b * output_m * mfma_info::num_blks_wave] +=
+                    //     math::inner_product_with_conversion<FloatC>{}(p_a_wave[aindex],
+                    //                                                   p_b_wave[bindex]);
+                    index_t cindex = m + n * output_m + b * output_m * mfma_info::num_blks_wave;                                                                      
+                    if(blockIdx.x*blockDim.x + threadIdx.x == 0 && cindex == 0)
+                    {
+                         printf("Run p_c[%d] = %f, p_a[%d] = %f, p_b[%d] = %f\n",
+                                 cindex,                         
+                                 p_c_thread[cindex],
+                                 aindex,
+                                 p_a_wave[aindex],
+                                 bindex,
+                                 p_b_wave[bindex]);                                                                      
+                        p_c_thread[cindex+k] = p_a_wave[aindex];                                 
+                    }
                 }
             }
         }
@@ -251,6 +263,9 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_xdlops
         constexpr index_t N = BlockMatrixB::NCol();
         constexpr index_t K = BlockMatrixA::NRow();
 
+        if(blockIdx.x*blockDim.x + threadIdx.x == 0)
+            printf("Run M %d, N %d, K %d\n", M, N, K);
+            
         // static_if<EnableXdlops>{}([&](auto) {
         //     WaveWiseGemmMx64_xdlops<M,
         //                             N,

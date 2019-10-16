@@ -24,6 +24,21 @@ std::ostream& LogRange(std::ostream& os, Range&& range, std::string delim)
     return os;
 }
 
+template <class Range>
+std::ostream& LogRangeStrided(std::ostream& os, Range&& range, std::string delim, size_t stride)
+{
+    bool first = true;
+    for(size_t idx=0; idx<range.size(); idx+=stride)
+    {
+        if(first)
+            first = false;
+        else
+            os << delim;
+        os << range[idx];
+    }
+    return os;
+}
+
 typedef enum {
     Half  = 0,
     Float = 1,
