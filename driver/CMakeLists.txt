@@ -15,10 +15,10 @@ install(TARGETS host LIBRARY DESTINATION lib)
 
 
 if(DEVICE_BACKEND STREQUAL "AMD")
-    set(DRIVER_SOURCE src/driver.cpp)
+    set(DRIVER_SOURCE src/conv_driver.cpp)
 elseif(DEVICE_BACKEND STREQUAL "NVIDIA")
-    set(DRIVER_SOURCE src/driver.cu)
+    set(DRIVER_SOURCE src/conv_driver.cu)
 endif()
 
-add_executable(driver ${DRIVER_SOURCE}) 
-target_link_libraries(driver PRIVATE host)
+add_executable(conv ${DRIVER_SOURCE}) 
+target_link_libraries(conv PRIVATE host)
