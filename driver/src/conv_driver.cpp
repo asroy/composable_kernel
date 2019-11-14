@@ -11,6 +11,7 @@
 #include "tensor_generator.hpp"
 #include "conv_common.hpp"
 #include "host_conv.hpp"
+#include "device_tensor.hpp"
 //#include "device_convolution_direct_v2_nchw_kcyx_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v1_chwn_cyxk_khwn.hpp"
 //#include "device_convolution_implicit_gemm_v1_chwn_cyxk_khwn_padded.hpp"
@@ -23,7 +24,6 @@
 //#include "device_convolution_implicit_gemm_v4r3_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_deprecated.hpp"
 #include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
-
 
 int main(int argc, char* argv[])
 {
@@ -315,7 +315,7 @@ int main(int argc, char* argv[])
 
     auto in_nchw_desc  = make_ConstantTensorDescriptor_packed(Sequence<N, C, HI, WI>{});
     auto wei_kcyx_desc = make_ConstantTensorDescriptor_packed(Sequence<K, C, Y, X>{});
-    auto out_nkhw_desc = get_convolution_with_padding_output_default_4d_tensor_descriptor(
+    auto out_nkhw_desc = get_convolution_output_default_4d_tensor_descriptor_deprecated(
         in_nchw_desc, wei_kcyx_desc, ConvStrides{}, ConvDilations{}, LeftPads{}, RightPads{});
 
     ostream_ConstantTensorDescriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
