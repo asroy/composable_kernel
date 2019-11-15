@@ -7,8 +7,8 @@
 template <typename ConstTensorDesc, std::size_t... Is>
 auto make_TensorDescriptor_impl(ConstTensorDesc, std::integer_sequence<std::size_t, Is...>)
 {
-    std::initializer_list<std::size_t> lengths = {ConstTensorDesc::GetLength(Is)...};
-    std::initializer_list<std::size_t> strides = {ConstTensorDesc::GetStride(Is)...};
+    std::initializer_list<std::size_t> lengths = {ConstTensorDesc::GetLengths()[Is]...};
+    std::initializer_list<std::size_t> strides = {ConstTensorDesc::GetStrides()[Is]...};
 
     return TensorDescriptor(lengths, strides);
 }

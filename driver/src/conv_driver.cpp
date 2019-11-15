@@ -29,20 +29,20 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 0
-    constexpr index_t N  = 128;
-    constexpr index_t C  = 128;
-    constexpr index_t HI = 17;
-    constexpr index_t WI = 17;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 7;
+#if 1
+    constexpr index_t N  = 8;
+    constexpr index_t C  = 32;
+    constexpr index_t HI = 28;
+    constexpr index_t WI = 28;
+    constexpr index_t K  = 32;
+    constexpr index_t Y  = 5;
+    constexpr index_t X  = 5;
 
     using ConvStrides   = Sequence<1, 1>;
-    using ConvDilations = Sequence<1, 1>;
+    using ConvDilations = Sequence<2, 2>;
 
-    using LeftPads  = Sequence<0, 3>;
-    using RightPads = Sequence<0, 3>;
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
 #elif 0
     // 3x3, 34x34
     constexpr index_t N  = 64;
@@ -393,7 +393,7 @@ int main(int argc, char* argv[])
 #elif 0
     device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw(
         (in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
-#elif 0
+#elif 1
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_deprecated(in_nchw_desc,
                                                                     in_nchw,
                                                                     wei_kcyx_desc,
