@@ -344,14 +344,13 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 1
+#if 0
         col_eb.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #else
         col_eb.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
 #endif
     }
 
-#if 1
     device_col2im_eb_nchw(col_eb_desc,
                           col_eb,
                           img_nchw_desc,
@@ -363,7 +362,6 @@ int main(int argc, char* argv[])
                           LeftPads{},
                           RightPads{},
                           nrepeat);
-#endif
 
     if(do_verification)
     {
@@ -378,7 +376,7 @@ int main(int argc, char* argv[])
 
         check_error(img_nchw_host, img_nchw_device);
 
-#if 1
+#if 0
         LogRange(std::cout << "col_eb : ", col_eb.mData, ",") << std::endl;
         LogRange(std::cout << "img_nchw_host : ", img_nchw_host.mData, ",") << std::endl;
         LogRange(std::cout << "img_nchw_device : ", img_nchw_device.mData, ",") << std::endl;
