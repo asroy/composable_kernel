@@ -13,26 +13,26 @@
 #include "device_tensor.hpp"
 #include "conv_common.hpp"
 #include "host_col2im.hpp"
-//#include "device_col2im.hpp"
+#include "device_col2im_eb_nchw.hpp"
 
 int main(int argc, char* argv[])
 {
     using namespace ck;
 
 #if 1
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 1;
-    constexpr index_t HI = 17;
-    constexpr index_t WI = 17;
-    constexpr index_t K  = 1;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
+    constexpr index_t N  = 2;
+    constexpr index_t C  = 8;
+    constexpr index_t HI = 8;
+    constexpr index_t WI = 8;
+    constexpr index_t K  = 128;
+    constexpr index_t Y  = 4;
+    constexpr index_t X  = 4;
 
     using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;
 
     using LeftPads  = Sequence<1, 1>;
-    using RightPads = Sequence<1, 1>;
+    using RightPads = Sequence<2, 2>;
 #elif 0
     // 3x3, 34x34
     constexpr index_t N  = 64;
@@ -303,21 +303,22 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 3>;
 #endif
 
-    constexpr auto in_nchw_desc  = make_native_tensor_descriptor_packed(Sequence<N, C, HI, WI>{});
+    constexpr auto img_nchw_desc = make_native_tensor_descriptor_packed(Sequence<N, C, HI, WI>{});
     constexpr auto wei_kcyx_desc = make_native_tensor_descriptor_packed(Sequence<K, C, Y, X>{});
     constexpr auto out_nkhw_desc = get_convolution_output_default_4d_tensor_descriptor(
-        in_nchw_desc, wei_kcyx_desc, ConvStrides{}, ConvDilations{}, LeftPads{}, RightPads{});
+        img_nchw_desc, wei_kcyx_desc, ConvStrides{}, ConvDilations{}, LeftPads{}, RightPads{});
 
     constexpr index_t HO = out_nkhw_desc.GetLengths()[2];
     constexpr index_t WO = out_nkhw_desc.GetLengths()[3];
 
-    auto in_eb_desc = make_native_tensor_descriptor_packed(Sequence<C * Y * X, N * HO * WO>{});
+    constexpr auto col_eb_desc =
+        make_native_tensor_descriptor_packed(Sequence<C * Y * X, N * HO * WO>{});
 
     using FilterSizes = Sequence<Y, X>;
     using OutputSizes = Sequence<HO, WO>;
 
-    ostream_ConstantTensorDescriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
-    ostream_ConstantTensorDescriptor(in_eb_desc, std::cout << "in_eb_desc: ");
+    ostream_ConstantTensorDescriptor(col_eb_desc, std::cout << "col_eb_desc: ");
+    ostream_ConstantTensorDescriptor(img_nchw_desc, std::cout << "img_nchw_desc: ");
     print_sequence("FilterSizes", FilterSizes{});
     print_sequence("OutputSizes", OutputSizes{});
     print_sequence("LeftPads", LeftPads{});
@@ -326,9 +327,9 @@ int main(int argc, char* argv[])
     print_sequence("ConvStrides", ConvStrides{});
     print_sequence("ConvDilations", ConvDilations{});
 
-    Tensor<float> in_eb(make_TensorDescriptor(in_eb_desc));
-    Tensor<float> in_nchw_host(make_TensorDescriptor(in_nchw_desc));
-    Tensor<float> in_nchw_device(make_TensorDescriptor(in_nchw_desc));
+    Tensor<float> col_eb(make_TensorDescriptor(col_eb_desc));
+    Tensor<float> img_nchw_host(make_TensorDescriptor(img_nchw_desc));
+    Tensor<float> img_nchw_device(make_TensorDescriptor(img_nchw_desc));
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
@@ -339,35 +340,35 @@ int main(int argc, char* argv[])
     }
 
     bool do_verification = atoi(argv[1]);
-    index_t nrepeat      = atoi(argv[2]);
+    std::size_t nrepeat  = atoi(argv[2]);
 
     if(do_verification)
     {
 #if 1
-        in_eb.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        col_eb.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #else
-        in_eb.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        col_eb.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
 #endif
     }
 
-#if 0
-    device_col2im(in_eb_desc,
-                  in_eb,
-                  in_nchw_desc,
-                  in_nchw_device,
-                  FilterSizes{},
-                  OutputSizes{},
-                  ConvStrides{},
-                  ConvDilations{},
-                  LeftPads{},
-                  RightPads{},
-                  nrepeat);
+#if 1
+    device_col2im_eb_nchw(col_eb_desc,
+                          col_eb,
+                          img_nchw_desc,
+                          img_nchw_device,
+                          FilterSizes{},
+                          OutputSizes{},
+                          ConvStrides{},
+                          ConvDilations{},
+                          LeftPads{},
+                          RightPads{},
+                          nrepeat);
 #endif
 
     if(do_verification)
     {
-        host_col2im(in_eb,
-                    in_nchw_host,
+        host_col2im(col_eb,
+                    img_nchw_host,
                     FilterSizes{},
                     OutputSizes{},
                     ConvStrides{},
@@ -375,12 +376,12 @@ int main(int argc, char* argv[])
                     LeftPads{},
                     RightPads{});
 
-        check_error(in_nchw_host, in_nchw_device);
+        check_error(img_nchw_host, img_nchw_device);
 
 #if 1
-        LogRange(std::cout << "in_eb : ", in_eb.mData, ",") << std::endl;
-        LogRange(std::cout << "in_nchw_host : ", in_nchw_host.mData, ",") << std::endl;
-        LogRange(std::cout << "in_nchw_device : ", in_nchw_device.mData, ",") << std::endl;
+        LogRange(std::cout << "col_eb : ", col_eb.mData, ",") << std::endl;
+        LogRange(std::cout << "img_nchw_host : ", img_nchw_host.mData, ",") << std::endl;
+        LogRange(std::cout << "img_nchw_device : ", img_nchw_device.mData, ",") << std::endl;
 #endif
     }
 }

@@ -134,8 +134,18 @@ struct BlockwiseGenericTensorSliceCopy_v4
         }
         else
         {
+#if 0 // debug
             mThreadwiseStore.Run(
                 p_thread_buffer, p_block_dst, thread_buffer_address_space, block_dst_address_space);
+#else
+            constexpr auto True = integral_constant<bool, true>{};
+
+            mThreadwiseStore.Run(p_thread_buffer,
+                                 p_block_dst,
+                                 thread_buffer_address_space,
+                                 block_dst_address_space,
+                                 True);
+#endif
         }
     }
 

@@ -69,11 +69,14 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     template <typename SrcData,
               typename DstData,
               AddressSpace SrcAddressSpace,
-              AddressSpace DstAddressSpace>
+              AddressSpace DstAddressSpace,
+              bool DoAtomicAdd = false>
     __device__ void Run(const SrcData* p_src,
                         DstData* p_dst,
                         integral_constant<AddressSpace, SrcAddressSpace>,
-                        integral_constant<AddressSpace, DstAddressSpace>) const
+                        integral_constant<AddressSpace, DstAddressSpace>,
+                        integral_constant<bool, DoAtomicAdd> do_atomic_add =
+                            integral_constant<bool, DoAtomicAdd>{}) const
     {
         using src_vector_t = typename vector_type<SrcData, SrcDataPerAccess>::MemoryType;
         using dst_vector_t = typename vector_type<DstData, DstDataPerAccess>::MemoryType;
@@ -160,21 +163,27 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                 //   has the same padding situation
                 if(dst_coord.IsUpperIndexMappedToValidOffset())
                 {
-                    static_if<DstAddressSpace == AddressSpace::global>{}([&](auto fwd) {
+                    static_if<!DoAtomicAdd>{}([&](auto) {
+                        static_if<DstAddressSpace == AddressSpace::global>{}([&](auto fwd) {
 #if CK_USE_AMD_BUFFER_ADDRESSING
-                        amd_intrinsic_buffer_store<DstData, DstDataPerAccess>(
-                            *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]),
-                            fwd(p_dst),
-                            dst_coord.GetOffset(),
-                            0);
+                            amd_intrinsic_buffer_store<DstData, DstDataPerAccess>(
+                                *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]),
+                                fwd(p_dst),
+                                dst_coord.GetOffset(),
+                                0);
 #else
-                        *reinterpret_cast<dst_vector_t*>(&p_dst[dst_coord.GetOffset()]) =
-                            *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]);
+                            *reinterpret_cast<dst_vector_t*>(&p_dst[dst_coord.GetOffset()]) =
+                                *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]);
 #endif
+                        }).Else([&](auto) {
+                            // dst can be all kinds of memory-space
+                            *reinterpret_cast<dst_vector_t*>(&p_dst[dst_coord.GetOffset()]) =
+                                *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]);
+                        });
                     }).Else([&](auto) {
-                        // dst can be all kinds of memory-space
-                        *reinterpret_cast<dst_vector_t*>(&p_dst[dst_coord.GetOffset()]) =
-                            *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]);
+                        atomicAdd(
+                            reinterpret_cast<dst_vector_t*>(&p_dst[dst_coord.GetOffset()]),
+                            *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]));
                     });
                 }
             }

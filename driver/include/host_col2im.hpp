@@ -37,7 +37,7 @@ void host_col2im(const Tensor<T>& in_eb,
         {
             int h_tmp = hi + LeftPads{}[0] - y * ConvDilations{}[0];
 
-            if(h_tmp % ConvStrides{}[0] == 0)
+            if(h_tmp >= 0 && h_tmp < HI && h_tmp % ConvStrides{}[0] == 0)
             {
                 int ho = h_tmp / ConvStrides{}[0];
 
@@ -45,7 +45,7 @@ void host_col2im(const Tensor<T>& in_eb,
                 {
                     int w_tmp = wi + LeftPads{}[1] - x * ConvDilations{}[1];
 
-                    if(w_tmp % ConvStrides{}[1] == 0)
+                    if(w_tmp >= 0 && w_tmp < WI && w_tmp % ConvStrides{}[1] == 0)
                     {
                         int wo = w_tmp / ConvStrides{}[1];
 

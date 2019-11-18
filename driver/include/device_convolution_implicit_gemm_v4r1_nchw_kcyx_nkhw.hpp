@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include "device.hpp"
 #include "tensor.hpp"
-#include "gridwise_convolution_kernel_wrapper.hpp"
+#include "gridwise_operation_wrapper.hpp"
 #include "convolution_common.hpp"
 #include "gridwise_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer.hpp"
 
@@ -221,13 +221,20 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
-        float time = launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
+        float time = launch_kernel(run_gridwise_operation<decltype(gridwise_conv),
+                                                          const T* const __restrict__,
+                                                          const T* const __restrict__,
+                                                          T* const __restrict__>,
                                    dim3(GridSize),
                                    dim3(BlockSize),
                                    0,
-                                   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-                                   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-                                   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+                                   gridwise_conv,
+                                   const_cast<const T* const __restrict__>(
+                                       static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer())),
+                                   const_cast<const T* const __restrict__>(
+                                       static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer())),
+                                   const_cast<T* const __restrict__>(
+                                       static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer())));
 
         printf("Elapsed time : %f ms, %f TFlop/s\n",
                time,

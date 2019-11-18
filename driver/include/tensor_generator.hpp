@@ -5,10 +5,12 @@
 
 struct GeneratorTensor_1
 {
+    int value = 1;
+
     template <class... Is>
     double operator()(Is... is)
     {
-        return 1;
+        return value;
     }
 };
 
