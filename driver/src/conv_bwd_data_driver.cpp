@@ -13,7 +13,7 @@
 #include "device_tensor.hpp"
 #include "conv_common.hpp"
 #include "host_conv_bwd_data.hpp"
-#include "device_convolution_bwd_data_implicit_gemm_v1_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
+#elif 1
     // 1x1 filter, 8x8 image
     // cudnn@V100 83%, ck@V100 75%, ck@P100 78%, ck@VII 65%
     constexpr index_t N  = 128;
@@ -344,19 +344,17 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 1
-    device_convolution_bwd_data_implicit_gemm_v1_nchw_kcyx_nkhw(in_nchw_desc,
-                                                                in_nchw_device,
-                                                                wei_kcyx_desc,
-                                                                wei_kcyx,
-                                                                out_nkhw_desc,
-                                                                out_nkhw,
-                                                                ConvStrides{},
-                                                                ConvDilations{},
-                                                                LeftPads{},
-                                                                RightPads{},
-                                                                nrepeat);
-#endif
+    device_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
+                                                                       in_nchw_device,
+                                                                       wei_kcyx_desc,
+                                                                       wei_kcyx,
+                                                                       out_nkhw_desc,
+                                                                       out_nkhw,
+                                                                       ConvStrides{},
+                                                                       ConvDilations{},
+                                                                       LeftPads{},
+                                                                       RightPads{},
+                                                                       nrepeat);
 
     if(do_verification)
     {

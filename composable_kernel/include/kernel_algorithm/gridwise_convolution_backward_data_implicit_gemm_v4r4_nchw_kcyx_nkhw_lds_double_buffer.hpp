@@ -1,5 +1,5 @@
-#ifndef CK_GRIDWISE_CONVOLUTION_BACKWARD_DATA_IMPLICIT_GEMM_V1_NCHW_KCYX_NKHW_LDS_DOUBLE_BUFFER_HPP
-#define CK_GRIDWISE_CONVOLUTION_BACKWARD_DATA_IMPLICIT_GEMM_V1_NCHW_KCYX_NKHW_LDS_DOUBLE_BUFFER_HPP
+#ifndef CK_GRIDWISE_CONVOLUTION_BACKWARD_DATA_IMPLICIT_GEMM_V4R4_NCHW_KCYX_NKHW_LDS_DOUBLE_BUFFER_HPP
+#define CK_GRIDWISE_CONVOLUTION_BACKWARD_DATA_IMPLICIT_GEMM_V4R4_NCHW_KCYX_NKHW_LDS_DOUBLE_BUFFER_HPP
 
 #include "common_header.hpp"
 #include "tensor_descriptor.hpp"
@@ -41,7 +41,7 @@ template <index_t GridSize,
           typename WeiBlockCopyClusterLengths_K_E,
           index_t WeiBlockCopyDataPerAccess_E,
           index_t InThreadCopyDataPerAccess_B>
-struct GridwiseConvolutionBackwardDataImplicitGemm_v1_nchw_kcyx_nkhw_lds_double_buffer
+struct GridwiseConvolutionBackwardDataImplicitGemm_v4r4_nchw_kcyx_nkhw_lds_double_buffer
 {
     __device__ void Run(Float* const __restrict__ p_in_global,
                         const Float* const __restrict__ p_wei_global,
