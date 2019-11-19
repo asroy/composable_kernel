@@ -15,12 +15,20 @@ __device__ void copy_data(const T* p_src, index_t src_offset, T* p_dst, index_t 
     using vector_t = typename vector_type<T, DataPerAccess>::MemoryType;
 
 #if CK_USE_AMD_BUFFER_ADDRESSING
-    // TODO: use static_if::ElseIf
+    // TODO: use static_if::ElseIf, instead of nested static_if
     static_if<SrcAddressSpace == AddressSpace::global && DstAddressSpace == vgpr>{}([&](auto) {
+        // buffer_load requires:
+        //   1) p_src must be in global memory space, d_dst must be vgpr
+        //   2) p_src to be a block-invariant pointer.
+        // It is user's responsibility to make sure that is true.
         *reinterpret_cast<vector_t*>(&p_dst[dst_offset]) =
             amd_intrinsic_buffer_load<T, DataPerAccess>(p_src, src_offset, 0);
     }).Else([&](auto) {
         static_if<SrcAddressSpace == AddressSpace::vgpr && DstAddressSpace == global>{}([&](auto) {
+            // buffer_store requires:
+            //   1) p_src must be in vgpr space, d_dst must be global memory
+            //   2) p_dst to be a block-invariant pointer.
+            // It is user's responsibility to make sure that is true.
             amd_intrinsic_buffer_store<T, DataPerAccess>(
                 *reinterpret_cast<const vector_t*>(&p_src[src_offset]), p_dst, dst_offset, 0);
         }).Else([&](auto) {
