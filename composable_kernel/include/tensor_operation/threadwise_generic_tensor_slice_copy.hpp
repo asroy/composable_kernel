@@ -72,9 +72,6 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     template <typename SrcData, typename DstData>
     __device__ void Run(const SrcData* p_src, DstData* p_dst) const
     {
-        using src_vector_t = typename vector_type<SrcData, SrcDataPerAccess>::MemoryType;
-        using dst_vector_t = typename vector_type<DstData, DstDataPerAccess>::MemoryType;
-
         constexpr auto vector_access_dim = Number<VectorAccessDim>{};
 
         constexpr auto src_data_per_access = Number<SrcDataPerAccess>{};
@@ -176,9 +173,6 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     __device__ void Run_optimized_src_address_calculation(const SrcData* p_src,
                                                           DstData* p_dst) const
     {
-        using src_vector_t = typename vector_type<SrcData, SrcDataPerAccess>::MemoryType;
-        using dst_vector_t = typename vector_type<DstData, DstDataPerAccess>::MemoryType;
-
         constexpr auto vector_access_dim = Number<VectorAccessDim>{};
 
         constexpr auto src_data_per_access = Number<SrcDataPerAccess>{};
@@ -327,9 +321,6 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     __device__ void Run_optimized_dst_address_calculation(const SrcData* p_src,
                                                           DstData* p_dst) const
     {
-        using src_vector_t = typename vector_type<SrcData, SrcDataPerAccess>::MemoryType;
-        using dst_vector_t = typename vector_type<DstData, DstDataPerAccess>::MemoryType;
-
         constexpr auto vector_access_dim = Number<VectorAccessDim>{};
 
         constexpr auto src_data_per_access = Number<SrcDataPerAccess>{};

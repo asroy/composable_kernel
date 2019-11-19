@@ -107,16 +107,6 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 
         constexpr auto True = integral_constant<bool, true>{};
 
-        constexpr auto global_address_space =
-            integral_constant<AddressSpace, AddressSpace::global>{};
-
-        constexpr auto lds_address_space = integral_constant<AddressSpace, AddressSpace::lds>{};
-
-        constexpr auto vgpr_address_space = integral_constant<AddressSpace, AddressSpace::vgpr>{};
-
-        constexpr auto no_inmem_op =
-            integral_constant<InMemoryDataOperation, InMemoryDataOperation::none>{};
-
         static_assert(ConvDirection == ConvolutionDirection::Forward ||
                           ConvDirection == ConvolutionDirection::BackwardWeight,
                       "wrong! this kernel only support convolution forward and backward-weight");
@@ -135,17 +125,17 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
         constexpr auto wei_k_c_y_x_global_desc   = WeiGlobalDesc{};
         constexpr auto out_n_k_ho_wo_global_desc = OutGlobalDesc{};
 
-        constexpr index_t N  = in_n_c_hi_wi_global_desc.GetLength(I0);
-        constexpr index_t C  = in_n_c_hi_wi_global_desc.GetLength(I1);
-        constexpr index_t Hi = in_n_c_hi_wi_global_desc.GetLength(I2);
-        constexpr index_t Wi = in_n_c_hi_wi_global_desc.GetLength(I3);
+        constexpr index_t N  = in_n_c_hi_wi_global_desc.GetLengths()[0];
+        constexpr index_t C  = in_n_c_hi_wi_global_desc.GetLengths()[1];
+        constexpr index_t Hi = in_n_c_hi_wi_global_desc.GetLengths()[2];
+        constexpr index_t Wi = in_n_c_hi_wi_global_desc.GetLengths()[3];
 
-        constexpr index_t K  = out_n_k_ho_wo_global_desc.GetLength(I1);
-        constexpr index_t Ho = out_n_k_ho_wo_global_desc.GetLength(I2);
-        constexpr index_t Wo = out_n_k_ho_wo_global_desc.GetLength(I3);
+        constexpr index_t K  = out_n_k_ho_wo_global_desc.GetLengths()[1];
+        constexpr index_t Ho = out_n_k_ho_wo_global_desc.GetLengths()[2];
+        constexpr index_t Wo = out_n_k_ho_wo_global_desc.GetLengths()[3];
 
-        constexpr index_t Y = wei_k_c_y_x_global_desc.GetLength(I2);
-        constexpr index_t X = wei_k_c_y_x_global_desc.GetLength(I3);
+        constexpr index_t Y = wei_k_c_y_x_global_desc.GetLengths()[2];
+        constexpr index_t X = wei_k_c_y_x_global_desc.GetLengths()[3];
 
         constexpr index_t ConvStrideH = ConvStrides{}[0];
         constexpr index_t ConvStrideW = ConvStrides{}[1];
