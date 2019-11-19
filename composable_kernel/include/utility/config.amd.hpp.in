@@ -54,7 +54,8 @@ namespace ck {
 enum AddressSpace
 {
     generic,
-    global
+    global,
+    vgpr
 };
 
 #if CK_UNSIGNED_INDEX_TYPE

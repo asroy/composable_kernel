@@ -403,7 +403,7 @@ int main(int argc, char* argv[])
                                                                     ConvStrides{},
                                                                     ConvDilations{},
                                                                     nrepeat);
-#elif 0
+#elif 1
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,

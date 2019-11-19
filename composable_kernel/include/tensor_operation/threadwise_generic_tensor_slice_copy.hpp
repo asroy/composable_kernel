@@ -21,7 +21,10 @@ template <typename SrcDesc,
           typename DimAccessOrder,
           index_t VectorAccessDim,
           index_t SrcDataPerAccess,
-          index_t DstDataPerAccess>
+          index_t DstDataPerAccess,
+          AddressSpace SrcAddressSpace     = AddressSpace::generic,
+          AddressSpace DstAddressSpace     = AddressSpace::generic,
+          InMemoryDataOperation DstInMemOp = InMemoryDataOperation::none>
 struct ThreadwiseGenericTensorSliceCopy_v4r2
 {
     static constexpr index_t nDim = SliceLengths::Size();
@@ -66,17 +69,8 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
 
     // Will do padding check on src data: Read 0 if src data is in padding area.
     // Will do padding check on dst data: No write if dst data is in paddin area.
-    template <typename SrcData,
-              typename DstData,
-              AddressSpace SrcAddressSpace,
-              AddressSpace DstAddressSpace,
-              bool DoAtomicAdd = false>
-    __device__ void Run(const SrcData* p_src,
-                        DstData* p_dst,
-                        integral_constant<AddressSpace, SrcAddressSpace>,
-                        integral_constant<AddressSpace, DstAddressSpace>,
-                        integral_constant<bool, DoAtomicAdd> do_atomic_add =
-                            integral_constant<bool, DoAtomicAdd>{}) const
+    template <typename SrcData, typename DstData>
+    __device__ void Run(const SrcData* p_src, DstData* p_dst) const
     {
         using src_vector_t = typename vector_type<SrcData, SrcDataPerAccess>::MemoryType;
         using dst_vector_t = typename vector_type<DstData, DstDataPerAccess>::MemoryType;
@@ -123,6 +117,7 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                 //   has the same padding situation
                 if(src_coord.IsUpperIndexMappedToValidOffset())
                 {
+#if 0 // debug
                     static_if<SrcAddressSpace == AddressSpace::global>{}([&](auto fwd) {
 #if CK_USE_AMD_BUFFER_ADDRESSING
                         *reinterpret_cast<src_vector_t*>(&p_src_long_vector[buffer_offset]) =
@@ -137,6 +132,14 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                         *reinterpret_cast<src_vector_t*>(&p_src_long_vector[buffer_offset]) =
                             *reinterpret_cast<const src_vector_t*>(&p_src[src_coord.GetOffset()]);
                     });
+#else
+                    move_data<SrcData,
+                              SrcDataPerAccess,
+                              SrcAddressSpace,
+                              AddressSpace::vgpr,
+                              InMemoryDataOperation::none>(
+                        p_src, src_coord.GetOffset(), p_src_long_vector, buffer_offset);
+#endif
                 }
             }
 
@@ -163,6 +166,7 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                 //   has the same padding situation
                 if(dst_coord.IsUpperIndexMappedToValidOffset())
                 {
+#if 0
                     static_if<!DoAtomicAdd>{}([&](auto) {
                         static_if<DstAddressSpace == AddressSpace::global>{}([&](auto fwd) {
 #if CK_USE_AMD_BUFFER_ADDRESSING
@@ -185,18 +189,17 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                             reinterpret_cast<dst_vector_t*>(&p_dst[dst_coord.GetOffset()]),
                             *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]));
                     });
+#else
+                    move_data<DstData,
+                              DstDataPerAccess,
+                              AddressSpace::vgpr,
+                              DstAddressSpace,
+                              DstInMemOp>(
+                        p_dst_long_vector, buffer_offset, p_dst, dst_coord.GetOffset());
+#endif
                 }
             }
         });
-    }
-
-    template <typename SrcData, typename DstData>
-    __device__ void Run(const SrcData* p_src, DstData* p_dst) const
-    {
-        constexpr auto generic_address_space =
-            integral_constant<AddressSpace, AddressSpace::generic>{};
-
-        Run(p_src, p_dst, generic_address_space, generic_address_space);
     }
 
     // Modify Length to 1, if Mask is set to false
@@ -214,15 +217,9 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     // Will do padding check on dst data: No write if dst data is in paddin area.
     // This version is optimized for address calculation of src tensor
     // TODO: this function is not compiled to expected ISA
-    template <typename SrcData,
-              typename DstData,
-              AddressSpace SrcAddressSpace,
-              AddressSpace DstAddressSpace>
-    __device__ void
-    Run_optimized_src_address_calculation(const SrcData* p_src,
-                                          DstData* p_dst,
-                                          integral_constant<AddressSpace, SrcAddressSpace>,
-                                          integral_constant<AddressSpace, DstAddressSpace>) const
+    template <typename SrcData, typename DstData>
+    __device__ void Run_optimized_src_address_calculation(const SrcData* p_src,
+                                                          DstData* p_dst) const
     {
         using src_vector_t = typename vector_type<SrcData, SrcDataPerAccess>::MemoryType;
         using dst_vector_t = typename vector_type<DstData, DstDataPerAccess>::MemoryType;
@@ -317,6 +314,7 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                     //   the src vector has the same padding situation
                     if(src_coord.IsUpperIndexMappedToValidOffset())
                     {
+#if 0 // debug
                         static_if<SrcAddressSpace == AddressSpace::global>{}([&](auto) {
 #if CK_USE_AMD_BUFFER_ADDRESSING
                             *reinterpret_cast<src_vector_t*>(&p_src_long_vector[buffer_offset]) =
@@ -332,6 +330,17 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                                 *reinterpret_cast<const src_vector_t*>(
                                     &p_src[src_nonlinear_coord.GetOffset() + src_linear_offset]);
                         });
+#else
+                        move_data<SrcData,
+                                  SrcDataPerAccess,
+                                  SrcAddressSpace,
+                                  AddressSpace::vgpr,
+                                  InMemoryDataOperation::none>(p_src,
+                                                               src_nonlinear_coord.GetOffset() +
+                                                                   src_linear_offset,
+                                                               p_src_long_vector,
+                                                               buffer_offset);
+#endif
                     }
                 }
 
@@ -361,8 +370,17 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                     //   the dst vector has the same padding situation
                     if(dst_coord.IsUpperIndexMappedToValidOffset())
                     {
+#if 0 // debug
                         *reinterpret_cast<dst_vector_t*>(&p_dst[dst_coord.GetOffset()]) =
                             *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]);
+#else
+                        move_data<DstData,
+                                  DstDataPerAccess,
+                                  AddressSpace::vgpr,
+                                  DstAddressSpace,
+                                  DstInMemOp>(
+                            p_dst_long_vector, buffer_offset, p_dst, dst_coord.GetOffset());
+#endif
                     }
                 }
             });
@@ -376,15 +394,9 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     // Will do padding check on dst data: No write if dst data is in paddin area.
     // This version is optimized for address calculation of dst tensor
     // TODO: this function is not compiled to expected ISA
-    template <typename SrcData,
-              typename DstData,
-              AddressSpace SrcAddressSpace,
-              AddressSpace DstAddressSpace>
-    __device__ void
-    Run_optimized_dst_address_calculation(const SrcData* p_src,
-                                          DstData* p_dst,
-                                          integral_constant<AddressSpace, SrcAddressSpace>,
-                                          integral_constant<AddressSpace, DstAddressSpace>) const
+    template <typename SrcData, typename DstData>
+    __device__ void Run_optimized_dst_address_calculation(const SrcData* p_src,
+                                                          DstData* p_dst) const
     {
         using src_vector_t = typename vector_type<SrcData, SrcDataPerAccess>::MemoryType;
         using dst_vector_t = typename vector_type<DstData, DstDataPerAccess>::MemoryType;
@@ -470,8 +482,17 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                     //   the src vector has the same padding situation
                     if(src_coord.IsUpperIndexMappedToValidOffset())
                     {
+#if 0
                         *reinterpret_cast<src_vector_t*>(&p_src_long_vector[buffer_offset]) =
                             *reinterpret_cast<const src_vector_t*>(&p_src[src_coord.GetOffset()]);
+#else
+                        move_data<SrcData,
+                                  SrcDataPerAccess,
+                                  SrcAddressSpace,
+                                  AddressSpace::vgpr,
+                                  InMemoryDataOperation::none>(
+                            p_src, src_coord.GetOffset(), p_src_long_vector, buffer_offset);
+#endif
                     }
                 }
 
@@ -510,6 +531,7 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                     //   the dst vector has the same padding situation
                     if(dst_coord.IsUpperIndexMappedToValidOffset())
                     {
+#if 0
                         static_if<DstAddressSpace == AddressSpace::global>{}([&](auto) {
 #if CK_USE_AMD_BUFFER_ADDRESSING
                             amd_intrinsic_buffer_store<DstData, DstDataPerAccess>(
@@ -527,6 +549,16 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                                 &p_dst[dst_nonlinear_coord.GetOffset() + dst_linear_offset]) =
                                 *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]);
                         });
+#else
+                        move_data<DstData,
+                                  DstDataPerAccess,
+                                  AddressSpace::vgpr,
+                                  DstAddressSpace,
+                                  DstInMemOp>(p_dst_long_vector,
+                                              buffer_offset,
+                                              p_dst,
+                                              dst_nonlinear_coord.GetOffset() + dst_linear_offset);
+#endif
                     }
                 }
             });

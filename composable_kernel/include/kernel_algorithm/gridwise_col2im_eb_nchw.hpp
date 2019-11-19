@@ -113,7 +113,11 @@ struct GridwiseCol2Im_eb_nchw
                                                                  1,
                                                                  1,
                                                                  BlockCopyDataPerAccess_B,
-                                                                 BlockCopyDataPerAccess_B>(
+                                                                 BlockCopyDataPerAccess_B,
+                                                                 AddressSpace::vgpr,
+                                                                 AddressSpace::vgpr,
+                                                                 AddressSpace::global,
+                                                                 InMemoryDataOperation::atomic_add>(
             {e_block_data_on_global, b_block_data_on_global},
             {e_block_data_on_global, b_block_data_on_global});
 
