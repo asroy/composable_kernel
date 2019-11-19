@@ -55,7 +55,14 @@ enum AddressSpace
 {
     generic,
     global,
+    lds,
     vgpr
+};
+
+enum InMemoryDataOperation
+{
+    none,
+    atomic_add
 };
 
 #if CK_UNSIGNED_INDEX_TYPE

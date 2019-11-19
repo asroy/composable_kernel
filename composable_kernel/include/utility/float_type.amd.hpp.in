@@ -307,58 +307,5 @@ struct inner_product_with_conversion
     }
 };
 
-template <DataMovement Movement, AddressSpace SrcAddressSpace, AddressSpace DstAddressSpace>
-void move_data(const float* p_src,
-               index_t src_offset,
-               float* p_dst,
-               dst_offset,
-               integral_constant<DataMovement, Movement>,
-               integral_constant<AddressSpace, SrcAddressSpace> src_address_space,
-               integral_constant<AddressSpace, DstAddressSpace> dst_address_space)
-{
-    // TODO: use static_if::ElseIf
-    static_if<Movement == DataMovement::copy>{}([&](auto) {
-        copy_data(p_src, src_offset, p_dst, dst_offset, src_address_space, dst_address_space);
-    });
-
-    static_if<Movement == DataMovement::atomic_add>{}([&](auto) {
-        atomic_add_data(p_src, src_offset, p_dst, dst_offset, src_address_space, dst_address_space);
-    });
-}
-
-template <AddressSpace SrcAddressSpace, AddressSpace DstAddressSpace>
-void copy_data(const float* p_src,
-               index_t src_offset,
-               float* p_dst,
-               dst_offset,
-               integral_constant<AddressSpace, SrcAddressSpace>,
-               integral_constant<AddressSpace, DstAddressSpace>)
-{
-    static_if<SrcAddressSpace == AddressSpace::vgpr && DstAddressSpace == AddressSpace::global>{}(
-        [&](auto fwd) {
-#if CK_USE_AMD_BUFFER_ADDRESSING
-            amd_intrinsic_buffer_store(p_src[src_offset], fwd(p_dst), dst_offset, 0);
-#else
-            p_dst[dst_offset] = p_src[src_offset];
-#endif
-        })
-        .Else([&](auto) { p_dst[dst_offset] = p_src[src_offset]; });
-}
-
-template <AddressSpace SrcAddressSpace, AddressSpace DstAddressSpace>
-void atomic_add_data(const float* p_src,
-                     index_t src_offset,
-                     float* p_dst,
-                     dst_offset,
-                     integral_constant<AddressSpace, SrcAddressSpace>,
-                     integral_constant<AddressSpace, DstAddressSpace>)
-{
-    static_if<SrcAddressSpace == AddressSpace::vgpr && DstAddressSpace == AddressSpace::global>{}(
-        [&](auto fwd) { atomicAdd(&(p_dst[dst_offset]), p_src[src_offset]); })
-        .Else([&](auto fwd) {
-            static_assert(fwd(false), "atomic_add doesn't support this memory space");
-        });
-}
-
 } // namespace ck
 #endif

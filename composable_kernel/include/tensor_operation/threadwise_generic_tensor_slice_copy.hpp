@@ -166,28 +166,22 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                 //   has the same padding situation
                 if(dst_coord.IsUpperIndexMappedToValidOffset())
                 {
-#if 0
-                    static_if<!DoAtomicAdd>{}([&](auto) {
-                        static_if<DstAddressSpace == AddressSpace::global>{}([&](auto fwd) {
+#if 0 // debug
+                    static_if<DstAddressSpace == AddressSpace::global>{}([&](auto fwd) {
 #if CK_USE_AMD_BUFFER_ADDRESSING
-                            amd_intrinsic_buffer_store<DstData, DstDataPerAccess>(
-                                *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]),
-                                fwd(p_dst),
-                                dst_coord.GetOffset(),
-                                0);
+                        amd_intrinsic_buffer_store<DstData, DstDataPerAccess>(
+                            *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]),
+                            fwd(p_dst),
+                            dst_coord.GetOffset(),
+                            0);
 #else
-                            *reinterpret_cast<dst_vector_t*>(&p_dst[dst_coord.GetOffset()]) =
-                                *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]);
+                        *reinterpret_cast<dst_vector_t*>(&p_dst[dst_coord.GetOffset()]) =
+                            *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]);
 #endif
-                        }).Else([&](auto) {
-                            // dst can be all kinds of memory-space
-                            *reinterpret_cast<dst_vector_t*>(&p_dst[dst_coord.GetOffset()]) =
-                                *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]);
-                        });
                     }).Else([&](auto) {
-                        atomicAdd(
-                            reinterpret_cast<dst_vector_t*>(&p_dst[dst_coord.GetOffset()]),
-                            *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]));
+                        // dst can be all kinds of memory-space
+                        *reinterpret_cast<dst_vector_t*>(&p_dst[dst_coord.GetOffset()]) =
+                            *reinterpret_cast<dst_vector_t*>(&p_dst_long_vector[buffer_offset]);
                     });
 #else
                     move_data<DstData,
