@@ -3,7 +3,7 @@
 #include "device.hpp"
 #include "tensor.hpp"
 #include "gridwise_operation_wrapper.hpp"
-#include "gridwise_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw_lds_double_buffer.hpp"
+#include "gridwise_convolution_backward_data_implicit_gemm_v4r5_nchw_kcyx_nkhw_lds_double_buffer.hpp"
 
 template <typename T,
           typename InDesc,
@@ -13,7 +13,7 @@ template <typename T,
           typename ConvDilations,
           typename LeftPads,
           typename RightPads>
-void device_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc in_nchw_desc,
+void device_convolution_backward_data_implicit_gemm_v4r5_nchw_kcyx_nkhw(InDesc in_nchw_desc,
                                                                         Tensor<T>& in_nchw,
                                                                         WeiDesc wei_kcyx_desc,
                                                                         const Tensor<T>& wei_kcyx,
@@ -49,8 +49,8 @@ void device_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc i
     // BlockSize = 256, each thread hold 64 data
     constexpr index_t BlockSize = 256;
 
-    constexpr index_t EPerBlock = 128;
-    constexpr index_t BPerBlock = 128;
+    constexpr index_t BPerBlock = 32;
+    constexpr index_t EPerBlock = 32;
     constexpr index_t KPerBlock = 8;
 
     constexpr index_t GemmMPerThreadSubC = 4;
@@ -63,17 +63,19 @@ void device_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc i
     constexpr index_t GemmDataPerReadA   = 4;
     constexpr index_t GemmDataPerReadB   = 4;
 
-    using OutBlockCopySubLengths_K_B     = Sequence<4, 1>;
-    using OutBlockCopyClusterLengths_K_B = Sequence<2, 128>;
+    using OutBlockCopySubLengths_K_B_N0     = Sequence<1, 1, 4>;
+    using OutBlockCopyClusterLengths_K_B_N0 = Sequence<8, 32, 1>;
 
-    constexpr index_t OutBlockCopyDataPerAccess_B = 1;
+    constexpr index_t OutBlockCopySrcDataPerRead_B   = 1;
+    constexpr index_t OutBlockCopyDstDataPerWrite_N0 = 4;
 
-    using WeiBlockCopySubLengths_K_E     = Sequence<1, 4>;
-    using WeiBlockCopyClusterLengths_K_E = Sequence<8, 32>;
+    using WeiBlockCopySubLengths_K_E_C0     = Sequence<1, 4, 1>;
+    using WeiBlockCopyClusterLengths_K_E_C0 = Sequence<8, 8, 4>;
 
-    constexpr index_t WeiBlockCopyDataPerAccess_E = 4;
+    constexpr index_t WeiBlockCopySrcDataPerRead_E   = 4;
+    constexpr index_t WeiBlockCopyDstDataPerWrite_C0 = 1;
 
-    constexpr index_t InThreadCopyDataPerAccess_B = 1;
+    constexpr index_t InThreadCopyDstDataPerWrite_B = 1;
 #endif
 
     constexpr index_t E = C * Y * X;
@@ -85,7 +87,7 @@ void device_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc i
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
     constexpr auto gridwise_conv =
-        GridwiseConvolutionBackwardDataImplicitGemm_v4r4_nchw_kcyx_nkhw_lds_double_buffer<
+        GridwiseConvolutionBackwardDataImplicitGemm_v4r5_nchw_kcyx_nkhw_lds_double_buffer<
             GridSize,
             BlockSize,
             T,
@@ -109,13 +111,15 @@ void device_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc i
             GemmKPerThreadLoop,
             GemmDataPerReadA,
             GemmDataPerReadB,
-            OutBlockCopySubLengths_K_B,
-            OutBlockCopyClusterLengths_K_B,
-            OutBlockCopyDataPerAccess_B,
-            WeiBlockCopySubLengths_K_E,
-            WeiBlockCopyClusterLengths_K_E,
-            WeiBlockCopyDataPerAccess_E,
-            InThreadCopyDataPerAccess_B>{};
+            OutBlockCopySubLengths_K_B_N0,
+            OutBlockCopyClusterLengths_K_B_N0,
+            OutBlockCopySrcDataPerRead_B,
+            OutBlockCopyDstDataPerWrite_N0,
+            WeiBlockCopySubLengths_K_E_C0,
+            WeiBlockCopyClusterLengths_K_E_C0,
+            WeiBlockCopySrcDataPerRead_E,
+            WeiBlockCopyDstDataPerWrite_C0,
+            InThreadCopyDstDataPerWrite_B>{};
 
     for(index_t i = 0; i < nrepeat; ++i)
     {

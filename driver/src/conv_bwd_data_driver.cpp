@@ -14,6 +14,7 @@
 #include "conv_common.hpp"
 #include "host_conv_bwd_data.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_backward_data_implicit_gemm_v4r5_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -344,17 +345,22 @@ int main(int argc, char* argv[])
 #endif
     }
 
-    device_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
-                                                                       in_nchw_device,
-                                                                       wei_kcyx_desc,
-                                                                       wei_kcyx,
-                                                                       out_nkhw_desc,
-                                                                       out_nkhw,
-                                                                       ConvStrides{},
-                                                                       ConvDilations{},
-                                                                       LeftPads{},
-                                                                       RightPads{},
-                                                                       nrepeat);
+#if 0
+    device_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw
+#else
+    device_convolution_backward_data_implicit_gemm_v4r5_nchw_kcyx_nkhw
+#endif
+    (in_nchw_desc,
+     in_nchw_device,
+     wei_kcyx_desc,
+     wei_kcyx,
+     out_nkhw_desc,
+     out_nkhw,
+     ConvStrides{},
+     ConvDilations{},
+     LeftPads{},
+     RightPads{},
+     nrepeat);
 
     if(do_verification)
     {
