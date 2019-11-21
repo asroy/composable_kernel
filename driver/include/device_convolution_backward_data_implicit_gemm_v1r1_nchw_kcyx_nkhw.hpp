@@ -3,7 +3,7 @@
 #include "device.hpp"
 #include "tensor.hpp"
 #include "gridwise_operation_wrapper.hpp"
-#include "gridwise_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw_lds_double_buffer.hpp"
+#include "gridwise_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw_lds_double_buffer.hpp"
 
 template <typename T,
           typename InDesc,
@@ -13,7 +13,7 @@ template <typename T,
           typename ConvDilations,
           typename LeftPads,
           typename RightPads>
-void device_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc in_nchw_desc,
+void device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw(InDesc in_nchw_desc,
                                                                         Tensor<T>& in_nchw,
                                                                         WeiDesc wei_kcyx_desc,
                                                                         const Tensor<T>& wei_kcyx,
@@ -85,7 +85,7 @@ void device_convolution_backward_data_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc i
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
     constexpr auto gridwise_conv =
-        GridwiseConvolutionBackwardDataImplicitGemm_v4r4_nchw_kcyx_nkhw_lds_double_buffer<
+        GridwiseConvolutionBackwardDataImplicitGemm_v1r1_nchw_kcyx_nkhw_lds_double_buffer<
             GridSize,
             BlockSize,
             T,
