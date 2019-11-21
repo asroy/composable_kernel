@@ -21,19 +21,19 @@ int main(int argc, char* argv[])
     using namespace ck;
 
 #if 0
-    constexpr index_t N  = 2;
-    constexpr index_t C  = 8;
-    constexpr index_t HI = 8;
-    constexpr index_t WI = 8;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 4;
-    constexpr index_t X  = 4;
+    constexpr index_t N  = 128;
+    constexpr index_t C  = 256;
+    constexpr index_t HI = 35;
+    constexpr index_t WI = 35;
+    constexpr index_t K  = 384;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
 
-    using ConvStrides   = Sequence<1, 1>;
+    using ConvStrides   = Sequence<2, 2>;
     using ConvDilations = Sequence<1, 1>;
 
-    using LeftPads  = Sequence<1, 1>;
-    using RightPads = Sequence<2, 2>;
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
 #elif 0
     // 3x3, 34x34
     constexpr index_t N  = 64;
@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
+#elif 1
     // 1x1 filter, 8x8 image
     // cudnn@V100 68%, ck@V100 72%, ck@P100 52%, ck@VII 42%
     constexpr index_t N  = 64;
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 1
+#elif 0
     // 1x1 filter, 8x8 image
     // cudnn@V100 83%, ck@V100 75%, ck@P100 78%, ck@VII 65%
     constexpr index_t N  = 128;
@@ -241,7 +241,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
+#elif 1
     // 3x3 filter, 2x2 stride, 35x35 input, 17x17 output
     // cudnn@V100 90%, ck@V100 93%, ck@P100 83%, ck@VII 81%
     constexpr index_t N  = 128;
@@ -287,7 +287,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<3, 0>;
     using RightPads = Sequence<3, 0>;
-#elif 1
+#elif 0
     // 1x7 filter, 0x3 pad, 17x17 input
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;
@@ -375,9 +375,10 @@ int main(int argc, char* argv[])
         check_error(in_nchw_host, in_nchw_device);
 
 #if 0
-        LogRange(std::cout << "col_eb : ", col_eb.mData, ",") << std::endl;
-        LogRange(std::cout << "img_nchw_host : ", img_nchw_host.mData, ",") << std::endl;
-        LogRange(std::cout << "img_nchw_device : ", img_nchw_device.mData, ",") << std::endl;
+        LogRange(std::cout << "out_nkhw : ", out_nkhw.mData, ",") << std::endl;
+        LogRange(std::cout << "wei_kcyx : ", wei_kcyx.mData, ",") << std::endl;
+        LogRange(std::cout << "in_nchw_host : ", in_nchw_host.mData, ",") << std::endl;
+        LogRange(std::cout << "in_nchw_device : ", in_nchw_device.mData, ",") << std::endl;
 #endif
     }
 }

@@ -78,8 +78,14 @@ void device_convolution_backward_data_implicit_gemm_v4r5_nchw_kcyx_nkhw(InDesc i
     constexpr index_t InThreadCopyDstDataPerWrite_B = 1;
 #endif
 
-    constexpr index_t E = C * Y * X;
-    constexpr index_t B = (N * Ho * Wo);
+    constexpr index_t C0 = GemmMPerThreadSubC;
+    constexpr index_t N0 = GemmNPerThreadSubC;
+
+    constexpr index_t C1 = C / C0;
+    constexpr index_t N1 = N / N0;
+
+    constexpr index_t E = C1 * Y * X;
+    constexpr index_t B = (N1 * Ho * Wo);
 
     constexpr index_t GridSize =
         ((E + EPerBlock - 1) / EPerBlock) * ((B + BPerBlock - 1) / BPerBlock);
