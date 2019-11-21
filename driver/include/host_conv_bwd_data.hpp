@@ -8,13 +8,13 @@ template <typename TIn,
           typename ConvDilations,
           typename LeftPads,
           typename RightPads>
-void host_direct_convolution_bwd_data(Tensor<TIn>& in_nchw,
-                                      const Tensor<TWei>& wei_kcyx,
-                                      const Tensor<TOut>& out_nkhw,
-                                      ConvStrides,
-                                      ConvDilations,
-                                      LeftPads,
-                                      RightPads)
+void host_direct_convolution_backward_data(Tensor<TIn>& in_nchw,
+                                           const Tensor<TWei>& wei_kcyx,
+                                           const Tensor<TOut>& out_nkhw,
+                                           ConvStrides,
+                                           ConvDilations,
+                                           LeftPads,
+                                           RightPads)
 {
     using namespace ck;
 
@@ -37,21 +37,27 @@ void host_direct_convolution_bwd_data(Tensor<TIn>& in_nchw,
         {
             int h_tmp = hi + LeftPads{}[0] - y * ConvDilations{}[0];
 
-            if(h_tmp >= 0 && h_tmp < HI && h_tmp % ConvStrides{}[0] == 0)
+            if(h_tmp % ConvStrides{}[0] == 0)
             {
                 int ho = h_tmp / ConvStrides{}[0];
 
-                for(int x = 0; x < X; ++x)
+                if(ho >= 0 && ho < HO)
                 {
-                    int w_tmp = wi + LeftPads{}[1] - x * ConvDilations{}[1];
-
-                    if(w_tmp >= 0 && w_tmp < WI && w_tmp % ConvStrides{}[1] == 0)
+                    for(int x = 0; x < X; ++x)
                     {
-                        int wo = w_tmp / ConvStrides{}[1];
+                        int w_tmp = wi + LeftPads{}[1] - x * ConvDilations{}[1];
 
-                        for(int k = 0; k < K; ++k)
+                        if(w_tmp % ConvStrides{}[1] == 0)
                         {
-                            v += out_nkhw(n, k, ho, wo) * wei_kcyx(k, c, y, x);
+                            int wo = w_tmp / ConvStrides{}[1];
+
+                            if(wo >= 0 && wo < WO)
+                            {
+                                for(int k = 0; k < K; ++k)
+                                {
+                                    v += out_nkhw(n, k, ho, wo) * wei_kcyx(k, c, y, x);
+                                }
+                            }
                         }
                     }
                 }
