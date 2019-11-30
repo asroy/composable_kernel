@@ -3,7 +3,7 @@
 #include "device.hpp"
 #include "tensor.hpp"
 #include "gridwise_operation_wrapper.hpp"
-#include "gridwise_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw_lds_double_buffer.hpp"
+#include "gridwise_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw.hpp"
 
 template <typename T,
           typename InDesc,
@@ -84,38 +84,37 @@ void device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw(InDesc i
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
-    constexpr auto gridwise_conv =
-        GridwiseConvolutionBackwardDataImplicitGemm_v1r1_nchw_kcyx_nkhw_lds_double_buffer<
-            GridSize,
-            BlockSize,
-            T,
-            T,
-            decltype(in_nchw_desc),
-            decltype(wei_kcyx_desc),
-            decltype(out_nkhw_desc),
-            ConvStrides,
-            ConvDilations,
-            LeftPads,
-            RightPads,
-            BPerBlock,
-            EPerBlock,
-            KPerBlock,
-            GemmMPerThreadSubC,
-            GemmNPerThreadSubC,
-            GemmMLevel0Cluster,
-            GemmNLevel0Cluster,
-            GemmMLevel1Cluster,
-            GemmNLevel1Cluster,
-            GemmKPerThreadLoop,
-            GemmDataPerReadA,
-            GemmDataPerReadB,
-            OutBlockCopySubLengths_K_B,
-            OutBlockCopyClusterLengths_K_B,
-            OutBlockCopyDataPerAccess_B,
-            WeiBlockCopySubLengths_K_E,
-            WeiBlockCopyClusterLengths_K_E,
-            WeiBlockCopyDataPerAccess_E,
-            InThreadCopyDataPerAccess_B>{};
+    constexpr auto gridwise_conv = GridwiseConvolutionBackwardDataImplicitGemm_v1r1_nchw_kcyx_nkhw<
+        GridSize,
+        BlockSize,
+        T,
+        T,
+        decltype(in_nchw_desc),
+        decltype(wei_kcyx_desc),
+        decltype(out_nkhw_desc),
+        ConvStrides,
+        ConvDilations,
+        LeftPads,
+        RightPads,
+        BPerBlock,
+        EPerBlock,
+        KPerBlock,
+        GemmMPerThreadSubC,
+        GemmNPerThreadSubC,
+        GemmMLevel0Cluster,
+        GemmNLevel0Cluster,
+        GemmMLevel1Cluster,
+        GemmNLevel1Cluster,
+        GemmKPerThreadLoop,
+        GemmDataPerReadA,
+        GemmDataPerReadB,
+        OutBlockCopySubLengths_K_B,
+        OutBlockCopyClusterLengths_K_B,
+        OutBlockCopyDataPerAccess_B,
+        WeiBlockCopySubLengths_K_E,
+        WeiBlockCopyClusterLengths_K_E,
+        WeiBlockCopyDataPerAccess_E,
+        InThreadCopyDataPerAccess_B>{};
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
