@@ -3,7 +3,7 @@
 #include "device.hpp"
 #include "tensor.hpp"
 #include "gridwise_operation_wrapper.hpp"
-#include "gridwise_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw.hpp"
+#include "gridwise_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw.hpp"
 
 template <typename T,
           typename InDesc,
@@ -13,7 +13,7 @@ template <typename T,
           typename ConvDilations,
           typename LeftPads,
           typename RightPads>
-void device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw(InDesc in_nchw_desc,
+void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc in_nchw_desc,
                                                                         Tensor<T>& in_nchw,
                                                                         WeiDesc wei_kcyx_desc,
                                                                         const Tensor<T>& wei_kcyx,
@@ -62,6 +62,34 @@ void device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t GemmThreadGemmDataPerReadM = 4;
     constexpr index_t GemmThreadGemmDataPerReadN = 4;
 
+    using GemmABlockCopySubLengths     = Sequence<4, 1>;   // Gemm-K, Gemm-M
+    using GemmABlockCopyClusterLengths = Sequence<2, 128>; // Gemm-K, Gemm-M
+
+    constexpr index_t GemmABlockCopyDataPerAccess = 1; // Gemm-M
+
+    using GemmBBlockCopySubLengths     = Sequence<4, 1>;   // Gemm-K, Gemm-N
+    using GemmBBlockCopyClusterLengths = Sequence<2, 128>; // Gemm-K, Gemm-N
+
+    constexpr index_t GemmBBlockCopyDataPerAccess = 1; // Gemm-N
+
+    constexpr index_t GemmCThreadCopyDataPerAccess = 1; // Gemm-N
+#elif 0
+    // BlockSize = 256, each thread hold 64 data
+    constexpr index_t BlockSize = 256;
+
+    constexpr index_t GemmMPerBlock              = 128;
+    constexpr index_t GemmNPerBlock              = 128;
+    constexpr index_t GemmKPerBlock              = 8;
+    constexpr index_t GemmMPerThreadSubC         = 4;
+    constexpr index_t GemmNPerThreadSubC         = 4;
+    constexpr index_t GemmMLevel0Cluster         = 4;
+    constexpr index_t GemmNLevel0Cluster         = 4;
+    constexpr index_t GemmMLevel1Cluster         = 4;
+    constexpr index_t GemmNLevel1Cluster         = 4;
+    constexpr index_t GemmKPerThreadLoop         = 1;
+    constexpr index_t GemmThreadGemmDataPerReadM = 4;
+    constexpr index_t GemmThreadGemmDataPerReadN = 4;
+
     using GemmABlockCopySubLengths     = Sequence<1, 4>;  // Gemm-K, Gemm-M
     using GemmABlockCopyClusterLengths = Sequence<8, 32>; // Gemm-K, Gemm-M
 
@@ -75,15 +103,26 @@ void device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t GemmCThreadCopyDataPerAccess = 1; // Gemm-N
 #endif
 
-    constexpr index_t GemmM = C * Y * X;
-    constexpr index_t GemmN = N * Ho * Wo;
+    // TODO: this algo support any stride and dilation. But for now, let's fix them to be 1 for
+    // simplicity
+    constexpr index_t Ydot   = 1;
+    constexpr index_t Ytilda = Y;
+    constexpr index_t Htilda = Ho + Y - 1;
+
+    constexpr index_t Xdot   = 1;
+    constexpr index_t Xtilda = X;
+    constexpr index_t Wtilda = Wo + X - 1;
+
+    constexpr index_t GemmK = K * Ydot * Xdot;
+    constexpr index_t GemmM = C * Ytilda * Xtilda;
+    constexpr index_t GemmN = N * Htilda * Wtilda;
 
     constexpr index_t GridSize = ((GemmM + GemmMPerBlock - 1) / GemmMPerBlock) *
                                  ((GemmN + GemmNPerBlock - 1) / GemmNPerBlock);
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
-    constexpr auto gridwise_conv = GridwiseConvolutionBackwardDataImplicitGemm_v1r1_nchw_kcyx_nkhw<
+    constexpr auto gridwise_conv = GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw<
         GridSize,
         BlockSize,
         T,
