@@ -46,18 +46,13 @@ struct GridwiseGemmTransposedANormalBNormalC_v1r1
     {
         constexpr auto True = integral_constant<bool, true>{};
 
-        constexpr auto I0 = Number<0>{};
-        constexpr auto I1 = Number<1>{};
-        constexpr auto I2 = Number<2>{};
-        constexpr auto I3 = Number<3>{};
-
         constexpr auto a_k_m_global_desc = AGlobalDesc{};
         constexpr auto b_k_n_global_desc = BGlobalDesc{};
         constexpr auto c_m_n_global_desc = CGlobalDesc{};
 
-        constexpr auto K = a_k_m_global_desc.GetLength(I0);
-        constexpr auto M = a_k_m_global_desc.GetLength(I1);
-        constexpr auto N = b_k_n_global_desc.GetLength(I1);
+        constexpr auto K = a_k_m_global_desc.GetLengths()[0];
+        constexpr auto M = a_k_m_global_desc.GetLengths()[1];
+        constexpr auto N = b_k_n_global_desc.GetLengths()[1];
 
         // lds max alignment
         constexpr index_t max_lds_align = math::lcm(ABlockCopyDataPerAccess_M,

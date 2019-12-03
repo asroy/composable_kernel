@@ -8,6 +8,9 @@
 
 namespace ck {
 
+// GemmK = K * Ydot * Xdot;
+// GemmM = C * Ytilda * Xtilda;
+// GemmN = N * Htilda * Wtilda;
 template <index_t GridSize,
           index_t BlockSize,
           typename Float,
@@ -73,33 +76,41 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
                       "wrong! aligment requirement for vectorized global load of input tensor will "
                       "be violated");
 
-        // TODO: this algo support any stride and dilation. But for now, let's fix them to be 1 for
-        // simplicity
-        static_assert(ConvStrideH == 1 && ConvStrideW == 1 && ConvDilationH == 1 &&
-                          ConvDilationW == 1,
-                      "wrong! not supported yet");
+        constexpr index_t hcf_stride_dilation_h = math::hcf(ConvStrideH, ConvDilationH);
+        constexpr index_t hcf_stride_dilation_w = math::hcf(ConvStrideW, ConvDilationW);
 
-        // TODO: these logic are only for stride = 1, dilation = 1
-        constexpr index_t Ydot   = Y;
-        constexpr index_t Ytilda = 1;
-        constexpr index_t Htilda = Ho + Y - 1;
+        constexpr index_t Ytilda = ConvStrideH / hcf_stride_dilation_h;
+        constexpr index_t Xtilda = ConvStrideW / hcf_stride_dilation_w;
 
-        constexpr index_t Xdot   = X;
-        constexpr index_t Xtilda = 1;
-        constexpr index_t Wtilda = Wo + X - 1;
+        constexpr index_t Ydot = math::integer_divide_ceil(Y, Ytilda);
+        constexpr index_t Xdot = math::integer_divide_ceil(X, Xtilda);
 
-        constexpr index_t GemmK = K * Ydot * Xdot;
-        constexpr index_t GemmM = C * Ytilda * Xtilda;
-        constexpr index_t GemmN = N * Htilda * Wtilda;
+        constexpr index_t right_pad_ho = (ConvDilationH / hcf_stride_dilation_h) * (Y - Ytilda);
+        constexpr index_t right_pad_wo = (ConvDilationW / hcf_stride_dilation_w) * (X - Xtilda);
+
+        constexpr index_t Htilda = Ho + right_pad_ho;
+        constexpr index_t Wtilda = Wo + right_pad_wo;
 
         // weight tensor
-        constexpr auto wei_k_c_ydot_ytilda_xdot_xtilda_global_desc = transform_tensor_descriptor(
+        constexpr auto wei_k_c_yp_xp_global_desc = transform_tensor_descriptor(
             wei_k_c_y_x_global_desc,
-            make_tuple(
-                PassThrough<K>{},
-                PassThrough<C>{},
-                Embed<Sequence<Ydot, Ytilda>, Sequence<1, 1, 0>>{},  // coefficient may be wrong
-                Embed<Sequence<Xdot, Xtilda>, Sequence<1, 1, 0>>{}), // coefficient may be wrong
+            make_tuple(PassThrough<K>{},
+                       PassThrough<C>{},
+                       Pad<Sequence<Y, X>,
+                           Sequence<0, 0>,
+                           Sequence<Ydot * Ytilda - Y, Xdot * Xtilda - X>,
+                           true>{}),
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}),
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}));
+
+        constexpr auto wei_k_c_ydot_ytilda_xdot_xtilda_global_desc = transform_tensor_descriptor(
+            wei_k_c_yp_xp_global_desc,
+            make_tuple(PassThrough<K>{},
+                       PassThrough<C>{},
+                       Embed<Sequence<Ydot, Ytilda>,
+                             Sequence<ConvStrideH / hcf_stride_dilation_h, 1, 0>>{},
+                       Embed<Sequence<Xdot, Xtilda>,
+                             Sequence<ConvStrideW / hcf_stride_dilation_w, 1, 0>>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 
@@ -110,23 +121,25 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
         // output tensor
-        constexpr auto out_n_k_hop_wop_global_desc = transform_tensor_descriptor(
-            out_n_k_ho_wo_global_desc,
-            make_tuple(
-                PassThrough<N>{},
-                PassThrough<K>{},
-                Pad<Sequence<Ho, Wo>, Sequence<0, 0>, Sequence<Y - 1, X - 1>>{}), // coefficient may
-                                                                                  // be wrong
-            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}),
-            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}));
+        constexpr auto out_n_k_hop_wop_global_desc =
+            transform_tensor_descriptor(out_n_k_ho_wo_global_desc,
+                                        make_tuple(PassThrough<N>{},
+                                                   PassThrough<K>{},
+                                                   Pad<Sequence<Ho, Wo>,
+                                                       Sequence<0, 0>,
+                                                       Sequence<right_pad_ho, right_pad_wo>,
+                                                       true>{}),
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}),
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}));
 
         constexpr auto out_n_k_ydot_htilda_xdot_wtilda_global_desc = transform_tensor_descriptor(
             out_n_k_hop_wop_global_desc,
-            make_tuple(
-                PassThrough<N>{},
-                PassThrough<K>{},
-                Embed<Sequence<Ydot, Htilda>, Sequence<0, 1, 0>>{},  // coefficient may be wrong
-                Embed<Sequence<Xdot, Wtilda>, Sequence<0, 1, 0>>{}), // coefficient may be wrong
+            make_tuple(PassThrough<N>{},
+                       PassThrough<K>{},
+                       Embed<Sequence<Ydot, Htilda>,
+                             Sequence<-ConvDilationH / hcf_stride_dilation_h, 1, 0>>{},
+                       Embed<Sequence<Xdot, Wtilda>,
+                             Sequence<-ConvDilationW / hcf_stride_dilation_w, 1, 0>>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 
@@ -137,14 +150,11 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
         // input tensor
-        constexpr auto eff_left_pads  = LeftPads{} + Sequence<Y - 1, X - 1>{};
-        constexpr auto eff_right_pads = RightPads{} + Sequence<Y - 1, X - 1>{};
-
         constexpr auto in_n_c_hip_wip_global_desc = transform_tensor_descriptor(
             in_n_c_hi_wi_global_desc,
             make_tuple(PassThrough<N>{},
                        PassThrough<C>{},
-                       Pad<Sequence<Hi, Wi>, decltype(eff_left_pads), decltype(eff_right_pads)>{}),
+                       Pad<Sequence<Hi, Wi>, LeftPads, RightPads, true>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}));
 
@@ -160,7 +170,7 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
         constexpr auto in_gemmm_gemmn_global_desc = transform_tensor_descriptor(
             in_n_c_ytilda_htilda_xtilda_wtilda_global_desc,
             make_tuple(Merge<Sequence<C, Ytilda, Xtilda>>{}, Merge<Sequence<N, Htilda, Wtilda>>{}),
-            make_tuple(Sequence<1, 3, 5>{}, Sequence<0, 2, 4>{}),
+            make_tuple(Sequence<1, 2, 4>{}, Sequence<0, 3, 5>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
         // GEMM

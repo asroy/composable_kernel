@@ -36,6 +36,12 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t Y = wei_kcyx_desc.GetLengths()[2];
     constexpr index_t X = wei_kcyx_desc.GetLengths()[3];
 
+    constexpr index_t ConvStrideH = ConvStrides{}[0];
+    constexpr index_t ConvStrideW = ConvStrides{}[1];
+
+    constexpr index_t ConvDilationH = ConvDilations{}[0];
+    constexpr index_t ConvDilationW = ConvDilations{}[1];
+
     std::size_t data_sz = sizeof(T);
     DeviceMem in_nchw_device_buf(data_sz * in_nchw.mDesc.GetElementSpace());
     DeviceMem wei_kcyx_device_buf(data_sz * wei_kcyx.mDesc.GetElementSpace());
@@ -105,13 +111,20 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
 
     // TODO: this algo support any stride and dilation. But for now, let's fix them to be 1 for
     // simplicity
-    constexpr index_t Ydot   = 1;
-    constexpr index_t Ytilda = Y;
-    constexpr index_t Htilda = Ho + Y - 1;
+    constexpr index_t hcf_stride_dilation_h = math::hcf(ConvStrideH, ConvDilationH);
+    constexpr index_t hcf_stride_dilation_w = math::hcf(ConvStrideW, ConvDilationW);
 
-    constexpr index_t Xdot   = 1;
-    constexpr index_t Xtilda = X;
-    constexpr index_t Wtilda = Wo + X - 1;
+    constexpr index_t Ytilda = ConvStrideH / hcf_stride_dilation_h; // may be wrong
+    constexpr index_t Xtilda = ConvStrideW / hcf_stride_dilation_w; // may be wrong
+
+    constexpr index_t Ydot = math::integer_divide_ceil(Y, Ytilda);
+    constexpr index_t Xdot = math::integer_divide_ceil(X, Xtilda);
+
+    constexpr index_t right_pad_ho = (ConvDilationH / hcf_stride_dilation_h) * (Y - Ytilda);
+    constexpr index_t right_pad_wo = (ConvDilationW / hcf_stride_dilation_w) * (X - Xtilda);
+
+    constexpr index_t Htilda = Ho + right_pad_ho;
+    constexpr index_t Wtilda = Wo + right_pad_wo;
 
     constexpr index_t GemmK = K * Ydot * Xdot;
     constexpr index_t GemmM = C * Ytilda * Xtilda;

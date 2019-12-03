@@ -22,20 +22,20 @@ int main(int argc, char* argv[])
     using namespace ck;
 
 #if 0
-    constexpr index_t N  = 4;
-    constexpr index_t C  = 8;
-    constexpr index_t HI = 11;
-    constexpr index_t WI = 11;
+    constexpr index_t N  = 8;
+    constexpr index_t C  = 128;
+    constexpr index_t HI = 16;
+    constexpr index_t WI = 16;
     constexpr index_t K  = 8;
-    constexpr index_t Y  = 4;
-    constexpr index_t X  = 4;
+    constexpr index_t Y  = 2;
+    constexpr index_t X  = 2;
 
-    using ConvStrides   = Sequence<1, 1>;
-    using ConvDilations = Sequence<1, 1>;
+    using ConvStrides   = Sequence<4, 4>;
+    using ConvDilations = Sequence<2, 2>;
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 1
+#elif 0
     // 3x3, 34x34
     constexpr index_t N  = 64;
     constexpr index_t C  = 256;
@@ -52,7 +52,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1 filter, 8x8 image
-    // cudnn@V100 68%, ck@V100 72%, ck@P100 52%, ck@VII 42%
     constexpr index_t N  = 64;
     constexpr index_t C  = 1536;
     constexpr index_t HI = 8;
@@ -68,7 +67,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1 filter, 8x8 image
-    // cudnn@V100 77%, ck@V100 76%, ck@P100 79%, ck@VII 51%
     constexpr index_t N  = 128;
     constexpr index_t C  = 2048;
     constexpr index_t HI = 8;
@@ -84,7 +82,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1 filter, 7x7 image
-    // cudnn@V100 82%, ck@V100 76%, ck@P100 67%, ck@VII 64%
     constexpr index_t N  = 128;
     constexpr index_t C  = 832;
     constexpr index_t HI = 7;
@@ -100,7 +97,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1 filter, 8x8 image
-    // cudnn@V100 83%, ck@V100 75%, ck@P100 78%, ck@VII 65%
     constexpr index_t N  = 128;
     constexpr index_t C  = 1280;
     constexpr index_t HI = 8;
@@ -116,7 +112,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1 filter, 14x14 image
-    // cudnn@V100 62%, ck@V100 68%, ck@P100 70%, ck@VII 50%
     constexpr index_t N  = 128;
     constexpr index_t C  = 512;
     constexpr index_t HI = 14;
@@ -132,7 +127,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1 filter, 8x8 image
-    // cudnn@V100 74%, ck@V100 57%, ck@P100 78%, ck@VII 61%
     constexpr index_t N  = 64;
     constexpr index_t C  = 1536;
     constexpr index_t HI = 8;
@@ -148,7 +142,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1 filter, 28x28 image
-    // cudnn@V100 86%, ck@V100 84%, ck@P100 80%, ck@VII 69%
     constexpr index_t N  = 128;
     constexpr index_t C  = 256;
     constexpr index_t HI = 28;
@@ -164,7 +157,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1 filter, 7x7 image
-    // cudnn@V100 71%, ck@V100 55%, ck@P100 70%, ck@VII 62%
     constexpr index_t N  = 128;
     constexpr index_t C  = 832;
     constexpr index_t HI = 7;
@@ -180,7 +172,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1 filter, 17x17 input
-    // cudnn@V100 81%, ck@V100 76%, ck@P100 70%, ck@VII 76%
     constexpr index_t N  = 128;
     constexpr index_t C  = 768;
     constexpr index_t HI = 17;
@@ -196,7 +187,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1 filter, 14x14 image
-    // cudnn@V100 73%, ck@V100 71%, ck@P100 70%, ck@VII 64%
     constexpr index_t N  = 128;
     constexpr index_t C  = 528;
     constexpr index_t HI = 14;
@@ -212,7 +202,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1 filter, 14x14 image
-    // cudnn@V100 73%, ck@V100 72%, ck@P100 79%, ck@VII 75%
     constexpr index_t N  = 128;
     constexpr index_t C  = 528;
     constexpr index_t HI = 14;
@@ -228,7 +217,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1 filter, 7x7 image
-    // cudnn@V100 49%, ck@V100 50%, ck@P100 61%, ck@VII 52%
     constexpr index_t N  = 128;
     constexpr index_t C  = 832;
     constexpr index_t HI = 7;
@@ -244,7 +232,6 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 3x3 filter, 2x2 stride, 35x35 input, 17x17 output
-    // cudnn@V100 90%, ck@V100 93%, ck@P100 83%, ck@VII 81%
     constexpr index_t N  = 128;
     constexpr index_t C  = 288;
     constexpr index_t HI = 35;
@@ -339,9 +326,6 @@ int main(int argc, char* argv[])
     {
 #if 0
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{1}, num_thread);
-        out_nkhw.GenerateTensorValue(GeneratorTensor_1{1}, num_thread);
-#elif 0
-        wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         out_nkhw.GenerateTensorValue(GeneratorTensor_1{1}, num_thread);
 #else
         wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
