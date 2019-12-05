@@ -8,9 +8,9 @@
 
 namespace ck {
 
-// GemmK = K * Ydot * Xdot;
 // GemmM = C * Ytilda * Xtilda;
 // GemmN = N * Htilda * Wtilda;
+// GemmK = K * Ydot * Xdot;
 template <index_t GridSize,
           index_t BlockSize,
           typename Float,

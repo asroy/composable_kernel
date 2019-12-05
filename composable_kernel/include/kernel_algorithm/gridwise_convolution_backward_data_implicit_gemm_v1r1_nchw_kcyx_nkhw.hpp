@@ -1,5 +1,5 @@
-#ifndef CK_GRIDWISE_CONVOLUTION_GemmNACKWARD_DATA_IMPLICIT_GEMM_V1R1_NCHW_KCYX_NKHW_HPP
-#define CK_GRIDWISE_CONVOLUTION_GemmNACKWARD_DATA_IMPLICIT_GEMM_V1R1_NCHW_KCYX_NKHW_HPP
+#ifndef CK_GRIDWISE_CONVOLUTION_BACKWARD_DATA_IMPLICIT_GEMM_V1R1_NCHW_KCYX_NKHW_HPP
+#define CK_GRIDWISE_CONVOLUTION_BACKWARD_DATA_IMPLICIT_GEMM_V1R1_NCHW_KCYX_NKHW_HPP
 
 #include "common_header.hpp"
 #include "tensor_descriptor.hpp"
@@ -8,6 +8,9 @@
 
 namespace ck {
 
+// GemmM = C * Y * X
+// GemmN = N * Ho * Wo
+// GemmK = K
 template <index_t GridSize,
           index_t BlockSize,
           typename Float,
