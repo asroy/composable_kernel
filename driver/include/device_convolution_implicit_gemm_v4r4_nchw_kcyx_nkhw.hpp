@@ -11,8 +11,8 @@ template <class T,
           class OutDesc,
           class ConvStrides,
           class ConvDilations,
-          class LeftPads,
-          class RightPads>
+          class InLeftPads,
+          class InRightPads>
 void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
                                                           const Tensor<T>& in_nchw,
                                                           WeiDesc,
@@ -21,8 +21,8 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
                                                           Tensor<T>& out_nkhw,
                                                           ConvStrides,
                                                           ConvDilations,
-                                                          LeftPads,
-                                                          RightPads,
+                                                          InLeftPads,
+                                                          InRightPads,
                                                           ck::index_t nrepeat)
 {
     using namespace ck;
@@ -181,10 +181,11 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 2;
 #endif
 
-    constexpr index_t B = N * Ho * Wo;
+    constexpr index_t GemmM = K;
+    constexpr index_t GemmN = N * Ho * Wo;
 
-    constexpr index_t GridSize =
-        ((B + GemmNPerBlock - 1) / GemmNPerBlock) * ((K + GemmMPerBlock - 1) / GemmMPerBlock);
+    constexpr index_t GridSize = math::integer_divide_ceil(GemmM, GemmMPerBlock) *
+                                 math::integer_divide_ceil(GemmN, GemmNPerBlock);
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
@@ -198,8 +199,8 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
         decltype(out_nkhw_desc),
         ConvStrides,
         ConvDilations,
-        LeftPads,
-        RightPads,
+        InLeftPads,
+        InRightPads,
         GemmMPerBlock,
         GemmNPerBlock,
         GemmKPerBlock,

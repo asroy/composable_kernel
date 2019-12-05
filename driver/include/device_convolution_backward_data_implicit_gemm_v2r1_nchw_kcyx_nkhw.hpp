@@ -11,8 +11,8 @@ template <typename T,
           typename OutDesc,
           typename ConvStrides,
           typename ConvDilations,
-          typename LeftPads,
-          typename RightPads>
+          typename InLeftPads,
+          typename InRightPads>
 void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc in_nchw_desc,
                                                                         Tensor<T>& in_nchw,
                                                                         WeiDesc wei_kcyx_desc,
@@ -21,8 +21,8 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
                                                                         const Tensor<T>& out_nkhw,
                                                                         ConvStrides,
                                                                         ConvDilations,
-                                                                        LeftPads,
-                                                                        RightPads,
+                                                                        InLeftPads,
+                                                                        InRightPads,
                                                                         std::size_t nrepeat)
 {
     using namespace ck;
@@ -101,8 +101,8 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t GemmM = C * Ytilda * Xtilda;
     constexpr index_t GemmN = N * Htilda * Wtilda;
 
-    constexpr index_t GridSize = ((GemmM + GemmMPerBlock - 1) / GemmMPerBlock) *
-                                 ((GemmN + GemmNPerBlock - 1) / GemmNPerBlock);
+    constexpr index_t GridSize = math::integer_divide_ceil(GemmM, GemmMPerBlock) *
+                                 math::integer_divide_ceil(GemmN, GemmNPerBlock);
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
@@ -116,8 +116,8 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
         decltype(out_nkhw_desc),
         ConvStrides,
         ConvDilations,
-        LeftPads,
-        RightPads,
+        InLeftPads,
+        InRightPads,
         GemmMPerBlock,
         GemmNPerBlock,
         GemmKPerBlock,
