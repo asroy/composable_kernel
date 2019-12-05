@@ -89,8 +89,8 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     // 1x1 filter, 8x8 image
     constexpr index_t BlockSize = 256;
 
-    constexpr index_t GemmNPerBlock = 128;
     constexpr index_t GemmMPerBlock = 128;
+    constexpr index_t GemmNPerBlock = 128;
     constexpr index_t GemmKPerBlock = 8;
 
     constexpr index_t GemmMPerThreadSubC     = 4;
@@ -121,8 +121,8 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     // 1x1 filter, 8x8 image
     constexpr index_t BlockSize = 256;
 
-    constexpr index_t GemmNPerBlock = 128;
     constexpr index_t GemmMPerBlock = 128;
+    constexpr index_t GemmNPerBlock = 128;
     constexpr index_t GemmKPerBlock = 16;
 
     constexpr index_t GemmMPerThreadSubC     = 4;
@@ -152,8 +152,8 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     // 1x1 filter, 14x14 image
     constexpr index_t BlockSize = 256;
 
-    constexpr index_t GemmNPerBlock = 128;
     constexpr index_t GemmMPerBlock = 128;
+    constexpr index_t GemmNPerBlock = 128;
     constexpr index_t GemmKPerBlock = 8;
 
     constexpr index_t GemmMPerThreadSubC     = 4;
