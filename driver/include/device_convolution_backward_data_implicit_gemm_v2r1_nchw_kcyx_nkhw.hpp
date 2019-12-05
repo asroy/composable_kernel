@@ -83,13 +83,11 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
 #endif
 
-    // TODO: this algo support any stride and dilation. But for now, let's fix them to be 1 for
-    // simplicity
     constexpr index_t hcf_stride_dilation_h = math::hcf(ConvStrideH, ConvDilationH);
     constexpr index_t hcf_stride_dilation_w = math::hcf(ConvStrideW, ConvDilationW);
 
-    constexpr index_t Ytilda = ConvStrideH / hcf_stride_dilation_h; // may be wrong
-    constexpr index_t Xtilda = ConvStrideW / hcf_stride_dilation_w; // may be wrong
+    constexpr index_t Ytilda = ConvStrideH / hcf_stride_dilation_h;
+    constexpr index_t Xtilda = ConvStrideW / hcf_stride_dilation_w;
 
     constexpr index_t Ydot = math::integer_divide_ceil(Y, Ytilda);
     constexpr index_t Xdot = math::integer_divide_ceil(X, Xtilda);

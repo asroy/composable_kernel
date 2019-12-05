@@ -198,15 +198,18 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
                                                      GemmABlockCopyThreadSliceLengths_GemmK_GemmM,
                                                      GemmABlockCopyThreadClusterLengths_GemmK_GemmM,
                                                      Sequence<0, 1>,
+                                                     Sequence<0, 1>,
                                                      1,
                                                      GemmABlockCopySrcDataPerRead_GemmM,
                                                      GemmABlockCopyDstDataPerWrite_GemmM,
                                                      GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
                                                      GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
                                                      Sequence<0, 1>,
+                                                     Sequence<0, 1>,
                                                      1,
                                                      GemmBBlockCopySrcDataPerRead_GemmN,
                                                      GemmBBlockCopyDstDataPerWrite_GemmN,
+                                                     Sequence<0, 1, 2, 3>,
                                                      3,
                                                      GemmCThreadCopyDstDataPerWrite_GemmN1>{};
 

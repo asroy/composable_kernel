@@ -8,20 +8,17 @@
 
 namespace ck {
 
-// This version use multi-index transformation
 // This threadwise copy allow vector access of src and dst.
 // It allows the vector size to be different on src and dst.
 // The dimensions of vector access should be the same on src and dst.
 // The dimension access order should be the same on src and dst.
-// It is designed for cases, where one of src and dst is register, and
-// the other is device memory or LDS
 // Will do valid mapping check on src data: Read 0 if src data has a invalid mapping
 // Will do valid mapping check on dst data: No write if dst data has a invalid mapping
 template <typename SrcDesc,
           typename DstDesc,
           typename SliceLengths,
-          typename DimAccessOrder,
-          index_t VectorReadWriteDim,
+          typename SrcDstDimAccessOrder,
+          index_t SrcDstVectorReadWriteDim,
           index_t SrcDataPerRead,
           index_t DstDataPerWrite,
           AddressSpace SrcAddressSpace     = AddressSpace::generic,
@@ -41,14 +38,15 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     {
         static_assert(nDim == SrcDesc::GetNumOfDimension() &&
                           nDim == DstDesc::GetNumOfDimension() && nDim == SliceLengths::Size() &&
-                          nDim == DimAccessOrder::Size(),
+                          nDim == SrcDstDimAccessOrder::Size(),
                       "wrong! # of dimensions not the same");
 
-        static_assert(is_valid_sequence_map<DimAccessOrder>{}, "wrong! map is not valid");
+        static_assert(is_valid_sequence_map<SrcDstDimAccessOrder>{}, "wrong! map is not valid");
 
-        static_assert(
-            SliceLengths{}[VectorReadWriteDim] % math::lcm(SrcDataPerRead, DstDataPerWrite) == 0,
-            "wrong! cannot evenly divide");
+        static_assert(SliceLengths{}[SrcDstVectorReadWriteDim] %
+                              math::lcm(SrcDataPerRead, DstDataPerWrite) ==
+                          0,
+                      "wrong! cannot evenly divide");
 
         // TODO:: sanity-check if vectorized memory read/write is allowed on src and dst
     }
@@ -72,7 +70,7 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     template <typename SrcData, typename DstData>
     __device__ void Run(const SrcData* p_src, DstData* p_dst) const
     {
-        constexpr auto vector_access_dim = Number<VectorReadWriteDim>{};
+        constexpr auto vector_access_dim = Number<SrcDstVectorReadWriteDim>{};
 
         constexpr auto src_data_per_access = Number<SrcDataPerRead>{};
         constexpr auto dst_data_per_access = Number<DstDataPerWrite>{};
@@ -82,7 +80,7 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
         constexpr auto long_vector_access_lengths = SliceLengths::Modify(
             vector_access_dim, SliceLengths::Get(vector_access_dim) / long_vector_size);
 
-        ford<decltype(long_vector_access_lengths), DimAccessOrder>{}([&](
+        ford<decltype(long_vector_access_lengths), SrcDstDimAccessOrder>{}([&](
             auto long_vector_access_id) {
 
             // data id w.r.t slicing-window
@@ -173,7 +171,7 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     __device__ void Run_optimized_src_address_calculation(const SrcData* p_src,
                                                           DstData* p_dst) const
     {
-        constexpr auto vector_access_dim = Number<VectorReadWriteDim>{};
+        constexpr auto vector_access_dim = Number<SrcDstVectorReadWriteDim>{};
 
         constexpr auto src_data_per_access = Number<SrcDataPerRead>{};
         constexpr auto dst_data_per_access = Number<DstDataPerWrite>{};
@@ -187,10 +185,10 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
         constexpr auto src_linear_dim_mask    = SrcDesc::GetLinearDimensionMask();
         constexpr auto src_nonlinear_dim_mask = SrcDesc::GetNonLinearDimensionMask();
 
-        static_assert(src_linear_dim_mask.At(VectorReadWriteDim) ||
-                          long_vector_size == SrcDataPerRead,
-                      "Warning! VectorReadWriteDim is not SrcDesc's linear dimension, performance "
-                      "would drop");
+        static_assert(
+            src_linear_dim_mask.At(SrcDstVectorReadWriteDim) || long_vector_size == SrcDataPerRead,
+            "Warning! SrcDstVectorReadWriteDim is not SrcDesc's linear dimension, performance "
+            "would drop");
 
         // separate steps into linear and non-linear components, accoording to src tensor
         constexpr auto linear_long_vector_access_lengths =
@@ -230,13 +228,13 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                     p_src_long_vector[i] = 0;
                 }
 
-                // Loop over VectorReadWriteDim, and load data from src to the
+                // Loop over SrcDstVectorReadWriteDim, and load data from src to the
                 //   long-vector buffer.
-                // If VectorReadWriteDim is src's linear dimension, then src's
+                // If SrcDstVectorReadWriteDim is src's linear dimension, then src's
                 //   offset-diff due to this looping is known at compile-time. If
-                //   VectorReadWriteDim is src's nonlinear dimension, then src's
+                //   SrcDstVectorReadWriteDim is src's nonlinear dimension, then src's
                 //   offset-diff due to this looping is only known at run-time. For best
-                //   performance, VectorReadWriteDim, should be src's linear dimension
+                //   performance, SrcDstVectorReadWriteDim, should be src's linear dimension
                 for(index_t i = 0; i < long_vector_size / src_data_per_access; ++i)
                 {
                     auto scalar_id               = make_zero_array<index_t, nDim>();
@@ -321,7 +319,7 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     __device__ void Run_optimized_dst_address_calculation(const SrcData* p_src,
                                                           DstData* p_dst) const
     {
-        constexpr auto vector_access_dim = Number<VectorReadWriteDim>{};
+        constexpr auto vector_access_dim = Number<SrcDstVectorReadWriteDim>{};
 
         constexpr auto src_data_per_access = Number<SrcDataPerRead>{};
         constexpr auto dst_data_per_access = Number<DstDataPerWrite>{};
@@ -335,10 +333,10 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
         constexpr auto dst_linear_dim_mask    = DstDesc::GetLinearDimensionMask();
         constexpr auto dst_nonlinear_dim_mask = DstDesc::GetNonLinearDimensionMask();
 
-        static_assert(dst_linear_dim_mask.At(VectorReadWriteDim) ||
-                          long_vector_size == DstDataPerWrite,
-                      "Warning! VectorReadWriteDim is not DstDesc's linear dimension, performance "
-                      "would drop");
+        static_assert(
+            dst_linear_dim_mask.At(SrcDstVectorReadWriteDim) || long_vector_size == DstDataPerWrite,
+            "Warning! SrcDstVectorReadWriteDim is not DstDesc's linear dimension, performance "
+            "would drop");
 
         // separate steps into linear and non-linear components, accoording to dst tensor
         constexpr auto linear_long_vector_access_lengths =
@@ -378,13 +376,13 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                     p_src_long_vector[i] = 0;
                 }
 
-                // Loop over VectorReadWriteDim, and load data from src to the
+                // Loop over SrcDstVectorReadWriteDim, and load data from src to the
                 //   long-vector buffer.
-                // If VectorReadWriteDim is dst's linear dimension, then dst's
+                // If SrcDstVectorReadWriteDim is dst's linear dimension, then dst's
                 //   offset-diff due to this looping is known at compile-time. If
-                //   VectorReadWriteDim is dst's nonlinear dimension, then dst's
+                //   SrcDstVectorReadWriteDim is dst's nonlinear dimension, then dst's
                 //   offset-diff due to this looping is only known at run-time. For best
-                //   performance, VectorReadWriteDim, should be dst's linear dimension
+                //   performance, SrcDstVectorReadWriteDim, should be dst's linear dimension
                 for(index_t i = 0; i < long_vector_size / src_data_per_access; ++i)
                 {
                     auto scalar_id               = make_zero_array<index_t, nDim>();
