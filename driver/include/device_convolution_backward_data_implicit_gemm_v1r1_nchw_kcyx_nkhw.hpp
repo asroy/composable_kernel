@@ -62,17 +62,19 @@ void device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t GemmThreadGemmDataPerReadM = 4;
     constexpr index_t GemmThreadGemmDataPerReadN = 4;
 
-    using GemmABlockCopySubLengths     = Sequence<1, 4>;  // Gemm-K, Gemm-M
-    using GemmABlockCopyClusterLengths = Sequence<8, 32>; // Gemm-K, Gemm-M
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<1, 4>;  // Gemm-K, Gemm-M
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<8, 32>; // Gemm-K, Gemm-M
 
-    constexpr index_t GemmABlockCopyDataPerAccess = 4; // Gemm-M
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmM  = 4; // Gemm-M
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 4; // Gemm-M
 
-    using GemmBBlockCopySubLengths     = Sequence<4, 1>;   // Gemm-K, Gemm-N
-    using GemmBBlockCopyClusterLengths = Sequence<2, 128>; // Gemm-K, Gemm-N
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<4, 1>;   // Gemm-K, Gemm-N
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<2, 128>; // Gemm-K, Gemm-N
 
-    constexpr index_t GemmBBlockCopyDataPerAccess = 1; // Gemm-N
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
 
-    constexpr index_t GemmCThreadCopyDataPerAccess = 1; // Gemm-N
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
 #endif
 
     constexpr index_t GemmM = C * Y * X;
@@ -107,13 +109,15 @@ void device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw(InDesc i
         GemmKPerThreadLoop,
         GemmThreadGemmDataPerReadM,
         GemmThreadGemmDataPerReadN,
-        GemmABlockCopySubLengths,
-        GemmABlockCopyClusterLengths,
-        GemmABlockCopyDataPerAccess,
-        GemmBBlockCopySubLengths,
-        GemmBBlockCopyClusterLengths,
-        GemmBBlockCopyDataPerAccess,
-        GemmCThreadCopyDataPerAccess>{};
+        GemmABlockCopyThreadSliceLengths_GemmK_GemmM,
+        GemmABlockCopyThreadClusterLengths_GemmK_GemmM,
+        GemmABlockCopySrcDataPerRead_GemmM,
+        GemmABlockCopyDstDataPerWrite_GemmM,
+        GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
+        GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
+        GemmBBlockCopySrcDataPerRead_GemmN,
+        GemmBBlockCopyDstDataPerWrite_GemmN,
+        GemmCThreadCopyDstDataPerWrite_GemmN1>{};
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
