@@ -21,21 +21,52 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 1
-    constexpr index_t N  = 8;
-    constexpr index_t C  = 128;
-    constexpr index_t HI = 16;
-    constexpr index_t WI = 16;
-    constexpr index_t K  = 8;
-    constexpr index_t Y  = 2;
-    constexpr index_t X  = 2;
+#if 0
+    // 1x1
+    constexpr index_t N  = 256;
+    constexpr index_t C  = 1024;
+    constexpr index_t HI = 8;
+    constexpr index_t WI = 8;
+    constexpr index_t K  = 1024;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
 
-    using ConvStrides   = Sequence<4, 4>;
-    using ConvDilations = Sequence<2, 2>;
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
 #elif 0
+    // 1x7
+    constexpr index_t N  = 128;
+    constexpr index_t C  = 1024;
+    constexpr index_t HI = 17;
+    constexpr index_t WI = 17;
+    constexpr index_t K  = 1024;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 7;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<0, 3>;
+    using RightPads = Sequence<0, 3>;
+#elif 1
+    // 3x3, 34x34
+    constexpr index_t N  = 64;
+    constexpr index_t C  = 256;
+    constexpr index_t HI = 34;
+    constexpr index_t WI = 34;
+    constexpr index_t K  = 256;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
+#elif 1
     // 3x3, 34x34
     constexpr index_t N  = 64;
     constexpr index_t C  = 256;
