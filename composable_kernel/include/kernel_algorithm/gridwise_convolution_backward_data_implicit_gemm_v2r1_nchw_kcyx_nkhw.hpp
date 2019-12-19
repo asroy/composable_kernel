@@ -122,8 +122,8 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
             make_tuple(Sequence<0, 2, 4>{}, Sequence<1, 3, 5>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
-// output tensor
-#if 1 // debug
+#if 0 // debug
+        // output tensor
         constexpr auto out_n_k_hop_wop_global_desc = transform_tensor_descriptor(
             out_n_k_ho_wo_global_desc,
             make_tuple(
@@ -144,14 +144,17 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 #else
+        // output tensor
         constexpr auto out_n_k_ydot_htilda_xdot_wtilda_global_desc = transform_tensor_descriptor(
             out_n_k_ho_wo_global_desc,
             make_tuple(PassThrough<N>{},
                        PassThrough<K>{},
                        Embed<Sequence<Ydot, Htilda>,
-                             Sequence<-ConvDilationH / hcf_stride_dilation_h, 1, 0>>{},
+                             Sequence<-ConvDilationH / hcf_stride_dilation_h, 1, 0>,
+                             false>{},
                        Embed<Sequence<Xdot, Wtilda>,
-                             Sequence<-ConvDilationW / hcf_stride_dilation_w, 1, 0>>{}),
+                             Sequence<-ConvDilationW / hcf_stride_dilation_w, 1, 0>,
+                             false>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 #endif
