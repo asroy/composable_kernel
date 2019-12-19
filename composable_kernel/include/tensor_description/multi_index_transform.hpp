@@ -41,18 +41,10 @@ struct PassThrough
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
 
-#if 0
-    __host__ __device__ static constexpr bool
-    IsUpperIndexMappedToValidLowerIndex(const UpperIndex& /* idx_up */)
-    {
-        return true;
-    }
-#else
     __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
     {
         return true;
     }
-#endif
 };
 
 // LowerLengths: Sequence<...>
@@ -63,6 +55,13 @@ struct Pad
 
     using LowerIndex = MultiIndex<nDim>;
     using UpperIndex = MultiIndex<nDim>;
+
+    __host__ __device__ explicit constexpr Pad()
+    {
+        static_assert(LowerLengths::GetSize() == nDim && LeftPads::GetSize() == nDim &&
+                          RightPads::GetSize() == nDim,
+                      "wrong! # of dimensions not consistent");
+    }
 
     __host__ __device__ static constexpr auto GetNumOfLowerDimension() { return Number<nDim>{}; }
 
@@ -88,15 +87,14 @@ struct Pad
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
 
-    __host__ __device__ constexpr bool
-    IsUpperIndexMappedToValidLowerIndex(const UpperIndex& idx_up) const
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
     {
         bool flag = true;
 
-        static_for<0, nDim, 1>{}([&](auto idim) {
-            flag = flag && (idx_up[idim] >= LeftPads::At(idim)) &&
-                   (idx_up[idim] < LeftPads::At(idim) + LowerLengths::At(idim));
-        });
+        for(index_t i = 0; i < nDim; ++i)
+        {
+            flag = flag && LeftPads::At(i) == 0 && RightPads::At(i) == 0;
+        }
 
         return flag;
     }
@@ -163,91 +161,6 @@ struct Merge
         return idx_low;
     }
 
-#if 0
-    // idx_low_diff depends on idx_low_old, so idx_low need to be up-to-date
-    // If idx_up_diff is known at compile-time, many calculations can be optimized
-    // away by compiler
-    // This function assume idx_low_old is not out-of-bound
-    __host__ __device__ static constexpr auto
-    CalculateLowerIndexDiff(const UpperIndex& idx_up_diff,
-                            const UpperIndex& /* idx_up_old */,
-                            const LowerIndex& idx_low_old)
-    {
-        // do nothing if idx_up_diff == 0
-        if(idx_up_diff[0] == 0)
-        {
-            return make_zero_array<index_t, nDimLow>();
-        }
-
-        // CalculateLowerIndex(idx_up_diff) has multiple integer divisions.
-        //   If idx_up_diff is known at compile-time, the calculation can
-        //   be done at compile-time. However, if idx_up_diff is only known
-        //   at run-time, then the calculation will also be computed at
-        //   run-time, and can be very expensive.
-        LowerIndex idx_low_new = idx_low_old + CalculateLowerIndex(idx_up_diff);
-
-        if(idx_up_diff[0] > 0)
-        {
-            bool carry = false;
-
-            // do carry check in reversed order, starting from lowest dimension
-            // don't check the highest dimension
-            static_for<0, nDimLow - 1, 1>{}([&](auto ireverse) {
-                constexpr index_t i = nDimLow - 1 - ireverse;
-
-                if(carry)
-                {
-                    ++idx_low_new(i);
-                }
-
-                carry = false;
-
-                if(idx_low_new[i] >= LowerLengths::At(i))
-                {
-                    idx_low_new(i) -= LowerLengths::At(i);
-                    carry = true;
-                }
-            });
-
-            // highest dimension, no out-of-bound check
-            if(carry)
-            {
-                ++idx_low_new(0);
-            }
-        }
-        else if(idx_up_diff[0] < 0)
-        {
-            bool borrow = false;
-
-            // do borrow check in reversed order, starting from lowest dimension
-            // don't check the highest dimension
-            static_for<0, nDimLow - 1, 1>{}([&](auto ireverse) {
-                constexpr index_t i = nDimLow - 1 - ireverse;
-
-                if(borrow)
-                {
-                    --idx_low_new(i);
-                }
-
-                borrow = false;
-
-                if(idx_low_new[i] < 0)
-                {
-                    idx_low_new(i) += LowerLengths::At(i);
-                    borrow = true;
-                }
-            });
-
-            // highest dimension, no out-of-bound check
-            if(borrow)
-            {
-                --idx_low_new(0);
-            }
-        }
-
-        return idx_low_new - idx_low_old;
-    }
-#else
     // idx_low_diff depends on idx_low_old, so idx_low need to be up-to-date
     // If idx_up_diff is known at compile-time, many calculations can be optimized
     // away by compiler
@@ -348,12 +261,10 @@ struct Merge
             return idx_low_new - idx_low_old;
         }
     }
-#endif
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return false; }
 
-    __host__ __device__ static constexpr bool
-    IsUpperIndexMappedToValidLowerIndex(const UpperIndex& /* idx_up */)
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
     {
         return true;
     }
@@ -400,8 +311,7 @@ struct UnMerge
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
 
-    __host__ __device__ static constexpr bool
-    IsUpperIndexMappedToValidLowerIndex(const UpperIndex& /* idx_up */)
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
     {
         return true;
     }
@@ -410,7 +320,7 @@ struct UnMerge
 // UpperLengths: Sequence<...>
 // Coefficients: Sequence<...>
 // idx_low = coefficients[0, ...nDimUp-1] * idx_up[0, ...nDimUp-1] + coefficients[nDimUp]
-template <typename UpperLengths, typename Coefficients>
+template <typename UpperLengths, typename Coefficients, bool IsAlwaysValidMapping = true>
 struct Embed
 {
     static constexpr index_t nDimLow = 1;
@@ -456,10 +366,9 @@ struct Embed
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
 
-    __host__ __device__ static constexpr bool
-    IsUpperIndexMappedToValidLowerIndex(const UpperIndex& /* idx_up */)
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
     {
-        return true;
+        return IsAlwaysValidMapping;
     }
 };
 
@@ -499,8 +408,7 @@ struct Vectorize
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
 
-    __host__ __device__ static constexpr bool
-    IsUpperIndexMappedToValidLowerIndex(const UpperIndex& /* idx_up */)
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
     {
         return true;
     }

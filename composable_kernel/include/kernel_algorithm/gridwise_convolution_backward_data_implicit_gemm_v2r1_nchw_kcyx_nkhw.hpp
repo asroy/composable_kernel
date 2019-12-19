@@ -123,7 +123,7 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
 // output tensor
-#if 0 // debug
+#if 1 // debug
         constexpr auto out_n_k_hop_wop_global_desc = transform_tensor_descriptor(
             out_n_k_ho_wo_global_desc,
             make_tuple(
