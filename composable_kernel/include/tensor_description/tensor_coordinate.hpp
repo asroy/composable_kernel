@@ -98,7 +98,29 @@ struct NativeTensorCoordinate
         return tensor_desc_type::CalculateOffsetDiff(idx_diff);
     }
 
-    __host__ __device__ static constexpr bool IsUpperIndexMappedToValidOffset() { return true; }
+#if 0 // debug
+    __host__ __device__ static constexpr bool HasValidOffset() { return true; }
+#else
+    // evaluated at run-time
+    __host__ __device__ constexpr bool IsUpperIndexValid() const
+    {
+        return tensor_desc_type::IsUpperIndexValid(GetUpperIndex());
+    }
+
+    // evaluated at run-time
+    __host__ __device__ constexpr bool IsOffsetValid() const
+    {
+        // For native tensor, offset is valid if upper-index is valid
+        return IsUpperIndexValid();
+    }
+
+    // evaluated at compile-time
+    __host__ __device__ static constexpr bool IsOffsetValidAssumingUpperIndexIsValid()
+    {
+        // For native tensor, offset is valid if upper-index is valid
+        return true;
+    }
+#endif
 
     private:
     // mIndex may be saved and updated, however, the value of some (or all) of its entries may
@@ -142,6 +164,8 @@ struct TransformedTensorCoordinate
     __host__ __device__ constexpr const LowerCoord& GetLowerCoordinate() const { return mCoordLow; }
 
     __host__ __device__ constexpr const UpperIndex& GetUpperIndex() const { return mIndexUp; }
+
+    __host__ __device__ constexpr const LowerIndex& GetLowerIndex() const { return mIndexLow.GetIndex(); }
 
     __host__ __device__ constexpr const UpperIndex& GetIndex() const { return GetUpperIndex(); }
 
@@ -206,11 +230,38 @@ struct TransformedTensorCoordinate
         return GetLowerCoordinate().CalculateOffsetDiff(idx_low_diff);
     }
 
+#if 0 // debug
     __host__ __device__ constexpr bool IsUpperIndexMappedToValidOffset() const
     {
         return tensor_desc_type::IsUpperIndexMappedToValidLowerIndex(GetIndex()) &&
                mCoordLow.IsUpperIndexMappedToValidOffset();
     }
+#else
+    // evaluated at run-time
+    __host__ __device__ constexpr bool IsUpperIndexValid() const
+    {
+        return tensor_desc_type::IsUpperIndexValid(GetUpperIndex());
+    }
+
+    // evaluted at run-time
+    __host__ __device__ constexpr bool IsOffsetValid() const
+    {
+        return IsUpperIndexValid() && GetLowerCoordinate().IsOffsetValid();
+    }
+
+    // most evaluatation is done at comile-time
+    __host__ __device__ constexpr bool IsLowerIndexValidAssumingUpperIndexIsValid() const
+    {
+        return tensor_desc_type::IsLowerIndexValidAssumingUpperIndexIsValid(GetLowerIndex());
+    }
+
+    // most evaluatation is done at comile-time
+    __host__ __device__ constexpr bool IsOffsetValidAssumingUpperIndexIsValid() const
+    {
+        return IsLowerIndexValidAssumingUpperIndexIsValid() &&
+               GetLowerCoordinate().IsOffsetValidAssumingUpperIndexIsValid();
+    }
+#endif
 
     private:
     // mIndexUp may be calculated and updated, however, the value of some (or all) of its entries

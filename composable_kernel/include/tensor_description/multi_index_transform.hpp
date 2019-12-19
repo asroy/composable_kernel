@@ -41,11 +41,18 @@ struct PassThrough
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
 
+#if 0
     __host__ __device__ static constexpr bool
     IsUpperIndexMappedToValidLowerIndex(const UpperIndex& /* idx_up */)
     {
         return true;
     }
+#else
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
+    {
+        return true;
+    }
+#endif
 };
 
 // LowerLengths: Sequence<...>
@@ -156,6 +163,7 @@ struct Merge
         return idx_low;
     }
 
+#if 0
     // idx_low_diff depends on idx_low_old, so idx_low need to be up-to-date
     // If idx_up_diff is known at compile-time, many calculations can be optimized
     // away by compiler
@@ -239,6 +247,108 @@ struct Merge
 
         return idx_low_new - idx_low_old;
     }
+#else
+    // idx_low_diff depends on idx_low_old, so idx_low need to be up-to-date
+    // If idx_up_diff is known at compile-time, many calculations can be optimized
+    // away by compiler
+    // This function assume idx_low_old is not out-of-bound
+    __host__ __device__ static constexpr auto
+    CalculateLowerIndexDiff(const UpperIndex& idx_up_diff,
+                            const UpperIndex& /* idx_up_old */,
+                            const LowerIndex& idx_low_old)
+    {
+        if(idx_up_diff[0] == 0)
+        {
+            return make_zero_array<index_t, nDimLow>();
+        }
+        else
+        {
+            // CalculateLowerIndex(idx_up_diff) has multiple integer divisions.
+            //   If idx_up_diff is known at compile-time, the calculation can
+            //   be done at compile-time. However, if idx_up_diff is only known
+            //   at run-time, then the calculation will also be computed at
+            //   run-time, and can be very expensive.
+            LowerIndex idx_low_diff_tmp = CalculateLowerIndex(idx_up_diff);
+
+            // find out the last low dimension that changed
+            index_t last_changed_low_dim = 0;
+
+            static_for<0, nDimLow, 1>{}([&](auto i) {
+                if(idx_low_diff_tmp[i] != 0)
+                {
+                    last_changed_low_dim = i;
+                }
+            });
+
+            LowerIndex idx_low_new = idx_low_old + idx_low_diff_tmp;
+
+            if(idx_up_diff[0] > 0)
+            {
+                // do carry check on each low dimension in reversed order
+                // starting from the first digit that changed
+                // don't check the highest dimension
+                bool carry = false;
+
+                static_for<nDimLow - 1, 0, -1>{}([&](auto i) {
+                    if(i <= last_changed_low_dim)
+                    {
+                        if(carry)
+                        {
+                            ++idx_low_new(i);
+                        }
+
+                        carry = false;
+
+                        if(idx_low_new[i] >= LowerLengths::At(i))
+                        {
+                            idx_low_new(i) -= LowerLengths::At(i);
+                            carry = true;
+                        }
+                    }
+                });
+
+                // highest dimension, no out-of-bound check
+                if(carry)
+                {
+                    ++idx_low_new(0);
+                }
+            }
+            else
+            {
+                // do borrow check on each low dimension in reversed order
+                // starting from the first digit that changed
+                // don't check the highest dimension
+                bool borrow = false;
+
+                static_for<nDimLow - 1, 0, -1>{}([&](auto i) {
+                    if(i <= last_changed_low_dim)
+                    {
+                        if(borrow)
+                        {
+                            --idx_low_new(i);
+                        }
+
+                        borrow = false;
+
+                        if(idx_low_new[i] < 0)
+                        {
+                            idx_low_new(i) += LowerLengths::At(i);
+                            borrow = true;
+                        }
+                    }
+                });
+
+                // highest dimension, no out-of-bound check
+                if(borrow)
+                {
+                    --idx_low_new(0);
+                }
+            }
+
+            return idx_low_new - idx_low_old;
+        }
+    }
+#endif
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return false; }
 

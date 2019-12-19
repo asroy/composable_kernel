@@ -120,11 +120,30 @@ struct NativeTensorDescriptor
         return Tuple<>{};
     }
 
+#if 0 // debug
     __host__ __device__ static constexpr bool
     IsUpperIndexMappedToValidOffset(const Index& /* idx */)
     {
         return true;
     }
+#else
+    __host__ __device__ static constexpr bool IsUpperIndexValid(const Index& idx)
+    {
+        bool flag = true;
+
+        for(index_t i = 0; i < nDim; ++i)
+            flag = flag && idx[i] >= 0 && idx[i] < GetLengths()[i];
+    });
+
+    return flag;
+}
+
+__host__ __device__ static constexpr bool
+IsUpperIndexMappedToValidOffset(const Index& idx)
+{
+    return IsUpperIndexValid(idx) && IsValidUpperIndexAlwaysMappedToValidOffset();
+}
+#endif
 };
 
 // Tensor descriptor for "transformed tensor"
@@ -467,6 +486,7 @@ struct TransformedTensorDescriptor
     }
 #endif
 
+#if 0
     __host__ __device__ static constexpr bool
     IsUpperIndexMappedToValidLowerIndex(const UpperIndex& idx_up)
     {
@@ -494,6 +514,48 @@ struct TransformedTensorDescriptor
                GetLowerTensorDescriptor().IsUpperIndexMappedToValidOffset(
                    CalculateLowerIndex(idx_up));
     }
+#else
+    //
+    __host__ __device__ constexpr bool IsUpperIndexValid(const UpperIndex& idx_up) const
+    {
+        bool flag = true;
+
+        for(index_t i = 0; i < nDim; ++i)
+        {
+            flag = flag && idx_up[i] >= 0 && idx_up[i] < GetLengths()[i];
+        }
+
+        return flag;
+    }
+
+    // this function tells you: Is lower-index valid, assuming upper index is valid?
+    __host__ __device__ constexpr bool
+    IsLowerIndexValidAssumingUpperIndexIsValid(const LowerIndex& idx_low) const
+    {
+        bool flag = true;
+
+        static_for<0, nTransform, 1>{}([&](auto itran) {
+            constexpr auto tran = Transforms{}.At(itran);
+
+            // check a indtransformation if it does not always has a valid mapping
+            if(!tran.IsValidUpperIndexAlwaysMappedToValidLowerIndex())
+            {
+                const auto idx_low_part =
+                    to_array(pick_array_element(idx_low, LowerDimensionIds{}.At(itran)));
+
+                constexpr auto lengths_low_part =
+                    GetLowerTenosrDescriptor().GetLengths()(LowerDimensionIds{});
+
+                for(index_t i = 0; i < LowerDimensionIds::Size(); ++i)
+                {
+                    flag = flag && idx_low_part[i] >= 0 && idx_low_part[i] < lengths_low_part[i];
+                }
+            }
+        });
+
+        return flag;
+    }
+#endif
 };
 
 } // namespace ck
