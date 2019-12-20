@@ -320,7 +320,7 @@ struct UnMerge
 // UpperLengths: Sequence<...>
 // Coefficients: Sequence<...>
 // idx_low = coefficients[0, ...nDimUp-1] * idx_up[0, ...nDimUp-1] + coefficients[nDimUp]
-template <typename UpperLengths, typename Coefficients, bool IsAlwaysValidMapping = true>
+template <index_t LowerLength, typename UpperLengths, typename Coefficients>
 struct Embed
 {
     static constexpr index_t nDimLow = 1;
@@ -345,8 +345,10 @@ struct Embed
     {
         LowerIndex idx_low(Coefficients{}[nDimUp]);
 
-        static_for<0, nDimUp, 1>{}(
-            [&](auto idim) { idx_low(0) += idx_up[idim] * Coefficients{}[idim]; });
+        for(index_t i = 0; i < nDimUp; ++i)
+        {
+            idx_low(0) += idx_up[i] * Coefficients{}[i];
+        }
 
         return idx_low;
     }
@@ -358,8 +360,10 @@ struct Embed
     {
         LowerIndex idx_low_diff{0};
 
-        static_for<0, nDimUp, 1>{}(
-            [&](auto idim) { idx_low_diff(0) += idx_up_diff[idim] * Coefficients{}[idim]; });
+        for(index_t i = 0; i < nDimUp; ++i)
+        {
+            idx_low_diff(0) += idx_up_diff[i] * Coefficients{}[i];
+        }
 
         return idx_low_diff;
     }
@@ -368,7 +372,37 @@ struct Embed
 
     __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
     {
-        return IsAlwaysValidMapping;
+        bool flag = true;
+
+        index_t ncorner = 1;
+
+        for(index_t idim = 0; idim < nDimUp; ++idim)
+        {
+            ncorner *= 2;
+        }
+
+        // loop over each corner of the upper tensor
+        for(index_t icorner = 0; icorner < ncorner; ++icorner)
+        {
+            // generate upper index for each corner
+            auto idx_up = make_zero_array<index_t, nDimUp>();
+
+            index_t itmp = icorner;
+
+            for(index_t idim = nDimUp - 1; idim >= 0; --idim)
+            {
+                idx_up(idim) = itmp % 2 == 0 ? 0 : UpperLengths::At(idim) - 1;
+                itmp /= 2;
+            }
+
+            // calculate lower index
+            auto idx_low = CalculateLowerIndex(idx_up);
+
+            // judge if lower index is valid
+            flag = flag && idx_low[0] >= 0 && idx_low[0] < LowerLength;
+        }
+
+        return flag;
     }
 };
 

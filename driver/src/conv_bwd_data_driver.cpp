@@ -13,20 +13,20 @@
 #include "device_tensor.hpp"
 #include "conv_common.hpp"
 #include "host_conv_bwd_data.hpp"
-#include "device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw.hpp"
+//#include "device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw.hpp"
+//#include "device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 1
+#if 0
     constexpr index_t N  = 128;
-    constexpr index_t C  = 256;
-    constexpr index_t HI = 35;
-    constexpr index_t WI = 35;
-    constexpr index_t K  = 384;
+    constexpr index_t C  = 128;
+    constexpr index_t HI = 5;
+    constexpr index_t WI = 5;
+    constexpr index_t K  = 8;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
+#elif 1
     // 1x7
     constexpr index_t N  = 128;
     constexpr index_t C  = 1024;
@@ -260,7 +260,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 1
+#elif 0
     // 3x3 filter, 2x2 stride, 35x35 input, 17x17 output
     constexpr index_t N  = 128;
     constexpr index_t C  = 288;

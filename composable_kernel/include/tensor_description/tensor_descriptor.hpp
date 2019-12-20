@@ -498,7 +498,10 @@ struct TransformedTensorDescriptor
             constexpr auto tran = Transforms{}.At(itran);
 
             // check a indtransformation if it does not always has a valid mapping
-            if(!tran.IsValidUpperIndexAlwaysMappedToValidLowerIndex())
+            constexpr bool is_valid_up_always_mapped_to_valid_low =
+                decltype(tran)::IsValidUpperIndexAlwaysMappedToValidLowerIndex();
+
+            if(!is_valid_up_always_mapped_to_valid_low)
             {
                 constexpr auto low_dims_part = LowDimensionIds{}.At(itran);
                 constexpr auto low_lengths_part =
