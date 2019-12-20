@@ -13,8 +13,8 @@
 #include "device_tensor.hpp"
 #include "conv_common.hpp"
 #include "host_conv_bwd_data.hpp"
-//#include "device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw.hpp"
-//#include "device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
@@ -65,7 +65,22 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 3>;
     using RightPads = Sequence<0, 3>;
-#elif 0
+#elif 1
+    // 3x3 filter, 2x2 stride
+    constexpr index_t N  = 128;
+    constexpr index_t C  = 1024;
+    constexpr index_t HI = 35;
+    constexpr index_t WI = 35;
+    constexpr index_t K  = 1024;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+
+    using ConvStrides   = Sequence<2, 2>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
+#elif 1
     // 3x3, 34x34
     constexpr index_t N  = 64;
     constexpr index_t C  = 256;
@@ -365,7 +380,7 @@ int main(int argc, char* argv[])
 
 #if 0
     device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw
-#elif 0
+#elif 1
     device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw
 #else
     device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw

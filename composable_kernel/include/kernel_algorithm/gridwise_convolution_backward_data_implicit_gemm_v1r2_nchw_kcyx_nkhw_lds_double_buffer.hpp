@@ -378,8 +378,12 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v1r2_nchw_kcyx_nkhw_lds_doubl
                 in_n_c_hip_wip_global_desc,
                 make_tuple(UnMerge<Sequence<N0, N1>>{},
                            UnMerge<Sequence<C0, C1>>{},
-                           Embed<Sequence<Y, Ho>, Sequence<ConvDilationH, ConvStrideH, 0>>{},
-                           Embed<Sequence<X, Wo>, Sequence<ConvDilationW, ConvStrideW, 0>>{}),
+                           Embed<Hi + LeftPads::At(0) + RightPads::At(0),
+                                 Sequence<Y, Ho>,
+                                 Sequence<ConvDilationH, ConvStrideH, 0>>{},
+                           Embed<Wi + LeftPads::At(1) + RightPads::At(1),
+                                 Sequence<X, Wo>,
+                                 Sequence<ConvDilationW, ConvStrideW, 0>>{}),
                 make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
                 make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}, Sequence<6, 7>{}));
 
