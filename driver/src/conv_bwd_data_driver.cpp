@@ -54,10 +54,10 @@ int main(int argc, char* argv[])
 #elif 0
     // 1x1 filter, 7x7 image
     constexpr index_t N  = 128;
-    constexpr index_t C  = 832;
+    constexpr index_t C  = 1024;
     constexpr index_t HI = 7;
     constexpr index_t WI = 7;
-    constexpr index_t K  = 384;
+    constexpr index_t K  = 1024;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
 
@@ -99,10 +99,10 @@ int main(int argc, char* argv[])
 #elif 0
     // 1x1 filter, 17x17 input
     constexpr index_t N  = 128;
-    constexpr index_t C  = 768;
+    constexpr index_t C  = 1024;
     constexpr index_t HI = 17;
     constexpr index_t WI = 17;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 1024;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
 
@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 1
+#elif 0
     // 3x3 filter, 2x2 stride, 35x35 input, 17x17 output
     constexpr index_t N  = 128;
     constexpr index_t C  = 1024;
@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<3, 0>;
     using RightPads = Sequence<3, 0>;
-#elif 0
+#elif 1
     // 1x7 filter, 0x3 pad, 17x17 input
     constexpr index_t N  = 128;
     constexpr index_t C  = 1024;
@@ -216,7 +216,7 @@ int main(int argc, char* argv[])
 
 #if 0
     device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw
-#elif 1
+#elif 0
     device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw
 #else
     device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw
