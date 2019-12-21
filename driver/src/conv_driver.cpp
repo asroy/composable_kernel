@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 0
+#if 1
     // 1x1
     constexpr index_t N  = 256;
     constexpr index_t C  = 1024;
