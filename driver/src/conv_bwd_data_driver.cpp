@@ -141,13 +141,13 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<2, 2>;
     using RightPads = Sequence<2, 2>;
-#elif 1
+#elif 0
     // 1x7 filter, 23x23 input
     constexpr index_t N  = 128;
-    constexpr index_t C  = 1024;
+    constexpr index_t C  = 128;
     constexpr index_t HI = 23;
     constexpr index_t WI = 23;
-    constexpr index_t K  = 1024;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 7;
 
@@ -174,10 +174,10 @@ int main(int argc, char* argv[])
 #elif 1
     // 1x7 filter, 0x3 pad, 17x17 input
     constexpr index_t N  = 128;
-    constexpr index_t C  = 1024;
+    constexpr index_t C  = 128;
     constexpr index_t HI = 17;
     constexpr index_t WI = 17;
-    constexpr index_t K  = 1024;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 7;
 
@@ -186,13 +186,13 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 3>;
     using RightPads = Sequence<0, 3>;
-#elif 1
+#elif 0
     // 3x3 filter, 2x2 stride, 35x35 input, 17x17 output
     constexpr index_t N  = 128;
-    constexpr index_t C  = 1024;
+    constexpr index_t C  = 128;
     constexpr index_t HI = 35;
     constexpr index_t WI = 35;
-    constexpr index_t K  = 1024;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 

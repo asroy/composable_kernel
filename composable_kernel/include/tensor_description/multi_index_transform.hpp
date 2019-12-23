@@ -122,7 +122,7 @@ struct Trim
 
     __host__ __device__ static constexpr auto GetUpperLengths()
     {
-        return LowerLengths{} - LeftTrims{} + RightTrims{};
+        return LowerLengths{} - LeftTrims{} - RightTrims{};
     }
 
     __host__ __device__ static constexpr auto CalculateLowerIndex(const UpperIndex& idx_up)
