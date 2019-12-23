@@ -101,6 +101,52 @@ struct Pad
 };
 
 // LowerLengths: Sequence<...>
+template <typename LowerLengths, typename LeftTrims, typename RightTrims>
+struct Trim
+{
+    static constexpr index_t nDim = LowerLengths::Size();
+
+    using LowerIndex = MultiIndex<nDim>;
+    using UpperIndex = MultiIndex<nDim>;
+
+    __host__ __device__ explicit constexpr Trim()
+    {
+        static_assert(LowerLengths::GetSize() == nDim && LeftTrims::GetSize() == nDim &&
+                          RightTrims::GetSize() == nDim,
+                      "wrong! # of dimensions not consistent");
+    }
+
+    __host__ __device__ static constexpr auto GetNumOfLowerDimension() { return Number<nDim>{}; }
+
+    __host__ __device__ static constexpr auto GetNumOfUpperDimension() { return Number<nDim>{}; }
+
+    __host__ __device__ static constexpr auto GetUpperLengths()
+    {
+        return LowerLengths{} - LeftTrims{} + RightTrims{};
+    }
+
+    __host__ __device__ static constexpr auto CalculateLowerIndex(const UpperIndex& idx_up)
+    {
+        return idx_up + LeftTrims{};
+    }
+
+    __host__ __device__ static constexpr auto
+    CalculateLowerIndexDiff(const UpperIndex& idx_up_diff,
+                            const UpperIndex& /* idx_up_old */,
+                            const LowerIndex& /* idx_low_old */)
+    {
+        return idx_up_diff;
+    }
+
+    __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
+
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
+    {
+        return true;
+    }
+};
+
+// LowerLengths: Sequence<...>
 template <typename LowerLengths>
 struct Merge
 {

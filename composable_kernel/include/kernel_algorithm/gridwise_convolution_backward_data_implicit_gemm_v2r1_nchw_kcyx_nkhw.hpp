@@ -142,18 +142,35 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}));
 
+        constexpr index_t Hip = in_n_c_hip_wip_global_desc.GetLengths()[2];
+        constexpr index_t Wip = in_n_c_hip_wip_global_desc.GetLengths()[3];
+
         constexpr auto in_n_c_ytilda_htilda_xtilda_wtilda_global_desc = transform_tensor_descriptor(
             in_n_c_hip_wip_global_desc,
-            make_tuple(PassThrough<N>{},
-                       PassThrough<C>{},
-                       Embed<Hi + InputLeftPads::At(0) + InputRightPads::At(0),
-                             Sequence<Ytilda, Htilda>,
-                             Sequence<ConvDilationH, ConvStrideH, 0>>{},
-                       Embed<Wi + InputLeftPads::At(1) + InputRightPads::At(1),
-                             Sequence<Xtilda, Wtilda>,
-                             Sequence<ConvDilationW, ConvStrideW, 0>>{}),
+            make_tuple(
+                PassThrough<N>{},
+                PassThrough<C>{},
+                Embed<Hip, Sequence<Ytilda, Htilda>, Sequence<ConvDilationH, ConvStrideH, 0>>{},
+                Embed<Wip, Sequence<Xtilda, Wtilda>, Sequence<ConvDilationW, ConvStrideW, 0>>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
+
+#if 0
+        constexpr index_t HtildaLeft = LeftPads{}[0] / ConvStrides{}[0];
+        constexpr idext_t HtildaRight = math::integer_divide_ceil
+
+        constexpr index_t WtidaTrimLeft = LeftPads{}[0] / ConvStrides{}[0];
+
+        constexpr auto in_n_c_ytilda_htildatrim_xtilda_wtildatrim_global_desc = transform_tensor_descriptor(
+            in_n_c_ytilda_htilda_xtilda_wtilda_global_desc,
+            make_tuple(PassThrough<N>{},
+                       PassThrough<C>{},
+                       Trim<Sequence<Htilda, Wtilda>,
+                             Sequence<Ytilda, Htilda>,
+                             Sequence<ConvDilationH, ConvStrideH, 0>>{},
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
+#endif
 
         constexpr auto in_gemmm_gemmn_global_desc = transform_tensor_descriptor(
             in_n_c_ytilda_htilda_xtilda_wtilda_global_desc,
