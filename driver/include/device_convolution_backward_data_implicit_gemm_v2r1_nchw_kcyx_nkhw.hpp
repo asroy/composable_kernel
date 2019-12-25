@@ -55,7 +55,7 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
     wei_kcyx_device_buf.ToDevice(wei_kcyx.mData.data());
     out_nkhw_device_buf.ToDevice(out_nkhw.mData.data());
 
-#if 1
+#if 0
     // BlockSize = 256, each thread hold 64 data
     constexpr index_t BlockSize = 256;
 
@@ -115,7 +115,7 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
-#elif 1
+#elif 0
     // BlockSize = 256, each thread hold 64 data
     // for 1x1 weight, 8x8 input
     constexpr index_t BlockSize = 256;

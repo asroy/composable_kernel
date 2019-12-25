@@ -48,7 +48,10 @@ struct PassThrough
 };
 
 // LowerLengths: Sequence<...>
-template <typename LowerLengths, typename LeftPads, typename RightPads>
+template <typename LowerLengths,
+          typename LeftPads,
+          typename RightPads,
+          bool SkipIsValidCheck = false>
 struct Pad
 {
     static constexpr index_t nDim = LowerLengths::Size();
@@ -89,6 +92,12 @@ struct Pad
 
     __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
     {
+#if 1 // debug
+        if(SkipIsValidCheck)
+        {
+            return true;
+        }
+#endif
         bool flag = true;
 
         for(index_t i = 0; i < nDim; ++i)
@@ -366,7 +375,10 @@ struct UnMerge
 // UpperLengths: Sequence<...>
 // Coefficients: Sequence<...>
 // idx_low = coefficients[0, ...nDimUp-1] * idx_up[0, ...nDimUp-1] + coefficients[nDimUp]
-template <index_t LowerLength, typename UpperLengths, typename Coefficients>
+template <index_t LowerLength,
+          typename UpperLengths,
+          typename Coefficients,
+          bool SkipIsValidCheck = false>
 struct Embed
 {
     static constexpr index_t nDimLow = 1;
@@ -418,6 +430,12 @@ struct Embed
 
     __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
     {
+#if 1 // debug
+        if(SkipIsValidCheck)
+        {
+            return true;
+        }
+#endif
         bool flag = true;
 
         index_t ncorner = 1;

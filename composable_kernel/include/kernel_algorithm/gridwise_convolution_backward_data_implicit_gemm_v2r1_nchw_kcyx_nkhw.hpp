@@ -227,7 +227,7 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
             in_n_c_hi_wi_global_desc,
             make_tuple(PassThrough<N>{},
                        PassThrough<C>{},
-                       Pad<Sequence<Hi, Wi>, InLeftPads, InRightPads>{}),
+                       Pad<Sequence<Hi, Wi>, InLeftPads, InRightPads, true>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}));
 
@@ -236,11 +236,16 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
 
         constexpr auto in_n_c_ytilda_htilda_xtilda_wtilda_global_desc = transform_tensor_descriptor(
             in_n_c_hip_wip_global_desc,
-            make_tuple(
-                PassThrough<N>{},
-                PassThrough<C>{},
-                Embed<Hip, Sequence<Ytilda, Htilda>, Sequence<ConvDilationH, ConvStrideH, 0>>{},
-                Embed<Wip, Sequence<Xtilda, Wtilda>, Sequence<ConvDilationW, ConvStrideW, 0>>{}),
+            make_tuple(PassThrough<N>{},
+                       PassThrough<C>{},
+                       Embed<Hip,
+                             Sequence<Ytilda, Htilda>,
+                             Sequence<ConvDilationH, ConvStrideH, 0>,
+                             true>{},
+                       Embed<Wip,
+                             Sequence<Xtilda, Wtilda>,
+                             Sequence<ConvDilationW, ConvStrideW, 0>,
+                             true>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 
