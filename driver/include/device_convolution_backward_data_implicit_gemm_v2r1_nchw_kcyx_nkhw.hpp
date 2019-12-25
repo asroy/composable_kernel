@@ -115,7 +115,7 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
-#elif 0
+#elif 1
     // BlockSize = 256, each thread hold 64 data
     // for 1x1 weight, 8x8 input
     constexpr index_t BlockSize = 256;
@@ -161,10 +161,11 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t Wtilda = Wo + (ConvDilationW / hcf_stride_dilation_w) * (X - Xtilda);
 
 #if 0 // debug
-    constexpr index_t GemmM = C * Ytilda * Xtilda;
-    constexpr index_t GemmN = N * Htilda * Wtilda;
-#else
-#if 1
+    constexpr index_t HtildaLeft  = 0;
+    constexpr index_t WtildaLeft  = 0;
+    constexpr index_t HtildaRight = Htilda;
+    constexpr index_t WtildaRight = Wtilda;
+#else // doesn't produce correct result for stride=2 dilation=3
     constexpr index_t HtildaLeft = math::integer_divide_floor(InLeftPads{}[0], ConvStrides{}[0]);
     constexpr index_t WtildaLeft = math::integer_divide_floor(InLeftPads{}[1], ConvStrides{}[1]);
 
@@ -176,18 +177,12 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
         math::integer_divide_ceil(InLeftPads{}[1] + Wi - 1 - ConvDilations{}[1] * (Xtilda - 1),
                                   ConvStrides{}[1]) +
         1;
-#else
-    constexpr index_t HtildaLeft  = 0;
-    constexpr index_t WtildaLeft  = 0;
-    constexpr index_t HtildaRight = Htilda;
-    constexpr index_t WtildaRight = Wtilda;
 #endif
     constexpr index_t HtildaTrim = HtildaRight - HtildaLeft;
     constexpr index_t WtildaTrim = WtildaRight - WtildaLeft;
 
     constexpr index_t GemmM = C * Ytilda * Xtilda;
     constexpr index_t GemmN = N * HtildaTrim * WtildaTrim;
-#endif
 
     constexpr index_t GridSize = math::integer_divide_ceil(GemmM, GemmMPerBlock) *
                                  math::integer_divide_ceil(GemmN, GemmNPerBlock);
