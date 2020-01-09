@@ -115,14 +115,10 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
             make_tuple(Sequence<0, 2, 4>{}, Sequence<1, 3, 5>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
-        constexpr index_t HtildaLeft =
-            math::max(0,
-                      math::integer_divide_floor(InLeftPads{}[0] - ConvDilationH * (Ytilda - 1),
-                                                 ConvStrides{}[0]));
-        constexpr index_t WtildaLeft =
-            math::max(0,
-                      math::integer_divide_floor(InLeftPads{}[1] - ConvDilationW * (Xtilda - 1),
-                                                 ConvStrides{}[1]));
+        constexpr index_t HtildaLeft = math::integer_divide_floor(
+            math::max(0, InLeftPads{}[0] - ConvDilationH * (Ytilda - 1)), ConvStrides{}[0]);
+        constexpr index_t WtildaLeft = math::integer_divide_floor(
+            math::max(0, InLeftPads{}[1] - ConvDilationW * (Xtilda - 1)), ConvStrides{}[1]);
 
         constexpr index_t HtildaRight = math::min(
             Htilda, math::integer_divide_ceil(InLeftPads{}[0] + Hi - 1, ConvStrides{}[0]) + 1);
