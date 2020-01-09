@@ -162,13 +162,19 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t Wtilda =
         Wo + math::integer_divide_ceil(ConvDilationW * (X - (X % Xtilda)), ConvStrideW);
 
-    constexpr index_t HtildaLeft = math::integer_divide_floor(InLeftPads{}[0], ConvStrides{}[0]);
-    constexpr index_t WtildaLeft = math::integer_divide_floor(InLeftPads{}[1], ConvStrides{}[1]);
+    constexpr index_t HtildaLeft =
+        math::max(0,
+                  math::integer_divide_floor(InLeftPads{}[0] - ConvDilationH * (Ytilda - 1),
+                                             ConvStrides{}[0]));
+    constexpr index_t WtildaLeft =
+        math::max(0,
+                  math::integer_divide_floor(InLeftPads{}[1] - ConvDilationW * (Xtilda - 1),
+                                             ConvStrides{}[1]));
 
-    constexpr index_t HtildaRight =
-        math::integer_divide_ceil(InLeftPads{}[0] + Hi - 1, ConvStrides{}[0]) + 1;
-    constexpr index_t WtildaRight =
-        math::integer_divide_ceil(InLeftPads{}[1] + Wi - 1, ConvStrides{}[1]) + 1;
+    constexpr index_t HtildaRight = math::min(
+        Htilda, math::integer_divide_ceil(InLeftPads{}[0] + Hi - 1, ConvStrides{}[0]) + 1);
+    constexpr index_t WtildaRight = math::min(
+        Wtilda, math::integer_divide_ceil(InLeftPads{}[1] + Wi - 1, ConvStrides{}[1]) + 1);
 
     constexpr index_t HtildaTrim = HtildaRight - HtildaLeft;
     constexpr index_t WtildaTrim = WtildaRight - WtildaLeft;
