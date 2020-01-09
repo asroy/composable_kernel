@@ -90,8 +90,10 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
         constexpr index_t Ydot = math::integer_divide_ceil(Y, Ytilda);
         constexpr index_t Xdot = math::integer_divide_ceil(X, Xtilda);
 
-        constexpr index_t Htilda = Ho + (ConvDilationH / hcf_stride_dilation_h) * (Y - Ytilda);
-        constexpr index_t Wtilda = Wo + (ConvDilationW / hcf_stride_dilation_w) * (X - Xtilda);
+        constexpr index_t Htilda =
+            Ho + math::integer_divide_ceil(ConvDilationH * (Y - (Y % Ytilda)), ConvStrideH);
+        constexpr index_t Wtilda =
+            Wo + math::integer_divide_ceil(ConvDilationW * (X - (X % Xtilda)), ConvStrideW);
 
         // weight tensor
         constexpr auto wei_k_c_ydot_ytilda_xdot_xtilda_global_desc = transform_tensor_descriptor(
@@ -113,26 +115,15 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
             make_tuple(Sequence<0, 2, 4>{}, Sequence<1, 3, 5>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
-#if 0 // debug
-        constexpr index_t HtildaLeft                  = 0;
-        constexpr index_t WtildaLeft                  = 0;
-        constexpr index_t HtildaRight                 = Htilda;
-        constexpr index_t WtildaRight                 = Wtilda;
-#else // doesn't produce correct result for stride=2 dilation=3
         constexpr index_t HtildaLeft =
             math::integer_divide_floor(InLeftPads{}[0], ConvStrides{}[0]);
         constexpr index_t WtildaLeft =
             math::integer_divide_floor(InLeftPads{}[1], ConvStrides{}[1]);
 
         constexpr index_t HtildaRight =
-            math::integer_divide_ceil(InLeftPads{}[0] + Hi - 1 - ConvDilations{}[0] * (Ytilda - 1),
-                                      ConvStrides{}[0]) +
-            1;
+            math::integer_divide_ceil(InLeftPads{}[0] + Hi - 1, ConvStrides{}[0]) + 1;
         constexpr index_t WtildaRight =
-            math::integer_divide_ceil(InLeftPads{}[1] + Wi - 1 - ConvDilations{}[1] * (Xtilda - 1),
-                                      ConvStrides{}[1]) +
-            1;
-#endif
+            math::integer_divide_ceil(InLeftPads{}[1] + Wi - 1, ConvStrides{}[1]) + 1;
 
         constexpr index_t HtildaTrim = HtildaRight - HtildaLeft;
         constexpr index_t WtildaTrim = WtildaRight - WtildaLeft;
@@ -173,7 +164,7 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
                                         make_tuple(Sequence<1, 2, 4>{}, Sequence<0, 3, 5>{}),
                                         make_tuple(Sequence<0>{}, Sequence<1>{}));
 
-#if 0 // debug
+#if 1 // debug
         constexpr bool in_skip_all_out_of_bound_check = false;
 #else // doesn't produce correct result for stride=2 dilation=1
         constexpr bool in_skip_all_out_of_bound_check = true;

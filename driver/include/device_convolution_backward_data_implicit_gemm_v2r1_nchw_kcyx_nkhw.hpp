@@ -55,7 +55,7 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
     wei_kcyx_device_buf.ToDevice(wei_kcyx.mData.data());
     out_nkhw_device_buf.ToDevice(out_nkhw.mData.data());
 
-#if 0
+#if 1
     // BlockSize = 256, each thread hold 64 data
     constexpr index_t BlockSize = 256;
 
@@ -157,27 +157,19 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t Ydot = math::integer_divide_ceil(Y, Ytilda);
     constexpr index_t Xdot = math::integer_divide_ceil(X, Xtilda);
 
-    constexpr index_t Htilda = Ho + (ConvDilationH / hcf_stride_dilation_h) * (Y - Ytilda);
-    constexpr index_t Wtilda = Wo + (ConvDilationW / hcf_stride_dilation_w) * (X - Xtilda);
+    constexpr index_t Htilda =
+        Ho + math::integer_divide_ceil(ConvDilationH * (Y - (Y % Ytilda)), ConvStrideH);
+    constexpr index_t Wtilda =
+        Wo + math::integer_divide_ceil(ConvDilationW * (X - (X % Xtilda)), ConvStrideW);
 
-#if 0 // debug
-    constexpr index_t HtildaLeft  = 0;
-    constexpr index_t WtildaLeft  = 0;
-    constexpr index_t HtildaRight = Htilda;
-    constexpr index_t WtildaRight = Wtilda;
-#else // doesn't produce correct result for stride=2 dilation=3
     constexpr index_t HtildaLeft = math::integer_divide_floor(InLeftPads{}[0], ConvStrides{}[0]);
     constexpr index_t WtildaLeft = math::integer_divide_floor(InLeftPads{}[1], ConvStrides{}[1]);
 
     constexpr index_t HtildaRight =
-        math::integer_divide_ceil(InLeftPads{}[0] + Hi - 1 - ConvDilations{}[0] * (Ytilda - 1),
-                                  ConvStrides{}[0]) +
-        1;
+        math::integer_divide_ceil(InLeftPads{}[0] + Hi - 1, ConvStrides{}[0]) + 1;
     constexpr index_t WtildaRight =
-        math::integer_divide_ceil(InLeftPads{}[1] + Wi - 1 - ConvDilations{}[1] * (Xtilda - 1),
-                                  ConvStrides{}[1]) +
-        1;
-#endif
+        math::integer_divide_ceil(InLeftPads{}[1] + Wi - 1, ConvStrides{}[1]) + 1;
+
     constexpr index_t HtildaTrim = HtildaRight - HtildaLeft;
     constexpr index_t WtildaTrim = WtildaRight - WtildaLeft;
 

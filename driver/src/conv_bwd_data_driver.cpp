@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
-    using ConvStrides   = Sequence<2, 2>;
+    using ConvStrides   = Sequence<3, 3>;
     using ConvDilations = Sequence<2, 2>;
 
     using LeftPads  = Sequence<0, 0>;
@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 3>;
     using RightPads = Sequence<0, 3>;
-#elif 1
+#elif 0
     // 7x1 filter, 3x0 pad, 17x17 input
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;
