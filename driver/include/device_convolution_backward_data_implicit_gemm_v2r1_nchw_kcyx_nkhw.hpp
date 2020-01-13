@@ -158,9 +158,9 @@ void device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t Xdot = math::integer_divide_ceil(X, Xtilda);
 
     constexpr index_t Htilda =
-        Ho + math::integer_divide_ceil(ConvDilationH * (Y - (Y % Ytilda)), ConvStrideH);
+        Ho + math::integer_divide_ceil(ConvDilationH * (Y - (Y % Ytilda) - 1), ConvStrideH);
     constexpr index_t Wtilda =
-        Wo + math::integer_divide_ceil(ConvDilationW * (X - (X % Xtilda)), ConvStrideW);
+        Wo + math::integer_divide_ceil(ConvDilationW * (X - (X % Xtilda) - 1), ConvStrideW);
 
     constexpr index_t HtildaLeft = math::integer_divide_floor(
         math::max(0, InLeftPads{}[0] - ConvDilationH * (Ytilda - 1)), ConvStrides{}[0]);

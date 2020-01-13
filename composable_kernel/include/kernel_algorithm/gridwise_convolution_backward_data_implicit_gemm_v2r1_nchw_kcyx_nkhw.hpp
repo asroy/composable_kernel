@@ -91,9 +91,9 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
         constexpr index_t Xdot = math::integer_divide_ceil(X, Xtilda);
 
         constexpr index_t Htilda =
-            Ho + math::integer_divide_ceil(ConvDilationH * (Y - (Y % Ytilda)), ConvStrideH);
+            Ho + math::integer_divide_ceil(ConvDilationH * (Y - (Y % Ytilda) - 1), ConvStrideH);
         constexpr index_t Wtilda =
-            Wo + math::integer_divide_ceil(ConvDilationW * (X - (X % Xtilda)), ConvStrideW);
+            Wo + math::integer_divide_ceil(ConvDilationW * (X - (X % Xtilda) - 1), ConvStrideW);
 
         // weight tensor
         constexpr auto wei_k_c_ydot_ytilda_xdot_xtilda_global_desc = transform_tensor_descriptor(
@@ -166,7 +166,7 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
 
 #if 1 // debug
         constexpr bool in_skip_all_out_of_bound_check = false;
-#else // doesn't produce correct result for stride=2 dilation=1
+#else
         constexpr bool in_skip_all_out_of_bound_check = true;
 #endif
 
