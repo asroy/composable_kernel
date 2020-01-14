@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<3, 0>;
     using RightPads = Sequence<3, 0>;
-#elif 1
+#elif 0
     // 3x3 filter, 2x2 stride, 35x35 input, 17x17 output
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;
@@ -249,7 +249,7 @@ int main(int argc, char* argv[])
     device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw
 #elif 0
     device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw
-#elif 1
+#elif 0
     device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw
 #else
     device_convolution_backward_data_implicit_gemm_v3r1_nchw_kcyx_nkhw
