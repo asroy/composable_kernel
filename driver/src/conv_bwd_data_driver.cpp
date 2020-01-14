@@ -25,10 +25,10 @@ int main(int argc, char* argv[])
 #if 1
     // 3x3 filter, 2x2 stride, 35x35 input
     constexpr index_t N  = 128;
-    constexpr index_t C  = 128;
+    constexpr index_t C  = 1024;
     constexpr index_t HI = 35;
     constexpr index_t WI = 35;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 1024;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<2, 2>;
     using RightPads = Sequence<2, 2>;
-#elif 0
+#elif 1
     // 1x7 filter, 0x3 pad, 17x17 input
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;

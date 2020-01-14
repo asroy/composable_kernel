@@ -50,7 +50,7 @@ template <index_t GridSize,
           index_t CThreadCopyDstDataPerWrite>
 struct GridwiseGemmTransposedANormalBNormalC_v1
 {
-    __host__ __device__ static constexpr index_t GetSharedMemorySize()
+    __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
         constexpr index_t max_lds_align = math::lcm(ABlockCopyDstDataPerWrite_M,
                                                     BBlockCopyDstDataPerWrite_N,
@@ -80,7 +80,7 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
     __device__ void Run(const Float* __restrict__ p_a_global,
                         const Float* __restrict__ p_b_global,
                         Float* __restrict__ p_c_global,
-                        void* __restrict__ p_shared) const
+                        Float* __restrict__ p_shared_block) const
     {
         constexpr auto True = integral_constant<bool, true>{};
 
@@ -91,6 +91,12 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
         constexpr auto K = a_k_m_global_desc.GetLengths()[0];
         constexpr auto M = a_k_m_global_desc.GetLengths()[1];
         constexpr auto N = b_k_n_global_desc.GetLengths()[1];
+
+        // don't do anything if K == 0
+        if(K == 0)
+        {
+            return;
+        }
 
         // lds max alignment
         constexpr index_t max_lds_align = math::lcm(ABlockCopyDstDataPerWrite_M,
@@ -212,8 +218,8 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
         constexpr index_t b_block_space =
             math::integer_least_multiple(b_k_n_block_desc.GetElementSpace(), max_lds_align);
 
-        Float* p_a_block_double = reinterpret_cast<Float*>(p_shared);
-        Float* p_b_block_double = p_a_block_double + 2 * a_block_space;
+        Float* p_a_block_double = p_shared_block;
+        Float* p_b_block_double = p_shared_block + 2 * a_block_space;
 
         // register allocation for output
         AccFloat p_c_thread[c_m0m1_n0n1_thread_mtx_desc.GetElementSpace()];
@@ -362,11 +368,11 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
                         const Float* __restrict__ p_b_global,
                         Float* __restrict__ p_c_global) const
     {
-        constexpr index_t shared_mem_size = GetSharedMemorySize();
+        constexpr index_t shared_block_size = GetSharedMemoryNumberOfByte() / sizeof(Float);
 
-        __shared__ Float p_shared_float[shared_mem_size / sizeof(Float)];
+        __shared__ Float p_shared_block[shared_block_size];
 
-        Run(p_a_global, p_b_global, p_c_global, p_shared_float);
+        Run(p_a_global, p_b_global, p_c_global, p_shared_block);
     }
 };
 
