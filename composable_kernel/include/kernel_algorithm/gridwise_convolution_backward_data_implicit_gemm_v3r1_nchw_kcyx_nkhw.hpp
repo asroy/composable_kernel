@@ -137,6 +137,8 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v3r1_nchw_kcyx_nkhw
         constexpr index_t HtildaTrim = HtildaRight - HtildaLeft;
         constexpr index_t WtildaTrim = WtildaRight - WtildaLeft;
 
+        constexpr bool wei_skip_all_out_of_bound_check = true;
+
         // weight tensor
         constexpr auto wei_k_c_ydot_ytilda_xdot_xtilda_global_desc = transform_tensor_descriptor(
             wei_k_c_y_x_global_desc,
@@ -145,13 +147,19 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v3r1_nchw_kcyx_nkhw
                        Embed<Y,
                              Sequence<Ydot, Ytilda>,
                              Sequence<ConvStrideH / hcf_stride_dilation_h, 1, 0>,
-                             true>{},
+                             wei_skip_all_out_of_bound_check>{},
                        Embed<X,
                              Sequence<Xdot, Xtilda>,
                              Sequence<ConvStrideW / hcf_stride_dilation_w, 1, 0>,
-                             true>{}),
+                             wei_skip_all_out_of_bound_check>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
+
+#if 1 // debug
+        constexpr bool out_skip_all_out_of_bound_check = false;
+#else
+        constexpr bool out_skip_all_out_of_bound_check = true;
+#endif
 
         // output tensor
         constexpr auto out_n_k_ydot_htilda_xdot_wtilda_global_desc = transform_tensor_descriptor(
@@ -161,11 +169,11 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v3r1_nchw_kcyx_nkhw
                        Embed<Ho,
                              Sequence<Ydot, Htilda>,
                              Sequence<-ConvDilationH / hcf_stride_dilation_h, 1, 0>,
-                             false>{},
+                             out_skip_all_out_of_bound_check>{},
                        Embed<Wo,
                              Sequence<Xdot, Wtilda>,
                              Sequence<-ConvDilationW / hcf_stride_dilation_w, 1, 0>,
-                             false>{}),
+                             out_skip_all_out_of_bound_check>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 
