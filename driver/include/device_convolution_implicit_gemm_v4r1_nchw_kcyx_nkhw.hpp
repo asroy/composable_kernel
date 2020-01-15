@@ -258,7 +258,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
-        float time = launch_kernel(run_gridwise_operation<decltype(gridwise_conv),
+        float time =
+            launch_and_time_kernel(run_gridwise_operation<decltype(gridwise_conv),
                                                           const T* const __restrict__,
                                                           const T* const __restrict__,
                                                           T* const __restrict__>,

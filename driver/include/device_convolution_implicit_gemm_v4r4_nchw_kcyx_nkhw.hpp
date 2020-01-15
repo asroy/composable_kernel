@@ -225,9 +225,11 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
-        float time = launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
+        float time =
+            launch_and_time_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
                                    dim3(GridSize),
                                    dim3(BlockSize),
+                                   0,
                                    0,
                                    static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
                                    static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),

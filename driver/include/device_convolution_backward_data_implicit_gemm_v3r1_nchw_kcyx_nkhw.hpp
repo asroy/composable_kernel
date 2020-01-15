@@ -85,6 +85,36 @@ void device_convolution_backward_data_implicit_gemm_v3r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 1
+    // BlockSize = 256, each thread hold 64 data
+    constexpr index_t BlockSize = 256;
+
+    constexpr index_t GemmMPerBlock              = 128;
+    constexpr index_t GemmNPerBlock              = 128;
+    constexpr index_t GemmKPerBlock              = 4;
+    constexpr index_t GemmMPerThreadSubC         = 4;
+    constexpr index_t GemmNPerThreadSubC         = 4;
+    constexpr index_t GemmMLevel0Cluster         = 4;
+    constexpr index_t GemmNLevel0Cluster         = 4;
+    constexpr index_t GemmMLevel1Cluster         = 4;
+    constexpr index_t GemmNLevel1Cluster         = 4;
+    constexpr index_t GemmKPerThreadLoop         = 1;
+    constexpr index_t GemmThreadGemmDataPerReadM = 4;
+    constexpr index_t GemmThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<2, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 128>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmM  = 1;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<2, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<2, 128>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
 #endif
 
     constexpr index_t hcf_stride_dilation_h = math::hcf(ConvStrideH, ConvDilationH);
@@ -156,7 +186,8 @@ void device_convolution_backward_data_implicit_gemm_v3r1_nchw_kcyx_nkhw(InDesc i
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
-        float time = launch_kernel(run_gridwise_operation<decltype(gridwise_conv),
+        float time =
+            launch_and_time_kernel(run_gridwise_operation<decltype(gridwise_conv),
                                                           T* const __restrict__,
                                                           const T* const __restrict__,
                                                           const T* const __restrict__>,

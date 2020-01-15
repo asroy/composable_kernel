@@ -121,12 +121,14 @@ void device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw(InDesc i
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
-        float time = launch_kernel(run_gridwise_operation<decltype(gridwise_conv),
+        float time =
+            launch_and_time_kernel(run_gridwise_operation<decltype(gridwise_conv),
                                                           T* const __restrict__,
                                                           const T* const __restrict__,
                                                           const T* const __restrict__>,
                                    dim3(GridSize),
                                    dim3(BlockSize),
+                                   0,
                                    0,
                                    gridwise_conv,
                                    const_cast<T* const __restrict__>(
