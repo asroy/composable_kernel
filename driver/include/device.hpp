@@ -76,7 +76,10 @@ void launch_kernel(F kernel,
                    cudaStream_t stream_id,
                    Args... args)
 {
-    cudaLaunchKernel(f, grid_dim, block_dim, p_args, lds_byte, stream_id);
+    const void* f  = reinterpret_cast<const void*>(kernel);
+    void* p_args[] = {&args...};
+
+    cudaError_t error = cudaLaunchKernel(f, grid_dim, block_dim, p_args, lds_byte, stream_id);
 }
 
 template <typename... Args, typename F>

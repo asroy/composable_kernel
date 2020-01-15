@@ -5,6 +5,10 @@
 #include "gridwise_operation_wrapper.hpp"
 #include "gridwise_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
 
+namespace launcher {
+
+using namespace ck;
+
 template <typename T,
           typename InDesc,
           typename WeiDesc,
@@ -25,8 +29,6 @@ void device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc i
                                                                         InRightPads,
                                                                         std::size_t nrepeat)
 {
-    using namespace ck;
-
     constexpr index_t N = out_nkhw_desc.GetLengths()[0];
     constexpr index_t K = out_nkhw_desc.GetLengths()[1];
     constexpr index_t C = wei_kcyx_desc.GetLengths()[1];
@@ -207,12 +209,9 @@ void device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc i
                                        0,
                                        0,
                                        gridwise_conv,
-                                       const_cast<T* const __restrict__>(
-                                           static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer())),
-                                       const_cast<const T* const __restrict__>(
-                                           static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer())),
-                                       const_cast<const T* const __restrict__>(
-                                           static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer())));
+                                       static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
+                                       static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                                       static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
             });
         });
 
@@ -229,3 +228,5 @@ void device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc i
 
     in_nchw_device_buf.FromDevice(in_nchw.mData.data());
 }
+
+} // namespace launcher
