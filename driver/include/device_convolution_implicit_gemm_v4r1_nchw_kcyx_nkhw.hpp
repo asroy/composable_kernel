@@ -266,6 +266,7 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
                                    dim3(GridSize),
                                    dim3(BlockSize),
                                    0,
+                                   0,
                                    gridwise_conv,
                                    const_cast<const T* const __restrict__>(
                                        static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer())),
