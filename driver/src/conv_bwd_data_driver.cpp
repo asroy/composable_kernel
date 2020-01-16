@@ -23,10 +23,10 @@ int main(int argc, char* argv[])
 {
     using namespace launcher;
 
-#if 1
+#if 0
     // 3x3 filter, 2x2 stride, 35x35 input
     constexpr index_t N  = 128;
-    constexpr index_t C  = 128;
+    constexpr index_t C  = 1024;
     constexpr index_t HI = 35;
     constexpr index_t WI = 35;
     constexpr index_t K  = 1024;
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
     constexpr index_t C  = 1024;
     constexpr index_t HI = 28;
     constexpr index_t WI = 28;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 1024;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -83,13 +83,13 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
+#elif 1
     // 1x1 filter, 7x7 image
     constexpr index_t N  = 128;
     constexpr index_t C  = 1024;
     constexpr index_t HI = 7;
     constexpr index_t WI = 7;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 1024;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
 
@@ -158,13 +158,13 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<2, 2>;
     using RightPads = Sequence<2, 2>;
-#elif 1
+#elif 0
     // 1x7 filter, 0x3 pad, 17x17 input
     constexpr index_t N  = 128;
-    constexpr index_t C  = 128;
+    constexpr index_t C  = 1024;
     constexpr index_t HI = 17;
     constexpr index_t WI = 17;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 1024;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 7;
 
@@ -246,7 +246,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 1
+#if 0
     device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw
 #elif 1
     device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw
@@ -257,17 +257,17 @@ int main(int argc, char* argv[])
 #else
     device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw
 #endif
-        (in_nchw_desc,
-         in_nchw_device,
-         wei_kcyx_desc,
-         wei_kcyx,
-         out_nkhw_desc,
-         out_nkhw,
-         ConvStrides{},
-         ConvDilations{},
-         LeftPads{},
-         RightPads{},
-         nrepeat);
+    (in_nchw_desc,
+     in_nchw_device,
+     wei_kcyx_desc,
+     wei_kcyx,
+     out_nkhw_desc,
+     out_nkhw,
+     ConvStrides{},
+     ConvDilations{},
+     LeftPads{},
+     RightPads{},
+     nrepeat);
 
     if(do_verification)
     {

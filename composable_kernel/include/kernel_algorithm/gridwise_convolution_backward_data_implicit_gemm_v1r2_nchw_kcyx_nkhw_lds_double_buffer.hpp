@@ -352,8 +352,16 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v1r2_nchw_kcyx_nkhw_lds_doubl
             }
         }
 
-        // input: register to global memory, atomic add
         {
+#if 1       // debug
+            // input: register to global memory, atomic add
+            constexpr auto in_memory_op = (Y <= ConvStrideH && X <= ConvStrideW)
+                                              ? InMemoryDataOperation::none
+                                              : InMemoryDataOperation::atomic_add;
+#else
+            constexpr auto in_memory_op = InMemoryDataOperation::atomic_add;
+#endif
+
             constexpr index_t E1 = GemmMLevel0Cluster * GemmMLevel1Cluster;
             constexpr index_t E0 = E / E1;
 
@@ -426,13 +434,13 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v1r2_nchw_kcyx_nkhw_lds_doubl
                 InThreadCopyDstDataPerWrite_B,
                 AddressSpace::vgpr,
                 AddressSpace::global,
-                InMemoryDataOperation::atomic_add>({0, 0, 0, 0, 0, 0},
-                                                   {e_thread_data_on_global / E1,
-                                                    e_thread_data_on_global % E1,
-                                                    0,
-                                                    b_thread_data_on_global / B1,
-                                                    b_thread_data_on_global % B1,
-                                                    0})
+                in_memory_op>({0, 0, 0, 0, 0, 0},
+                              {e_thread_data_on_global / E1,
+                               e_thread_data_on_global % E1,
+                               0,
+                               b_thread_data_on_global / B1,
+                               b_thread_data_on_global % B1,
+                               0})
                 .Run(p_in_thread, p_in_global);
         }
     }
