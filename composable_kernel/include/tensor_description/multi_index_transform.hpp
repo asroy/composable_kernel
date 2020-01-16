@@ -110,19 +110,31 @@ struct Pad
 };
 
 // LowerLengths: Sequence<...>
-template <typename LowerLengths, typename LeftTrims, typename RightTrims>
-struct Trim
+// SliceBegins: Sequence<...>
+// SliceEnds: Sequence<...>
+template <typename LowerLengths, typename SliceBegins, typename SliceEnds>
+struct Slice
 {
     static constexpr index_t nDim = LowerLengths::Size();
 
     using LowerIndex = MultiIndex<nDim>;
     using UpperIndex = MultiIndex<nDim>;
 
-    __host__ __device__ explicit constexpr Trim()
+    __host__ __device__ explicit constexpr Slice()
     {
-        static_assert(LowerLengths::GetSize() == nDim && LeftTrims::GetSize() == nDim &&
-                          RightTrims::GetSize() == nDim,
+        static_assert(LowerLengths::GetSize() == nDim && SliceBegins::GetSize() == nDim &&
+                          SliceEnds::GetSize() == nDim,
                       "wrong! # of dimensions not consistent");
+
+#if 0 
+        // TODO: would not compile, error on constexpr
+        static_for<0, nDim, 1>{}([&](auto idim) {
+            static_assert(SliceBegins::At(idim) <= SliceEnds::At(idim) &&
+                              SliceBegins::At(idim) >= 0 &&
+                              SliceEnds::At(idim) <= LowerLengths::At(idim),
+                          "wrong! Slice config is wrong");
+        });
+#endif
     }
 
     __host__ __device__ static constexpr auto GetNumOfLowerDimension() { return Number<nDim>{}; }
@@ -131,12 +143,12 @@ struct Trim
 
     __host__ __device__ static constexpr auto GetUpperLengths()
     {
-        return LowerLengths{} - LeftTrims{} - RightTrims{};
+        return SliceEnds{} - SliceBegins{};
     }
 
     __host__ __device__ static constexpr auto CalculateLowerIndex(const UpperIndex& idx_up)
     {
-        return idx_up + LeftTrims{};
+        return idx_up + SliceBegins{};
     }
 
     __host__ __device__ static constexpr auto

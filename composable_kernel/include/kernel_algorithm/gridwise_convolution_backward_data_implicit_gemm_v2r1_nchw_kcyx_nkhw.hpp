@@ -9,7 +9,7 @@
 namespace ck {
 
 // GemmM = C * Ytilda * Xtilda;
-// GemmN = N * Htilda * Wtilda;
+// GemmN = N * HtildaNonZero * WtildaNonZero;
 // GemmK = K * Ydot * Xdot;
 template <index_t GridSize,
           index_t BlockSize,
@@ -149,9 +149,9 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
                            PassThrough<K>{},
                            PassThrough<Ytilda>{},
                            PassThrough<Xtilda>{},
-                           Trim<Sequence<Htilda, Wtilda>,
-                                Sequence<HtildaLeft, WtildaLeft>,
-                                Sequence<Htilda - HtildaRight, Wtilda - WtildaRight>>{}),
+                           Slice<Sequence<Htilda, Wtilda>,
+                                 Sequence<HtildaLeft, WtildaLeft>,
+                                 Sequence<HtildaRight, WtildaRight>>{}),
                 make_tuple(
                     Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<4>{}, Sequence<3, 5>{}),
                 make_tuple(
@@ -205,9 +205,9 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v2r1_nchw_kcyx_nkhw
                            PassThrough<C>{},
                            PassThrough<Ytilda>{},
                            PassThrough<Xtilda>{},
-                           Trim<Sequence<Htilda, Wtilda>,
-                                Sequence<HtildaLeft, WtildaLeft>,
-                                Sequence<Htilda - HtildaRight, Wtilda - WtildaRight>>{}),
+                           Slice<Sequence<Htilda, Wtilda>,
+                                 Sequence<HtildaLeft, WtildaLeft>,
+                                 Sequence<HtildaRight, WtildaRight>>{}),
                 make_tuple(
                     Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<4>{}, Sequence<3, 5>{}),
                 make_tuple(

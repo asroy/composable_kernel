@@ -9,9 +9,9 @@
 namespace ck {
 
 // Ytilda*Xtilda number of GEMMs
-// GemmM = C
-// GemmN = N * Htilda * Wtilda;
-// GemmK = K * slice(Ydot) * slice(Xdot);
+// GemmM = C;
+// GemmN = N * HtildaNonZero * WtildaNonZero;
+// GemmK = K * YdotNonZero * XdotNonZero;
 template <index_t GridSize,
           index_t BlockSize,
           typename Float,
@@ -184,9 +184,9 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v3r1_nchw_kcyx_nkhw
                            PassThrough<K>{},
                            PassThrough<Ytilda>{},
                            PassThrough<Xtilda>{},
-                           Trim<Sequence<Htilda, Wtilda>,
-                                Sequence<HtildaLeft, WtildaLeft>,
-                                Sequence<Htilda - HtildaRight, Wtilda - WtildaRight>>{}),
+                           Slice<Sequence<Htilda, Wtilda>,
+                                 Sequence<HtildaLeft, WtildaLeft>,
+                                 Sequence<HtildaRight, WtildaRight>>{}),
                 make_tuple(
                     Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<4>{}, Sequence<3, 5>{}),
                 make_tuple(
@@ -233,9 +233,9 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v3r1_nchw_kcyx_nkhw
                            PassThrough<C>{},
                            PassThrough<Ytilda>{},
                            PassThrough<Xtilda>{},
-                           Trim<Sequence<Htilda, Wtilda>,
-                                Sequence<HtildaLeft, WtildaLeft>,
-                                Sequence<Htilda - HtildaRight, Wtilda - WtildaRight>>{}),
+                           Slice<Sequence<Htilda, Wtilda>,
+                                 Sequence<HtildaLeft, WtildaLeft>,
+                                 Sequence<HtildaRight, WtildaRight>>{}),
                 make_tuple(
                     Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<4>{}, Sequence<3, 5>{}),
                 make_tuple(
@@ -265,12 +265,12 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v3r1_nchw_kcyx_nkhw
                         wei_k_c_ydot_ytilda_xdot_xtilda_global_desc,
                         make_tuple(PassThrough<K>{},
                                    PassThrough<C>{},
-                                   Trim<Sequence<Ydot, Xdot>,
-                                        Sequence<0, 0>,
-                                        Sequence<Ydot - YdotNonZero, Xdot - XdotNonZero>>{},
-                                   Trim<Sequence<Ytilda, Xtilda>,
-                                        Sequence<ytilda, xtilda>,
-                                        Sequence<Ytilda - ytilda - 1, Xtilda - xtilda - 1>>{}),
+                                   Slice<Sequence<Ydot, Xdot>,
+                                         Sequence<0, 0>,
+                                         Sequence<YdotNonZero, XdotNonZero>>{},
+                                   Slice<Sequence<Ytilda, Xtilda>,
+                                         Sequence<ytilda, xtilda>,
+                                         Sequence<ytilda + 1, xtilda + 1>>{}),
                         make_tuple(
                             Sequence<0>{}, Sequence<1>{}, Sequence<2, 4>{}, Sequence<3, 5>{}),
                         make_tuple(
@@ -291,9 +291,9 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v3r1_nchw_kcyx_nkhw
                                    PassThrough<K>{},
                                    PassThrough<HtildaTrim>{},
                                    PassThrough<WtildaTrim>{},
-                                   Trim<Sequence<Ydot, Xdot>,
-                                        Sequence<0, 0>,
-                                        Sequence<Ydot - YdotNonZero, Xdot - XdotNonZero>>{}),
+                                   Slice<Sequence<Ydot, Xdot>,
+                                         Sequence<0, 0>,
+                                         Sequence<YdotNonZero, XdotNonZero>>{}),
                         make_tuple(Sequence<0>{},
                                    Sequence<1>{},
                                    Sequence<3>{},
@@ -320,9 +320,9 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v3r1_nchw_kcyx_nkhw
                                    PassThrough<C>{},
                                    PassThrough<HtildaTrim>{},
                                    PassThrough<WtildaTrim>{},
-                                   Trim<Sequence<Ytilda, Xtilda>,
-                                        Sequence<ytilda, xtilda>,
-                                        Sequence<Ytilda - ytilda - 1, Xtilda - xtilda - 1>>{}),
+                                   Slice<Sequence<Ytilda, Xtilda>,
+                                         Sequence<ytilda, xtilda>,
+                                         Sequence<ytilda + 1, xtilda + 1>>{}),
                         make_tuple(Sequence<0>{},
                                    Sequence<1>{},
                                    Sequence<3>{},
