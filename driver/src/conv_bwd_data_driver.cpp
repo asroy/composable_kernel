@@ -23,13 +23,13 @@ int main(int argc, char* argv[])
 {
     using namespace launcher;
 
-#if 0
+#if 1
     // 3x3 filter, 2x2 stride, 35x35 input
     constexpr index_t N  = 128;
-    constexpr index_t C  = 1024;
+    constexpr index_t C  = 128;
     constexpr index_t HI = 35;
     constexpr index_t WI = 35;
-    constexpr index_t K  = 1024;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -246,7 +246,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 1
+#if 0
     device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw
 #elif 0
     device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw
