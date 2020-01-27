@@ -63,9 +63,9 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v4r1_nchw_kcyx_nkhw
     }
 
     template <index_t iYTilda, index_t iXTilda>
-    __device__ void RunImpl(Float* __restrict__ p_in_global,
-                            const Float* __restrict__ p_wei_global,
-                            const Float* __restrict__ p_out_global) const
+    __device__ static void RunImpl(Float* __restrict__ p_in_global,
+                                   const Float* __restrict__ p_wei_global,
+                                   const Float* __restrict__ p_out_global)
     {
         constexpr auto in_n_c_hi_wi_global_desc  = InGlobalDesc{};
         constexpr auto wei_k_c_y_x_global_desc   = WeiGlobalDesc{};
@@ -345,9 +345,9 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v4r1_nchw_kcyx_nkhw
     }
 
     template <index_t GemmId>
-    __device__ void Run(Float* __restrict__ p_in_global,
-                        const Float* __restrict__ p_wei_global,
-                        const Float* __restrict__ p_out_global) const
+    __device__ static void Run(Float* __restrict__ p_in_global,
+                               const Float* __restrict__ p_wei_global,
+                               const Float* __restrict__ p_out_global)
     {
         constexpr index_t ConvStrideH = ConvStrides{}[0];
         constexpr index_t ConvStrideW = ConvStrides{}[1];
