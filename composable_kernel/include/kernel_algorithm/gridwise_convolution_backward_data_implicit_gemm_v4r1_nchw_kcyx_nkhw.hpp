@@ -63,6 +63,87 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v4r1_nchw_kcyx_nkhw
         return YTilda * XTilda;
     }
 
+    __host__ __device__ static constexpr auto GetGemmSizeImpl(index_t iYTilda, index_t iXTilda)
+    {
+        constexpr index_t N  = InGlobalDesc::GetLengths()[0];
+        constexpr index_t C  = InGlobalDesc::GetLengths()[1];
+        constexpr index_t Hi = InGlobalDesc::GetLengths()[2];
+        constexpr index_t Wi = InGlobalDesc::GetLengths()[3];
+
+        constexpr index_t K  = OutGlobalDesc::GetLengths()[1];
+        constexpr index_t Ho = OutGlobalDesc::GetLengths()[2];
+        constexpr index_t Wo = OutGlobalDesc::GetLengths()[3];
+
+        constexpr index_t Y = WeiGlobalDesc::GetLengths()[2];
+        constexpr index_t X = WeiGlobalDesc::GetLengths()[3];
+
+        constexpr index_t ConvStrideH = ConvStrides{}[0];
+        constexpr index_t ConvStrideW = ConvStrides{}[1];
+
+        constexpr index_t ConvDilationH = ConvDilations{}[0];
+        constexpr index_t ConvDilationW = ConvDilations{}[1];
+
+        constexpr index_t GcdStrideDilationH = math::gcd(ConvStrideH, ConvDilationH);
+        constexpr index_t GcdStrideDilationW = math::gcd(ConvStrideW, ConvDilationW);
+
+        constexpr index_t YTilda = ConvStrideH / GcdStrideDilationH;
+        constexpr index_t XTilda = ConvStrideW / GcdStrideDilationW;
+
+        constexpr index_t YDot = math::integer_divide_ceil(Y, YTilda);
+        constexpr index_t XDot = math::integer_divide_ceil(X, XTilda);
+
+        constexpr index_t HTilda =
+            Ho + math::integer_divide_ceil(ConvDilationH * (Y - 1), ConvStrideH);
+        constexpr index_t WTilda =
+            Wo + math::integer_divide_ceil(ConvDilationW * (X - 1), ConvStrideW);
+
+        // only work on HTilda and WTilda that contribute to non-padding area of input tensor
+        constexpr index_t iHTildaLeft = math::integer_divide_floor(
+            math::max(0, InLeftPads{}[0] - ConvDilationH * (YTilda - 1)), ConvStrides{}[0]);
+        constexpr index_t iWTildaLeft = math::integer_divide_floor(
+            math::max(0, InLeftPads{}[1] - ConvDilationW * (XTilda - 1)), ConvStrides{}[1]);
+
+        constexpr index_t iHTildaRight = math::min(
+            HTilda, math::integer_divide_ceil(InLeftPads{}[0] + Hi - 1, ConvStrides{}[0]) + 1);
+        constexpr index_t iWTildaRight = math::min(
+            WTilda, math::integer_divide_ceil(InLeftPads{}[1] + Wi - 1, ConvStrides{}[1]) + 1);
+
+        constexpr index_t HTildaSlice = iHTildaRight - iHTildaLeft;
+        constexpr index_t WTildaSlice = iWTildaRight - iWTildaLeft;
+
+        // GemmM and GemmN
+        constexpr index_t GemmM = C;
+        constexpr index_t GemmN = N * HTildaSlice * WTildaSlice;
+
+        // GemmK is different for each GEMM
+        index_t YDotSlice = (iYTilda + 1) * YDot <= Y ? YDot : Y % YDot;
+        index_t XDotSlice = (iXTilda + 1) * XDot <= X ? XDot : X % XDot;
+
+        index_t GemmK = K * YDotSlice * XDotSlice;
+
+        return Array<index_t, 3>{GemmM, GemmN, GemmK};
+    }
+
+    __host__ __device__ static constexpr auto GetGemmSize(index_t gemm_id)
+    {
+        constexpr index_t ConvStrideH = ConvStrides{}[0];
+        constexpr index_t ConvStrideW = ConvStrides{}[1];
+
+        constexpr index_t ConvDilationH = ConvDilations{}[0];
+        constexpr index_t ConvDilationW = ConvDilations{}[1];
+
+        constexpr index_t GcdStrideDilationH = math::gcd(ConvStrideH, ConvDilationH);
+        constexpr index_t GcdStrideDilationW = math::gcd(ConvStrideW, ConvDilationW);
+
+        constexpr index_t YTilda = ConvStrideH / GcdStrideDilationH;
+        constexpr index_t XTilda = ConvStrideW / GcdStrideDilationW;
+
+        index_t iYTilda = gemm_id / XTilda;
+        index_t iXTilda = gemm_id % XTilda;
+
+        return GetGemmSizeImpl(iYTilda, iXTilda);
+    }
+
     template <index_t iYTilda, index_t iXTilda>
     __device__ static void RunImpl(Float* __restrict__ p_in_global,
                                    const Float* __restrict__ p_wei_global,
@@ -115,18 +196,18 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v4r1_nchw_kcyx_nkhw
             Wo + math::integer_divide_ceil(ConvDilationW * (X - 1), ConvStrideW);
 
         // only work on HTilda and WTilda that contribute to non-padding area of input tensor
-        constexpr index_t HTildaLeft = math::integer_divide_floor(
+        constexpr index_t iHTildaLeft = math::integer_divide_floor(
             math::max(0, InLeftPads{}[0] - ConvDilationH * (YTilda - 1)), ConvStrides{}[0]);
-        constexpr index_t WTildaLeft = math::integer_divide_floor(
+        constexpr index_t iWTildaLeft = math::integer_divide_floor(
             math::max(0, InLeftPads{}[1] - ConvDilationW * (XTilda - 1)), ConvStrides{}[1]);
 
-        constexpr index_t HTildaRight = math::min(
+        constexpr index_t iHTildaRight = math::min(
             HTilda, math::integer_divide_ceil(InLeftPads{}[0] + Hi - 1, ConvStrides{}[0]) + 1);
-        constexpr index_t WTildaRight = math::min(
+        constexpr index_t iWTildaRight = math::min(
             WTilda, math::integer_divide_ceil(InLeftPads{}[1] + Wi - 1, ConvStrides{}[1]) + 1);
 
-        constexpr index_t HTildaSlice = HTildaRight - HTildaLeft;
-        constexpr index_t WTildaSlice = WTildaRight - WTildaLeft;
+        constexpr index_t HTildaSlice = iHTildaRight - iHTildaLeft;
+        constexpr index_t WTildaSlice = iWTildaRight - iWTildaLeft;
 
         constexpr bool wei_skip_all_out_of_bound_check = true;
 
@@ -176,8 +257,8 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v4r1_nchw_kcyx_nkhw
                            PassThrough<YTilda>{},
                            PassThrough<XTilda>{},
                            Slice<Sequence<HTilda, WTilda>,
-                                 Sequence<HTildaLeft, WTildaLeft>,
-                                 Sequence<HTildaRight, WTildaRight>>{}),
+                                 Sequence<iHTildaLeft, iWTildaLeft>,
+                                 Sequence<iHTildaRight, iWTildaRight>>{}),
                 make_tuple(
                     Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<4>{}, Sequence<3, 5>{}),
                 make_tuple(
@@ -225,8 +306,8 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v4r1_nchw_kcyx_nkhw
                            PassThrough<YTilda>{},
                            PassThrough<XTilda>{},
                            Slice<Sequence<HTilda, WTilda>,
-                                 Sequence<HTildaLeft, WTildaLeft>,
-                                 Sequence<HTildaRight, WTildaRight>>{}),
+                                 Sequence<iHTildaLeft, iWTildaLeft>,
+                                 Sequence<iHTildaRight, iWTildaRight>>{}),
                 make_tuple(
                     Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<4>{}, Sequence<3, 5>{}),
                 make_tuple(

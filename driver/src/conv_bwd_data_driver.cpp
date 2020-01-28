@@ -23,15 +23,14 @@ int main(int argc, char* argv[])
 {
     using namespace launcher;
 
-#if 1
-    // 3x3 filter, 2x2 stride, 35x35 input
-    constexpr index_t N  = 128;
-    constexpr index_t C  = 128;
-    constexpr index_t HI = 35;
-    constexpr index_t WI = 35;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
+#if 0
+    constexpr index_t N  = 64;
+    constexpr index_t C  = 256;
+    constexpr index_t HI = 56;
+    constexpr index_t WI = 56;
+    constexpr index_t K  = 512;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
 
     using ConvStrides   = Sequence<2, 2>;
     using ConvDilations = Sequence<1, 1>;
@@ -158,7 +157,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<2, 2>;
     using RightPads = Sequence<2, 2>;
-#elif 1
+#elif 0
     // 1x7 filter, 0x3 pad, 17x17 input
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;
@@ -188,7 +187,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<3, 0>;
     using RightPads = Sequence<3, 0>;
-#elif 0
+#elif 1
     // 3x3 filter, 2x2 stride, 35x35 input, 17x17 output
     constexpr index_t N  = 128;
     constexpr index_t C  = 1024;
@@ -257,17 +256,17 @@ int main(int argc, char* argv[])
 #elif 1
     device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw
 #endif
-        (in_nchw_desc,
-         in_nchw_device,
-         wei_kcyx_desc,
-         wei_kcyx,
-         out_nkhw_desc,
-         out_nkhw,
-         ConvStrides{},
-         ConvDilations{},
-         LeftPads{},
-         RightPads{},
-         nrepeat);
+    (in_nchw_desc,
+     in_nchw_device,
+     wei_kcyx_desc,
+     wei_kcyx,
+     out_nkhw_desc,
+     out_nkhw,
+     ConvStrides{},
+     ConvDilations{},
+     LeftPads{},
+     RightPads{},
+     nrepeat);
 
     if(do_verification)
     {

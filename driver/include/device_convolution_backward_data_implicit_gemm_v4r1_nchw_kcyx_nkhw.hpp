@@ -159,7 +159,7 @@ void device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc i
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
-        using GridwiseConv = GridwiseConvolutionBackwardDataImplicitGemm_v4r1_nchw_kcyx_nkhw<
+        using GridwiseConvBwdData = GridwiseConvolutionBackwardDataImplicitGemm_v4r1_nchw_kcyx_nkhw<
             GridSize,
             BlockSize,
             T,
@@ -196,21 +196,29 @@ void device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc i
         KernelTimer timer;
         timer.Start();
 
-        static_for<0, GridwiseConv::GetNumberOfGemm(), 1>{}([&](auto gemm_id_) {
+        static_for<0, GridwiseConvBwdData::GetNumberOfGemm(), 1>{}([&](auto gemm_id_) {
             constexpr index_t gemm_id = decltype(gemm_id_){};
 
-            launch_kernel(run_gridwise_convolution_backward_data_v4r1<GridwiseConv,
-                                                                      gemm_id,
-                                                                      T* const __restrict__,
-                                                                      const T* const __restrict__,
-                                                                      const T* const __restrict__>,
-                          dim3(GridSize),
-                          dim3(BlockSize),
-                          0,
-                          0,
-                          static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-                          static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-                          static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+            constexpr auto gemm_sizes        = GridwiseConvBwdData::GetGemmSize(gemm_id);
+            constexpr index_t gemm_k         = gemm_sizes.At(2);
+            constexpr bool is_gemm_not_empty = gemm_k > 0;
+
+            // only compile and run if GEMM is no empty
+            static_if<is_gemm_not_empty>{}([&](auto fwd) {
+                launch_kernel(
+                    run_gridwise_convolution_backward_data_v4r1<GridwiseConvBwdData,
+                                                                fwd(gemm_id),
+                                                                T* const __restrict__,
+                                                                const T* const __restrict__,
+                                                                const T* const __restrict__>,
+                    dim3(GridSize),
+                    dim3(BlockSize),
+                    0,
+                    0,
+                    static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
+                    static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                    static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+            });
         });
 
         timer.End();
