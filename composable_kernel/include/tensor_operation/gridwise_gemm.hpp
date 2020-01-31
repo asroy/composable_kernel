@@ -139,10 +139,10 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
                                                1,
                                                ABlockCopySrcDataPerRead,
                                                ABlockCopyDstDataPerWrite_M,
-                                               AddressSpace::global,
-                                               AddressSpace::vgpr,
-                                               AddressSpace::lds,
-                                               InMemoryDataOperation::none>(
+                                               AddressSpace::Global,
+                                               AddressSpace::Vgpr,
+                                               AddressSpace::Lds,
+                                               InMemoryDataOperation::Set>(
                 {0, m_block_data_on_global}, {0, 0});
 
         // B matrix in LDS memory, dst of blockwise copy
@@ -165,10 +165,10 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
                                                1,
                                                BBlockCopySrcDataPerRead,
                                                BBlockCopyDstDataPerWrite_N,
-                                               AddressSpace::global,
-                                               AddressSpace::vgpr,
-                                               AddressSpace::lds,
-                                               InMemoryDataOperation::none>(
+                                               AddressSpace::Global,
+                                               AddressSpace::Vgpr,
+                                               AddressSpace::Lds,
+                                               InMemoryDataOperation::Set>(
                 {0, n_block_data_on_global}, {0, 0});
 
         // GEMM definition
@@ -233,6 +233,9 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
             b_blockwise_copy.Run(p_b_global, p_b_block_double);
         }
 
+        constexpr auto a_block_slice_copy_steps = Sequence<KPerBlock, 0>{};
+        constexpr auto b_block_slice_copy_steps = Sequence<KPerBlock, 0>{};
+
         // LDS double buffer: main body
         for(index_t k_block_data_begin = 0; k_block_data_begin + 2 * KPerBlock < K;
             k_block_data_begin += 2 * KPerBlock)
@@ -255,8 +258,8 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
                 Float p_a_thread_buffer[a_blockwise_copy.GetThreadBufferSize()];
                 Float p_b_thread_buffer[b_blockwise_copy.GetThreadBufferSize()];
 
-                a_blockwise_copy.MoveSrcSliceWindow(Sequence<KPerBlock, 0>{}, True);
-                b_blockwise_copy.MoveSrcSliceWindow(Sequence<KPerBlock, 0>{}, True);
+                a_blockwise_copy.MoveSrcSliceWindow(a_block_slice_copy_steps, True);
+                b_blockwise_copy.MoveSrcSliceWindow(b_block_slice_copy_steps, True);
 
                 __syncthreads();
 
@@ -282,8 +285,8 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
                 Float p_a_thread_buffer[a_blockwise_copy.GetThreadBufferSize()];
                 Float p_b_thread_buffer[b_blockwise_copy.GetThreadBufferSize()];
 
-                a_blockwise_copy.MoveSrcSliceWindow(Sequence<KPerBlock, 0>{}, True);
-                b_blockwise_copy.MoveSrcSliceWindow(Sequence<KPerBlock, 0>{}, True);
+                a_blockwise_copy.MoveSrcSliceWindow(a_block_slice_copy_steps, True);
+                b_blockwise_copy.MoveSrcSliceWindow(b_block_slice_copy_steps, True);
 
                 __syncthreads();
 
@@ -352,8 +355,8 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
                                                   CThreadCopySrcDstVectorReadWriteDim,
                                                   1,
                                                   CThreadCopyDstDataPerWrite,
-                                                  AddressSpace::vgpr,
-                                                  AddressSpace::global,
+                                                  AddressSpace::Vgpr,
+                                                  AddressSpace::Global,
                                                   CGlobalMemoryDataOperation>(
                 {0, 0, 0, 0},
                 {m_thread_data_on_global / M1,

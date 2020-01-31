@@ -59,16 +59,16 @@ namespace ck {
 
 enum AddressSpace
 {
-    generic,
-    global,
-    lds,
-    vgpr
+    Generic,
+    Global,
+    Lds,
+    Vgpr
 };
 
 enum InMemoryDataOperation
 {
-    none,
-    atomic_add
+    Set,
+    AtomicAdd
 };
 
 #if CK_UNSIGNED_INDEX_TYPE

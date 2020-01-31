@@ -123,9 +123,13 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v1r1_nchw_kcyx_nkhw
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
         // GEMM
-        constexpr auto in_memory_op = (Y <= ConvStrideH && X <= ConvStrideW)
-                                          ? InMemoryDataOperation::none
-                                          : InMemoryDataOperation::atomic_add;
+        // \todo there are more combinations of Y, ConvDilationH and ConvStrideH that don't need
+        // atomic, find out all of them
+        constexpr bool not_need_atomic = (ConvStrideH >= ConvDilationH * (Y - 1) + 1) and
+                                         (ConvStrideW >= ConvDilationW * (X - 1) + 1);
+
+        constexpr auto in_memory_op =
+            not_need_atomic ? InMemoryDataOperation::Set : InMemoryDataOperation::AtomicAdd;
 
         constexpr auto gridwise_gemm =
             GridwiseGemmTransposedANormalBNormalC_v1<GridSize,

@@ -23,16 +23,16 @@ int main(int argc, char* argv[])
 {
     using namespace launcher;
 
-#if 0
+#if 1
     constexpr index_t N  = 64;
     constexpr index_t C  = 256;
     constexpr index_t HI = 56;
     constexpr index_t WI = 56;
-    constexpr index_t K  = 512;
+    constexpr index_t K  = 256;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
 
-    using ConvStrides   = Sequence<2, 2>;
+    using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;
 
     using LeftPads  = Sequence<0, 0>;
@@ -245,7 +245,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 0
+#if 1
     device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw
 #elif 0
     device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw
@@ -256,17 +256,17 @@ int main(int argc, char* argv[])
 #elif 1
     device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw
 #endif
-    (in_nchw_desc,
-     in_nchw_device,
-     wei_kcyx_desc,
-     wei_kcyx,
-     out_nkhw_desc,
-     out_nkhw,
-     ConvStrides{},
-     ConvDilations{},
-     LeftPads{},
-     RightPads{},
-     nrepeat);
+        (in_nchw_desc,
+         in_nchw_device,
+         wei_kcyx_desc,
+         wei_kcyx,
+         out_nkhw_desc,
+         out_nkhw,
+         ConvStrides{},
+         ConvDilations{},
+         LeftPads{},
+         RightPads{},
+         nrepeat);
 
     if(do_verification)
     {

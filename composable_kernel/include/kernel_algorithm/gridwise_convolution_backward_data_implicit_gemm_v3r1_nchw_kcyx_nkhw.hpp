@@ -344,7 +344,7 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v3r1_nchw_kcyx_nkhw
                     decltype(wei_gemmk_gemmm_global_desc),
                     decltype(out_gemmk_gemmn_global_desc),
                     decltype(in_gemmm_gemmn_global_desc),
-                    InMemoryDataOperation::none,
+                    InMemoryDataOperation::Set,
                     GemmMPerBlock,
                     GemmNPerBlock,
                     GemmKPerBlock,

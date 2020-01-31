@@ -126,16 +126,12 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v4r1_nchw_kcyx_nkhw
 
     __host__ __device__ static constexpr auto GetGemmSize(index_t gemm_id)
     {
-        constexpr index_t ConvStrideH = ConvStrides{}[0];
         constexpr index_t ConvStrideW = ConvStrides{}[1];
 
-        constexpr index_t ConvDilationH = ConvDilations{}[0];
         constexpr index_t ConvDilationW = ConvDilations{}[1];
 
-        constexpr index_t GcdStrideDilationH = math::gcd(ConvStrideH, ConvDilationH);
         constexpr index_t GcdStrideDilationW = math::gcd(ConvStrideW, ConvDilationW);
 
-        constexpr index_t YTilda = ConvStrideH / GcdStrideDilationH;
         constexpr index_t XTilda = ConvStrideW / GcdStrideDilationW;
 
         index_t iYTilda = gemm_id / XTilda;
@@ -389,7 +385,7 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v4r1_nchw_kcyx_nkhw
                                                      decltype(wei_gemmk_gemmm_global_desc),
                                                      decltype(out_gemmk_gemmn_global_desc),
                                                      decltype(in_gemmm_gemmn_global_desc),
-                                                     InMemoryDataOperation::none,
+                                                     InMemoryDataOperation::Set,
                                                      GemmMPerBlock,
                                                      GemmNPerBlock,
                                                      GemmKPerBlock,
