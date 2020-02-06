@@ -19,6 +19,7 @@
 //#include "device_convolution_implicit_gemm_v2_chwn_cyxk_khwn.hpp"
 //#include "device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_deprecated.hpp"
+#include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_generic_nkc.hpp"
 #include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v4r2_nchw_kcyx_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v4r3_nchw_kcyx_nkhw.hpp"
@@ -434,6 +435,18 @@ int main(int argc, char* argv[])
                                                                     ConvStrides{},
                                                                     ConvDilations{},
                                                                     nrepeat);
+#elif 0
+    device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_generic_nkc(in_nchw_desc,
+                                                                     in_nchw,
+                                                                     wei_kcyx_desc,
+                                                                     wei_kcyx,
+                                                                     out_nkhw_desc,
+                                                                     out_nkhw_device,
+                                                                     ConvStrides{},
+                                                                     ConvDilations{},
+                                                                     LeftPads{},
+                                                                     RightPads{},
+                                                                     nrepeat);
 #elif 0
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,

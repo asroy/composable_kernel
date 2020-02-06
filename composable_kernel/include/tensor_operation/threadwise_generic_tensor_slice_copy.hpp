@@ -497,5 +497,436 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     DstCoord mDstSliceOrigin;
 };
 
+template <typename SrcDesc,
+          typename DstDesc,
+          typename SliceLengths,
+          typename SrcDstDimAccessOrder,
+          index_t SrcDstVectorReadWriteDim,
+          index_t SrcDataPerRead,
+          index_t DstDataPerWrite,
+          AddressSpace SrcAddressSpace     = AddressSpace::generic,
+          AddressSpace DstAddressSpace     = AddressSpace::generic,
+          InMemoryDataOperation DstInMemOp = InMemoryDataOperation::none>
+struct ThreadwiseGenericTensorSliceCopy_v4r2_src_runtime_offsets
+{
+    static constexpr index_t nDim = SliceLengths::Size();
+    using Index                   = MultiIndex<nDim>;
+
+    using SrcCoord = typename TensorCoordinate<SrcDesc>::type;
+    using DstCoord = typename TensorCoordinate<DstDesc>::type;
+
+    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v4r2_src_runtime_offsets(const Index& src_slice_origin,
+                                                               const Index& dst_slice_origin,
+                                                               const Index& src_runtime_strides_div,
+                                                               const Index& src_runtime_strides_mul)
+        : mSrcSliceOrigin(src_slice_origin), mDstSliceOrigin(dst_slice_origin),
+        mSrcRuntimeStridesDiv(src_runtime_strides_div), mSrcRuntimeStridesMul(src_runtime_strides_mul),
+        mSrcRuntimeOffsetsPerThread(0)
+    {
+        static_assert(nDim == SrcDesc::GetNumOfDimension() &&
+                          nDim == DstDesc::GetNumOfDimension() && nDim == SliceLengths::Size() &&
+                          nDim == SrcDstDimAccessOrder::Size(),
+                      "wrong! # of dimensions not the same");
+
+        static_assert(is_valid_sequence_map<SrcDstDimAccessOrder>{}, "wrong! map is not valid");
+
+        static_assert(SliceLengths{}[SrcDstVectorReadWriteDim] %
+                              math::lcm(SrcDataPerRead, DstDataPerWrite) ==
+                          0,
+                      "wrong! cannot evenly divide");
+
+        // TODO:: sanity-check if vectorized memory read/write is allowed on src and dst
+
+        // TODO: be careful of constructor time update
+        // UpdateSrcSliceOriginWithRuntimeOffsets();
+    }
+
+    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v4r2_src_runtime_offsets()
+        : ThreadwiseGenericTensorSliceCopy_v4r2_src_runtime_offsets(make_zero_array<index_t, nDim>(),
+                                                make_zero_array<index_t, nDim>(),
+                                                sequence2array(typename uniform_sequence_gen<nDim, 1>::type{}),
+                                                sequence2array(typename uniform_sequence_gen<nDim, 1>::type{}))
+    {
+    }
+
+    __device__ void UpdateSrcSliceOriginWithRuntimeOffsets(){
+        Index cur_upper_index = mSrcSliceOrigin.GetIndex();
+        index_t cur_offset = 0;
+        for(index_t i=0; i< nDim; i++){
+            index_t p = cur_upper_index[i] / mSrcRuntimeStridesDiv[i];
+            index_t q = cur_upper_index[i] % mSrcRuntimeStridesDiv[i];
+            cur_upper_index.At(i) = q;
+            cur_offset += p * mSrcRuntimeStridesMul[i];
+        }
+        mSrcSliceOrigin = SrcCoord{cur_upper_index};
+        mSrcRuntimeOffsetsPerThread += cur_offset;
+    }
+
+    __device__ void SetSrcRuntimeStrides(Index src_runtime_strides_div, Index src_runtime_strides_mul)
+    {
+        mSrcRuntimeStridesDiv = src_runtime_strides_div;
+        mSrcRuntimeStridesMul = src_runtime_strides_mul;
+    }
+
+    __device__ void SetSrcSliceOrigin(SrcCoord src_slice_origin)
+    {
+        mSrcSliceOrigin = src_slice_origin;
+        UpdateSrcSliceOriginWithRuntimeOffsets();
+    }
+
+    __device__ void SetDstSliceOrigin(DstCoord dst_slice_origin)
+    {
+        mDstSliceOrigin = dst_slice_origin;
+    }
+
+    __device__ index_t CalculateSliceSrcRuntimeOffsets(Index & vector_id) const
+    {
+        index_t slice_offset = 0;
+        for(index_t i=0; i< nDim; i++){
+            index_t id = vector_id[i];
+            slice_offset += (id / mSrcRuntimeStridesDiv[i]) * mSrcRuntimeStridesMul[i];
+            vector_id.At(i) = id % mSrcRuntimeStridesDiv[i];
+        }
+        return slice_offset;
+    }
+
+    template <typename SrcData, typename DstData>
+    __device__ void Run(const SrcData* p_src, DstData* p_dst) const
+    {
+        constexpr auto vector_access_dim = Number<SrcDstVectorReadWriteDim>{};
+
+        constexpr auto src_data_per_access = Number<SrcDataPerRead>{};
+        constexpr auto dst_data_per_access = Number<DstDataPerWrite>{};
+
+        constexpr auto long_vector_size = Number<math::lcm(SrcDataPerRead, DstDataPerWrite)>{};
+
+        constexpr auto long_vector_access_lengths = SliceLengths::Modify(
+            vector_access_dim, SliceLengths::Get(vector_access_dim) / long_vector_size);
+
+        ford<decltype(long_vector_access_lengths), SrcDstDimAccessOrder>{}([&](
+            auto long_vector_access_id) {
+
+            // data id w.r.t slicing-window
+            auto long_vector_data_begin_id = long_vector_access_id;
+            long_vector_data_begin_id(vector_access_dim) =
+                long_vector_size * long_vector_access_id[vector_access_dim];
+
+            // buffer to hold a src long-vector
+            SrcData p_src_long_vector[long_vector_size];
+
+            // zero out buffer
+            for(index_t i = 0; i < long_vector_size; ++i)
+            {
+                p_src_long_vector[i] = 0;
+            }
+
+            // load data from src to the long-vector buffer
+            for(index_t i = 0; i < long_vector_size / src_data_per_access; ++i)
+            {
+                auto scalar_id               = make_zero_array<index_t, nDim>();
+                scalar_id(vector_access_dim) = i * src_data_per_access;
+
+                const index_t buffer_offset = i * src_data_per_access;
+                auto vector_id = long_vector_data_begin_id + scalar_id;
+                index_t src_runtime_offset = CalculateSliceSrcRuntimeOffsets(vector_id);
+
+                const auto src_coord = mSrcSliceOrigin + vector_id;
+
+                // Check src data's valid mapping situation, only check the first data in this src
+                //   vector. It's user's responsiblity to make sure all data in the src vector
+                //   has the valid/invalid mapping situation
+                if(src_coord.IsOffsetValidAssumingUpperIndexIsValid())
+                {
+                    transfer_data<SrcData,
+                                  SrcDataPerRead,
+                                  SrcAddressSpace,
+                                  AddressSpace::vgpr,
+                                  InMemoryDataOperation::none>(
+                        p_src,
+                        src_coord.GetOffset() + mSrcRuntimeOffsetsPerThread + src_runtime_offset,
+                        p_src_long_vector, buffer_offset);
+                }
+            }
+
+            // SrcData to DstData conversion
+            DstData p_dst_long_vector[long_vector_size];
+
+            for(index_t i = 0; i < long_vector_size; ++i)
+            {
+                p_dst_long_vector[i] = type_convert<DstData>{}(p_src_long_vector[i]);
+            }
+
+            // store data from the long-vector buffer to dst
+            for(index_t i = 0; i < long_vector_size / dst_data_per_access; ++i)
+            {
+                auto scalar_id               = make_zero_array<index_t, nDim>();
+                scalar_id(vector_access_dim) = i * dst_data_per_access;
+
+                const index_t buffer_offset = i * dst_data_per_access;
+
+                const auto dst_coord = mDstSliceOrigin + (long_vector_data_begin_id + scalar_id);
+
+                // Check dst data's valid mapping situation, only check the first data in this dst
+                //   vector. It's user's responsiblity to make sure all data in the dst vector
+                //   has the valid/invalid mapping situation
+                if(dst_coord.IsOffsetValidAssumingUpperIndexIsValid())
+                {
+                    transfer_data<DstData,
+                                  DstDataPerWrite,
+                                  AddressSpace::vgpr,
+                                  DstAddressSpace,
+                                  DstInMemOp>(
+                        p_dst_long_vector, buffer_offset, p_dst, dst_coord.GetOffset());
+                }
+            }
+        });
+    }
+
+    template <typename T, bool PositiveDirection>
+    __device__ void MoveSrcSliceWindow(const T& step_sizes_,
+                                       integral_constant<bool, PositiveDirection>)
+    {
+        const auto step_sizes = to_array(step_sizes_);
+
+        static_if<PositiveDirection>{}([&](auto) {
+            mSrcSliceOrigin += to_array(step_sizes);
+        }).Else([&](auto) { mSrcSliceOrigin -= step_sizes; });
+        UpdateSrcSliceOriginWithRuntimeOffsets();
+    }
+
+    template <typename T, bool PositiveDirection>
+    __device__ void MoveDstSliceWindow(const T& step_sizes_,
+                                       integral_constant<bool, PositiveDirection>)
+    {
+        const auto step_sizes = to_array(step_sizes_);
+
+        static_if<PositiveDirection>{}([&](auto) {
+            mDstSliceOrigin += step_sizes;
+        }).Else([&](auto) { mDstSliceOrigin -= step_sizes; });
+    }
+
+    private:
+    SrcCoord mSrcSliceOrigin;
+    DstCoord mDstSliceOrigin;
+    index_t mSrcRuntimeOffsetsPerThread;
+    Index mSrcRuntimeStridesDiv;
+    Index mSrcRuntimeStridesMul;
+};
+
+template <typename SrcDesc,
+          typename DstDesc,
+          typename SliceLengths,
+          typename SrcDstDimAccessOrder,
+          index_t SrcDstVectorReadWriteDim,
+          index_t SrcDataPerRead,
+          index_t DstDataPerWrite,
+          AddressSpace SrcAddressSpace     = AddressSpace::generic,
+          AddressSpace DstAddressSpace     = AddressSpace::generic,
+          InMemoryDataOperation DstInMemOp = InMemoryDataOperation::none>
+struct ThreadwiseGenericTensorSliceCopy_v4r2_dst_runtime_offsets
+{
+    static constexpr index_t nDim = SliceLengths::Size();
+    using Index                   = MultiIndex<nDim>;
+
+    using SrcCoord = typename TensorCoordinate<SrcDesc>::type;
+    using DstCoord = typename TensorCoordinate<DstDesc>::type;
+
+    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v4r2_dst_runtime_offsets(const Index& src_slice_origin,
+                                                               const Index& dst_slice_origin,
+                                                               const Index& dst_runtime_strides_div,
+                                                               const Index& dst_runtime_strides_mul)
+        : mSrcSliceOrigin(src_slice_origin), mDstSliceOrigin(dst_slice_origin),
+        mDstRuntimeStridesDiv(dst_runtime_strides_div), mDstRuntimeStridesMul(dst_runtime_strides_mul),
+        mDstRuntimeOffsetsPerThread(0)
+    {
+        static_assert(nDim == SrcDesc::GetNumOfDimension() &&
+                          nDim == DstDesc::GetNumOfDimension() && nDim == SliceLengths::Size() &&
+                          nDim == SrcDstDimAccessOrder::Size(),
+                      "wrong! # of dimensions not the same");
+
+        static_assert(is_valid_sequence_map<SrcDstDimAccessOrder>{}, "wrong! map is not valid");
+
+        static_assert(SliceLengths{}[SrcDstVectorReadWriteDim] %
+                              math::lcm(SrcDataPerRead, DstDataPerWrite) ==
+                          0,
+                      "wrong! cannot evenly divide");
+
+        // TODO:: sanity-check if vectorized memory read/write is allowed on src and dst
+
+        // TODO: be careful of constructor time update
+        UpdateDstSliceOriginWithRuntimeOffsets();
+    }
+
+    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v4r2_dst_runtime_offsets()
+        : ThreadwiseGenericTensorSliceCopy_v4r2_dst_runtime_offsets(make_zero_array<index_t, nDim>(),
+                                                make_zero_array<index_t, nDim>(),
+                                                sequence2array(typename uniform_sequence_gen<nDim, 1>::type{}),
+                                                sequence2array(typename uniform_sequence_gen<nDim, 1>::type{}))
+    {
+    }
+
+    __device__ void UpdateDstSliceOriginWithRuntimeOffsets(){
+        Index cur_upper_index = mDstSliceOrigin.GetIndex();
+        index_t cur_offset = 0;
+        for(index_t i=0; i< nDim; i++){
+            index_t p = cur_upper_index[i] / mDstRuntimeStridesDiv[i];
+            index_t q = cur_upper_index[i] % mDstRuntimeStridesDiv[i];
+            cur_upper_index.At(i) = q;
+            cur_offset += p * mDstRuntimeStridesMul[i];
+        }
+        mDstSliceOrigin = DstCoord{cur_upper_index};
+        mDstRuntimeOffsetsPerThread += cur_offset;
+    }
+
+    __device__ void SetDstRuntimeStrides(Index dst_runtime_strides_div, Index dst_runtime_strides_mul)
+    {
+        mDstRuntimeStridesDiv = dst_runtime_strides_div;
+        mDstRuntimeStridesMul = dst_runtime_strides_mul;
+    }
+
+    __device__ void SetSrcSliceOrigin(SrcCoord src_slice_origin)
+    {
+        mSrcSliceOrigin = src_slice_origin;
+    }
+
+    __device__ void SetDstSliceOrigin(DstCoord dst_slice_origin)
+    {
+        mDstSliceOrigin = dst_slice_origin;
+        UpdateDstSliceOriginWithRuntimeOffsets();
+    }
+
+    __device__ index_t CalculateSliceDstRuntimeOffsets(Index & vector_id) const
+    {
+        index_t slice_offset = 0;
+        for(index_t i=0; i< nDim; i++){
+            index_t id = vector_id[i];
+            slice_offset += (id / mDstRuntimeStridesDiv[i]) * mDstRuntimeStridesMul[i];
+            vector_id.At(i) = id % mDstRuntimeStridesDiv[i];
+        }
+        return slice_offset;
+    }
+
+    template <typename SrcData, typename DstData>
+    __device__ void Run(const SrcData* p_src, DstData* p_dst) const
+    {
+        constexpr auto vector_access_dim = Number<SrcDstVectorReadWriteDim>{};
+
+        constexpr auto src_data_per_access = Number<SrcDataPerRead>{};
+        constexpr auto dst_data_per_access = Number<DstDataPerWrite>{};
+
+        constexpr auto long_vector_size = Number<math::lcm(SrcDataPerRead, DstDataPerWrite)>{};
+
+        constexpr auto long_vector_access_lengths = SliceLengths::Modify(
+            vector_access_dim, SliceLengths::Get(vector_access_dim) / long_vector_size);
+
+        ford<decltype(long_vector_access_lengths), SrcDstDimAccessOrder>{}([&](
+            auto long_vector_access_id) {
+
+            // data id w.r.t slicing-window
+            auto long_vector_data_begin_id = long_vector_access_id;
+            long_vector_data_begin_id(vector_access_dim) =
+                long_vector_size * long_vector_access_id[vector_access_dim];
+
+            // buffer to hold a src long-vector
+            SrcData p_src_long_vector[long_vector_size];
+
+            // zero out buffer
+            for(index_t i = 0; i < long_vector_size; ++i)
+            {
+                p_src_long_vector[i] = 0;
+            }
+
+            // load data from src to the long-vector buffer
+            for(index_t i = 0; i < long_vector_size / src_data_per_access; ++i)
+            {
+                auto scalar_id               = make_zero_array<index_t, nDim>();
+                scalar_id(vector_access_dim) = i * src_data_per_access;
+
+                const index_t buffer_offset = i * src_data_per_access;
+
+                const auto src_coord = mSrcSliceOrigin + (long_vector_data_begin_id + scalar_id);
+
+                // Check src data's valid mapping situation, only check the first data in this src
+                //   vector. It's user's responsiblity to make sure all data in the src vector
+                //   has the valid/invalid mapping situation
+                if(src_coord.IsOffsetValidAssumingUpperIndexIsValid())
+                {
+                    transfer_data<SrcData,
+                                  SrcDataPerRead,
+                                  SrcAddressSpace,
+                                  AddressSpace::vgpr,
+                                  InMemoryDataOperation::none>(
+                        p_src, src_coord.GetOffset(), p_src_long_vector, buffer_offset);
+                }
+            }
+
+            // SrcData to DstData conversion
+            DstData p_dst_long_vector[long_vector_size];
+
+            for(index_t i = 0; i < long_vector_size; ++i)
+            {
+                p_dst_long_vector[i] = type_convert<DstData>{}(p_src_long_vector[i]);
+            }
+
+            // store data from the long-vector buffer to dst
+            for(index_t i = 0; i < long_vector_size / dst_data_per_access; ++i)
+            {
+                auto scalar_id               = make_zero_array<index_t, nDim>();
+                scalar_id(vector_access_dim) = i * dst_data_per_access;
+
+                const index_t buffer_offset = i * dst_data_per_access;
+                auto vector_id = long_vector_data_begin_id + scalar_id; 
+                index_t dst_runtime_offset = CalculateSliceDstRuntimeOffsets(vector_id);
+
+                const auto dst_coord = mDstSliceOrigin + vector_id;
+
+                // Check dst data's valid mapping situation, only check the first data in this dst
+                //   vector. It's user's responsiblity to make sure all data in the dst vector
+                //   has the valid/invalid mapping situation
+                if(dst_coord.IsOffsetValidAssumingUpperIndexIsValid())
+                {
+                    transfer_data<DstData,
+                                  DstDataPerWrite,
+                                  AddressSpace::vgpr,
+                                  DstAddressSpace,
+                                  DstInMemOp>(
+                        p_dst_long_vector, buffer_offset, p_dst,
+                        dst_coord.GetOffset() + mDstRuntimeOffsetsPerThread + dst_runtime_offset);
+                }
+            }
+        });
+    }
+
+    template <typename T, bool PositiveDirection>
+    __device__ void MoveSrcSliceWindow(const T& step_sizes_,
+                                       integral_constant<bool, PositiveDirection>)
+    {
+        const auto step_sizes = to_array(step_sizes_);
+
+        static_if<PositiveDirection>{}([&](auto) {
+            mSrcSliceOrigin += to_array(step_sizes);
+        }).Else([&](auto) { mSrcSliceOrigin -= step_sizes; });
+    }
+
+    template <typename T, bool PositiveDirection>
+    __device__ void MoveDstSliceWindow(const T& step_sizes_,
+                                       integral_constant<bool, PositiveDirection>)
+    {
+        const auto step_sizes = to_array(step_sizes_);
+
+        static_if<PositiveDirection>{}([&](auto) {
+            mDstSliceOrigin += step_sizes;
+        }).Else([&](auto) { mDstSliceOrigin -= step_sizes; });
+        UpdateDstSliceOriginWithRuntimeOffsets();
+    }
+
+    private:
+    SrcCoord mSrcSliceOrigin;
+    DstCoord mDstSliceOrigin;
+    index_t mDstRuntimeOffsetsPerThread;
+    Index mDstRuntimeStridesDiv;
+    Index mDstRuntimeStridesMul;
+};
+
 } // namespace ck
 #endif
