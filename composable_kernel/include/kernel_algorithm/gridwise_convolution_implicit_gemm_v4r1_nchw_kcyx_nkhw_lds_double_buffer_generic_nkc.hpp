@@ -274,7 +274,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_gen
             AddressSpace::vgpr,
             AddressSpace::lds,
             InMemoryDataOperation::none>(
-            {0, k_block_data_on_global}, {0, 0}, {Y * X, 1}, {Y * X, C * Y * X});
+            {0, k_block_data_on_global}, {0, 0}, {1, 1}, {1, C * Y * X});
 
         // GEMM definition
         //   c_mtx += transpose(a_mtx) * b_mtx
