@@ -56,13 +56,13 @@ void device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t GemmMPerBlock              = 128;
     constexpr index_t GemmNPerBlock              = 128;
     constexpr index_t GemmKPerBlock              = 8;
-    constexpr index_t GemmMPerThreadSubC         = 4;
-    constexpr index_t GemmNPerThreadSubC         = 4;
+    constexpr index_t GemmMPerThread         = 4;
+    constexpr index_t GemmNPerThread         = 4;
+    constexpr index_t GemmKPerThread         = 1;
     constexpr index_t GemmMLevel0Cluster         = 4;
     constexpr index_t GemmNLevel0Cluster         = 4;
     constexpr index_t GemmMLevel1Cluster         = 4;
     constexpr index_t GemmNLevel1Cluster         = 4;
-    constexpr index_t GemmKPerThreadLoop         = 1;
     constexpr index_t GemmThreadGemmDataPerReadM = 4;
     constexpr index_t GemmThreadGemmDataPerReadN = 4;
 
@@ -86,13 +86,13 @@ void device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t GemmMPerBlock              = 128;
     constexpr index_t GemmNPerBlock              = 128;
     constexpr index_t GemmKPerBlock              = 16;
-    constexpr index_t GemmMPerThreadSubC         = 4;
-    constexpr index_t GemmNPerThreadSubC         = 4;
+    constexpr index_t GemmMPerThread             = 4;
+    constexpr index_t GemmNPerThread             = 4;
+    constexpr index_t GemmKPerThread             = 1;
     constexpr index_t GemmMLevel0Cluster         = 4;
     constexpr index_t GemmNLevel0Cluster         = 4;
     constexpr index_t GemmMLevel1Cluster         = 4;
     constexpr index_t GemmNLevel1Cluster         = 4;
-    constexpr index_t GemmKPerThreadLoop         = 1;
     constexpr index_t GemmThreadGemmDataPerReadM = 4;
     constexpr index_t GemmThreadGemmDataPerReadN = 4;
 
@@ -134,13 +134,13 @@ void device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw(InDesc i
         GemmMPerBlock,
         GemmNPerBlock,
         GemmKPerBlock,
-        GemmMPerThreadSubC,
-        GemmNPerThreadSubC,
+        GemmMPerThread,
+        GemmNPerThread,
+        GemmKPerThread,
         GemmMLevel0Cluster,
         GemmNLevel0Cluster,
         GemmMLevel1Cluster,
         GemmNLevel1Cluster,
-        GemmKPerThreadLoop,
         GemmThreadGemmDataPerReadM,
         GemmThreadGemmDataPerReadN,
         GemmABlockCopyThreadSliceLengths_GemmK_GemmM,
