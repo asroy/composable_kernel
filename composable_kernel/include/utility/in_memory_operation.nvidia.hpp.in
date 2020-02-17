@@ -23,14 +23,13 @@ __device__ void atomic_add_data(const T* p_src, index_t src_offset, T* p_dst, in
 {
     using vector_t = typename vector_type<T, DataPerAccess>::MemoryType;
 
-    static_if<SrcAddressSpace == AddressSpace::Vgpr && DstAddressSpace == AddressSpace::Global>{}(
-        [&](auto) {
-            atomicAdd(reinterpret_cast<vector_t*>(&p_dst[dst_offset]),
-                      *reinterpret_cast<const vector_t*>(&p_src[src_offset]));
-        })
-        .Else([&](auto fwd) {
-            static_assert(fwd(false), "atomic_add doesn't support this memory space");
-        });
+    static_if<SrcAddressSpace == AddressSpace::Vgpr &&
+              DstAddressSpace == AddressSpace::Global>{}([&](auto) {
+        atomicAdd(reinterpret_cast<vector_t*>(&p_dst[dst_offset]),
+                  *reinterpret_cast<const vector_t*>(&p_src[src_offset]));
+    }).Else([&](auto fwd) {
+        static_assert(fwd(false), "atomic_add doesn't support this memory space");
+    });
 }
 
 template <typename T,
