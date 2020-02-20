@@ -31,12 +31,31 @@ __host__ __device__ constexpr auto make_native_tensor_descriptor(Sequence<Length
     return NativeTensorDescriptor<NativeDimension<Lengths, Strides>...>{};
 }
 
+template <typename X, typename... XR>
+__host__ __device__ constexpr auto dynamic_native_tensor_descriptor(X x, XR... xr)
+{
+    return DynamicNativeTensorDescriptor<X, XR...>{x, xr...};
+}
+
+template <typename X, typename... XR>
+__host__ __device__ constexpr auto
+dynamic_native_tensor_descriptor(const DynamicSequence<X, XR...>& s)
+{
+    return DynamicNativeTensorDescriptor<X, XR...>{s};
+}
+
 template <typename Lengths>
 __host__ __device__ constexpr auto make_native_tensor_descriptor_packed(Lengths)
 {
     constexpr auto strides = calculate_tensor_strides_packed(Lengths{});
 
     return make_native_tensor_descriptor(Lengths{}, strides);
+}
+
+template <typename X, typename... XR>
+__host__ __device__ constexpr auto dynamic_native_tensor_descriptor_packed(X x, XR... xr)
+{
+    return DynamicNativeTensorDescriptor<X, XR...>{x, xr...};
 }
 
 template <typename Lengths, index_t Align>
@@ -59,15 +78,30 @@ __host__ __device__ constexpr auto
                                        UpDimensionIds>{};
 }
 
+template <typename LowTensorDescriptor,
+          typename Transforms,
+          typename LowDimensionIds,
+          typename UpDimensionIds>
+__host__ __device__ constexpr auto dynamic_transform_tensor_descriptor(LowTensorDescriptor& lower,
+                                                                       Transforms&& trans,
+                                                                       LowDimensionIds,
+                                                                       UpDimensionIds)
+{
+    return DynamicTransformedTensorDescriptor<LowTensorDescriptor,
+                                              Transforms,
+                                              LowDimensionIds,
+                                              UpDimensionIds>{lower, std::move(trans)};
+}
+
 template <typename LowerTensorDescriptor,
           index_t... LowerLengths,
           index_t... LowerDimensionIds,
           index_t... UpperDimensionIds>
 __host__ __device__ constexpr auto
-reorder_transformed_tensor_descriptor_impl(LowerTensorDescriptor,
-                                           Sequence<LowerLengths...>,
-                                           Sequence<LowerDimensionIds...>,
-                                           Sequence<UpperDimensionIds...>)
+    reorder_transformed_tensor_descriptor_impl(LowerTensorDescriptor,
+                                               Sequence<LowerLengths...>,
+                                               Sequence<LowerDimensionIds...>,
+                                               Sequence<UpperDimensionIds...>)
 {
     return TransformedTensorDescriptor<LowerTensorDescriptor,
                                        Tuple<PassThrough<LowerLengths>...>,
@@ -78,7 +112,7 @@ reorder_transformed_tensor_descriptor_impl(LowerTensorDescriptor,
 // reorder a NativeTensorDescriptor
 template <typename... Ts, typename MapLower2Upper>
 __host__ __device__ constexpr auto
-reorder_tensor_descriptor_given_lower2upper(NativeTensorDescriptor<Ts...>, MapLower2Upper)
+    reorder_tensor_descriptor_given_lower2upper(NativeTensorDescriptor<Ts...>, MapLower2Upper)
 {
     static_assert(is_valid_sequence_map<MapLower2Upper>{},
                   "wrong! MapLower2Upper is not a valid map");
@@ -96,7 +130,7 @@ reorder_tensor_descriptor_given_lower2upper(NativeTensorDescriptor<Ts...>, MapLo
 // reorder a TransformedTensorDescriptor
 template <typename... Ts, typename MapLower2Upper>
 __host__ __device__ constexpr auto
-reorder_tensor_descriptor_given_lower2upper(TransformedTensorDescriptor<Ts...>, MapLower2Upper)
+    reorder_tensor_descriptor_given_lower2upper(TransformedTensorDescriptor<Ts...>, MapLower2Upper)
 {
     static_assert(is_valid_sequence_map<MapLower2Upper>{},
                   "wrong! MapLower2Upper is not a valid map");

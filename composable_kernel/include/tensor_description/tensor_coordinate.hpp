@@ -39,6 +39,11 @@ struct NativeTensorCoordinate
     {
     }
 
+    __host__ __device__ constexpr NativeTensorCoordinate(Index idx, tensor_desc_type)
+        : NativeTensorCoordinate(idx)
+    {
+    }
+
     template <typename... Xs>
     __host__ __device__ constexpr NativeTensorCoordinate(Xs... xs)
         : NativeTensorCoordinate(Index{xs...})
@@ -128,6 +133,134 @@ struct NativeTensorCoordinate
     index_t mOffset;
 };
 
+template <typename DynamicNativeTensorDesc>
+struct DynamicNativeTensorCoordinate
+{
+    using type                    = DynamicNativeTensorCoordinate;
+    using tensor_desc_type        = DynamicNativeTensorDesc;
+    static constexpr index_t nDim = tensor_desc_type::GetNumOfDimension();
+    using Index                   = MultiIndex<nDim>;
+
+    __host__ __device__ constexpr DynamicNativeTensorCoordinate(Index idx,
+                                                                const tensor_desc_type& tensor_desc)
+        : mIndex(idx), mOffset(tensor_desc.CalculateOffset(idx)), mTensorDesc(tensor_desc)
+    {
+    }
+
+    __host__ __device__ constexpr DynamicNativeTensorCoordinate(Index idx) : mIndex(idx)
+    {
+        /* dummy constructor */
+    }
+
+    template <typename... Xs>
+    __host__ __device__ constexpr DynamicNativeTensorCoordinate(Xs... xs,
+                                                                const tensor_desc_type& tensor_desc)
+        : DynamicNativeTensorCoordinate(Index{xs...}, tensor_desc)
+    {
+    }
+
+    template <typename... Xs>
+    __host__ __device__ constexpr DynamicNativeTensorCoordinate(Xs... xs)
+        : DynamicNativeTensorCoordinate(Index{xs...})
+    {
+        /* dummy constructor */
+    }
+
+    template <index_t... Xs>
+    __host__ __device__ constexpr DynamicNativeTensorCoordinate(Sequence<Xs...>)
+        : DynamicNativeTensorCoordinate(Index{Xs...})
+    {
+        /* dummy constructor */
+    }
+
+    __host__ __device__ constexpr type& operator=(const type& other)
+    {
+        mIndex = other.GetIndex();
+        // this is a workaround
+        // calculate this's offset from other's index, using this's tensor_desc
+        // since *other* may use dummy constructor
+        mOffset = mTensorDesc.CalculateOffset(mIndex);
+        return *this;
+    }
+
+    __host__ __device__ constexpr auto GetTensorDescriptor() const { return mTensorDesc; }
+
+    __host__ __device__ constexpr const Index& GetUpperIndex() const { return mIndex; }
+
+    __host__ __device__ constexpr const Index& GetIndex() const { return mIndex; }
+
+    __host__ __device__ constexpr const index_t& GetOffset() const { return mOffset; }
+
+    __host__ __device__ constexpr type operator+=(const Index& idx_diff)
+    {
+        // mIndex is updated here, but some (or all) of its entries may never be used
+        // compiler should remove those entries as dead code
+        mIndex += idx_diff;
+
+        mOffset += mTensorDesc.CalculateOffsetDiff(idx_diff);
+
+        return *this;
+    }
+
+    __host__ __device__ constexpr type operator-=(const Index& idx_diff)
+    {
+        // mIndex is updated here, but some (or all) of its entries may never be used
+        // compiler should remove those entries as dead code
+        mIndex -= idx_diff;
+
+        mOffset -= mTensorDesc.CalculateOffsetDiff(idx_diff);
+
+        return *this;
+    }
+
+    __host__ __device__ constexpr type operator+(const Index& idx_diff) const
+    {
+        type coord = *this;
+        coord += idx_diff;
+        return coord;
+    }
+
+    __host__ __device__ constexpr type operator-(const Index& idx_diff) const
+    {
+        type coord = *this;
+        coord -= idx_diff;
+        return coord;
+    }
+
+    __host__ __device__ constexpr index_t CalculateOffsetDiff(const Index& idx_diff) const
+    {
+        return mTensorDesc.CalculateOffsetDiff(idx_diff);
+    }
+
+    // evaluated at run-time
+    __host__ __device__ constexpr bool IsUpperIndexValid() const
+    {
+        return mTensorDesc.IsUpperIndexValid(GetUpperIndex());
+    }
+
+    // evaluated at run-time
+    __host__ __device__ constexpr bool IsOffsetValid() const
+    {
+        // For native tensor, offset is valid if upper-index is valid
+        return IsUpperIndexValid();
+    }
+
+    // evaluated at compile-time
+    __host__ __device__ static constexpr bool IsOffsetValidAssumingUpperIndexIsValid()
+    {
+        return true;
+    }
+
+    private:
+    // mIndex may be saved and updated, however, the value of some (or all) of its entries may
+    //   never be used. Compiler should be able to remove these entries as well as its calculation
+    //   as dead code.
+    // TODO: make sure compiler indeed remove these dead code
+    Index mIndex;
+    index_t mOffset;
+    tensor_desc_type mTensorDesc;
+};
+
 // tensor coordinate for transformed tensor
 template <typename TransformedTensorDesc>
 struct TransformedTensorCoordinate
@@ -141,6 +274,11 @@ struct TransformedTensorCoordinate
 
     __host__ __device__ constexpr TransformedTensorCoordinate(UpperIndex idx)
         : mIndexUp{idx}, mCoordLow{tensor_desc_type::CalculateLowerIndex(idx)}
+    {
+    }
+
+    __host__ __device__ constexpr TransformedTensorCoordinate(UpperIndex idx, tensor_desc_type)
+        : TransformedTensorCoordinate(idx)
     {
     }
 
@@ -261,13 +399,183 @@ struct TransformedTensorCoordinate
     LowerCoord mCoordLow;
 };
 
+template <typename DynamicTransformedTensorDesc>
+struct DynamicTransformedTensorCoordinate
+{
+    using tensor_desc_type = DynamicTransformedTensorDesc;
+    using LowerCoord =
+        typename TensorCoordinate<typename tensor_desc_type::lower_tensor_desc_type>::type;
+    using UpperCoord              = DynamicTransformedTensorCoordinate;
+    static constexpr index_t nDim = tensor_desc_type::GetNumOfDimension();
+    using UpperIndex              = MultiIndex<nDim>;
+
+    __host__
+        __device__ constexpr DynamicTransformedTensorCoordinate(UpperIndex idx,
+                                                                const tensor_desc_type& tensor_desc)
+        : mIndexUp{idx},
+          mCoordLow{tensor_desc.CalculateLowerIndex(idx), tensor_desc.GetLowerTensorDescriptor()},
+          mTensorDesc(tensor_desc)
+    {
+    }
+    __host__ __device__ constexpr DynamicTransformedTensorCoordinate(UpperIndex idx) : mIndexUp{idx}
+    {
+        /* dummy constructor */
+    }
+
+    template <typename... Xs>
+    __host__
+        __device__ constexpr DynamicTransformedTensorCoordinate(Xs... xs,
+                                                                const tensor_desc_type& tensor_desc)
+        : DynamicTransformedTensorCoordinate(UpperIndex{xs...}, tensor_desc)
+    {
+    }
+
+    template <typename... Xs>
+    __host__ __device__ constexpr DynamicTransformedTensorCoordinate(Xs... xs)
+        : DynamicTransformedTensorCoordinate(UpperIndex{xs...})
+    {
+        /* dummy constructor */
+    }
+
+    template <index_t... Xs>
+    __host__
+        __device__ constexpr DynamicTransformedTensorCoordinate(Sequence<Xs...>,
+                                                                const tensor_desc_type& tensor_desc)
+        : DynamicTransformedTensorCoordinate(UpperIndex{Xs...}, tensor_desc)
+    {
+    }
+
+    template <index_t... Xs>
+    __host__ __device__ constexpr DynamicTransformedTensorCoordinate(Sequence<Xs...>)
+        : DynamicTransformedTensorCoordinate(UpperIndex{Xs...})
+    {
+        /* dummy constructor */
+    }
+
+    __host__ __device__ constexpr UpperCoord& operator=(const UpperCoord& other)
+    {
+        mIndexUp = other.GetUpperIndex();
+        // this is a workaround
+        // calculate this's offset from other's index, using this's tensor_desc
+        // since *other* may use dummy constructor
+        mCoordLow = LowerCoord{mTensorDesc.CalculateLowerIndex(mIndexUp),
+                               mTensorDesc.GetLowerTensorDescriptor()};
+        return *this;
+    }
+
+    __host__ __device__ constexpr auto GetTensorDescriptor() const { return mTensorDesc; }
+
+    __host__ __device__ constexpr const LowerCoord& GetLowerCoordinate() const { return mCoordLow; }
+
+    __host__ __device__ constexpr const UpperIndex& GetUpperIndex() const { return mIndexUp; }
+
+    __host__ __device__ constexpr const UpperIndex& GetIndex() const { return GetUpperIndex(); }
+
+    __host__ __device__ constexpr const index_t& GetOffset() const
+    {
+        return GetLowerCoordinate().GetOffset();
+    }
+
+    __host__ __device__ constexpr UpperCoord operator+=(const UpperIndex& idx_up_diff)
+    {
+        // For transformation of multi-index difference, not all transformation functions need to
+        //   know the old lower-index or the old upper-index. We pass both of them to the
+        //   transformation function. The transformation function itself decides to use them or not.
+        mCoordLow += mTensorDesc.CalculateLowerIndexDiff(
+            idx_up_diff, GetIndex(), GetLowerCoordinate().GetIndex());
+
+        // mIndexUp is updated here, but some (or all) of its entries may never be used
+        // compiler should remove those entries as dead code
+        mIndexUp += idx_up_diff;
+
+        return *this;
+    }
+
+    __host__ __device__ constexpr UpperCoord operator-=(const UpperIndex& idx_up_diff)
+    {
+        mCoordLow -= mTensorDesc.CalculateLowerIndexDiff(
+            idx_up_diff, GetIndex(), GetLowerCoordinate().GetIndex());
+
+        // mIndex is updated here, but some (or all) of its entries may never be used
+        // compiler should remove those entries as dead code
+        mIndexUp -= idx_up_diff;
+
+        return *this;
+    }
+
+    __host__ __device__ constexpr UpperCoord operator+(const UpperIndex& idx_up_diff) const
+    {
+        UpperCoord coord_up = *this;
+        coord_up += idx_up_diff;
+        return coord_up;
+    }
+
+    __host__ __device__ constexpr UpperCoord operator-(const UpperIndex& idx_up_diff) const
+    {
+        UpperCoord coord_up = *this;
+        coord_up -= idx_up_diff;
+        return coord_up;
+    }
+
+    // Calculate offset diff without updating tensor-coordinate
+    // If idx_up_diff is know at compile time, and has only non-zero entries on linear dimensions,
+    //   then all calculation can be done at compile-time.
+    // TODO: this function is not compiled to expected ISA
+    __host__ __device__ constexpr index_t CalculateOffsetDiff(const UpperIndex& idx_up_diff) const
+    {
+        // For transformation of multi-index difference, not all transformation functions need to
+        //   know the old lower-index or the old upper-index. We pass both of them to the
+        //   transformation function. The transformation function itself decides to use them or not.
+        const auto idx_low_diff = mTensorDesc.CalculateLowerIndexDiff(
+            idx_up_diff, GetIndex(), GetLowerCoordinate().GetIndex());
+
+        return GetLowerCoordinate().CalculateOffsetDiff(idx_low_diff);
+    }
+
+    // evaluated at run-time
+    __host__ __device__ constexpr bool IsUpperIndexValid() const
+    {
+        return mTensorDesc.IsUpperIndexValid(GetUpperIndex());
+    }
+
+    // evaluted at run-time
+    __host__ __device__ constexpr bool IsOffsetValid() const
+    {
+        return IsUpperIndexValid() && GetLowerCoordinate().IsOffsetValid();
+    }
+
+    // most evaluatation is done at comile-time
+    __host__ __device__ constexpr bool IsLowerIndexValidAssumingUpperIndexIsValid() const
+    {
+        return mTensorDesc.IsLowerIndexValidAssumingUpperIndexIsValid(
+            GetLowerCoordinate().GetIndex());
+    }
+
+    // most evaluatation is done at comile-time
+    __host__ __device__ constexpr bool IsOffsetValidAssumingUpperIndexIsValid() const
+    {
+        return IsLowerIndexValidAssumingUpperIndexIsValid() &&
+               GetLowerCoordinate().IsOffsetValidAssumingUpperIndexIsValid();
+    }
+
+    private:
+    // mIndexUp may be calculated and updated, however, the value of some (or all) of its entries
+    // may
+    //   never be used. Compiler should be able to remove these entries as well as its calculation
+    //   as dead code.
+    // TODO: make sure compiler indeed remove these dead code
+    UpperIndex mIndexUp;
+    LowerCoord mCoordLow;
+    tensor_desc_type mTensorDesc;
+};
+
 template <typename TensorDesc>
 struct TensorCoordinate
 {
     private:
     template <typename... Ts>
     __host__ __device__ static constexpr auto
-    MakeDummyTensorCoordinate(NativeTensorDescriptor<Ts...>)
+        MakeDummyTensorCoordinate(NativeTensorDescriptor<Ts...>)
     {
         return NativeTensorCoordinate<NativeTensorDescriptor<Ts...>>(
             make_zero_array<index_t, TensorDesc::GetNumOfDimension()>());
@@ -275,10 +583,28 @@ struct TensorCoordinate
 
     template <typename... Ts>
     __host__ __device__ static constexpr auto
-    MakeDummyTensorCoordinate(TransformedTensorDescriptor<Ts...>)
+        MakeDummyTensorCoordinate(TransformedTensorDescriptor<Ts...>)
     {
         return TransformedTensorCoordinate<TransformedTensorDescriptor<Ts...>>(
             make_zero_array<index_t, TensorDesc::GetNumOfDimension()>());
+    }
+
+    template <typename... Ts>
+    __host__ __device__ static constexpr auto
+        MakeDummyTensorCoordinate(DynamicNativeTensorDescriptor<Ts...>)
+    {
+        return DynamicNativeTensorCoordinate<DynamicNativeTensorDescriptor<Ts...>>(
+            make_zero_array<index_t, TensorDesc::GetNumOfDimension()>(),
+            DynamicNativeTensorDescriptor<Ts...>{});
+    }
+
+    template <typename... Ts>
+    __host__ __device__ static constexpr auto
+        MakeDummyTensorCoordinate(DynamicTransformedTensorDescriptor<Ts...>)
+    {
+        return DynamicTransformedTensorCoordinate<DynamicTransformedTensorDescriptor<Ts...>>(
+            make_zero_array<index_t, TensorDesc::GetNumOfDimension()>(),
+            DynamicTransformedTensorDescriptor<Ts...>{});
     }
 
     public:

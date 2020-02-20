@@ -134,6 +134,135 @@ struct NativeTensorDescriptor
     }
 };
 
+// TODO: currently only consider this as *packed* native tensor
+template <typename X, typename... Xs>
+struct DynamicNativeTensorDescriptor
+{
+    using type                    = DynamicNativeTensorDescriptor;
+    using lengths_type            = DynamicSequence<X, Xs...>;
+    static constexpr index_t nDim = sizeof...(Xs) + 1;
+
+    using Index = MultiIndex<nDim>;
+    lengths_type mDimensions; // this is the final place holder
+
+    __host__ __device__ constexpr DynamicNativeTensorDescriptor() {}
+
+    __host__ __device__ constexpr DynamicNativeTensorDescriptor(const lengths_type& lengths)
+        : mDimensions(lengths)
+    {
+    }
+
+    __host__ __device__ constexpr DynamicNativeTensorDescriptor(X x, Xs... xs)
+        : mDimensions{x, xs...}
+    {
+    }
+
+    __host__ __device__ static constexpr auto GetNumOfDimension() { return Number<nDim>{}; }
+
+    template <index_t IDim>
+    __host__ __device__ constexpr auto GetLength(Number<IDim>) const
+    {
+        return mDimensions.At(Number<IDim>{});
+    }
+
+    template <index_t IDim>
+    __host__ __device__ constexpr auto GetStride(Number<IDim>) const
+    {
+        // TODO: only consider *packed* native tensor
+        index_t stride = 1;
+        static_for<IDim, nDim - 1, 1>{}([&](auto idim) { stride *= mDimensions[IDim + 1]; });
+        return stride;
+    }
+
+    __host__ __device__ constexpr auto GetLengths() const { return mDimensions; }
+
+    template <index_t... IDims>
+    __host__ __device__ constexpr auto GetLengths(Sequence<IDims...>) const
+    {
+        auto lengths = GetLengths();
+        return dynamic_sequence(lengths.At(Number<IDims>{})...);
+    }
+
+    template <index_t IDim, index_t... IDims>
+    __host__ __device__ constexpr auto GetLengths(Number<IDim>, Number<IDims>...) const
+    {
+        return GetLengths(Sequence<IDim, IDims...>{});
+    }
+
+    __host__ __device__ constexpr auto GetStrides() const
+    {
+        lengths_type strides;
+        index_t stride = 1;
+        static_for<nDim - 1, 0, -1>{}([&](auto idim) {
+            strides[idim] = stride;
+            stride *= mDimensions[idim];
+        });
+        strides[0] = stride;
+        return strides;
+    }
+
+    __host__ __device__ constexpr index_t GetElementSize() const
+    {
+        return reduce_on_sequence(mDimensions, math::multiplies<index_t>{}, Number<1>{});
+    }
+
+    __host__ __device__ constexpr index_t GetElementSpace() const
+    {
+        // TODO: only consider *packed* native tensor
+        return GetElementSize();
+    }
+
+    // TODO: this cannot return constepxr because of use of lambda
+    __host__ __device__ constexpr index_t CalculateOffset(const Index& idx) const
+    {
+        index_t offset = 0;
+
+        static_for<0, nDim, 1>{}([&](auto idim) { offset += idx[idim] * GetStride(idim); });
+
+        return offset;
+    }
+
+    __host__ __device__ constexpr index_t CalculateOffsetDiff(const Index& idx_diff) const
+    {
+        index_t offset_diff = 0;
+
+        static_for<0, nDim, 1>{}(
+            [&](auto idim) { offset_diff += idx_diff[idim] * GetStride(idim); });
+
+        return offset_diff;
+    }
+
+    template <index_t IDim>
+    __host__ __device__ static constexpr bool IsLinearDimension(Number<IDim>)
+    {
+        return true;
+    }
+
+    __host__ __device__ static constexpr auto GetLinearDimensionMask()
+    {
+        return typename uniform_sequence_gen<nDim, 1>::type{};
+    }
+
+    __host__ __device__ static constexpr auto GetNonLinearDimensionMask()
+    {
+        return typename uniform_sequence_gen<nDim, 0>::type{};
+    }
+
+    // TODO: remove this, to save runtime calculation.
+    // a multi-index is valid if there is a corresponding point for it in the tensor
+    __host__ __device__ constexpr bool IsUpperIndexValid(const Index& idx) const
+    {
+        bool flag = true;
+
+        for(index_t i = 0; i < nDim; ++i)
+        {
+            flag = flag && idx[i] >= 0 && idx[i] < GetLengths()[i];
+        }
+
+        return flag;
+    }
+};
+
 // Tensor descriptor for "transformed tensor"
 template <typename LowTensorDescriptor, // NativeTensorDescriptor or TransformedTensorDescriptor
           typename Transforms,          // Tuple<MultIndexTransforms...>
@@ -507,6 +636,305 @@ struct TransformedTensorDescriptor
                 constexpr auto low_lengths_part =
                     GetLowerTensorDescriptor().GetLengths(low_dims_part);
                 const auto idx_low_part = to_array(pick_array_element(idx_low, low_dims_part));
+
+                for(index_t i = 0; i < low_dims_part.Size(); ++i)
+                {
+                    flag = flag && idx_low_part[i] >= 0 && idx_low_part[i] < low_lengths_part[i];
+                }
+            }
+        });
+
+        return flag;
+    }
+};
+
+// Tensor descriptor for "transformed tensor"
+template <typename LowTensorDescriptor, // DynamicNativeTensorDescriptor or
+                                        // DynamicTransformedTensorDescriptor
+          typename Transforms,          // Tuple<DynamicMultIndexTransforms...>
+          typename LowDimensionIds,     // Tuple<Sequence<...>>
+          typename UpDimensionIds>      // Tuple<Sequence<...>>
+struct DynamicTransformedTensorDescriptor
+{
+    using type                          = DynamicTransformedTensorDescriptor;
+    static constexpr index_t nTransform = Transforms::Size();
+    using lower_tensor_desc_type        = LowTensorDescriptor;
+
+    struct lambda_merge_sequences
+    {
+        template <typename... Seqs>
+        __host__ __device__ constexpr auto operator()(Seqs... seqs) const
+        {
+            return merge_sequences(seqs...);
+        }
+    };
+
+    struct lambda_merge_dynamic_sequences
+    {
+        template <typename... Seqs>
+        __host__ __device__ auto operator()(Seqs... seqs) const
+        {
+            return merge_dynamic_sequences(seqs...);
+        }
+    };
+
+    __host__ __device__ static constexpr auto GetNumOfLowerDimension()
+    {
+        // Here, we assume all lower-dimensions are active
+        // TODO: sanity-check all lower-dimension are indeed active
+        using duplicated_low_active_dims =
+            decltype(unpack(lambda_merge_sequences{}, LowDimensionIds{}));
+
+        using low_active_dims = typename sequence_unique_sort<duplicated_low_active_dims,
+                                                              math::less<index_t>,
+                                                              math::equal<index_t>>::type;
+
+        return low_active_dims::Size();
+    }
+
+    __host__ __device__ static constexpr auto GetNumOfUpperDimension()
+    {
+        using duplicated_up_active_dims =
+            decltype(unpack(lambda_merge_sequences{}, UpDimensionIds{}));
+
+        using up_active_dims = typename sequence_unique_sort<duplicated_up_active_dims,
+                                                             math::less<index_t>,
+                                                             math::equal<index_t>>::type;
+
+        return up_active_dims::Size();
+    }
+
+    static constexpr index_t nDimUp  = GetNumOfUpperDimension();
+    static constexpr index_t nDimLow = GetNumOfLowerDimension();
+
+    using UpperIndex = MultiIndex<nDimUp>;
+    using LowerIndex = MultiIndex<nDimLow>;
+
+    LowTensorDescriptor mLowTensorDescriptor;
+    Transforms mTransforms; // for transform instance, this is the place to store it
+
+    __host__ __device__ constexpr DynamicTransformedTensorDescriptor() { /* dummy constructor */ }
+
+    __host__ __device__ constexpr DynamicTransformedTensorDescriptor(
+        LowTensorDescriptor& lower_tensor_descriptor, Transforms&& transforms)
+        : mLowTensorDescriptor(lower_tensor_descriptor), mTransforms(std::move(transforms))
+    {
+        static_assert(nTransform == Transforms::Size() && nTransform == LowDimensionIds::Size() &&
+                          nTransform == UpDimensionIds::Size(),
+                      "wrong! # of transformations not the same");
+
+        // sanity check:
+        //   LowDimensionIds should include all low-dimensions,
+        //   UpDimensionIds should include all up-dimensions
+        using mingled_up_dimension_ids =
+            decltype(unpack(lambda_merge_sequences{}, UpDimensionIds{}));
+
+        using sorted_up_dimension_ids =
+            typename sequence_sort<mingled_up_dimension_ids, math::less<index_t>>::type;
+
+        static_assert(sorted_up_dimension_ids::Size() == nDimUp &&
+                          is_valid_sequence_map<sorted_up_dimension_ids>{},
+                      "wrong! UpDimensionIds is not configured correctly");
+
+        using mingled_low_dimension_ids =
+            decltype(unpack(lambda_merge_sequences{}, LowDimensionIds{}));
+
+        using sorted_low_dimension_ids =
+            typename sequence_sort<mingled_low_dimension_ids, math::less<index_t>>::type;
+
+        static_assert(sorted_low_dimension_ids::Size() == nDimLow &&
+                          is_valid_sequence_map<sorted_low_dimension_ids>{},
+                      "wrong! LowDimensionIds is not configured correctly");
+
+        // TODO: sanity check: while a up-dimension could be associated with multille
+        //   transformation, a low-dimension should be associated with only one transformation
+
+        // TODO: sanity-check: GetLowerLengths of each transform should be consistent with lengths
+        //   of lower-tensor-descriptor
+    }
+
+    __host__ __device__ static constexpr auto GetNumOfDimension()
+    {
+        return GetNumOfUpperDimension();
+    }
+
+    __host__ __device__ constexpr auto GetLowerTensorDescriptor() const
+    {
+        return mLowTensorDescriptor;
+    }
+
+    struct lambda_GetUpperLengths
+    {
+        template <typename Transform>
+        __host__ __device__ constexpr auto operator()(const Transform& tran) const
+        {
+            return tran.GetUpperLengths();
+        }
+    };
+
+    __host__ __device__ constexpr auto GetUpperLengths() const
+    {
+        auto tuple_of_up_lengths = transform_tuples(lambda_GetUpperLengths{}, mTransforms);
+
+        auto mingled_up_lengths = unpack(lambda_merge_dynamic_sequences{}, tuple_of_up_lengths);
+
+        constexpr auto mingled_up_dimension_ids =
+            unpack(lambda_merge_sequences{}, UpDimensionIds{});
+
+        // TODO: sanity-check mingled_up_dimension_ids contain all upper-dimensions
+        // TODO: sanity-check mingled_up_lengths have no conflicting upper-length
+
+        // sort by upper-dimension-ids
+        using sort_up_dimension_ids = sequence_unique_sort<decltype(mingled_up_dimension_ids),
+                                                           math::less<index_t>,
+                                                           math::equal<index_t>>;
+
+        // sanity-check sorted-upper-dimension-ids should be Sequence<0, 1, ... nDimUp-1>
+        static_assert(is_same<typename sort_up_dimension_ids::type,
+                              typename arithmetic_sequence_gen<0, nDimUp, 1>::type>{},
+                      "wrong! UpDimensionIds is not configured correctly");
+
+        constexpr auto sorted2unsorted_map = typename sort_up_dimension_ids::sorted2unsorted_map{};
+
+        auto sorted_up_lengths =
+            pick_sequence_elements_by_ids(mingled_up_lengths, sorted2unsorted_map);
+
+        return sorted_up_lengths;
+    }
+
+    __host__ __device__ constexpr auto GetLengths() const { return GetUpperLengths(); }
+
+    template <index_t IDim>
+    __host__ __device__ constexpr auto GetLength(Number<IDim>) const
+    {
+        return GetLengths()[IDim];
+    }
+
+    template <index_t... IDims>
+    __host__ __device__ constexpr auto GetLengths(Sequence<IDims...>) const
+    {
+        auto lengths = GetLengths();
+        return dynamic_sequence(lengths.At(Number<IDims>{})...);
+    }
+
+    template <index_t IDim, index_t... IDims>
+    __host__ __device__ constexpr auto GetLengths(Number<IDim>, Number<IDims>...) const
+    {
+        return GetLengths(Sequence<IDim, IDims...>{});
+    }
+
+    __host__ __device__ constexpr index_t GetElementSize() const
+    {
+        return reduce_on_sequence(GetLengths(), math::multiplies<index_t>{}, Number<1>{});
+    }
+
+    __host__ __device__ constexpr index_t GetElementSpace() const
+    {
+        // TODO: Is this the correct definition for transformed tensor?
+        return GetLowerTensorDescriptor().GetElementSpace();
+    }
+
+    // TODO: right now return value is not constexpr because use of non-constexpr lambda
+    __host__ __device__ constexpr LowerIndex CalculateLowerIndex(const UpperIndex& idx_up) const
+    {
+        LowerIndex idx_low;
+
+        static_for<0, nTransform, 1>{}([&](auto itran) {
+            auto tran = mTransforms.At(itran);
+
+            const auto idx_up_part = pick_array_element(idx_up, UpDimensionIds{}.At(itran));
+            auto idx_low_part      = pick_array_element(idx_low, LowDimensionIds{}.At(itran));
+
+            // this assume each lower (single) index is only assocaited with one transformation,
+            //   which is required for index transformation, and has been checked during constructor
+            //   of TransformedTensorDescriptor
+            idx_low_part = tran.CalculateLowerIndex(to_array(idx_up_part));
+        });
+
+        return idx_low;
+    }
+
+    // TODO: right now return value is not constexpr because use of non-constepxr lambda
+    __host__ __device__ constexpr LowerIndex
+    CalculateLowerIndexDiff(const UpperIndex& idx_up_diff,
+                            const UpperIndex& idx_up_old,
+                            const LowerIndex& idx_low_old) const
+    {
+        LowerIndex idx_low_diff;
+
+        static_for<0, nTransform, 1>{}([&](auto itran) {
+            constexpr auto tran = Transforms{}.At(itran);
+
+            const auto idx_up_diff_part =
+                pick_array_element(idx_up_diff, UpDimensionIds{}.At(itran));
+
+            const auto idx_up_old_part = pick_array_element(idx_up_old, UpDimensionIds{}.At(itran));
+
+            const auto idx_low_old_part =
+                pick_array_element(idx_low_old, LowDimensionIds{}.At(itran));
+
+            auto idx_low_diff_part = pick_array_element(idx_low_diff, LowDimensionIds{}.At(itran));
+
+            // this assume each lower (single) index is associated with only one transformation,
+            //   which is required for index transformation, and has been checked during constructor
+            //   of TransformedTensorDescriptor
+            idx_low_diff_part = tran.CalculateLowerIndexDiff(
+                to_array(idx_up_diff_part), to_array(idx_up_old_part), to_array(idx_low_old_part));
+        });
+
+        return idx_low_diff;
+    }
+
+    __host__ __device__ constexpr index_t CalculateOffset(const UpperIndex& idx_up) const
+    {
+        return GetLowerTensorDescriptor().CalculateOffset(CalculateLowerIndex(idx_up));
+    }
+
+    __host__ __device__ static constexpr auto GetLinearDimensionMask()
+    {
+        // not implemented
+        return typename uniform_sequence_gen<nDimUp, 1>::type{};
+    }
+
+    __host__ __device__ static constexpr auto GetNonLinearDimensionMask()
+    {
+        // not implemented
+        return typename uniform_sequence_gen<nDimUp, 0>::type{};
+    }
+
+    // a multi-index is valid if there is a corresponding point for it in the tensor
+    __host__ __device__ constexpr bool IsUpperIndexValid(const UpperIndex& idx_up) const
+    {
+        bool flag = true;
+
+        for(index_t i = 0; i < nDimUp; ++i)
+        {
+            flag = flag && idx_up[i] >= 0 && idx_up[i] < GetLengths()[i];
+        }
+
+        return flag;
+    }
+
+    // this function is for optimization purpose, it's called by tensor coordinate
+    // this function tells you: If a lower-index is valid or not, assuming upper index is valid
+    __host__ __device__ constexpr bool
+    IsLowerIndexValidAssumingUpperIndexIsValid(const LowerIndex& idx_low) const
+    {
+        bool flag = true;
+
+        static_for<0, nTransform, 1>{}([&](auto itran) {
+            auto tran = mTransforms.At(itran);
+
+            // TODO: for Embed, Pad, this need determine at runtime hence not constexpr
+            // check a indtransformation if it does not always has a valid mapping
+            bool is_valid_up_always_mapped_to_valid_low =
+                tran.IsValidUpperIndexAlwaysMappedToValidLowerIndex();
+
+            if(!is_valid_up_always_mapped_to_valid_low)
+            {
+                constexpr auto low_dims_part = LowDimensionIds{}.At(itran);
+                auto low_lengths_part        = GetLowerTensorDescriptor().GetLengths(low_dims_part);
+                const auto idx_low_part      = to_array(pick_array_element(idx_low, low_dims_part));
 
                 for(index_t i = 0; i < low_dims_part.Size(); ++i)
                 {

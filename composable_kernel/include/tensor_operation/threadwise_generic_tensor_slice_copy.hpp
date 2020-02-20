@@ -33,8 +33,10 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     using DstCoord = typename TensorCoordinate<DstDesc>::type;
 
     __device__ constexpr ThreadwiseGenericTensorSliceCopy_v4r2(const Index& src_slice_origin,
-                                                               const Index& dst_slice_origin)
-        : mSrcSliceOrigin(src_slice_origin), mDstSliceOrigin(dst_slice_origin)
+                                                               const Index& dst_slice_origin,
+                                                               const SrcDesc& src_desc,
+                                                               const DstDesc& dst_desc)
+        : mSrcSliceOrigin(src_slice_origin, src_desc), mDstSliceOrigin(dst_slice_origin, dst_desc)
     {
         static_assert(nDim == SrcDesc::GetNumOfDimension() &&
                           nDim == DstDesc::GetNumOfDimension() && nDim == SliceLengths::Size() &&
@@ -49,6 +51,22 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                       "wrong! cannot evenly divide");
 
         // TODO:: sanity-check if vectorized memory read/write is allowed on src and dst
+    }
+
+    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v4r2(const SrcDesc& src_desc,
+                                                               const DstDesc& dst_desc)
+        : ThreadwiseGenericTensorSliceCopy_v4r2(make_zero_array<index_t, nDim>(),
+                                                make_zero_array<index_t, nDim>(),
+                                                src_desc,
+                                                dst_desc)
+    {
+    }
+
+    __device__ constexpr ThreadwiseGenericTensorSliceCopy_v4r2(const Index& src_slice_origin,
+                                                               const Index& dst_slice_origin)
+        : ThreadwiseGenericTensorSliceCopy_v4r2(
+              src_slice_origin, dst_slice_origin, SrcDesc{}, DstDesc{})
+    {
     }
 
     __device__ constexpr ThreadwiseGenericTensorSliceCopy_v4r2()

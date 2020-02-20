@@ -36,9 +36,16 @@ struct BlockwiseGenericTensorSliceCopy_v4
 {
     static constexpr index_t nDim = BlockSrcDesc::GetNumOfDimension();
     using Index                   = MultiIndex<nDim>;
+    using ThreadBufferDesc = decltype(make_native_tensor_descriptor_packed(ThreadSliceLengths{}));
+
+    // static constexpr ThreadBufferDesc thread_buffer_desc = ThreadBufferDesc{};
 
     __device__ constexpr BlockwiseGenericTensorSliceCopy_v4(const Index& src_block_slice_origin,
-                                                            const Index& dst_block_slice_origin)
+                                                            const Index& dst_block_slice_origin,
+                                                            const BlockSrcDesc& src_desc,
+                                                            const BlockDstDesc& dst_desc)
+        : mThreadwiseLoad(src_desc, ThreadBufferDesc{}),
+          mThreadwiseStore(ThreadBufferDesc{}, dst_desc)
     {
         static_assert(nDim == BlockSrcDesc::GetNumOfDimension() &&
                           nDim == BlockDstDesc::GetNumOfDimension() &&
@@ -69,6 +76,13 @@ struct BlockwiseGenericTensorSliceCopy_v4
 
         mThreadwiseStore.SetSrcSliceOrigin(make_zero_array<index_t, nDim>());
         mThreadwiseStore.SetDstSliceOrigin(dst_block_slice_origin + thread_data_id_begin);
+    }
+
+    __device__ constexpr BlockwiseGenericTensorSliceCopy_v4(const Index& src_block_slice_origin,
+                                                            const Index& dst_block_slice_origin)
+        : BlockwiseGenericTensorSliceCopy_v4(
+              src_block_slice_origin, dst_block_slice_origin, BlockSrcDesc{}, BlockDstDesc{})
+    {
     }
 
     __device__ static constexpr index_t GetThreadBufferSize()
@@ -146,8 +160,6 @@ struct BlockwiseGenericTensorSliceCopy_v4
     }
 
     private:
-    using ThreadBufferDesc = decltype(make_native_tensor_descriptor_packed(ThreadSliceLengths{}));
-
     using ThreadwiseLoad = ThreadwiseGenericTensorSliceCopy_v4r2<BlockSrcDesc,
                                                                  ThreadBufferDesc,
                                                                  ThreadSliceLengths,

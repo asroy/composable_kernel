@@ -170,6 +170,154 @@ struct Sequence
     }
 };
 
+template <typename... Xr>
+struct DynamicSequence
+{
+    using Type      = DynamicSequence;
+    using data_type = index_t;
+
+    static constexpr index_t mSize = sizeof...(Xr);
+
+    index_t mData[mSize];
+
+    __host__ __device__ constexpr DynamicSequence() : mData{0} {}
+
+    template <typename X, typename... Xs>
+    __host__ __device__ constexpr DynamicSequence(X x, Xs... xs)
+        : mData{static_cast<data_type>(x), static_cast<data_type>(xs)...}
+    {
+        static_assert(sizeof...(Xs) + 1 == mSize, "wrong! size");
+    }
+
+    __host__ __device__ static constexpr auto Size() { return Number<mSize>{}; }
+
+    __host__ __device__ static constexpr auto GetSize() { return Size(); }
+
+    __host__ __device__ constexpr index_t At(index_t I) const { return mData[I]; }
+
+    template <index_t I>
+    __host__ __device__ constexpr auto At(Number<I>) const
+    {
+        static_assert(I < mSize, "wrong! I too large");
+
+        return mData[I];
+    }
+
+    template <index_t I>
+    __host__ __device__ constexpr auto Get(Number<I>) const
+    {
+        return At(Number<I>{});
+    }
+
+    template <typename I>
+    __host__ __device__ constexpr auto operator[](I i) const
+    {
+        return At(i);
+    }
+
+    template <index_t... IRs>
+    __host__ __device__ constexpr auto ReorderGivenNew2Old(Sequence<IRs...> /*new2old*/) const
+    {
+        static_assert(mSize == sizeof...(IRs),
+                      "wrong! reorder map should have the same size as Sequence to be rerodered");
+
+        static_assert(is_valid_sequence_map<Sequence<IRs...>>::value, "wrong! invalid reorder map");
+
+        return Type(mData[IRs]...);
+    }
+
+    // MapOld2New is Sequence<...>
+    template <typename MapOld2New>
+    __host__ __device__ constexpr auto ReorderGivenOld2New(MapOld2New) const
+    {
+        static_assert(MapOld2New::Size() == Size(),
+                      "wrong! reorder map should have the same size as Sequence to be rerodered");
+
+        static_assert(is_valid_sequence_map<MapOld2New>::value, "wrong! invalid reorder map");
+
+        return ReorderGivenNew2Old(typename sequence_map_inverse<MapOld2New>::type{});
+    }
+#if 0
+    __host__ __device__ static constexpr auto Reverse()
+    {
+        return typename sequence_reverse<Type>::type{};
+    }
+
+    __host__ __device__ static constexpr auto Front()
+    {
+        static_assert(mSize > 0, "wrong!");
+        return At(Number<0>{});
+    }
+
+    __host__ __device__ static constexpr auto Back()
+    {
+        static_assert(mSize > 0, "wrong!");
+        return At(Number<mSize - 1>{});
+    }
+
+    __host__ __device__ static constexpr auto PopFront() { return sequence_pop_front(Type{}); }
+
+    __host__ __device__ static constexpr auto PopBack() { return sequence_pop_back(Type{}); }
+
+    template <index_t... Xs>
+    __host__ __device__ static constexpr auto PushFront(Sequence<Xs...>)
+    {
+        return Sequence<Xs..., Is...>{};
+    }
+
+    template <index_t... Xs>
+    __host__ __device__ static constexpr auto PushFront(Number<Xs>...)
+    {
+        return Sequence<Xs..., Is...>{};
+    }
+
+    template <index_t... Xs>
+    __host__ __device__ static constexpr auto PushBack(Sequence<Xs...>)
+    {
+        return Sequence<Is..., Xs...>{};
+    }
+
+    template <index_t... Xs>
+    __host__ __device__ static constexpr auto PushBack(Number<Xs>...)
+    {
+        return Sequence<Is..., Xs...>{};
+    }
+
+    template <index_t... Ns>
+    __host__ __device__ static constexpr auto Extract(Number<Ns>...)
+    {
+        return Sequence<Type::At(Number<Ns>{})...>{};
+    }
+
+    template <index_t... Ns>
+    __host__ __device__ static constexpr auto Extract(Sequence<Ns...>)
+    {
+        return Sequence<Type::At(Number<Ns>{})...>{};
+    }
+#endif
+    template <index_t I, index_t X>
+    __host__ __device__ constexpr auto Modify(Number<I>, Number<X>) const
+    {
+        static_assert(I < Size(), "wrong!");
+
+        Type new_sequence     = *this;
+        new_sequence.mData[I] = X;
+        return new_sequence;
+    }
+
+    // template <typename F>
+    //__host__ __device__ static constexpr auto Transform(F f)
+    //{
+    //    return Sequence<f(Is)...>{};
+    //}
+};
+
+template <typename X, typename... XR>
+__host__ __device__ constexpr auto dynamic_sequence(X x, XR... xr)
+{
+    return DynamicSequence<X, XR...>{x, xr...};
+}
+
 // merge sequence
 template <typename Seq, typename... Seqs>
 struct sequence_merge
@@ -719,6 +867,47 @@ __host__ __device__ constexpr auto merge_sequences(Seqs...)
     return typename sequence_merge<Seqs...>::type{};
 }
 
+namespace detail {
+
+template <typename Sa, index_t... ia, typename Sb, index_t... ib>
+__host__ __device__ constexpr auto
+dynamic_sequence_merge_impl_with_index(const Sa& sa, Sequence<ia...>, const Sb& sb, Sequence<ib...>)
+{
+    return dynamic_sequence(sa.At(ia)..., sb.At(ib)...);
+}
+
+template <typename Sa, typename Sb>
+__host__ __device__ constexpr auto dynamic_sequence_merge_impl(const Sa& sa, const Sb& sb)
+{
+    return dynamic_sequence_merge_impl_with_index(
+        sa,
+        typename arithmetic_sequence_gen<0, Sa::GetSize(), 1>::type{},
+        sb,
+        typename arithmetic_sequence_gen<0, Sb::GetSize(), 1>::type{});
+}
+} // namespace detail
+
+template <typename Seq, typename... Seqs>
+struct dynamic_sequence_merge
+{
+    constexpr auto operator()(const Seq& seq, const Seqs&... seqs)
+    {
+        return detail::dynamic_sequence_merge_impl(seq, dynamic_sequence_merge<Seqs...>{}(seqs...));
+    }
+};
+
+template <typename Seq>
+struct dynamic_sequence_merge<Seq>
+{
+    constexpr auto operator()(const Seq& seq) { return seq; }
+};
+
+template <typename... Seqs>
+__host__ __device__ constexpr auto merge_dynamic_sequences(const Seqs&... seqs)
+{
+    return dynamic_sequence_merge<Seqs...>{}(seqs...);
+}
+
 template <typename F, index_t... Xs>
 __host__ __device__ constexpr auto transform_sequences(F f, Sequence<Xs...>)
 {
@@ -760,6 +949,15 @@ template <typename Seq, index_t... Is>
 __host__ __device__ constexpr auto pick_sequence_elements_by_ids(Seq, Sequence<Is...> /* ids */)
 {
     return Sequence<Seq::At(Number<Is>{})...>{};
+}
+
+template <typename... Xr, index_t... Is>
+__host__ __device__ constexpr auto pick_sequence_elements_by_ids(const DynamicSequence<Xr...>& dseq,
+                                                                 Sequence<Is...> /* ids */)
+{
+    static_assert(sizeof...(Xr) >= sizeof...(Is),
+                  "pickup index must be smaller than original size\n");
+    return dynamic_sequence(dseq.At(Number<Is>{})...);
 }
 
 #if 1
@@ -830,6 +1028,20 @@ reduce_on_sequence(Seq, Reduce f, Number<Init> /*initial_value*/)
     for(index_t i = 0; i < Seq::Size(); ++i)
     {
         result = f(result, Seq::At(i));
+    }
+
+    return result;
+}
+
+template <typename... Xr, typename Reduce, index_t Init>
+__host__ __device__ constexpr index_t
+reduce_on_sequence(const DynamicSequence<Xr...>& dseq, Reduce f, Number<Init> /*initial_value*/)
+{
+    index_t result = Init;
+
+    for(index_t i = 0; i < dseq.Size(); ++i)
+    {
+        result = f(result, dseq.At(i));
     }
 
     return result;

@@ -47,6 +47,52 @@ struct PassThrough
     }
 };
 
+struct DynamicPassThrough
+{
+    using LowerIndex = MultiIndex<1>;
+    using UpperIndex = MultiIndex<1>;
+
+    index_t mLength;
+
+    __host__ __device__ constexpr DynamicPassThrough() : mLength(0) { /* dummy constructor */}
+
+    __host__ __device__ constexpr DynamicPassThrough(index_t length) : mLength(length) {}
+
+    __host__ __device__ static constexpr auto GetNumOfLowerDimension() { return Number<1>{}; }
+
+    __host__ __device__ static constexpr auto GetNumOfUpperDimension() { return Number<1>{}; }
+
+    __host__ __device__ constexpr auto GetUpperLengths() const
+    {
+        return DynamicSequence<index_t>{mLength};
+    }
+
+    __host__ __device__ constexpr auto CalculateLowerIndex(const UpperIndex& idx_up) const
+    {
+        return idx_up;
+    }
+
+    __host__ __device__ constexpr auto
+    CalculateLowerIndexDiff(const UpperIndex& idx_up_diff,
+                            const UpperIndex& /* idx_up_old */,
+                            const LowerIndex& /* idx_low_old */) const
+    {
+        return idx_up_diff;
+    }
+
+    __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
+
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
+    {
+        return true;
+    }
+};
+
+__host__ __device__ constexpr auto dynamic_passthrough(const index_t& length)
+{
+    return DynamicPassThrough{length};
+}
+
 // By default, will automatically judge if is-valid check for upper-to-lower-index-mapping is
 // necessary
 // However, the check will be skipped if SkipIsValidCheck is set to true by user
@@ -340,6 +386,190 @@ struct Merge
     }
 };
 
+// LowerLengths: Sequence<...>
+template <typename LowerLengths>
+struct DynamicMerge
+{
+    static constexpr index_t nDimLow = LowerLengths::Size();
+    static constexpr index_t nDimUp  = 1;
+
+    using LowerIndex = MultiIndex<nDimLow>;
+    using UpperIndex = MultiIndex<nDimUp>;
+
+    LowerLengths mLowerLengths;
+
+    __host__ __device__ static constexpr auto GetNumOfLowerDimension() { return Number<nDimLow>{}; }
+
+    __host__ __device__ static constexpr auto GetNumOfUpperDimension() { return Number<nDimUp>{}; }
+
+    __host__ __device__ constexpr auto GetUpperLengths() const
+    {
+        return DynamicSequence<typename LowerLengths::data_type>{
+            reduce_on_sequence(mLowerLengths, math::multiplies<index_t>{}, Number<1>{})};
+    }
+
+    __host__ __device__ constexpr DynamicMerge() { /* dummy constructor */}
+
+    __host__ __device__ constexpr DynamicMerge(LowerLengths lower) : mLowerLengths(lower) {}
+
+    // emulate constexpr lambda
+    struct lambda_CalculateLowerIndex
+    {
+        index_t& itmp;
+        LowerIndex& idx_low;
+        const LowerLengths& lower_lengths;
+
+        __host__ __device__ explicit constexpr lambda_CalculateLowerIndex(
+            index_t& itmp_, LowerIndex& idx_low_, const LowerLengths& lower_lengths_)
+            : itmp(itmp_), idx_low(idx_low_), lower_lengths(lower_lengths_)
+        {
+        }
+
+        template <typename IDim>
+        __host__ __device__ void operator()(IDim idim) const
+        {
+            index_t stride = lower_lengths.At(idim.value);
+            idx_low(idim)  = itmp % stride;
+            itmp           = itmp / stride;
+        }
+    };
+
+    __host__ __device__ constexpr auto CalculateLowerIndex(const UpperIndex& idx_up) const
+    {
+        LowerIndex idx_low;
+
+        index_t itmp = idx_up[0];
+
+        static_for<nDimLow - 1, 0, -1>{}(lambda_CalculateLowerIndex(itmp, idx_low, mLowerLengths));
+
+        idx_low(0) = itmp;
+
+        return idx_low;
+    }
+
+    // idx_low_diff depends on idx_low_old, so idx_low need to be up-to-date
+    // If idx_up_diff is known at compile-time, many calculations can be optimized
+    // away by compiler
+    // This function assume idx_low_old is not out-of-bound
+    __host__ __device__ constexpr auto CalculateLowerIndexDiff(const UpperIndex& idx_up_diff,
+                                                               const UpperIndex& /* idx_up_old */,
+                                                               const LowerIndex& idx_low_old) const
+    {
+        // TODO: runtime calculation is very expensive.
+        // may find a tunable parameter to remove carrt/borrow calculation
+        if(idx_up_diff[0] == 0)
+        {
+            return make_zero_array<index_t, nDimLow>();
+        }
+        else
+        {
+            // CalculateLowerIndex(idx_up_diff) has multiple integer divisions.
+            //   If idx_up_diff is known at compile-time, the calculation can
+            //   be done at compile-time. However, if idx_up_diff is only known
+            //   at run-time, then the calculation will also be computed at
+            //   run-time, and can be very expensive.
+            LowerIndex idx_low_diff_tmp = CalculateLowerIndex(idx_up_diff);
+
+            // find out the last low dimension that changed
+            index_t last_changed_low_dim = 0;
+
+            static_for<0, nDimLow, 1>{}([&](auto i) {
+                if(idx_low_diff_tmp[i] != 0)
+                {
+                    last_changed_low_dim = i;
+                }
+            });
+
+            LowerIndex idx_low_new = idx_low_old + idx_low_diff_tmp;
+
+            if(idx_up_diff[0] > 0)
+            {
+                // do carry check on each low dimension in reversed order
+                // starting from the first digit that changed
+                // don't check the highest dimension
+                bool carry = false;
+
+                static_for<nDimLow - 1, 0, -1>{}([&](auto i) {
+                    if(i <= last_changed_low_dim)
+                    {
+                        if(carry)
+                        {
+                            ++idx_low_new(i);
+                        }
+
+                        carry = false;
+
+                        if(idx_low_new[i] >= mLowerLengths.At(i))
+                        {
+                            idx_low_new(i) -= mLowerLengths.At(i);
+                            carry = true;
+                        }
+                    }
+                });
+
+                // highest dimension, no out-of-bound check
+                if(carry)
+                {
+                    ++idx_low_new(0);
+                }
+            }
+            else
+            {
+                // do borrow check on each low dimension in reversed order
+                // starting from the first digit that changed
+                // don't check the highest dimension
+                bool borrow = false;
+
+                static_for<nDimLow - 1, 0, -1>{}([&](auto i) {
+                    if(i <= last_changed_low_dim)
+                    {
+                        if(borrow)
+                        {
+                            --idx_low_new(i);
+                        }
+
+                        borrow = false;
+
+                        if(idx_low_new[i] < 0)
+                        {
+                            idx_low_new(i) += mLowerLengths.At(i);
+                            borrow = true;
+                        }
+                    }
+                });
+
+                // highest dimension, no out-of-bound check
+                if(borrow)
+                {
+                    --idx_low_new(0);
+                }
+            }
+
+            return idx_low_new - idx_low_old;
+        }
+    }
+
+    __host__ __device__ static constexpr bool IsLinearTransform() { return false; }
+
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
+    {
+        return true;
+    }
+};
+
+template <typename LowerLengths>
+__host__ __device__ constexpr auto dynamic_merge(const LowerLengths& lower_lengths)
+{
+    return DynamicMerge<LowerLengths>{lower_lengths};
+}
+
+template <typename X, typename... XR>
+__host__ __device__ constexpr auto dynamic_merge(X x, XR... xr)
+{
+    using dseq_type = DynamicSequence<X, XR...>;
+    return DynamicMerge<dseq_type>{dseq_type{x, xr...}};
+}
+
 // UpperLengths: Sequence<...>
 template <typename UpperLengths>
 struct UnMerge
@@ -386,6 +616,65 @@ struct UnMerge
         return true;
     }
 };
+
+// UpperLengths: Sequence<...>
+template <typename UpperLengths>
+struct DynamicUnMerge
+{
+    static constexpr index_t nDimLow = 1;
+    static constexpr index_t nDimUp  = UpperLengths::Size();
+
+    using LowerIndex = MultiIndex<nDimLow>;
+    using UpperIndex = MultiIndex<nDimUp>;
+
+    UpperLengths mUpperLengths;
+
+    __host__ __device__ static constexpr auto GetNumOfLowerDimension() { return Number<nDimLow>{}; }
+
+    __host__ __device__ static constexpr auto GetNumOfUpperDimension() { return Number<nDimUp>{}; }
+
+    __host__ __device__ constexpr auto GetUpperLengths() const { return mUpperLengths; }
+
+    __host__ __device__ constexpr auto CalculateLowerIndex(const UpperIndex& idx_up) const
+    {
+        LowerIndex idx_low{0};
+        index_t stride = 1;
+
+        static_for<nDimUp - 1, 0, -1>{}([&](auto idim) {
+            idx_low(0) += idx_up[idim] * stride;
+            stride *= mUpperLengths[idim];
+        });
+        idx_low(0) += idx_up[0] * stride;
+        return idx_low;
+    }
+
+    __host__ __device__ constexpr auto
+    CalculateLowerIndexDiff(const UpperIndex& idx_up_diff,
+                            const UpperIndex& /* idx_up_old */,
+                            const LowerIndex& /* idx_low_old */) const
+    {
+        return CalculateLowerIndex(idx_up_diff);
+    }
+
+    __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
+
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
+    {
+        return true;
+    }
+};
+
+template <typename LowerLengths>
+__host__ __device__ constexpr auto dynamic_unmerge(const LowerLengths& lower_lengths)
+{
+    return DynamicUnMerge<LowerLengths>{lower_lengths};
+}
+template <typename X, typename... XR>
+__host__ __device__ constexpr auto dynamic_unmerge(X x, XR... xr)
+{
+    using dseq_type = DynamicSequence<X, XR...>;
+    return DynamicUnMerge<dseq_type>{dseq_type{x, xr...}};
+}
 
 // By default, will automatically judge if is-valid check for upper-to-lower-index-mapping is
 // necessary
