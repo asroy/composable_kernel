@@ -863,7 +863,7 @@ struct DynamicTransformedTensorDescriptor
         LowerIndex idx_low_diff;
 
         static_for<0, nTransform, 1>{}([&](auto itran) {
-            constexpr auto tran = Transforms{}.At(itran);
+            auto tran = mTransforms.At(itran);
 
             const auto idx_up_diff_part =
                 pick_array_element(idx_up_diff, UpDimensionIds{}.At(itran));
