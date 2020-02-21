@@ -295,14 +295,12 @@ struct DynamicSequence
         return Sequence<Type::At(Number<Ns>{})...>{};
     }
 #endif
-    template <index_t I, index_t X>
-    __host__ __device__ constexpr auto Modify(Number<I>, Number<X>) const
+    template <index_t I>
+    __host__ __device__ constexpr auto Modify(Number<I>, index_t X)
     {
         static_assert(I < Size(), "wrong!");
-
-        Type new_sequence     = *this;
-        new_sequence.mData[I] = X;
-        return new_sequence;
+        mData[I] = X;
+        return *this;
     }
 
     // template <typename F>

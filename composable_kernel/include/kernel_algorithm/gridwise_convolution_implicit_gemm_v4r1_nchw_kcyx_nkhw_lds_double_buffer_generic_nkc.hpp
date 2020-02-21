@@ -424,7 +424,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_gen
                 blockwise_gemm.Run(p_wei_block_double, p_in_block_double, p_out_thread);
             }
         }
-#if 1
+
         // copy output: register to global memory
         {
             constexpr index_t K1 = GemmMPerThreadSubC * GemmMLevel0Cluster * GemmMLevel1Cluster;
@@ -494,7 +494,6 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_gen
                                              out_k0_k1_n1_b_n2_global_desc)
                 .Run(p_out_thread, p_out_global);
         }
-#endif
     }
 };
 

@@ -170,7 +170,7 @@ struct DynamicNativeTensorDescriptor
     {
         // TODO: only consider *packed* native tensor
         index_t stride = 1;
-        static_for<IDim, nDim - 1, 1>{}([&](auto idim) { stride *= mDimensions[IDim + 1]; });
+        static_for<nDim - 1, IDim, -1>{}([&](auto idim) { stride *= mDimensions[idim]; });
         return stride;
     }
 
@@ -194,10 +194,10 @@ struct DynamicNativeTensorDescriptor
         lengths_type strides;
         index_t stride = 1;
         static_for<nDim - 1, 0, -1>{}([&](auto idim) {
-            strides[idim] = stride;
+            strides.Modify(idim, stride);
             stride *= mDimensions[idim];
         });
-        strides[0] = stride;
+        strides.Modify(Number<0>{}, stride);
         return strides;
     }
 
@@ -713,7 +713,7 @@ struct DynamicTransformedTensorDescriptor
     LowTensorDescriptor mLowTensorDescriptor;
     Transforms mTransforms; // for transform instance, this is the place to store it
 
-    __host__ __device__ constexpr DynamicTransformedTensorDescriptor() { /* dummy constructor */ }
+    __host__ __device__ constexpr DynamicTransformedTensorDescriptor() { /* dummy constructor */}
 
     __host__ __device__ constexpr DynamicTransformedTensorDescriptor(
         LowTensorDescriptor& lower_tensor_descriptor, Transforms&& transforms)
