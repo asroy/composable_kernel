@@ -310,10 +310,10 @@ struct DynamicSequence
     //}
 };
 
-template <typename X, typename... XR>
-__host__ __device__ constexpr auto dynamic_sequence(X x, XR... xr)
+template <typename... XR>
+__host__ __device__ constexpr auto dynamic_sequence(XR... xr)
 {
-    return DynamicSequence<X, XR...>{x, xr...};
+    return DynamicSequence<XR...>{xr...};
 }
 
 // merge sequence

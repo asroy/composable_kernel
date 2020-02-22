@@ -716,8 +716,8 @@ struct DynamicTransformedTensorDescriptor
     __host__ __device__ constexpr DynamicTransformedTensorDescriptor() { /* dummy constructor */}
 
     __host__ __device__ constexpr DynamicTransformedTensorDescriptor(
-        LowTensorDescriptor& lower_tensor_descriptor, Transforms&& transforms)
-        : mLowTensorDescriptor(lower_tensor_descriptor), mTransforms(std::move(transforms))
+        const LowTensorDescriptor& lower_tensor_descriptor, const Transforms& transforms)
+        : mLowTensorDescriptor(lower_tensor_descriptor), mTransforms(transforms)
     {
         static_assert(nTransform == Transforms::Size() && nTransform == LowDimensionIds::Size() &&
                           nTransform == UpDimensionIds::Size(),

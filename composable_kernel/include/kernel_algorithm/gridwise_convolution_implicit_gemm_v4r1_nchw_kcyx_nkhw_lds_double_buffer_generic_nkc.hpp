@@ -12,45 +12,6 @@
 
 namespace ck {
 
-template <ConvolutionDirection>
-struct make_wei_e_k_global_desc_v4r1_generic_nkc;
-
-template <>
-struct make_wei_e_k_global_desc_v4r1_generic_nkc<ConvolutionDirection::Forward>
-{
-    // weight global tensor is always dynamic tensor
-    template <typename WeiDesc>
-    __device__ constexpr auto operator()(const WeiDesc& desc) const
-    {
-        constexpr auto I0 = Number<0>{};
-        constexpr auto I1 = Number<1>{};
-        constexpr auto I2 = Number<2>{};
-        constexpr auto I3 = Number<3>{};
-
-        // This is an optimize. return native desc can save runtime calculation
-        return dynamic_native_tensor_descriptor(
-            desc.GetLength(I1) * desc.GetLength(I2) * desc.GetLength(I3), desc.GetLength(I0));
-    }
-};
-
-template <>
-struct make_wei_e_k_global_desc_v4r1_generic_nkc<ConvolutionDirection::BackwardWeight>
-{
-    // weight global tensor is always dynamic tensor
-    template <typename WeiDesc>
-    __device__ constexpr auto operator()(const WeiDesc& desc) const
-    {
-        constexpr auto I0 = Number<0>{};
-        constexpr auto I1 = Number<1>{};
-        constexpr auto I2 = Number<2>{};
-        constexpr auto I3 = Number<3>{};
-
-        // This is an optimize. return native desc can save runtime calculation
-        return dynamic_native_tensor_descriptor(
-            desc.GetLength(I1) * desc.GetLength(I2) * desc.GetLength(I3), desc.GetLength(I0));
-    }
-};
-
 template <index_t BlockSize,
           typename Float,
           typename AccDataType,
@@ -234,10 +195,15 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_gen
         //     global tensor in global memory, src of blockwise copy
         //     It is constructed differently, depending on whether forward or backward weight
         //       convolution
-        auto wei_k_c_y_x_global_desc = dynamic_native_tensor_descriptor_packed(N, C, Y, X);
+        auto wei_k_c_y_x_global_desc = dynamic_native_tensor_descriptor_packed(K, C, Y, X);
 
-        auto wei_e_k_global_desc =
-            make_wei_e_k_global_desc_v4r1_generic_nkc<ConvDirection>{}(wei_k_c_y_x_global_desc);
+        // TODO implement reorder & unfold, like v4r2, v4r4
+        // since these 2 operator have runtime parameter, so better find a more optimized way
+        auto wei_e_k_global_desc = dynamic_transform_tensor_descriptor(
+            wei_k_c_y_x_global_desc,
+            make_tuple(dynamic_merge(C, Y, X), dynamic_passthrough(K)),
+            make_tuple(Sequence<1, 2, 3>{}, Sequence<0>{}),
+            make_tuple(Sequence<0>{}, Sequence<1>{}));
 
         //     block tensor in LDS memory, dst of blockwise copy
         //     be careful of LDS alignment

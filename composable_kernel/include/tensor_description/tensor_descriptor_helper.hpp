@@ -82,15 +82,13 @@ template <typename LowTensorDescriptor,
           typename Transforms,
           typename LowDimensionIds,
           typename UpDimensionIds>
-__host__ __device__ constexpr auto dynamic_transform_tensor_descriptor(LowTensorDescriptor& lower,
-                                                                       Transforms&& trans,
-                                                                       LowDimensionIds,
-                                                                       UpDimensionIds)
+__host__ __device__ constexpr auto dynamic_transform_tensor_descriptor(
+    const LowTensorDescriptor& lower, const Transforms& trans, LowDimensionIds, UpDimensionIds)
 {
     return DynamicTransformedTensorDescriptor<LowTensorDescriptor,
                                               Transforms,
                                               LowDimensionIds,
-                                              UpDimensionIds>{lower, std::move(trans)};
+                                              UpDimensionIds>{lower, trans};
 }
 
 template <typename LowerTensorDescriptor,
