@@ -182,10 +182,10 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_gen
                                                3,
                                                InBlockCopySrcDataPerRead_B,
                                                InBlockCopyDstDataPerWrite_N2,
-                                               AddressSpace::global,
-                                               AddressSpace::vgpr,
-                                               AddressSpace::lds,
-                                               InMemoryDataOperation::none>(
+                                               AddressSpace::Global,
+                                               AddressSpace::Vgpr,
+                                               AddressSpace::Lds,
+                                               InMemoryDataOperation::Set>(
                 {0, 0, b_block_data_on_global, 0},
                 {0, 0, 0, 0},
                 in_e_n1_b_n2_global_desc,
@@ -232,10 +232,10 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_gen
                                                1,
                                                WeiBlockCopySrcDataPerRead_E,
                                                WeiBlockCopyDstDataPerWrite_K,
-                                               AddressSpace::global,
-                                               AddressSpace::vgpr,
-                                               AddressSpace::lds,
-                                               InMemoryDataOperation::none>(
+                                               AddressSpace::Global,
+                                               AddressSpace::Vgpr,
+                                               AddressSpace::Lds,
+                                               InMemoryDataOperation::Set>(
                 {0, k_block_data_on_global}, {0, 0}, wei_e_k_global_desc, wei_e_k_block_desc);
 
         // GEMM definition
@@ -448,16 +448,16 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_gen
                 3,
                 1,
                 1,
-                AddressSpace::vgpr,
-                AddressSpace::global,
-                InMemoryDataOperation::none>({0, 0, 0, 0, 0},
-                                             {k_thread_data_on_global / K1,
-                                              k_thread_data_on_global % K1,
-                                              0,
-                                              b_thread_data_on_global,
-                                              0},
-                                             out_k0_k1_n1_b_n2_thread_desc,
-                                             out_k0_k1_n1_b_n2_global_desc)
+                AddressSpace::Vgpr,
+                AddressSpace::Global,
+                InMemoryDataOperation::Set>({0, 0, 0, 0, 0},
+                                            {k_thread_data_on_global / K1,
+                                             k_thread_data_on_global % K1,
+                                             0,
+                                             b_thread_data_on_global,
+                                             0},
+                                            out_k0_k1_n1_b_n2_thread_desc,
+                                            out_k0_k1_n1_b_n2_global_desc)
                 .Run(p_out_thread, p_out_global);
         }
     }
