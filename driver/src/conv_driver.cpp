@@ -29,13 +29,13 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 1
+#if 0
     // 1x1
-    constexpr index_t N  = 64;
-    constexpr index_t C  = 64;
-    constexpr index_t HI = 56;
-    constexpr index_t WI = 56;
-    constexpr index_t K  = 256;
+    constexpr index_t N  = 128;
+    constexpr index_t C  = 256;
+    constexpr index_t HI = 14;
+    constexpr index_t WI = 14;
+    constexpr index_t K  = 1024;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
 
@@ -47,10 +47,10 @@ int main(int argc, char* argv[])
 #elif 0
     // 1x7
     constexpr index_t N  = 128;
-    constexpr index_t C  = 1024;
+    constexpr index_t C  = 128;
     constexpr index_t HI = 17;
     constexpr index_t WI = 17;
-    constexpr index_t K  = 1024;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 7;
 
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 3>;
     using RightPads = Sequence<0, 3>;
-#elif 0
+#elif 1
     // 3x3, 34x34
     constexpr index_t N  = 64;
     constexpr index_t C  = 256;
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
+#elif 1
     // 3x3 filter, 2x2 stride, 35x35 input, 17x17 output
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;
@@ -434,7 +434,7 @@ int main(int argc, char* argv[])
                                                                     ConvStrides{},
                                                                     ConvDilations{},
                                                                     nrepeat);
-#elif 0
+#elif 1
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
