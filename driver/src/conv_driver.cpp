@@ -18,18 +18,18 @@
 //#include "device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v2_chwn_cyxk_khwn.hpp"
 //#include "device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_deprecated.hpp"
-#include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
+//#include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_deprecated.hpp"
+//#include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v4r2_nchw_kcyx_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v4r3_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_deprecated.hpp"
+//#include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_deprecated.hpp"
 #include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 1
+#if 0
     // 1x1
     constexpr index_t N  = 64;
     constexpr index_t C  = 64;
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 3>;
     using RightPads = Sequence<0, 3>;
-#elif 0
+#elif 1
     // 3x3, 34x34
     constexpr index_t N  = 64;
     constexpr index_t C  = 256;

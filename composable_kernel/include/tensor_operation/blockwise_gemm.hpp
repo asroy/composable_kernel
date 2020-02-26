@@ -2,7 +2,9 @@
 #define CK_BLOCKWISE_GEMM_HPP
 
 #include "common_header.hpp"
-#include "ConstantMatrixDescriptor.hpp"
+#include "tensor_descriptor.hpp"
+#include "tensor_descriptor_helper.hpp"
+#include "threadwise_generic_tensor_slice_copy.hpp"
 #include "threadwise_gemm.hpp"
 
 namespace ck {
@@ -38,16 +40,22 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
 
     __device__ BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2()
     {
+
+        static_assert(BlockMatrixA::GetNumOfDimension() == 2 &&
+                          BlockMatrixB::GetNumOfDimension() == 2 &&
+                          ThreadMatrixC::GetNumOfDimension() == 2,
+                      "wrong! A, B, C matrix should be 2D tensors");
+
         constexpr index_t ThreadPerLevel1Cluster = MLevel0ThreadCluster * NLevel0ThreadCluster *
                                                    MLevel1ThreadCluster * NLevel1ThreadCluster;
 
         static_assert(BlockSize == ThreadPerLevel1Cluster, "wrong! wrong blocksize\n");
 
-        static_assert(BlockMatrixA::NRow() == BlockMatrixB::NRow(),
+        static_assert(BlockMatrixA::GetLengths()[0] == BlockMatrixB::GetLengths()[0],
                       "wrong! K dimension not consistent\n");
 
-        constexpr index_t M = BlockMatrixA::NCol(); // A is transposed
-        constexpr index_t N = BlockMatrixB::NCol();
+        constexpr index_t M = BlockMatrixA::GetLengths()[1]; // A is transposed
+        constexpr index_t N = BlockMatrixB::GetLengths()[1];
 
         static_assert(M % (MPerThreadSubC * MLevel0ThreadCluster * MLevel1ThreadCluster) == 0 &&
                           N % (NPerThreadSubC * NLevel0ThreadCluster * NLevel1ThreadCluster) == 0,
@@ -59,14 +67,14 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
 
         auto c_thread_mtx_index = GetBeginOfThreadMatrixC(get_thread_local_1d_id());
 
-        mMyThreadOffsetA = BlockMatrixA::GetOffsetFromMultiIndex(0, c_thread_mtx_index.row);
-        mMyThreadOffsetB = BlockMatrixB::GetOffsetFromMultiIndex(0, c_thread_mtx_index.col);
+        mMyThreadOffsetA = BlockMatrixA::CalculateOffset({0, c_thread_mtx_index.row});
+        mMyThreadOffsetB = BlockMatrixB::CalculateOffset({0, c_thread_mtx_index.col});
     }
 
     __device__ static constexpr auto GetThreadMatrixCLengths()
     {
-        constexpr index_t M = BlockMatrixA::NCol(); // A is transposed
-        constexpr index_t N = BlockMatrixB::NCol();
+        constexpr index_t M = BlockMatrixA::GetLengths()[1]; // A is transposed
+        constexpr index_t N = BlockMatrixB::GetLengths()[1];
 
         constexpr index_t MRepeat =
             M / (MPerThreadSubC * MLevel0ThreadCluster * MLevel1ThreadCluster);
@@ -125,8 +133,8 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
 
         constexpr index_t K = a_block_mtx.NRow();
 
-        constexpr index_t MPerThread = c_thread_mtx.NRow();
-        constexpr index_t NPerThread = c_thread_mtx.NCol();
+        constexpr index_t MPerThread = c_thread_mtx.GetLengths()[0];
+        constexpr index_t NPerThread = c_thread_mtx.GetLengths()[1];
 
         constexpr index_t MPerLevel1Cluster =
             MPerThreadSubC * MLevel0ThreadCluster * MLevel1ThreadCluster;
@@ -138,25 +146,36 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
 
         // thread A, B for GEMM
         constexpr auto a_thread_mtx =
-            make_ConstantMatrixDescriptor_packed(Number<KPerThreadLoop>{}, Number<MPerThread>{});
-
+            make_native_tensor_descriptor_packed(Sequence<KPerThreadLoop, MPerThread>{});
         constexpr auto b_thread_mtx =
-            make_ConstantMatrixDescriptor_packed(Number<KPerThreadLoop>{}, Number<NPerThread>{});
+            make_native_tensor_descriptor_packed(Sequence<KPerThreadLoop, NPerThread>{});
 
         FloatA p_a_thread[a_thread_mtx.GetElementSpace()];
         FloatB p_b_thread[b_thread_mtx.GetElementSpace()];
 
-        constexpr auto a_thread_copy = ThreadwiseMatrixSliceCopy<BlockMatrixA,
-                                                                 decltype(a_thread_mtx),
-                                                                 KPerThreadLoop,
-                                                                 MPerThreadSubC,
-                                                                 ThreadGemmADataPerRead_M>{};
+        constexpr auto a_thread_copy =
+            ThreadwiseGenericTensorSliceCopy_v4r2<BlockMatrixA,
+                                                  decltype(a_thread_mtx),
+                                                  Sequence<KPerThreadLoop, MPerThreadSubC>,
+                                                  Sequence<0, 1>,
+                                                  1,
+                                                  ThreadGemmADataPerRead_M,
+                                                  ThreadGemmADataPerRead_M,
+                                                  AddressSpace::Lds,
+                                                  AddressSpace::Vgpr,
+                                                  InMemoryDataOperation::Set>({0, 0}, {0, 0});
 
-        constexpr auto b_thread_copy = ThreadwiseMatrixSliceCopy<BlockMatrixB,
-                                                                 decltype(b_thread_mtx),
-                                                                 KPerThreadLoop,
-                                                                 NPerThreadSubC,
-                                                                 ThreadGemmBDataPerRead_N>{};
+        constexpr auto b_thread_copy =
+            ThreadwiseGenericTensorSliceCopy_v4r2<BlockMatrixB,
+                                                  decltype(b_thread_mtx),
+                                                  Sequence<KPerThreadLoop, NPerThreadSubC>,
+                                                  Sequence<0, 1>,
+                                                  1,
+                                                  ThreadGemmBDataPerRead_N,
+                                                  ThreadGemmBDataPerRead_N,
+                                                  AddressSpace::Lds,
+                                                  AddressSpace::Vgpr,
+                                                  InMemoryDataOperation::Set>({0, 0}, {0, 0});
 
         constexpr auto threadwise_gemm =
             ThreadwiseGemmTransANormalBNormalC<decltype(a_thread_mtx),
@@ -171,9 +190,10 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
             for(index_t m_repeat = 0; m_repeat < MRepeat; ++m_repeat)
             {
                 a_thread_copy.Run(
-                    p_a_block + a_block_mtx.CalculateOffset(k_begin, m_repeat * MPerLevel1Cluster) +
+                    p_a_block +
+                        a_block_mtx.CalculateOffset({k_begin, m_repeat * MPerLevel1Cluster}) +
                         mMyThreadOffsetA,
-                    p_a_thread + a_thread_mtx.CalculateOffset(0, m_repeat * MPerThreadSubC));
+                    p_a_thread + a_thread_mtx.CalculateOffset({0, m_repeat * MPerThreadSubC}));
             }
 
 #pragma unroll
@@ -181,9 +201,10 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
             for(index_t n_repeat = 0; n_repeat < NRepeat; ++n_repeat)
             {
                 b_thread_copy.Run(
-                    p_b_block + b_block_mtx.CalculateOffset(k_begin, n_repeat * NPerLevel1Cluster) +
+                    p_b_block +
+                        b_block_mtx.CalculateOffset({k_begin, n_repeat * NPerLevel1Cluster}) +
                         mMyThreadOffsetB,
-                    p_b_thread + b_thread_mtx.CalculateOffset(0, n_repeat * NPerThreadSubC));
+                    p_b_thread + b_thread_mtx.CalculateOffset({0, n_repeat * NPerThreadSubC}));
             }
 
             // C += A * B
@@ -217,34 +238,47 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
 
         // thread A, B
         constexpr auto a_thread_mtx =
-            make_ConstantMatrixDescriptor_packed(Number<KPerThreadLoop>{}, Number<MPerThread>{});
+            make_native_tensor_descriptor_packed(Sequence<KPerThreadLoop, MPerThread>{});
         constexpr auto b_thread_mtx =
-            make_ConstantMatrixDescriptor_packed(Number<KPerThreadLoop>{}, Number<NPerThread>{});
+            make_native_tensor_descriptor_packed(Sequence<KPerThreadLoop, NPerThread>{});
 
         // thread A-sub, B-sub
-        constexpr auto a_thread_sub_mtx = a_thread_mtx.MakeSubMatrixDescriptor(
-            Number<KPerThreadLoop>{}, Number<MPerThreadSubC>{});
-        constexpr auto b_thread_sub_mtx = b_thread_mtx.MakeSubMatrixDescriptor(
-            Number<KPerThreadLoop>{}, Number<NPerThreadSubC>{});
+        constexpr auto a_thread_sub_mtx = make_native_tensor_descriptor(
+            Sequence<KPerThreadLoop, MPerThreadSubC>{}, Sequence<MPerThread, 1>{});
+
+        constexpr auto b_thread_sub_mtx = make_native_tensor_descriptor(
+            Sequence<KPerThreadLoop, NPerThreadSubC>{}, Sequence<NPerThread, 1>{});
 
         // thread C-sub
-        constexpr auto c_thread_sub_mtx = ThreadMatrixC::MakeSubMatrixDescriptor(
-            Number<MPerThreadSubC>{}, Number<NPerThreadSubC>{});
+        constexpr auto c_thread_sub_mtx = make_native_tensor_descriptor(
+            Sequence<MPerThreadSubC, NPerThreadSubC>{}, Sequence<NPerThread, 1>{});
 
         FloatA p_a_thread[a_thread_mtx.GetElementSpace()];
         FloatB p_b_thread[b_thread_mtx.GetElementSpace()];
 
-        constexpr auto a_thread_copy = ThreadwiseMatrixSliceCopy<BlockMatrixA,
-                                                                 decltype(a_thread_mtx),
-                                                                 KPerThreadLoop,
-                                                                 MPerThreadSubC,
-                                                                 ThreadGemmADataPerRead_M>{};
+        constexpr auto a_thread_copy =
+            ThreadwiseGenericTnesorSliceCopy_v4r2<BlockMatrixA,
+                                                  decltype(a_thread_sub_mtx),
+                                                  decltype(a_thread_sub_mtx.GetLengths()),
+                                                  Sequence<0, 1>,
+                                                  1,
+                                                  ThreadGemmADataPerRead_M,
+                                                  ThreadGemmADataPerRead_M,
+                                                  AddressSpace::Lds,
+                                                  AddressSpace::Vgpr,
+                                                  InMemoryDataOperation::Set>({0, 0}, {0, 0});
 
-        constexpr auto b_thread_copy = ThreadwiseMatrixSliceCopy<BlockMatrixB,
-                                                                 decltype(b_thread_mtx),
-                                                                 KPerThreadLoop,
-                                                                 NPerThreadSubC,
-                                                                 ThreadGemmBDataPerRead_N>{};
+        constexpr auto b_thread_copy =
+            ThreadwiseGenericTnesorSliceCopy_v4r2<BlockMatrixB,
+                                                  decltype(b_thread_mtx),
+                                                  decltype(b_thread_sub_mtx.GetLengths()),
+                                                  Sequence<0, 1>,
+                                                  1,
+                                                  ThreadGemmBDataPerRead_N,
+                                                  ThreadGemmBDataPerRead_N,
+                                                  AddressSpace::Lds,
+                                                  AddressSpace::Vgpr,
+                                                  InMemoryDataOperation::Set>({0, 0}, {0, 0});
 
         constexpr auto threadwise_gemm =
             ThreadwiseGemmTransANormalBNormalC<decltype(a_thread_sub_mtx),
@@ -261,77 +295,77 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
         b_thread_copy.Run(p_b_block_off, p_b_thread);
 
         // read B_sub_1
-        b_thread_copy.Run(p_b_block_off + b_block_mtx.CalculateOffset(0, NPerLevel1Cluster),
-                          p_b_thread + b_thread_mtx.CalculateOffset(0, NPerThreadSubC));
+        b_thread_copy.Run(p_b_block_off + b_block_mtx.CalculateOffset({0, NPerLevel1Cluster}),
+                          p_b_thread + b_thread_mtx.CalculateOffset({0, NPerThreadSubC}));
 
         // read A_sub_1
-        a_thread_copy.Run(p_a_block_off + a_block_mtx.CalculateOffset(0, MPerLevel1Cluster),
-                          p_a_thread + a_thread_mtx.CalculateOffset(0, MPerThreadSubC));
+        a_thread_copy.Run(p_a_block_off + a_block_mtx.CalculateOffset({0, MPerLevel1Cluster}),
+                          p_a_thread + a_thread_mtx.CalculateOffset({0, MPerThreadSubC}));
 
         // C_sub_00 += transpose(A_sub_0) * B_sub_0
         threadwise_gemm.Run(p_a_thread, p_b_thread, p_c_thread);
 
         // C_sub_01 += transpose(A_sub_0) * B_sub_1
         threadwise_gemm.Run(p_a_thread,
-                            p_b_thread + b_thread_mtx.CalculateOffset(0, NPerThreadSubC),
-                            p_c_thread + ThreadMatrixC::CalculateOffset(0, NPerThreadSubC));
+                            p_b_thread + b_thread_mtx.CalculateOffset({0, NPerThreadSubC}),
+                            p_c_thread + ThreadMatrixC::CalculateOffset({0, NPerThreadSubC}));
 
 #pragma unroll
         // loop over rest of k
         for(index_t k = KPerThreadLoop; k < K; k += KPerThreadLoop)
         {
             // read A_sub_0
-            a_thread_copy.Run(p_a_block_off + a_block_mtx.CalculateOffset(k, 0), p_a_thread);
+            a_thread_copy.Run(p_a_block_off + a_block_mtx.CalculateOffset({k, 0}), p_a_thread);
 
             // C_sub_10 += transpose(A_sub_1) * B_sub_0
-            threadwise_gemm.Run(p_a_thread + a_thread_mtx.CalculateOffset(0, MPerThreadSubC),
+            threadwise_gemm.Run(p_a_thread + a_thread_mtx.CalculateOffset({0, MPerThreadSubC}),
                                 p_b_thread,
-                                p_c_thread + ThreadMatrixC::CalculateOffset(MPerThreadSubC, 0));
+                                p_c_thread + ThreadMatrixC::CalculateOffset({MPerThreadSubC, 0}));
 
             // read B_sub_0
-            b_thread_copy.Run(p_b_block_off + b_block_mtx.CalculateOffset(k, 0), p_b_thread);
+            b_thread_copy.Run(p_b_block_off + b_block_mtx.CalculateOffset({k, 0}), p_b_thread);
 
             // C_sub_11 += transpose(A_sub_1) * B_sub_1
-            threadwise_gemm.Run(p_a_thread + a_thread_mtx.CalculateOffset(0, MPerThreadSubC),
-                                p_b_thread + b_thread_mtx.CalculateOffset(0, NPerThreadSubC),
-                                p_c_thread +
-                                    ThreadMatrixC::CalculateOffset(MPerThreadSubC, NPerThreadSubC));
+            threadwise_gemm.Run(
+                p_a_thread + a_thread_mtx.CalculateOffset({0, MPerThreadSubC}),
+                p_b_thread + b_thread_mtx.CalculateOffset({0, NPerThreadSubC}),
+                p_c_thread + ThreadMatrixC::CalculateOffset({MPerThreadSubC, NPerThreadSubC}));
 
             // read B_sub_1
-            b_thread_copy.Run(p_b_block_off + b_block_mtx.CalculateOffset(k, NPerLevel1Cluster),
-                              p_b_thread + b_thread_mtx.CalculateOffset(0, NPerThreadSubC));
+            b_thread_copy.Run(p_b_block_off + b_block_mtx.CalculateOffset({k, NPerLevel1Cluster}),
+                              p_b_thread + b_thread_mtx.CalculateOffset({0, NPerThreadSubC}));
 
             // read A_sub_1
-            a_thread_copy.Run(p_a_block_off + a_block_mtx.CalculateOffset(k, MPerLevel1Cluster),
-                              p_a_thread + a_thread_mtx.CalculateOffset(0, MPerThreadSubC));
+            a_thread_copy.Run(p_a_block_off + a_block_mtx.CalculateOffset({k, MPerLevel1Cluster}),
+                              p_a_thread + a_thread_mtx.CalculateOffset({0, MPerThreadSubC}));
 
             // C_sub_00 += transpose(A_sub_0) * B_sub_0
             threadwise_gemm.Run(p_a_thread, p_b_thread, p_c_thread);
 
             // C_sub_01 += transpose(A_sub_0) * B_sub_1
             threadwise_gemm.Run(p_a_thread,
-                                p_b_thread + b_thread_mtx.CalculateOffset(0, NPerThreadSubC),
-                                p_c_thread + ThreadMatrixC::CalculateOffset(0, NPerThreadSubC));
+                                p_b_thread + b_thread_mtx.CalculateOffset({0, NPerThreadSubC}),
+                                p_c_thread + ThreadMatrixC::CalculateOffset({0, NPerThreadSubC}));
         }
 
         // C_sub_10 += transpose(A_sub_1) * B_sub_0
-        threadwise_gemm.Run(p_a_thread + a_thread_mtx.CalculateOffset(0, MPerThreadSubC),
+        threadwise_gemm.Run(p_a_thread + a_thread_mtx.CalculateOffset({0, MPerThreadSubC}),
                             p_b_thread,
-                            p_c_thread + ThreadMatrixC::CalculateOffset(MPerThreadSubC, 0));
+                            p_c_thread + ThreadMatrixC::CalculateOffset({MPerThreadSubC, 0}));
 
         // C_sub_11 += transpose(A_sub_1) * B_sub_1
-        threadwise_gemm.Run(p_a_thread + a_thread_mtx.CalculateOffset(0, MPerThreadSubC),
-                            p_b_thread + b_thread_mtx.CalculateOffset(0, NPerThreadSubC),
+        threadwise_gemm.Run(p_a_thread + a_thread_mtx.CalculateOffset({0, MPerThreadSubC}),
+                            p_b_thread + b_thread_mtx.CalculateOffset({0, NPerThreadSubC}),
                             p_c_thread +
-                                ThreadMatrixC::CalculateOffset(MPerThreadSubC, NPerThreadSubC));
+                                ThreadMatrixC::CalculateOffset({MPerThreadSubC, NPerThreadSubC}));
     }
 
     template <typename FloatA, typename FloatB, typename FloatC>
     __device__ void Run(const FloatA* p_a_block, const FloatB* p_b_block, FloatC* p_c_thread) const
     {
 #if CK_EXPERIMENTAL_BLOCKWISE_GEMM_USE_PIPELINE
-        constexpr index_t MPerThread = ThreadMatrixC::NRow();
-        constexpr index_t NPerThread = ThreadMatrixC::NCol();
+        constexpr index_t MPerThread = ThreadMatrixC::GetLengths()[0];
+        constexpr index_t NPerThread = ThreadMatrixC::GetLengths()[1];
 
         constexpr index_t MRepeat = MPerThread / MPerThreadSubC;
         constexpr index_t NRepeat = NPerThread / NPerThreadSubC;

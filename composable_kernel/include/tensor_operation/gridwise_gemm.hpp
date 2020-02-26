@@ -4,9 +4,9 @@
 #include "common_header.hpp"
 #include "tensor_descriptor.hpp"
 #include "tensor_descriptor_helper.hpp"
-#include "ConstantMatrixDescriptor.hpp"
 #include "blockwise_generic_tensor_slice_copy.hpp"
 #include "threadwise_generic_tensor_slice_copy.hpp"
+#include "threadwise_generic_tensor_op.hpp"
 #include "blockwise_gemm.hpp"
 
 namespace ck {
@@ -177,28 +177,24 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
         //     b_mtx[KPerBlocl, NPerBlock] is in LDS
         //     c_mtx[MPerBlock, NPerBlock] is distributed among threads, and saved in
         //       register
-        constexpr auto a_k_m_block_mtx_desc = make_ConstantMatrixDescriptor(a_k_m_block_desc);
-        constexpr auto b_k_n_block_mtx_desc = make_ConstantMatrixDescriptor(b_k_n_block_desc);
-
         // sanity check
         static_assert(MPerBlock % (MPerThread * MLevel0Cluster * MLevel1Cluster) == 0 &&
                           NPerBlock % (NPerThread * NLevel0Cluster * NLevel1Cluster) == 0,
                       "wrong!");
 
         constexpr index_t GemmMRepeat = MPerBlock / (MPerThread * MLevel0Cluster * MLevel1Cluster);
-
         constexpr index_t GemmNRepeat = NPerBlock / (NPerThread * NLevel0Cluster * NLevel1Cluster);
 
         // c_thread_mtx definition: this is a mess
         // TODO:: more elegent way of defining c_thread_mtx
-        constexpr auto c_m0m1_n0n1_thread_mtx_desc = make_ConstantMatrixDescriptor_packed(
-            Number<GemmMRepeat * MPerThread>{}, Number<GemmNRepeat * NPerThread>{});
+        constexpr auto c_m0m1_n0n1_thread_desc = make_native_tensor_descriptor_packed(
+            Sequence<GemmMRepeat * MPerThread, GemmNRepeat * NPerThread>{});
 
         const auto blockwise_gemm = BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2<
             BlockSize,
-            decltype(a_k_m_block_mtx_desc),
-            decltype(b_k_n_block_mtx_desc),
-            decltype(c_m0m1_n0n1_thread_mtx_desc),
+            decltype(a_k_m_block_desc),
+            decltype(b_k_n_block_desc),
+            decltype(c_m0m1_n0n1_thread_desc),
             MPerThread,
             NPerThread,
             MLevel0Cluster,
@@ -220,10 +216,10 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
         Float* p_b_block_double = p_shared_block + 2 * a_block_space;
 
         // register allocation for output
-        AccFloat p_c_thread[c_m0m1_n0n1_thread_mtx_desc.GetElementSpace()];
+        AccFloat p_c_thread[c_m0m1_n0n1_thread_desc.GetElementSpace()];
 
         // zero out threadwise output
-        threadwise_matrix_set_zero(c_m0m1_n0n1_thread_mtx_desc, p_c_thread);
+        threadwise_generic_tensor_set_zero(c_m0m1_n0n1_thread_desc, p_c_thread);
 
         // LDS double buffer: preload data into LDS
         {
