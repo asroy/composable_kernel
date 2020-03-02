@@ -187,14 +187,14 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_gen
         //     global tensor in global memory, src of blockwise copy
         //     It is constructed differently, depending on whether forward or backward weight
         //       convolution
-        auto wei_k_c_y_x_global_desc = dynamic_native_tensor_descriptor_packed(K, C, 1, 1);
+        auto wei_k_c_y_x_global_desc = dynamic_native_tensor_descriptor_packed(K, C);
 
         // TODO implement reorder & unfold, like v4r2, v4r4
         // since these 2 operator have runtime parameter, so better find a more optimized way
         auto wei_e_k_global_desc = dynamic_transform_tensor_descriptor(
             wei_k_c_y_x_global_desc,
-            make_tuple(dynamic_merge(C, 1, 1), dynamic_passthrough(K)),
-            make_tuple(Sequence<1, 2, 3>{}, Sequence<0>{}),
+            make_tuple(dynamic_passthrough(C), dynamic_passthrough(K)),
+            make_tuple(Sequence<1>{}, Sequence<0>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
         //     block tensor in LDS memory, dst of blockwise copy
