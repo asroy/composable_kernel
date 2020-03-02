@@ -21,6 +21,7 @@
 #include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_deprecated.hpp"
 #include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_generic_nkc.hpp"
 #include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_generic_1x1.hpp"
+#include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_generic_1x1_flat.hpp"
 #include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v4r2_nchw_kcyx_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v4r3_nchw_kcyx_nkhw.hpp"
@@ -448,8 +449,20 @@ int main(int argc, char* argv[])
                                                                      LeftPads{},
                                                                      RightPads{},
                                                                      nrepeat);
-#elif 1
+#elif 0
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_generic_1x1(in_nchw_desc,
+                                                                     in_nchw,
+                                                                     wei_kcyx_desc,
+                                                                     wei_kcyx,
+                                                                     out_nkhw_desc,
+                                                                     out_nkhw_device,
+                                                                     ConvStrides{},
+                                                                     ConvDilations{},
+                                                                     LeftPads{},
+                                                                     RightPads{},
+                                                                     nrepeat);
+#elif 1
+    device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_generic_1x1_flat(in_nchw_desc,
                                                                      in_nchw,
                                                                      wei_kcyx_desc,
                                                                      wei_kcyx,
