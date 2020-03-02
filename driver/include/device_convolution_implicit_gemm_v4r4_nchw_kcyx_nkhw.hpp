@@ -187,13 +187,14 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmNPerBlock = 128;
     constexpr index_t GemmKPerBlock = 8;
 
-    constexpr index_t GemmMPerThreadSubC     = 4;
-    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmMPerThreadSubC = 4;
+    constexpr index_t GemmNPerThreadSubC = 4;
+    constexpr index_t GemmKPerThreadLoop = 1;
+
     constexpr index_t GemmMLevel0Cluster     = 4;
     constexpr index_t GemmNLevel0Cluster     = 4;
     constexpr index_t GemmMLevel1Cluster     = 4;
     constexpr index_t GemmNLevel1Cluster     = 4;
-    constexpr index_t GemmKPerThreadLoop     = 1;
     constexpr index_t ThreadGemmDataPerReadM = 4;
     constexpr index_t ThreadGemmDataPerReadN = 4;
 
@@ -237,11 +238,11 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
         GemmKPerBlock,
         GemmMPerThreadSubC,
         GemmNPerThreadSubC,
+        GemmKPerThreadLoop,
         GemmMLevel0Cluster,
         GemmNLevel0Cluster,
         GemmMLevel1Cluster,
         GemmNLevel1Cluster,
-        GemmKPerThreadLoop,
         ThreadGemmDataPerReadM,
         ThreadGemmDataPerReadN,
         GemmABlockCopyThreadSliceLengths_GemmK_GemmM,
