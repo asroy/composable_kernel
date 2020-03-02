@@ -752,12 +752,46 @@ __host__ __device__ constexpr auto operator+(Sequence<Xs...>, Sequence<Ys...>)
     return Sequence<(Xs + Ys)...>{};
 }
 
+namespace detail {
+template <index_t... Is, typename... Ur>
+constexpr auto
+dynamic_sequence_add_impl(Sequence<Is...>, DynamicSequence<Ur...> sx, DynamicSequence<Ur...> sy)
+{
+    return dynamic_sequence(sx.At(Number<Is>{}) + sy.At(Number<Is>{})...);
+}
+
+template <index_t... Is, typename... Ur>
+constexpr auto
+dynamic_sequence_sub_impl(Sequence<Is...>, DynamicSequence<Ur...> sx, DynamicSequence<Ur...> sy)
+{
+    return dynamic_sequence(sx.At(Number<Is>{}) - sy.At(Number<Is>{})...);
+}
+} // namespace detail
+
+template <typename... Xr, typename... Yr>
+__host__ __device__ constexpr auto operator+(DynamicSequence<Xr...> sx, DynamicSequence<Yr...> sy)
+{
+    static_assert(sizeof...(Xr) == sizeof...(Yr), "wrong! inconsistent size");
+
+    return detail::dynamic_sequence_add_impl(
+        typename arithmetic_sequence_gen<0, sizeof...(Xr), 1>::type{}, sx, sy);
+}
+
 template <index_t... Xs, index_t... Ys>
 __host__ __device__ constexpr auto operator-(Sequence<Xs...>, Sequence<Ys...>)
 {
     static_assert(sizeof...(Xs) == sizeof...(Ys), "wrong! inconsistent size");
 
     return Sequence<(Xs - Ys)...>{};
+}
+
+template <typename... Xr, typename... Yr>
+__host__ __device__ constexpr auto operator-(DynamicSequence<Xr...> sx, DynamicSequence<Yr...> sy)
+{
+    static_assert(sizeof...(Xr) == sizeof...(Yr), "wrong! inconsistent size");
+
+    return detail::dynamic_sequence_sub_impl(
+        typename arithmetic_sequence_gen<0, sizeof...(Xr), 1>::type{}, sx, sy);
 }
 
 template <index_t... Xs, index_t... Ys>

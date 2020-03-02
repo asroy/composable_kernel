@@ -354,9 +354,43 @@ __host__ __device__ constexpr auto operator-(Array<TData, NSize> a, Sequence<Is.
     return result;
 }
 
+// Array = Array - DynamicSequence
+template <typename TData, index_t NSize, typename... Is>
+__host__ __device__ constexpr auto operator-(Array<TData, NSize> a, DynamicSequence<Is...> b)
+{
+    static_assert(sizeof...(Is) == NSize, "wrong! size not the same");
+
+    Array<TData, NSize> result;
+
+    auto f = math::minus<index_t>{};
+
+    static_for<0, NSize, 1>{}(
+        lambda_array_math<decltype(f), decltype(a), decltype(b), decltype(result)>(
+            f, a, b, result));
+
+    return result;
+}
+
 // Array = Array * Sequence
 template <typename TData, index_t NSize, index_t... Is>
 __host__ __device__ constexpr auto operator*(Array<TData, NSize> a, Sequence<Is...> b)
+{
+    static_assert(sizeof...(Is) == NSize, "wrong! size not the same");
+
+    Array<TData, NSize> result;
+
+    auto f = math::multiplies<index_t>{};
+
+    static_for<0, NSize, 1>{}(
+        lambda_array_math<decltype(f), decltype(a), decltype(b), decltype(result)>(
+            f, a, b, result));
+
+    return result;
+}
+
+// Array = Array * DynamicSequence
+template <typename TData, index_t NSize, typename... Is>
+__host__ __device__ constexpr auto operator*(Array<TData, NSize> a, DynamicSequence<Is...> b)
 {
     static_assert(sizeof...(Is) == NSize, "wrong! size not the same");
 

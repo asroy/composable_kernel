@@ -158,6 +158,84 @@ struct Pad
     }
 };
 
+template <typename LowerLengths,
+          typename LeftPads,
+          typename RightPads,
+          bool SkipIsValidCheck = false>
+struct DynamicPad
+{
+    static constexpr index_t nDim = LowerLengths::Size();
+
+    using LowerIndex = MultiIndex<nDim>;
+    using UpperIndex = MultiIndex<nDim>;
+
+    LowerLengths mLowerLengths;
+    LeftPads mLeftPads;
+    RightPads mRightPads;
+
+    __host__ __device__ explicit constexpr DynamicPad() { /* dummy constructor */ }
+
+    __host__ __device__ explicit constexpr DynamicPad(const LowerLengths& lower_lengths,
+                                                      const LeftPads& left_pads,
+                                                      const RightPads& right_pads)
+        : mLowerLengths(lower_lengths), mLeftPads(left_pads), mRightPads(right_pads)
+    {
+        static_assert(LowerLengths::GetSize() == nDim && LeftPads::GetSize() == nDim &&
+                          RightPads::GetSize() == nDim,
+                      "wrong! # of dimensions not consistent");
+    }
+
+    __host__ __device__ static constexpr auto GetNumOfLowerDimension() { return Number<nDim>{}; }
+
+    __host__ __device__ static constexpr auto GetNumOfUpperDimension() { return Number<nDim>{}; }
+
+    __host__ __device__ constexpr auto GetUpperLengths() const
+    {
+        return mLowerLengths + mLeftPads + mRightPads;
+    }
+
+    __host__ __device__ constexpr auto CalculateLowerIndex(const UpperIndex& idx_up) const
+    {
+        return idx_up - mLeftPads;
+    }
+
+    __host__ __device__ constexpr auto
+    CalculateLowerIndexDiff(const UpperIndex& idx_up_diff,
+                            const UpperIndex& /* idx_up_old */,
+                            const LowerIndex& /* idx_low_old */) const
+    {
+        return idx_up_diff;
+    }
+
+    __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
+
+    __host__ __device__ constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex() const
+    {
+        // skip valid check if user request it
+        if(SkipIsValidCheck)
+        {
+            return true;
+        }
+
+        bool flag = true;
+
+        for(index_t i = 0; i < nDim; ++i)
+        {
+            flag = flag && mLeftPads.At(i) == 0 && mRightPads.At(i) == 0;
+        }
+
+        return flag;
+    }
+};
+
+template <typename LowerLengths, typename LeftPads, typename RightPads>
+__host__ __device__ constexpr auto dynamic_pad(const LowerLengths& lower_lengths,
+                                               const LeftPads& left_pads,
+                                               const RightPads& right_pads)
+{
+    return DynamicPad<LowerLengths, LeftPads, RightPads>{lower_lengths, left_pads, right_pads};
+}
+
 // LowerLengths: Sequence<...>
 // SliceBegins: Sequence<...>
 // SliceEnds: Sequence<...>
@@ -410,7 +488,7 @@ struct DynamicMerge
 
     __host__ __device__ constexpr DynamicMerge() { /* dummy constructor */}
 
-    __host__ __device__ constexpr DynamicMerge(LowerLengths lower) : mLowerLengths(lower) {}
+    __host__ __device__ constexpr DynamicMerge(const LowerLengths& lower) : mLowerLengths(lower) {}
 
     // emulate constexpr lambda
     struct lambda_CalculateLowerIndex
@@ -776,6 +854,115 @@ struct Embed
         return flag;
     }
 };
+
+template <typename UpperLengths, typename Coefficients, bool SkipIsValidCheck = false>
+struct DynamicEmbed
+{
+    static constexpr index_t nDimLow = 1;
+    static constexpr index_t nDimUp  = UpperLengths::Size();
+
+    using LowerIndex = MultiIndex<nDimLow>;
+    using UpperIndex = MultiIndex<nDimUp>;
+
+    index_t mLowerLength;
+    UpperLengths mUpperLengths;
+    Coefficients mCoefficients;
+
+    __host__ __device__ explicit constexpr DynamicEmbed() { /* dummy constructor */ }
+
+    __host__ __device__ explicit constexpr DynamicEmbed(index_t lower_length,
+                                                        const UpperLengths& upper_lengths,
+                                                        const Coefficients& coefficients)
+        : mLowerLength(lower_length), mUpperLengths(upper_lengths), mCoefficients(coefficients)
+    {
+        static_assert(UpperLengths::GetSize() == nDimUp && Coefficients::GetSize() == nDimUp + 1,
+                      "wrong! # of dimensions not consistent");
+    }
+
+    __host__ __device__ static constexpr auto GetNumOfUpperDimension() { return Number<nDimUp>{}; }
+
+    __host__ __device__ static constexpr auto GetNumOfLowerDimension() { return Number<nDimLow>{}; }
+
+    __host__ __device__ constexpr auto GetUpperLengths() const { return mUpperLengths; }
+
+    __host__ __device__ constexpr auto CalculateLowerIndex(const UpperIndex& idx_up) const
+    {
+        LowerIndex idx_low(mCoefficients[nDimUp]);
+
+        for(index_t i = 0; i < nDimUp; ++i)
+        {
+            idx_low(0) += idx_up[i] * mCoefficients[i];
+        }
+
+        return idx_low;
+    }
+
+    __host__ __device__ constexpr auto
+    CalculateLowerIndexDiff(const UpperIndex& idx_up_diff,
+                            const UpperIndex& /* idx_up_old */,
+                            const LowerIndex& /* idx_low_old */) const
+    {
+        LowerIndex idx_low_diff{0};
+
+        for(index_t i = 0; i < nDimUp; ++i)
+        {
+            idx_low_diff(0) += idx_up_diff[i] * mCoefficients[i];
+        }
+
+        return idx_low_diff;
+    }
+
+    __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
+
+    __host__ __device__ constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex() const
+    {
+        // skip valid check if user request it
+        if(SkipIsValidCheck)
+        {
+            return true;
+        }
+
+        bool flag = true;
+
+        index_t ncorner = 1;
+
+        for(index_t idim = 0; idim < nDimUp; ++idim)
+        {
+            ncorner *= 2;
+        }
+
+        // loop over each corner of the upper tensor
+        for(index_t icorner = 0; icorner < ncorner; ++icorner)
+        {
+            // generate upper index for each corner
+            auto idx_up = make_zero_array<index_t, nDimUp>();
+
+            index_t itmp = icorner;
+
+            for(index_t idim = nDimUp - 1; idim >= 0; --idim)
+            {
+                idx_up(idim) = itmp % 2 == 0 ? 0 : mUpperLengths.At(idim) - 1;
+                itmp /= 2;
+            }
+
+            // calculate lower index
+            auto idx_low = CalculateLowerIndex(idx_up);
+
+            // judge if lower index is valid
+            flag = flag && idx_low[0] >= 0 && idx_low[0] < mLowerLength;
+        }
+
+        return flag;
+    }
+};
+
+template <typename UpperLengths, typename Coefficients>
+__host__ __device__ constexpr auto dynamic_embed(index_t lower_length,
+                                                 const UpperLengths& upper_lengths,
+                                                 const Coefficients& coefficients)
+{
+    return DynamicEmbed<UpperLengths, Coefficients>{lower_length, upper_lengths, coefficients};
+}
 
 template <index_t LowerLength, index_t VectorSize>
 struct Vectorize
