@@ -545,8 +545,6 @@ L_igemm_v4r1_generix_1x1_fma_body:
     s_addc_u32 s[s_p_in+1], s[s_p_in+1], 0
 
     s_waitcnt vmcnt(0)
-    ; load input from global
-    .v_in_load_e_n1_b_n2 v_b, s_p_in, v_in_os, s_in_diff_n1, s_in_diff_n2, v_flag, s_tmp
 
     ;
     ; |k0         |k1
@@ -561,12 +559,15 @@ L_igemm_v4r1_generix_1x1_fma_body:
     ds_write2st64_b64 v[v_sta_os], v[v_a+0:v_a+1], v[v_a+4:v_a+5], offset0:16+0, offset1:16+1
     ds_write2st64_b64 v[v_sta_os], v[v_a+2:v_a+3], v[v_a+6:v_a+7], offset0:16+2, offset1:16+3
 
+    s_waitcnt lgkmcnt(0)
+    s_barrier
+
+    ; load input from global
+    .v_in_load_e_n1_b_n2 v_b, s_p_in, v_in_os, s_in_diff_n1, s_in_diff_n2, v_flag, s_tmp
     ; load wei from global
     .v_wei_load_e_k v_a, s_p_wei, v_wei_os, s_wei_diff_k, s_tmp
 
-    s_waitcnt lgkmcnt(0)
-
-	s_barrier
+    ; do dma accumulate
     .v_fma_8x8_nk 16, v_c, v_la, v_lb, v_lda_os, v_ldb_os, 8192, 512, 0, 512
     s_barrier
 
