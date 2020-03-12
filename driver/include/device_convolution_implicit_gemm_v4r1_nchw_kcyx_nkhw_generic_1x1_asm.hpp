@@ -266,105 +266,35 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_generic_1x1_asm(InDesc
 
     constexpr index_t B = (N * Ho * Wo) / (N1 * N2);
 
+    constexpr index_t E = C * Y * X;
+
     constexpr index_t GridSize =
         ((B + BPerBlock - 1) / BPerBlock) * ((K + KPerBlock - 1) / KPerBlock);
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
+    static_assert(X == 1 && Y == 1, "only support 1x1 kernel");
+
     static_assert(LeftPads{}[0] == RightPads{}[0] && LeftPads{}[1] == RightPads{}[1],
                   "currently assume Pads X&Y in left&right is the same");
 
-#if 0
-    constexpr auto gridwise_conv =
-        GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer_generic_1x1<
-            BlockSize,
-            T,
-            T,
-            ConvolutionDirection::Forward,
-            BPerBlock,
-            KPerBlock,
-            EPerBlock,
-            GemmNRepeat,
-            GemmMPerThreadSubC,
-            GemmNPerThreadSubC,
-            GemmMLevel0Cluster,
-            GemmNLevel0Cluster,
-            GemmMLevel1Cluster,
-            GemmNLevel1Cluster,
-            GemmKPerThreadLoop,
-            GemmDataPerReadA,
-            GemmDataPerReadB,
-            InBlockCopySubLengths_E_N1_B_N2,
-            InBlockCopyClusterLengths_E_N1_B_N2,
-            InBlockCopyThreadClusterArrangeOrder,
-            InBlockCopySrcAccessOrder,
-            InBlockCopyDstAccessOrder,
-            InBlockCopySrcDataPerRead_B,
-            InBlockCopyDstDataPerWrite_N2,
-            WeiBlockCopySubLengths_E_K,
-            WeiBlockCopyClusterLengths_E_K,
-            WeiBlockCopyThreadClusterArrangeOrder,
-            WeiBlockCopySrcAccessOrder,
-            WeiBlockCopyDstAccessOrder,
-            WeiBlockCopySrcDataPerRead_E,
-            WeiBlockCopyDstDataPerWrite_K>{};
+    static_assert(
+        (N1 * N2 * BPerBlock) % (GemmNPerThreadSubC * GemmNLevel0Cluster * GemmNLevel1Cluster) == 0,
+        "wrong!");
+    static_assert(N % (N1 * N2) == 0, "wrong! cannot divice N evenly among thread");
 
-    for(index_t i = 0; i < nrepeat; ++i)
-    {
-        float time =
-            launch_and_time_kernel(run_gridwise_operation<decltype(gridwise_conv),
-                                                          const T* const __restrict__,
-                                                          const T* const __restrict__,
-                                                          T* const __restrict__,
-                                                          index_t,
-                                                          index_t,
-                                                          index_t,
-                                                          index_t,
-                                                          index_t,
-                                                          index_t,
-                                                          index_t,
-                                                          index_t,
-                                                          index_t,
-                                                          index_t,
-                                                          index_t,
-                                                          index_t,
-                                                          index_t>,
-                                   dim3(GridSize),
-                                   dim3(BlockSize),
-                                   0,
-                                   0,
-                                   gridwise_conv,
-                                   const_cast<const T* const __restrict__>(
-                                       static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer())),
-                                   const_cast<const T* const __restrict__>(
-                                       static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer())),
-                                   const_cast<T* const __restrict__>(
-                                       static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer())),
-                                   Hi,
-                                   Wi,
-                                   N,
-                                   K,
-                                   C,
-                                   Ho,
-                                   Wo,
-                                   ConvStrides{}[0],
-                                   ConvStrides{}[1],
-                                   ConvDilations{}[0],
-                                   ConvDilations{}[1],
-                                   LeftPads{}[0],
-                                   LeftPads{}[1]);
+    static_assert((Wo == 1 || (ConvStrides{}[1] == 1 || InBlockCopySrcDataPerRead_B == 1)) &&
+                      (X == 1 || ConvDilations{}[1] % InBlockCopySrcDataPerRead_B == 0),
+                  "wrong! aligment requirement for vectorized global load of input tensor will "
+                  "be violated");
 
-        printf("Elapsed time : %f ms, %f TFlop/s\n",
-               time,
-               (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
-                   (std::size_t(1000) * 1000 * 1000) / time);
-        usleep(std::min(time * 1000, float(10000)));
-    }
-#endif
-    printf("  in:%p, wei:%p, out:%p\n",
-           in_nchw_device_buf.GetDeviceBuffer(),
-           wei_kcyx_device_buf.GetDeviceBuffer(),
-           out_nkhw_device_buf.GetDeviceBuffer());
+    static_assert(K % KPerBlock == 0 && B % BPerBlock == 0 && E % EPerBlock == 0,
+                  "wrong! cannot divide work evenly among block");
+
+    // printf("  in:%p, wei:%p, out:%p\n",
+    //       in_nchw_device_buf.GetDeviceBuffer(),
+    //       wei_kcyx_device_buf.GetDeviceBuffer(),
+    //       out_nkhw_device_buf.GetDeviceBuffer());
     {
         // module load external hsaco
         hipModule_t module;
@@ -420,7 +350,6 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_generic_1x1_asm(InDesc
             hipEventCreate(&evt_0);
             hipEventCreate(&evt_1);
 
-            hipCtxSynchronize();
             hipEventRecord(evt_0, 0);
 
             HIP_CALL(hipModuleLaunchKernel(
