@@ -91,7 +91,7 @@
 .endm
 
 ; hard coded thread {1,2,1,4} for e_n1_b_n2
-.macro .v_in_load_e_n1_b_n2 v_dst, s_p_in, v_in_os, s_in_stride_n1, s_in_stride_n2, v_flag, s_tmp4
+.macro .v_in_load_e_n1_b_n2_deprecate v_dst, s_p_in, v_in_os, s_in_stride_n1, s_in_stride_n2, v_flag, s_tmp4
     .v_clear_nc \v_dst, 8
     v_cmp_eq_u32 vcc, 1, v[\v_flag]
     s_and_saveexec_b64 s[\s_tmp4+2:\s_tmp4+3], vcc
@@ -125,6 +125,37 @@
     s_addc_u32 s[\s_tmp4+1], s[\s_tmp4+1], 0
     ; {0,1,0,3}
     global_load_dword v[\v_dst+7], v[\v_in_os:\v_in_os+1], s[\s_tmp4:\s_tmp4+1]
+    s_or_b64 exec, exec, s[\s_tmp4+2:\s_tmp4+3]
+.endm
+
+; hard coded thread {1,2,1,4} for e_n1_b_n2
+.macro .v_in_load_e_n1_b_n2 v_dst, s_p_buf_in, v_in_os, s_in_stride_n1, s_in_stride_n2, v_flag, s_tmp4
+    .v_clear_nc \v_dst, 8
+    v_cmp_eq_u32 vcc, 1, v[\v_flag]
+    s_and_saveexec_b64 s[\s_tmp4+2:\s_tmp4+3], vcc
+    ; {0,0,0,0}
+    buffer_load_dword v[\v_dst], v[\v_in_os], s[\s_p_buf_in:\s_p_buf_in+3], 0 offen
+    s_mov_b32 s[\s_tmp4], s[\s_in_stride_n2]
+    ; {0,0,0,1}
+    buffer_load_dword v[\v_dst+1], v[\v_in_os], s[\s_p_buf_in:\s_p_buf_in+3], s[\s_tmp4] offen
+    s_add_u32 s[\s_tmp4], s[\s_tmp4], s[\s_in_stride_n2]
+    ; {0,0,0,2}
+    buffer_load_dword v[\v_dst+2], v[\v_in_os], s[\s_p_buf_in:\s_p_buf_in+3], s[\s_tmp4] offen
+    s_add_u32 s[\s_tmp4], s[\s_tmp4], s[\s_in_stride_n2]
+    ; {0,0,0,3}
+    buffer_load_dword v[\v_dst+3], v[\v_in_os], s[\s_p_buf_in:\s_p_buf_in+3], s[\s_tmp4] offen
+    s_mov_b32 s[\s_tmp4], s[\s_in_stride_n1]
+    ; {0,1,0,0}
+    buffer_load_dword v[\v_dst+4], v[\v_in_os], s[\s_p_buf_in:\s_p_buf_in+3], s[\s_tmp4] offen
+    s_add_u32 s[\s_tmp4], s[\s_tmp4], s[\s_in_stride_n2]
+    ; {0,1,0,1}
+    buffer_load_dword v[\v_dst+5], v[\v_in_os], s[\s_p_buf_in:\s_p_buf_in+3], s[\s_tmp4] offen
+    s_add_u32 s[\s_tmp4], s[\s_tmp4], s[\s_in_stride_n2]
+    ; {0,1,0,2}
+    buffer_load_dword v[\v_dst+6], v[\v_in_os], s[\s_p_buf_in:\s_p_buf_in+3], s[\s_tmp4] offen
+    s_add_u32 s[\s_tmp4], s[\s_tmp4], s[\s_in_stride_n2]
+    ; {0,1,0,3}
+    buffer_load_dword v[\v_dst+7], v[\v_in_os], s[\s_p_buf_in:\s_p_buf_in+3], s[\s_tmp4] offen
     s_or_b64 exec, exec, s[\s_tmp4+2:\s_tmp4+3]
 .endm
 
@@ -227,13 +258,19 @@
 .endm
 
 ; hard coded thread {4,2} for e_k
-.macro .v_wei_load_e_k v_dst, s_p_wei, v_wei_os, s_wei_stride_k, s_tmp2
+.macro .v_wei_load_e_k_deprecate v_dst, s_p_wei, v_wei_os, s_wei_stride_k, s_tmp2
     global_load_dwordx4 v[\v_dst+0:\v_dst+3], v[\v_wei_os:\v_wei_os+1], s[\s_p_wei:\s_p_wei+1]
     s_add_u32 s[\s_tmp2], s[\s_p_wei], s[\s_wei_stride_k]
     s_addc_u32 s[\s_tmp2+1], s[\s_p_wei+1], 0
     global_load_dwordx4 v[\v_dst+4:\v_dst+7], v[\v_wei_os:\v_wei_os+1], s[\s_tmp2:\s_tmp2+1]
 .endm
 
+.macro .v_wei_load_e_k v_dst, s_p_buf_wei, v_wei_os, s_wei_stride_k, s_tmp2
+    buffer_load_dwordx4 v[\v_dst+0:\v_dst+3], v[\v_wei_os], s[\s_p_buf_wei:\s_p_buf_wei+3], 0 offen
+    buffer_load_dwordx4 v[\v_dst+4:\v_dst+7], v[\v_wei_os], s[\s_p_buf_wei:\s_p_buf_wei+3], s[\s_wei_stride_k] offen
+.endm
+
+/*
 .macro .v_write1d_4_strided v_src, s_p_dst, v_dst_os, s_dst_diff, s_tmp2
     global_store_dword v[\v_dst_os:\v_dst_os+1], v[\v_src+0], s[\s_p_dst:\s_p_dst+1]
     s_add_u32 s[\s_tmp2], s[\s_p_dst], s[\s_dst_diff]
@@ -277,6 +314,54 @@
 ; hard coded thread {2, 4, 2, 1, 4} for k0_k1_n1_b_n2
 .macro .v_out_write_k0_k1_n1_b_n2 v_src, s_p_out, v_out_os, s_out_stride_k0, s_out_stride_k1, s_out_stride_n1, s_out_stride_n2, s_tmp4
     .v_write4d_2_4_2_4_strided \v_src, \s_p_out, \v_out_os, \s_out_stride_n2, \s_out_stride_n1, \s_out_stride_k1, \s_out_stride_k0, \s_tmp4
+.endm
+*/
+
+.macro .v_write1d_4_strided v_src, s_p_buf_dst, v_dst_os, s_dst_diff, s_dst_os
+    buffer_store_dword v[\v_src+0], v[\v_dst_os], s[\s_p_buf_dst:\s_p_buf_dst+3], s[\s_dst_os] offen
+    s_add_u32 s[\s_dst_os], s[\s_dst_os], s[\s_dst_diff]
+    buffer_store_dword v[\v_src+1], v[\v_dst_os], s[\s_p_buf_dst:\s_p_buf_dst+3], s[\s_dst_os] offen
+    s_add_u32 s[\s_dst_os], s[\s_dst_os], s[\s_dst_diff]
+    buffer_store_dword v[\v_src+2], v[\v_dst_os], s[\s_p_buf_dst:\s_p_buf_dst+3], s[\s_dst_os] offen
+    s_add_u32 s[\s_dst_os], s[\s_dst_os], s[\s_dst_diff]
+    buffer_store_dword v[\v_src+3], v[\v_dst_os], s[\s_p_buf_dst:\s_p_buf_dst+3], s[\s_dst_os] offen
+.endm
+
+.macro .v_write2d_2_4_strided v_src, s_p_dst, v_dst_os, s_dst_diff1d, s_dst_diff2d, s_dst_os_2
+    .v_write1d_4_strided \v_src+0, \s_p_dst, \v_dst_os, \s_dst_diff1d, \s_dst_os_2
+    s_add_u32 s[\s_dst_os_2+1], s[\s_dst_os_2+1], s[\s_dst_diff2d]
+    s_mov_b32 s[\s_dst_os_2], s[\s_dst_os_2+1]
+    .v_write1d_4_strided \v_src+4, \s_p_dst, \v_dst_os, \s_dst_diff1d, \s_dst_os_2
+.endm
+
+.macro .v_write3d_4_2_4_strided v_src, s_p_dst, v_dst_os, s_dst_diff1d, s_dst_diff2d, s_dst_diff3d, s_dst_os_3
+    .v_write2d_2_4_strided \v_src+0, \s_p_dst, \v_dst_os, \s_dst_diff1d, \s_dst_diff2d, \s_dst_os_3
+    s_add_u32 s[\s_dst_os_3+2], s[\s_dst_os_3+2], s[\s_dst_diff3d]
+    s_mov_b32 s[\s_dst_os_3+1], s[\s_dst_os_3+2]
+    s_mov_b32 s[\s_dst_os_3], s[\s_dst_os_3+1]
+    .v_write2d_2_4_strided \v_src+8, \s_p_dst, \v_dst_os, \s_dst_diff1d, \s_dst_diff2d, \s_dst_os_3
+    s_add_u32 s[\s_dst_os_3+2], s[\s_dst_os_3+2], s[\s_dst_diff3d]
+    s_mov_b32 s[\s_dst_os_3+1], s[\s_dst_os_3+2]
+    s_mov_b32 s[\s_dst_os_3], s[\s_dst_os_3+1]
+    .v_write2d_2_4_strided \v_src+16, \s_p_dst, \v_dst_os, \s_dst_diff1d, \s_dst_diff2d, \s_dst_os_3
+    s_add_u32 s[\s_dst_os_3+2], s[\s_dst_os_3+2], s[\s_dst_diff3d]
+    s_mov_b32 s[\s_dst_os_3+1], s[\s_dst_os_3+2]
+    s_mov_b32 s[\s_dst_os_3], s[\s_dst_os_3+1]
+    .v_write2d_2_4_strided \v_src+24, \s_p_dst, \v_dst_os, \s_dst_diff1d, \s_dst_diff2d, \s_dst_os_3
+.endm
+
+.macro .v_write4d_2_4_2_4_strided v_src, s_p_dst, v_dst_os, s_dst_diff1d, s_dst_diff2d, s_dst_diff3d, s_dst_diff4d, s_dst_os_4
+    .v_write3d_4_2_4_strided \v_src, \s_p_dst, \v_dst_os, \s_dst_diff1d, \s_dst_diff2d, \s_dst_diff3d, \s_dst_os_4
+    s_add_u32 s[\s_dst_os_4+3], s[\s_dst_os_4+3], s[\s_dst_diff4d]
+    s_mov_b32 s[\s_dst_os_4+2], s[\s_dst_os_4+3]
+    s_mov_b32 s[\s_dst_os_4+1], s[\s_dst_os_4+2]
+    s_mov_b32 s[\s_dst_os_4], s[\s_dst_os_4+1]
+    .v_write3d_4_2_4_strided \v_src+32, \s_p_dst, \v_dst_os, \s_dst_diff1d, \s_dst_diff2d, \s_dst_diff3d, \s_dst_os_4
+.endm
+
+; hard coded thread {2, 4, 2, 1, 4} for k0_k1_n1_b_n2
+.macro .v_out_write_k0_k1_n1_b_n2 v_src, s_p_out, v_out_os, s_out_stride_k0, s_out_stride_k1, s_out_stride_n1, s_out_stride_n2, s_dst_os_4
+    .v_write4d_2_4_2_4_strided \v_src, \s_p_out, \v_out_os, \s_out_stride_n2, \s_out_stride_n1, \s_out_stride_k1, \s_out_stride_k0, \s_dst_os_4
 .endm
 
 .macro .v_fma_4x4_s8 v_c, v_a, v_b
@@ -385,7 +470,6 @@
 .set s_y,                   21
 .set s_x,                   22
 .set s_p_out,               24
-
 .set s_block_ik,            26
 .set s_block_ib,            27
 .set s_in_stride_c,         28
@@ -403,10 +487,12 @@
 .set s_out_stride_k1,       37
 .set s_out_stride_n1,       38
 .set s_out_stride_n2,       39
-.set s_kitr,                40
-.set s_e,                   41  ; e = c*y*x
-.set s_tmp,                 42
-.set s_end,                 45
+.set s_kitr,                0
+.set s_tmp,                 40
+.set s_p_buf_in,            s_p_in      ; 4 sgpr used for MUBUF
+.set s_p_buf_wei,           44
+.set s_p_buf_out,           s_p_out
+.set s_end,                 47
 
 ; vgpr
 .set v_c,                   0
@@ -523,7 +609,11 @@ igemm_v4r1_generic:
     ;s_lshl_b32 s[s_in_stride_n1], s[s_in_stride_n2], 2      ; TUNABLE
     s_mul_i32 s[s_wei_stride_c], s[s_y], s[s_x]
     s_mul_i32 s[s_wei_stride_k], s[s_c], s[s_wei_stride_c]
-    s_mul_i32 s[s_e], s[s_c], s[s_wei_stride_c]             ; here is needed, for we may multiply s_wei_stride_k by sizeof(float)
+    s_mov_b64 s[s_p_buf_wei:s_p_buf_wei+1], s[s_p_wei:s_p_wei+1]
+    s_mov_b32 s[s_p_buf_in+2], 0xffffffff
+    s_mov_b32 s[s_p_buf_in+3], 0x27000
+    s_mov_b32 s[s_p_buf_wei+2], 0xffffffff
+    s_mov_b32 s[s_p_buf_wei+3], 0x27000
 
     s_lshr_b32 s[s_tmp], s[s_n], 3                          ; TUNABLE   N0 = N / (N1 * N2);
     s_mul_i32 s[s_tmp+1], s[s_out_stride_k1], s[s_tmp]      ;           B = N0 * Ho * Wo;
@@ -611,7 +701,7 @@ igemm_v4r1_generic:
     s_lshl_b32 s[s_in_stride_n1], s[s_in_stride_n2], 2      ; TUNABLE
 
     ; load input from global
-    .v_in_load_e_n1_b_n2 v_b, s_p_in, v_in_os, s_in_stride_n1, s_in_stride_n2, v_flag, s_tmp
+    .v_in_load_e_n1_b_n2 v_b, s_p_buf_in, v_in_os, s_in_stride_n1, s_in_stride_n2, v_flag, s_tmp
 
     ; calculate SliceWindow EPerBlock(e=c*y*x). this is same for both input/weight
     s_mov_b32 s[1], t_e_per_block                           ; TUNABLE
@@ -683,7 +773,7 @@ igemm_v4r1_generic:
     s_lshl_b32 s[s_wei_stride_k], s[s_wei_stride_k], 2
 
     ; load wei from global
-    .v_wei_load_e_k v_a, s_p_wei, v_wei_os, s_wei_stride_k, s_tmp
+    .v_wei_load_e_k v_a, s_p_buf_wei, v_wei_os, s_wei_stride_k, s_tmp
 
     ; out diff
     ; k_thread_data_on_global = k_block_data_on_global + c_thread_mtx_on_block.row;
@@ -729,9 +819,12 @@ igemm_v4r1_generic:
     v_lshl_or_b32 v[v_tmp], v[v_wei_ie], 7, v[v_wei_ik]
     v_lshlrev_b32 v[v_sta_os], 2, v[v_tmp]
 
+    s_mov_b32 s[s_p_buf_out+2], 0xffffffff
+    s_mov_b32 s[s_p_buf_out+3], 0x27000
     .v_clear_nc v_c, 64
     ; E = C * Y * X
-    s_sub_i32 s[s_kitr], s[s_e], t_e_per_block
+    s_mul_i32 s[s_tmp], s[s_c], s[s_wei_stride_c]
+    s_sub_i32 s[s_kitr], s[s_tmp], t_e_per_block
     s_cmp_gt_i32 s[s_kitr], 0
     s_cbranch_scc0 L_igemm_v4r1_generic_fma_end
 
@@ -751,9 +844,7 @@ L_igemm_v4r1_generic_fma_body:
     ; 0  4  2  6  1  5  3  7
     ; blockwise_wei_copy.MoveSrcSliceWindow(Sequence<EPerBlock, 0>{}, True);
     v_swap_b32 v[v_a+1], v[v_a+4]       ; caution! swap is half speed
-    ;s_add_u32 s[s_p_wei], s[s_p_wei], s[s_wei_stride]
     v_swap_b32 v[v_a+3], v[v_a+6]
-    ;s_addc_u32 s[s_p_wei+1], s[s_p_wei+1], 0
     .v_wei_move_slice_window_e_cyx v_wei_os, v_wei_ic, v_wei_iy, v_wei_ix, s_y, s_x, s_wei_stride_c, s_wei_ic, s_wei_iy, s_wei_ix, v_idc, v_idy, v_idx, s_tmp
     ds_write2st64_b64 v[v_sta_os], v[v_a+0:v_a+1], v[v_a+4:v_a+5], offset0:16+0, offset1:16+1
     ds_write2st64_b64 v[v_sta_os], v[v_a+2:v_a+3], v[v_a+6:v_a+7], offset0:16+2, offset1:16+3
@@ -762,9 +853,9 @@ L_igemm_v4r1_generic_fma_body:
     s_barrier
 
     ; load input from global
-    .v_in_load_e_n1_b_n2 v_b, s_p_in, v_in_os, s_in_stride_n1, s_in_stride_n2, v_flag, s_tmp
+    .v_in_load_e_n1_b_n2 v_b, s_p_buf_in, v_in_os, s_in_stride_n1, s_in_stride_n2, v_flag, s_tmp
     ; load wei from global
-    .v_wei_load_e_k v_a, s_p_wei, v_wei_os, s_wei_stride_k, s_tmp
+    .v_wei_load_e_k v_a, s_p_buf_wei, v_wei_os, s_wei_stride_k, s_tmp
 
     ; do dma accumulate
     .v_fma_8x8_nk 16, v_c, v_la, v_lb, v_lda_os, v_ldb_os, 8192, 512, 0, 512
@@ -784,12 +875,17 @@ L_igemm_v4r1_generic_fma_end:
     ds_write2st64_b64 v[v_sta_os], v[v_a+0:v_a+1], v[v_a+4:v_a+5], offset0:16+0, offset1:16+1
     ds_write2st64_b64 v[v_sta_os], v[v_a+2:v_a+3], v[v_a+6:v_a+7], offset0:16+2, offset1:16+3
 
+    s_mov_b32 s[s_tmp], 0
+    s_mov_b32 s[s_tmp+1], 0
+    s_mov_b32 s[s_tmp+2], 0
+    s_mov_b32 s[s_tmp+3], 0
+
     s_waitcnt lgkmcnt(0)
 	s_barrier
 
     .v_fma_8x8_nk 16, v_c, v_la, v_lb, v_lda_os, v_ldb_os, 8192, 512, 0, 512
 
 L_igemm_v4r1_generic_fma_out:
-    .v_out_write_k0_k1_n1_b_n2 v_c, s_p_out, v_out_os, s_out_stride_k0, s_out_stride_k1, s_out_stride_n1, s_out_stride_n2, s_tmp
+    .v_out_write_k0_k1_n1_b_n2 v_c, s_p_buf_out, v_out_os, s_out_stride_k0, s_out_stride_k1, s_out_stride_n1, s_out_stride_n2, s_tmp
 
     s_endpgm
