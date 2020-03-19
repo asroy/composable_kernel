@@ -575,7 +575,7 @@ igemm_v4r1_generic:
         enable_vgpr_workitem_id = 0
         is_ptr64 = 1
         float_mode = 192
-        workgroup_group_segment_byte_size = 16384 * 2
+        workgroup_group_segment_byte_size = 16384
         kernarg_segment_byte_size = k_end
         wavefront_sgpr_count = s_end+1+2*3                  ; VCC, FLAT_SCRATCH and XNACK must be counted
         workitem_vgpr_count = v_end+1
@@ -822,73 +822,49 @@ igemm_v4r1_generic:
     s_mov_b32 s[s_p_buf_out+2], 0xffffffff
     s_mov_b32 s[s_p_buf_out+3], 0x27000
     .v_clear_nc v_c, 64
-
-    ; start FMA loop
-    s_waitcnt vmcnt(2)
-    ds_write_b128 v[v_stb_os], v[v_b:v_b+3]  offset:0
-    ds_write_b128 v[v_stb_os], v[v_b+4:v_b+7]  offset:64*4
-
-    s_waitcnt vmcnt(0)
-    v_swap_b32 v[v_a+1], v[v_a+4]       ; caution! swap is half speed
-    v_swap_b32 v[v_a+3], v[v_a+6]
-    ds_write2st64_b64 v[v_sta_os], v[v_a+0:v_a+1], v[v_a+4:v_a+5], offset0:16+0, offset1:16+1
-    ds_write2st64_b64 v[v_sta_os], v[v_a+2:v_a+3], v[v_a+6:v_a+7], offset0:16+2, offset1:16+3
-
     ; E = C * Y * X
     s_mul_i32 s[s_tmp], s[s_c], s[s_wei_stride_c]
     s_sub_i32 s[s_kitr], s[s_tmp], t_e_per_block
     s_cmp_gt_i32 s[s_kitr], 0
     s_cbranch_scc0 L_igemm_v4r1_generic_fma_end
 
-
+L_igemm_v4r1_generic_fma_body:
+    s_waitcnt vmcnt(2)
+    ds_write_b128 v[v_stb_os], v[v_b:v_b+3]  offset:0
+    ds_write_b128 v[v_stb_os], v[v_b+4:v_b+7]  offset:64*4
+    ; blockwise_in_copy.MoveSrcSliceWindow(Sequence<EPerBlock, 0, 0, 0>{}, True);
     .v_in_move_slice_window_e_cyx v_in_os, v_in_ic, v_in_iy, v_in_ix, v_in_ihi, v_in_iwi, v_flag, s_hi, s_wi, s_y, s_x, s_in_stride_c, s_dilation_h, s_dilation_w, s_in_ic, s_in_iy, s_in_ix, v_idc, v_idy, v_idx, s_tmp
+
+    s_waitcnt vmcnt(0)
+
+    ;
+    ; |k0         |k1
+    ; 0  1  2  3  4  5  6  7
+    ; |k0 k1|k0 k1|k0 k1|k0 k1|
+    ; 0  4  2  6  1  5  3  7
+    ; blockwise_wei_copy.MoveSrcSliceWindow(Sequence<EPerBlock, 0>{}, True);
+    v_swap_b32 v[v_a+1], v[v_a+4]       ; caution! swap is half speed
+    v_swap_b32 v[v_a+3], v[v_a+6]
     .v_wei_move_slice_window_e_cyx v_wei_os, v_wei_ic, v_wei_iy, v_wei_ix, s_y, s_x, s_wei_stride_c, s_wei_ic, s_wei_iy, s_wei_ix, v_idc, v_idy, v_idx, s_tmp
-    v_xor_b32 v[v_stb_os], 0x4000, v[v_stb_os]
-    v_xor_b32 v[v_sta_os], 0x4000, v[v_sta_os]
+    ds_write2st64_b64 v[v_sta_os], v[v_a+0:v_a+1], v[v_a+4:v_a+5], offset0:16+0, offset1:16+1
+    ds_write2st64_b64 v[v_sta_os], v[v_a+2:v_a+3], v[v_a+6:v_a+7], offset0:16+2, offset1:16+3
+
     s_waitcnt lgkmcnt(0)
     s_barrier
 
+    ; load input from global
     .v_in_load_e_n1_b_n2 v_b, s_p_buf_in, v_in_os, s_in_stride_n1, s_in_stride_n2, v_flag, s_tmp
+    ; load wei from global
     .v_wei_load_e_k v_a, s_p_buf_wei, v_wei_os, s_wei_stride_k, s_tmp
 
-L_igemm_v4r1_generic_fma_body:
-    ; do fma accumulate
-    .itr_k = 0
-    .rept 15
-        .if .itr_k == 0
-            ds_read_b128 v[v_la+0:v_la+3], v[v_lda_os], offset:8192
-            ds_read_b128 v[v_lb+0:v_lb+3], v[v_ldb_os], offset:0
-            ds_read_b128 v[v_lb+4:v_lb+7], v[v_ldb_os], offset:0 + (512 / 2)
-            ds_read_b128 v[v_la+4:v_la+7], v[v_lda_os], offset:8192 + (512 / 2)
-        .endif
+    ; do dma accumulate
+    .v_fma_8x8_nk 16, v_c, v_la, v_lb, v_lda_os, v_ldb_os, 8192, 512, 0, 512
+    s_barrier
 
-        s_waitcnt lgkmcnt(2)
-        .v_fma_4x4_s8 v_c+0, v_la+0, v_lb+0
-
-        s_waitcnt lgkmcnt(1)
-        .v_fma_4x4_s8 v_c+4, v_la+0, v_lb+4
-
-        ds_read_b128 v[v_la+0:v_la+3], v[v_lda_os], offset:8192 + (.itr_k + 1) * 512
-        s_waitcnt lgkmcnt(1)
-        .v_fma_4x4_s8 v_c+32, v_la+4, v_lb+0
-
-        ds_read_b128 v[v_lb+0:v_lb+3], v[v_ldb_os], offset:0 + (.itr_k + 1) * 512
-        .v_fma_4x4_s8 v_c+36, v_la+4, v_lb+4
-
-        ds_read_b128 v[v_lb+4:v_lb+7], v[v_ldb_os], offset:0 + (.itr_k + 1) * 512 + (512 / 2)
-        ds_read_b128 v[v_la+4:v_la+7], v[v_lda_os], offset:8192 + (.itr_k + 1) * 512 + (512 / 2)
-
-        .itr_k = .itr_k + 1
-    .endr
-
-    ; last unrool
-    v_xor_b32 v[v_ldb_os], 0x4000, v[v_ldb_os]
-    v_xor_b32 v[v_lda_os], 0x4000, v[v_lda_os]
-    s_waitcnt lgkmcnt(2)
-    .v_fma_4x4_s8 v_c+0, v_la+0, v_lb+0
-    s_waitcnt lgkmcnt(1)
-    .v_fma_4x4_s8 v_c+4, v_la+0, v_lb+4
-
+    s_sub_i32 s[s_kitr], s[s_kitr], t_e_per_block
+    s_cmp_gt_i32 s[s_kitr], 0
+    s_cbranch_scc1 L_igemm_v4r1_generic_fma_body
+L_igemm_v4r1_generic_fma_end:
     s_waitcnt vmcnt(2)
     ds_write_b128 v[v_stb_os], v[v_b:v_b+3]  offset:0
     ds_write_b128 v[v_stb_os], v[v_b+4:v_b+7]  offset:64*4
@@ -899,38 +875,14 @@ L_igemm_v4r1_generic_fma_body:
     ds_write2st64_b64 v[v_sta_os], v[v_a+0:v_a+1], v[v_a+4:v_a+5], offset0:16+0, offset1:16+1
     ds_write2st64_b64 v[v_sta_os], v[v_a+2:v_a+3], v[v_a+6:v_a+7], offset0:16+2, offset1:16+3
 
-    s_sub_i32 s[s_kitr], s[s_kitr], t_e_per_block
-    s_cmp_gt_i32 s[s_kitr], 0
-    s_cbranch_scc0 L_igemm_v4r1_generic_fma_finishing
-
-    .v_in_move_slice_window_e_cyx v_in_os, v_in_ic, v_in_iy, v_in_ix, v_in_ihi, v_in_iwi, v_flag, s_hi, s_wi, s_y, s_x, s_in_stride_c, s_dilation_h, s_dilation_w, s_in_ic, s_in_iy, s_in_ix, v_idc, v_idy, v_idx, s_tmp
-    .v_wei_move_slice_window_e_cyx v_wei_os, v_wei_ic, v_wei_iy, v_wei_ix, s_y, s_x, s_wei_stride_c, s_wei_ic, s_wei_iy, s_wei_ix, v_idc, v_idy, v_idx, s_tmp
-
-    s_waitcnt lgkmcnt(4)
-    .v_fma_4x4_s8 v_c+32, v_la+4, v_lb+0
-    v_xor_b32 v[v_stb_os], 0x4000, v[v_stb_os]
-    v_xor_b32 v[v_sta_os], 0x4000, v[v_sta_os]
-
-    s_waitcnt lgkmcnt(0)
-    s_barrier
-
-    .v_in_load_e_n1_b_n2 v_b, s_p_buf_in, v_in_os, s_in_stride_n1, s_in_stride_n2, v_flag, s_tmp
-    .v_wei_load_e_k v_a, s_p_buf_wei, v_wei_os, s_wei_stride_k, s_tmp
-
-    .v_fma_4x4_s8 v_c+36, v_la+4, v_lb+4
-    s_branch L_igemm_v4r1_generic_fma_body
-L_igemm_v4r1_generic_fma_finishing:
-    s_waitcnt lgkmcnt(4)
-    .v_fma_4x4_s8 v_c+32, v_la+4, v_lb+0
-    .v_fma_4x4_s8 v_c+36, v_la+4, v_lb+4
-L_igemm_v4r1_generic_fma_end:
     s_mov_b32 s[s_tmp], 0
     s_mov_b32 s[s_tmp+1], 0
     s_mov_b32 s[s_tmp+2], 0
     s_mov_b32 s[s_tmp+3], 0
 
     s_waitcnt lgkmcnt(0)
-    s_barrier
+	s_barrier
+
     .v_fma_8x8_nk 16, v_c, v_la, v_lb, v_lda_os, v_ldb_os, 8192, 512, 0, 512
 
 L_igemm_v4r1_generic_fma_out:
