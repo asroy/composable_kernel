@@ -272,8 +272,6 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_generic_asm(InDesc,
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
-    static_assert(X == 1 && Y == 1, "only support 1x1 kernel");
-
     static_assert(LeftPads{}[0] == RightPads{}[0] && LeftPads{}[1] == RightPads{}[1],
                   "currently assume Pads X&Y in left&right is the same");
 
