@@ -91,44 +91,6 @@
 .endm
 
 ; hard coded thread {1,2,1,4} for e_n1_b_n2
-.macro .v_in_load_e_n1_b_n2_deprecate v_dst, s_p_in, v_in_os, s_in_stride_n1, s_in_stride_n2, v_flag, s_tmp4
-    .v_clear_nc \v_dst, 8
-    v_cmp_eq_u32 vcc, 1, v[\v_flag]
-    s_and_saveexec_b64 s[\s_tmp4+2:\s_tmp4+3], vcc
-    ; {0,0,0,0}
-    global_load_dword v[\v_dst], v[\v_in_os:\v_in_os+1], s[\s_p_in:\s_p_in+1]
-    s_add_u32 s[\s_tmp4], s[\s_p_in], s[\s_in_stride_n2]
-    s_addc_u32 s[\s_tmp4+1], s[\s_p_in+1], 0
-    ; {0,0,0,1}
-    global_load_dword v[\v_dst+1], v[\v_in_os:\v_in_os+1], s[\s_tmp4:\s_tmp4+1]
-    s_add_u32 s[\s_tmp4], s[\s_tmp4], s[\s_in_stride_n2]
-    s_addc_u32 s[\s_tmp4+1], s[\s_tmp4+1], 0
-    ; {0,0,0,2}
-    global_load_dword v[\v_dst+2], v[\v_in_os:\v_in_os+1], s[\s_tmp4:\s_tmp4+1]
-    s_add_u32 s[\s_tmp4], s[\s_tmp4], s[\s_in_stride_n2]
-    s_addc_u32 s[\s_tmp4+1], s[\s_tmp4+1], 0
-    ; {0,0,0,3}
-    global_load_dword v[\v_dst+3], v[\v_in_os:\v_in_os+1], s[\s_tmp4:\s_tmp4+1]
-    s_add_u32 s[\s_tmp4], s[\s_p_in], s[\s_in_stride_n1]
-    s_addc_u32 s[\s_tmp4+1], s[\s_p_in+1], 0
-    ; {0,1,0,0}
-    global_load_dword v[\v_dst+4], v[\v_in_os:\v_in_os+1], s[\s_tmp4:\s_tmp4+1]
-    s_add_u32 s[\s_tmp4], s[\s_tmp4], s[\s_in_stride_n2]
-    s_addc_u32 s[\s_tmp4+1], s[\s_tmp4+1], 0
-    ; {0,1,0,1}
-    global_load_dword v[\v_dst+5], v[\v_in_os:\v_in_os+1], s[\s_tmp4:\s_tmp4+1]
-    s_add_u32 s[\s_tmp4], s[\s_tmp4], s[\s_in_stride_n2]
-    s_addc_u32 s[\s_tmp4+1], s[\s_tmp4+1], 0
-    ; {0,1,0,2}
-    global_load_dword v[\v_dst+6], v[\v_in_os:\v_in_os+1], s[\s_tmp4:\s_tmp4+1]
-    s_add_u32 s[\s_tmp4], s[\s_tmp4], s[\s_in_stride_n2]
-    s_addc_u32 s[\s_tmp4+1], s[\s_tmp4+1], 0
-    ; {0,1,0,3}
-    global_load_dword v[\v_dst+7], v[\v_in_os:\v_in_os+1], s[\s_tmp4:\s_tmp4+1]
-    s_or_b64 exec, exec, s[\s_tmp4+2:\s_tmp4+3]
-.endm
-
-; hard coded thread {1,2,1,4} for e_n1_b_n2
 .macro .v_in_load_e_n1_b_n2 v_dst, s_p_buf_in, v_in_os, s_in_stride_n1, s_in_stride_n2, v_flag, s_tmp4
     .v_clear_nc \v_dst, 8
     v_cmp_eq_u32 vcc, 1, v[\v_flag]
@@ -257,65 +219,10 @@
     v_lshl_add_u32 v[\v_wei_os], v[\v_idc], 2, v[\v_wei_os]  ; indeed, idc here must be possitive
 .endm
 
-; hard coded thread {4,2} for e_k
-.macro .v_wei_load_e_k_deprecate v_dst, s_p_wei, v_wei_os, s_wei_stride_k, s_tmp2
-    global_load_dwordx4 v[\v_dst+0:\v_dst+3], v[\v_wei_os:\v_wei_os+1], s[\s_p_wei:\s_p_wei+1]
-    s_add_u32 s[\s_tmp2], s[\s_p_wei], s[\s_wei_stride_k]
-    s_addc_u32 s[\s_tmp2+1], s[\s_p_wei+1], 0
-    global_load_dwordx4 v[\v_dst+4:\v_dst+7], v[\v_wei_os:\v_wei_os+1], s[\s_tmp2:\s_tmp2+1]
-.endm
-
 .macro .v_wei_load_e_k v_dst, s_p_buf_wei, v_wei_os, s_wei_stride_k, s_tmp2
     buffer_load_dwordx4 v[\v_dst+0:\v_dst+3], v[\v_wei_os], s[\s_p_buf_wei:\s_p_buf_wei+3], 0 offen
     buffer_load_dwordx4 v[\v_dst+4:\v_dst+7], v[\v_wei_os], s[\s_p_buf_wei:\s_p_buf_wei+3], s[\s_wei_stride_k] offen
 .endm
-
-/*
-.macro .v_write1d_4_strided v_src, s_p_dst, v_dst_os, s_dst_diff, s_tmp2
-    global_store_dword v[\v_dst_os:\v_dst_os+1], v[\v_src+0], s[\s_p_dst:\s_p_dst+1]
-    s_add_u32 s[\s_tmp2], s[\s_p_dst], s[\s_dst_diff]
-    s_addc_u32 s[\s_tmp2+1], s[\s_p_dst+1], 0
-    global_store_dword v[\v_dst_os:\v_dst_os+1], v[\v_src+1], s[\s_tmp2:\s_tmp2+1]
-    s_add_u32 s[\s_tmp2], s[\s_tmp2], s[\s_dst_diff]
-    s_addc_u32 s[\s_tmp2+1], s[\s_tmp2+1], 0
-    global_store_dword v[\v_dst_os:\v_dst_os+1], v[\v_src+2], s[\s_tmp2:\s_tmp2+1]
-    s_add_u32 s[\s_tmp2], s[\s_tmp2], s[\s_dst_diff]
-    s_addc_u32 s[\s_tmp2+1], s[\s_tmp2+1], 0
-    global_store_dword v[\v_dst_os:\v_dst_os+1], v[\v_src+3], s[\s_tmp2:\s_tmp2+1]
-.endm
-
-.macro .v_write2d_2_4_strided v_src, s_p_dst, v_dst_os, s_dst_diff1d, s_dst_diff2d, s_tmp2
-    .v_write1d_4_strided \v_src+0, \s_p_dst, \v_dst_os, \s_dst_diff1d, \s_tmp2
-    s_add_u32 s[\s_tmp2], s[\s_p_dst], s[\s_dst_diff2d]
-    s_addc_u32 s[\s_tmp2+1], s[\s_p_dst+1], 0
-    .v_write1d_4_strided \v_src+4, \s_tmp2, \v_dst_os, \s_dst_diff1d, \s_tmp2
-.endm
-
-.macro .v_write3d_4_2_4_strided v_src, s_p_dst, v_dst_os, s_dst_diff1d, s_dst_diff2d, s_dst_diff3d, s_tmp4
-    .v_write2d_2_4_strided \v_src+0, \s_p_dst, \v_dst_os, \s_dst_diff1d, \s_dst_diff2d, \s_tmp4+2
-    s_add_u32 s[\s_tmp4], s[\s_p_dst], s[\s_dst_diff3d]
-    s_addc_u32 s[\s_tmp4+1], s[\s_p_dst+1], 0
-    .v_write2d_2_4_strided \v_src+8, \s_tmp4, \v_dst_os, \s_dst_diff1d, \s_dst_diff2d, \s_tmp4+2
-    s_add_u32 s[\s_tmp4], s[\s_tmp4], s[\s_dst_diff3d]
-    s_addc_u32 s[\s_tmp4+1], s[\s_tmp4+1], 0
-    .v_write2d_2_4_strided \v_src+16, \s_tmp4, \v_dst_os, \s_dst_diff1d, \s_dst_diff2d, \s_tmp4+2
-    s_add_u32 s[\s_tmp4], s[\s_tmp4], s[\s_dst_diff3d]
-    s_addc_u32 s[\s_tmp4+1], s[\s_tmp4+1], 0
-    .v_write2d_2_4_strided \v_src+24, \s_tmp4, \v_dst_os, \s_dst_diff1d, \s_dst_diff2d, \s_tmp4+2
-.endm
-
-.macro .v_write4d_2_4_2_4_strided v_src, s_p_dst, v_dst_os, s_dst_diff1d, s_dst_diff2d, s_dst_diff3d, s_dst_diff4d, s_tmp4
-    .v_write3d_4_2_4_strided \v_src, \s_p_dst, \v_dst_os, \s_dst_diff1d, \s_dst_diff2d, \s_dst_diff3d, \s_tmp4
-    s_add_u32 s[\s_p_dst], s[\s_p_dst], s[\s_dst_diff4d]
-    s_addc_u32 s[\s_p_dst+1], s[\s_p_dst+1], 0
-    .v_write3d_4_2_4_strided \v_src+32, \s_p_dst, \v_dst_os, \s_dst_diff1d, \s_dst_diff2d, \s_dst_diff3d, \s_tmp4
-.endm
-
-; hard coded thread {2, 4, 2, 1, 4} for k0_k1_n1_b_n2
-.macro .v_out_write_k0_k1_n1_b_n2 v_src, s_p_out, v_out_os, s_out_stride_k0, s_out_stride_k1, s_out_stride_n1, s_out_stride_n2, s_tmp4
-    .v_write4d_2_4_2_4_strided \v_src, \s_p_out, \v_out_os, \s_out_stride_n2, \s_out_stride_n1, \s_out_stride_k1, \s_out_stride_k0, \s_tmp4
-.endm
-*/
 
 .macro .v_write1d_4_strided v_src, s_p_buf_dst, v_dst_os, s_dst_diff, s_dst_os
     buffer_store_dword v[\v_src+0], v[\v_dst_os], s[\s_p_buf_dst:\s_p_buf_dst+3], s[\s_dst_os] offen
