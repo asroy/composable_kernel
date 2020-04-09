@@ -75,6 +75,7 @@ struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw
         constexpr index_t ConvDilationH = ConvDilations{}[0];
         constexpr index_t ConvDilationW = ConvDilations{}[1];
 
+#if 0
         // sanity-check for vectorized memory load
         static_assert((Wo == 1 || (ConvStrideW == 1 || GemmBBlockCopySrcDataPerRead_GemmN == 1)) &&
                           (X == 1 || ConvDilationW % GemmBBlockCopySrcDataPerRead_GemmN == 0) &&
@@ -82,6 +83,7 @@ struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw
                           InRightPads{}[1] % GemmBBlockCopySrcDataPerRead_GemmN == 0,
                       "wrong! aligment requirement for vectorized global load of input tensor will "
                       "be violated");
+#endif
 
         // weight tensor
         constexpr auto wei_e_k_global_desc = reorder_tensor_descriptor_given_upper2lower(

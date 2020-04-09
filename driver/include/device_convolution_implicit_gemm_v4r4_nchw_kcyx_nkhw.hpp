@@ -1,4 +1,3 @@
-#pragma once
 #include <unistd.h>
 #include "device.hpp"
 #include "tensor.hpp"
@@ -54,7 +53,73 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     out_nkhw_device_buf.ToDevice(out_nkhw.mData.data());
 
 #if 0
-    // BlockSize = 256, GemmKPerBlock = 8
+    // cdata = 64, BlockSize = 256, 64x256x8
+    constexpr index_t BlockSize = 256;
+
+    constexpr index_t GemmMPerBlock = 64;
+    constexpr index_t GemmNPerBlock = 256;
+    constexpr index_t GemmKPerBlock = 8;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 4;
+    constexpr index_t GemmNLevel1Cluster     = 16;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<2, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<4, 64>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 2;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<8, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 256>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // cdata = 64, BlockSize = 256, 128x128x4
+    constexpr index_t BlockSize = 256;
+
+    constexpr index_t GemmMPerBlock = 128;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 4;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 4;
+    constexpr index_t GemmNLevel0Cluster     = 4;
+    constexpr index_t GemmMLevel1Cluster     = 4;
+    constexpr index_t GemmNLevel1Cluster     = 4;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<2, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 128>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 2;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<2, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<2, 128>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // cdata = 64, BlockSize = 256, 128x128x8
     constexpr index_t BlockSize = 256;
 
     constexpr index_t GemmMPerBlock = 128;
@@ -63,11 +128,13 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmMPerThreadSubC     = 4;
     constexpr index_t GemmNPerThreadSubC     = 4;
-    constexpr index_t GemmMLevel0Cluster     = 4;
-    constexpr index_t GemmNLevel0Cluster     = 4;
-    constexpr index_t GemmMLevel1Cluster     = 4;
-    constexpr index_t GemmNLevel1Cluster     = 4;
     constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 8;
+    constexpr index_t GemmNLevel1Cluster     = 8;
+
     constexpr index_t ThreadGemmDataPerReadM = 4;
     constexpr index_t ThreadGemmDataPerReadN = 4;
 
@@ -85,7 +152,41 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
 #elif 0
-    // BlockSize = 256, GemmKPerBlock = 16
+    // cdata = 64, BlockSize = 256, 128x128x8
+    // vector 4
+    constexpr index_t BlockSize = 256;
+
+    constexpr index_t GemmMPerBlock = 128;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 8;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 8;
+    constexpr index_t GemmNLevel1Cluster     = 8;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 128>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<1, 4>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<8, 32>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 4;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 4;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 4;
+#elif 0
+    // cdata = 64, BlockSize = 256, 128x128x16
     constexpr index_t BlockSize = 256;
 
     constexpr index_t GemmMPerBlock = 128;
@@ -94,11 +195,13 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmMPerThreadSubC     = 4;
     constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
     constexpr index_t GemmMLevel0Cluster     = 4;
     constexpr index_t GemmNLevel0Cluster     = 4;
     constexpr index_t GemmMLevel1Cluster     = 4;
     constexpr index_t GemmNLevel1Cluster     = 4;
-    constexpr index_t GemmKPerThreadLoop     = 1;
+
     constexpr index_t ThreadGemmDataPerReadM = 4;
     constexpr index_t ThreadGemmDataPerReadN = 4;
 
@@ -116,8 +219,9 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
 #elif 0
-    // BlockSize = 256, GemmKPerBlock = 8
-    // for 1x1 filter, vector-read-b = 4
+    // cdata = 64, BlockSize = 256, 128x128x8
+    // GemmBBlockCopySrcDataPerRead_GemmN = 4
+    // GemmCThreadCopyDstDataPerWrite_GemmN1 = 4
     constexpr index_t BlockSize = 256;
 
     constexpr index_t GemmMPerBlock = 128;
@@ -126,11 +230,13 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmMPerThreadSubC     = 4;
     constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
     constexpr index_t GemmMLevel0Cluster     = 4;
     constexpr index_t GemmNLevel0Cluster     = 4;
     constexpr index_t GemmMLevel1Cluster     = 4;
     constexpr index_t GemmNLevel1Cluster     = 4;
-    constexpr index_t GemmKPerThreadLoop     = 1;
+
     constexpr index_t ThreadGemmDataPerReadM = 4;
     constexpr index_t ThreadGemmDataPerReadN = 4;
 
@@ -147,9 +253,10 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 4;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 4;
-#elif 1
-    // BlockSize = 256, GemmKPerBlock = 16
-    // for 1x1 filter, vector-read-b = 4
+#elif 0
+    // cdata = 64, BlockSize = 256, 128x128x16
+    // GemmBBlockCopySrcDataPerRead_GemmN = 4
+    // GemmCThreadCopyDstDataPerWrite_GemmN1 = 4
     constexpr index_t BlockSize = 256;
 
     constexpr index_t GemmMPerBlock = 128;
@@ -158,11 +265,13 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmMPerThreadSubC     = 4;
     constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
     constexpr index_t GemmMLevel0Cluster     = 4;
     constexpr index_t GemmNLevel0Cluster     = 4;
     constexpr index_t GemmMLevel1Cluster     = 4;
     constexpr index_t GemmNLevel1Cluster     = 4;
-    constexpr index_t GemmKPerThreadLoop     = 1;
+
     constexpr index_t ThreadGemmDataPerReadM = 4;
     constexpr index_t ThreadGemmDataPerReadN = 4;
 
@@ -179,37 +288,641 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 4;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 4;
-#elif 1
-    // 1x1 filter, 14x14 image
-    constexpr index_t BlockSize = 256;
+#elif 0
+    // cdata = 64, BlockSize = 128, 128x64x4
+    constexpr index_t BlockSize = 128;
 
     constexpr index_t GemmMPerBlock = 128;
-    constexpr index_t GemmNPerBlock = 128;
-    constexpr index_t GemmKPerBlock = 8;
+    constexpr index_t GemmNPerBlock = 64;
+    constexpr index_t GemmKPerBlock = 4;
 
     constexpr index_t GemmMPerThreadSubC     = 4;
     constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
     constexpr index_t GemmMLevel0Cluster     = 4;
     constexpr index_t GemmNLevel0Cluster     = 4;
-    constexpr index_t GemmMLevel1Cluster     = 4;
+    constexpr index_t GemmMLevel1Cluster     = 2;
     constexpr index_t GemmNLevel1Cluster     = 4;
-    constexpr index_t GemmKPerThreadLoop     = 1;
+
     constexpr index_t ThreadGemmDataPerReadM = 4;
     constexpr index_t ThreadGemmDataPerReadN = 4;
 
     using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 1>;
-    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 128>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<1, 128>;
 
     constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
     constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
 
-    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<2, 2>;
-    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<4, 64>;
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<2, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<2, 64>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // cdata = 64, BlockSize = 128, 128x64x4
+    // GemmBBlockCopySrcDataPerRead_GemmN = 2
+    // GemmCThreadCopyDstDataPerWrite_GemmN1 = 2
+    constexpr index_t BlockSize = 128;
+
+    constexpr index_t GemmMPerBlock = 128;
+    constexpr index_t GemmNPerBlock = 64;
+    constexpr index_t GemmKPerBlock = 4;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 4;
+    constexpr index_t GemmNLevel1Cluster     = 8;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<1, 128>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<1, 2>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<4, 32>;
 
     constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 2;
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 2;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 2;
+#elif 0
+    // cdata = 64, BlockSize = 128, 128x64x8
+    constexpr index_t BlockSize = 128;
+
+    constexpr index_t GemmMPerBlock = 128;
+    constexpr index_t GemmNPerBlock = 64;
+    constexpr index_t GemmKPerBlock = 8;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 4;
+    constexpr index_t GemmNLevel1Cluster     = 8;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 2>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 64>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 2;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<4, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<2, 64>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // cdata = 64, BlockSize = 128, 128x64x8
+    // GemmBBlockCopySrcDataPerRead_GemmN = 4
+    // GemmCThreadCopyDstDataPerWrite_GemmN1 = 4
+    constexpr index_t BlockSize = 128;
+
+    constexpr index_t GemmMPerBlock = 128;
+    constexpr index_t GemmNPerBlock = 64;
+    constexpr index_t GemmKPerBlock = 8;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 4;
+    constexpr index_t GemmNLevel1Cluster     = 8;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 2>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 64>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 2;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<1, 4>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<8, 16>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 4;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 4;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 4;
+#elif 0
+    // cdata = 64, BlockSize = 128, 128x64x16
+    constexpr index_t BlockSize = 128;
+
+    constexpr index_t GemmMPerBlock = 128;
+    constexpr index_t GemmNPerBlock = 64;
+    constexpr index_t GemmKPerBlock = 16;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 4;
+    constexpr index_t GemmNLevel0Cluster     = 4;
+    constexpr index_t GemmMLevel1Cluster     = 2;
+    constexpr index_t GemmNLevel1Cluster     = 4;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 4>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<4, 32>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 4;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<8, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<2, 64>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // cdata = 64, BlockSize = 128, 64x128x4
+    constexpr index_t BlockSize = 128;
+
+    constexpr index_t GemmMPerBlock = 64;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 4;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 4;
+    constexpr index_t GemmMLevel1Cluster     = 4;
+    constexpr index_t GemmNLevel1Cluster     = 4;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<2, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 64>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 2;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<4, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 128>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // BlockSize = 128, 64x128x4
+    // GemmBBlockCopySrcDataPerRead_GemmN = 4
+    // GemmCThreadCopyDstDataPerWrite_GemmN1 = 4
+    constexpr index_t BlockSize = 128;
+
+    constexpr index_t GemmMPerBlock = 64;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 4;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 4;
+    constexpr index_t GemmNLevel1Cluster     = 8;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<2, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 64>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 2;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<1, 4>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<4, 32>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 4;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 4;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 4;
+#elif 0
+    // cdata = 64, BlockSize = 128, 64x128x8
+    constexpr index_t BlockSize = 128;
+
+    constexpr index_t GemmMPerBlock = 64;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 8;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 4;
+    constexpr index_t GemmNLevel1Cluster     = 8;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 64>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<8, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 128>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // BlockSize = 128, 64x128x8
+    // GemmBBlockCopySrcDataPerRead_GemmN = 4
+    // GemmCThreadCopyDstDataPerWrite_GemmN1 = 4
+    constexpr index_t BlockSize = 128;
+
+    constexpr index_t GemmMPerBlock = 64;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 8;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 4;
+    constexpr index_t GemmNLevel1Cluster     = 8;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 64>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<2, 4>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<4, 32>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 4;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 4;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 4;
+#elif 0
+    // BlockSize = 128, 64x128x16
+    constexpr index_t BlockSize = 128;
+
+    constexpr index_t GemmMPerBlock = 64;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 16;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 4;
+    constexpr index_t GemmNLevel0Cluster     = 4;
+    constexpr index_t GemmMLevel1Cluster     = 2;
+    constexpr index_t GemmNLevel1Cluster     = 4;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<8, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 64>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<16, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 128>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // cdata = 64, BlockSize = 64, 64x64x4
+    constexpr index_t BlockSize = 64;
+
+    constexpr index_t GemmMPerBlock = 64;
+    constexpr index_t GemmNPerBlock = 64;
+    constexpr index_t GemmKPerBlock = 4;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 4;
+    constexpr index_t GemmNLevel0Cluster     = 4;
+    constexpr index_t GemmMLevel1Cluster     = 2;
+    constexpr index_t GemmNLevel1Cluster     = 2;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<1, 64>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<4, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 64>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // cdata = 64, BlockSize = 64, 64x64x8
+    constexpr index_t BlockSize = 64;
+
+    constexpr index_t GemmMPerBlock = 64;
+    constexpr index_t GemmNPerBlock = 64;
+    constexpr index_t GemmKPerBlock = 8;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 4;
+    constexpr index_t GemmNLevel0Cluster     = 4;
+    constexpr index_t GemmMLevel1Cluster     = 2;
+    constexpr index_t GemmNLevel1Cluster     = 2;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 2>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 32>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 2;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<8, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 64>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // cdata = 64, BlockSize =  64, 32x128x2
+    constexpr index_t BlockSize = 64;
+
+    constexpr index_t GemmMPerBlock = 32;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 2;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 2;
+    constexpr index_t GemmNLevel1Cluster     = 8;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<1, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 32>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 1;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<2, 2>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 64>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // cdata = 64, BlockSize =  64, 32x128x4
+    constexpr index_t BlockSize = 64;
+
+    constexpr index_t GemmMPerBlock = 32;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 4;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 2;
+    constexpr index_t GemmNLevel1Cluster     = 8;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<2, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 32>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 2;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<4, 2>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 64>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 1
+    // cdata = 64, BlockSize = 32, 32x64x3
+    constexpr index_t BlockSize = 32;
+
+    constexpr index_t GemmMPerBlock = 32;
+    constexpr index_t GemmNPerBlock = 64;
+    constexpr index_t GemmKPerBlock = 3;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 2;
+    constexpr index_t GemmNLevel1Cluster     = 4;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<3, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<1, 32>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 1;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<3, 2>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 32>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 2;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 1
+    // cdata = 64, BlockSize = 64, 64x64x3
+    constexpr index_t BlockSize = 64;
+
+    constexpr index_t GemmMPerBlock = 64;
+    constexpr index_t GemmNPerBlock = 64;
+    constexpr index_t GemmKPerBlock = 3;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 2;
+    constexpr index_t GemmMLevel1Cluster     = 4;
+    constexpr index_t GemmNLevel1Cluster     = 4;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<3, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<1, 64>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 1;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<3, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 64>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // cdata = 64, BlockSize =  64, 32x128x8
+    constexpr index_t BlockSize = 64;
+
+    constexpr index_t GemmMPerBlock = 32;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 8;
+
+    constexpr index_t GemmMPerThreadSubC     = 4;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 2;
+    constexpr index_t GemmNLevel0Cluster     = 4;
+    constexpr index_t GemmMLevel1Cluster     = 2;
+    constexpr index_t GemmNLevel1Cluster     = 4;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 32>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<8, 2>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 64>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 1
+    // cdata = 32, BlockSize = 128, 32x128x8
+    constexpr index_t BlockSize = 128;
+
+    constexpr index_t GemmMPerBlock = 32;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 8;
+
+    constexpr index_t GemmMPerThreadSubC     = 2;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 4;
+    constexpr index_t GemmNLevel0Cluster     = 4;
+    constexpr index_t GemmMLevel1Cluster     = 2;
+    constexpr index_t GemmNLevel1Cluster     = 4;
+
+    constexpr index_t ThreadGemmDataPerReadM = 2;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<2, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<4, 32>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 2;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<8, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 128>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 0
+    // cdata = 32, BlockSize = 128, 32x128x16
+    constexpr index_t BlockSize = 128;
+
+    constexpr index_t GemmMPerBlock = 32;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 16;
+
+    constexpr index_t GemmMPerThreadSubC     = 2;
+    constexpr index_t GemmNPerThreadSubC     = 4;
+    constexpr index_t GemmKPerThreadLoop     = 1;
+
+    constexpr index_t GemmMLevel0Cluster     = 4;
+    constexpr index_t GemmNLevel0Cluster     = 4;
+    constexpr index_t GemmMLevel1Cluster     = 2;
+    constexpr index_t GemmNLevel1Cluster     = 4;
+
+    constexpr index_t ThreadGemmDataPerReadM = 2;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 1>;
+    using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<4, 32>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<16, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN = Sequence<1, 128>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
 #endif
 
     constexpr index_t GemmM = K;
@@ -237,11 +950,11 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
         GemmKPerBlock,
         GemmMPerThreadSubC,
         GemmNPerThreadSubC,
+        GemmKPerThreadLoop,
         GemmMLevel0Cluster,
         GemmNLevel0Cluster,
         GemmMLevel1Cluster,
         GemmNLevel1Cluster,
-        GemmKPerThreadLoop,
         ThreadGemmDataPerReadM,
         ThreadGemmDataPerReadN,
         GemmABlockCopyThreadSliceLengths_GemmK_GemmM,
@@ -254,10 +967,47 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
         GemmBBlockCopyDstDataPerWrite_GemmN,
         GemmCThreadCopyDstDataPerWrite_GemmN1>{};
 
-    for(index_t i = 0; i < nrepeat; ++i)
+    for(index_t i = 0; i < 10; ++i)
     {
         float time =
-            launch_and_time_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
+	    launch_and_time_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
+				   dim3(GridSize),
+				   dim3(BlockSize),
+				   0,
+				   0,
+				   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
+				   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+				   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+
+     	printf("Elapsed time : %f ms, %f TFlop/s\n",
+	       time,
+	       (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
+		   (std::size_t(1000) * 1000 * 1000) / time);
+    }
+
+    // warm up
+    printf("Warn up running %d times...\n", nrepeat);
+
+    for(index_t i = 0; i < nrepeat; ++i)
+    {
+	    launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
+				   dim3(GridSize),
+				   dim3(BlockSize),
+				   0,
+				   0,
+				   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
+				   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+				   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+    }
+
+    printf("Start running %d times...\n", nrepeat);
+
+    cudaDeviceSynchronize();
+    auto start = std::chrono::steady_clock::now();
+
+    for(index_t i = 0; i < nrepeat; ++i)
+    {
+            launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
                                    dim3(GridSize),
                                    dim3(BlockSize),
                                    0,
@@ -266,12 +1016,17 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
                                    static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
                                    static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
 
-        printf("Elapsed time : %f ms, %f TFlop/s\n",
-               time,
-               (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
-                   (std::size_t(1000) * 1000 * 1000) / time);
-        usleep(std::min(time * 1000, float(10000)));
-    }
+    } 
+
+    cudaDeviceSynchronize();
+    auto end = std::chrono::steady_clock::now();
+    
+    float ave_time = std::chrono::duration<float, std::milli>(end - start).count() / nrepeat;
+
+	printf("Average elapsed time : %f ms, %f TFlop/s\n",
+	       ave_time,
+	       (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
+		   (std::size_t(1000) * 1000 * 1000) / ave_time);
 
     out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
 }

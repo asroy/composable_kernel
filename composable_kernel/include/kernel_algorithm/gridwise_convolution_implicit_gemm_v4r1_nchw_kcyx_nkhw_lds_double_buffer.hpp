@@ -164,6 +164,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
         constexpr index_t KBlockWork = K / KPerBlock;
         constexpr index_t BBlockWork = B / BPerBlock;
 
+#if 0
         constexpr auto block_work_desc =
             make_cluster_descriptor(Sequence<KBlockWork, BBlockWork>{});
 
@@ -171,6 +172,16 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 
         const index_t k_block_data_on_global = block_work_id[0] * KPerBlock;
         const index_t b_block_data_on_global = block_work_id[1] * BPerBlock;
+#else
+        constexpr auto block_work_desc =
+            make_cluster_descriptor(Sequence<BBlockWork, KBlockWork>{});
+
+        const auto block_work_id = block_work_desc.CalculateClusterIndex(get_block_1d_id());
+
+        const index_t b_block_data_on_global = block_work_id[0] * BPerBlock;
+        const index_t k_block_data_on_global = block_work_id[1] * KPerBlock;
+#endif
+
 
         // input tensor
         //     global tensor in global memory

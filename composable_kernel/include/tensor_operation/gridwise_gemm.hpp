@@ -111,6 +111,7 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
         constexpr index_t MBlockWork = M / MPerBlock;
         constexpr index_t NBlockWork = N / NPerBlock;
 
+#if 1
         constexpr auto block_work_desc =
             make_cluster_descriptor(Sequence<MBlockWork, NBlockWork>{});
 
@@ -118,6 +119,15 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
 
         const index_t m_block_data_on_global = block_work_id[0] * MPerBlock;
         const index_t n_block_data_on_global = block_work_id[1] * NPerBlock;
+#else
+        constexpr auto block_work_desc =
+            make_cluster_descriptor(Sequence<NBlockWork, MBlockWork>{});
+
+        const auto block_work_id = block_work_desc.CalculateClusterIndex(get_block_1d_id());
+
+        const index_t n_block_data_on_global = block_work_id[0] * NPerBlock;
+        const index_t m_block_data_on_global = block_work_id[1] * MPerBlock;
+#endif
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
