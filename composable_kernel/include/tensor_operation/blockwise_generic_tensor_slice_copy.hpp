@@ -56,8 +56,10 @@ struct BlockwiseGenericTensorSliceCopy_v4
         constexpr auto thread_cluster_desc =
             make_cluster_descriptor(ThreadClusterLengths{}, ThreadClusterArrangeOrder{});
 
+#if 0
         static_assert(BlockSize == thread_cluster_desc.GetElementSize(),
                       "wrong! BlockSize not consistent with ThreadClusterLengths");
+#endif
 
         const auto thread_cluster_id =
             thread_cluster_desc.CalculateClusterIndex(get_thread_local_1d_id());
@@ -83,6 +85,11 @@ struct BlockwiseGenericTensorSliceCopy_v4
         constexpr bool has_optimized_address_calculation =
             decltype(mThreadwiseStore)::HasWorkingOptimizedAddressCalculation();
 
+        constexpr auto thread_cluster_desc =
+            make_cluster_descriptor(ThreadClusterLengths{}, ThreadClusterArrangeOrder{});
+
+        if(get_thread_local_1d_id() < thread_cluster_desc.GetElementSize())
+        {
         // TODO: threadwise copy is still being tweaked
         if(has_optimized_address_calculation)
         {
@@ -91,6 +98,7 @@ struct BlockwiseGenericTensorSliceCopy_v4
         else
         {
             mThreadwiseLoad.Run(p_block_src, p_thread_buffer);
+        }
         }
     }
 
@@ -101,6 +109,11 @@ struct BlockwiseGenericTensorSliceCopy_v4
         constexpr bool has_optimized_address_calculation =
             decltype(mThreadwiseStore)::HasWorkingOptimizedAddressCalculation();
 
+        constexpr auto thread_cluster_desc =
+            make_cluster_descriptor(ThreadClusterLengths{}, ThreadClusterArrangeOrder{});
+
+        if(get_thread_local_1d_id() < thread_cluster_desc.GetElementSize())
+        {
         // TODO: threadwise copy is still being tweaked
         if(has_optimized_address_calculation)
         {
@@ -109,6 +122,7 @@ struct BlockwiseGenericTensorSliceCopy_v4
         else
         {
             mThreadwiseStore.Run(p_thread_buffer, p_block_dst);
+        }
         }
     }
 

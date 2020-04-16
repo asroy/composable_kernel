@@ -27,6 +27,9 @@
 
 #if CK_USE_AMD_XDLOPS
 #include "amd_xdlops.hpp"
+#else
+#include "amd_xdlops_emulate.hpp"
 #endif
+
 
 #endif
