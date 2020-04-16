@@ -90,15 +90,15 @@ struct BlockwiseGenericTensorSliceCopy_v4
 
         if(get_thread_local_1d_id() < thread_cluster_desc.GetElementSize())
         {
-        // TODO: threadwise copy is still being tweaked
-        if(has_optimized_address_calculation)
-        {
-            mThreadwiseLoad.Run_optimized_src_address_calculation(p_block_src, p_thread_buffer);
-        }
-        else
-        {
-            mThreadwiseLoad.Run(p_block_src, p_thread_buffer);
-        }
+            // TODO: threadwise copy is still being tweaked
+            if(has_optimized_address_calculation)
+            {
+                mThreadwiseLoad.Run_optimized_src_address_calculation(p_block_src, p_thread_buffer);
+            }
+            else
+            {
+                mThreadwiseLoad.Run(p_block_src, p_thread_buffer);
+            }
         }
     }
 
@@ -114,15 +114,16 @@ struct BlockwiseGenericTensorSliceCopy_v4
 
         if(get_thread_local_1d_id() < thread_cluster_desc.GetElementSize())
         {
-        // TODO: threadwise copy is still being tweaked
-        if(has_optimized_address_calculation)
-        {
-            mThreadwiseStore.Run_optimized_dst_address_calculation(p_thread_buffer, p_block_dst);
-        }
-        else
-        {
-            mThreadwiseStore.Run(p_thread_buffer, p_block_dst);
-        }
+            // TODO: threadwise copy is still being tweaked
+            if(has_optimized_address_calculation)
+            {
+                mThreadwiseStore.Run_optimized_dst_address_calculation(p_thread_buffer,
+                                                                       p_block_dst);
+            }
+            else
+            {
+                mThreadwiseStore.Run(p_thread_buffer, p_block_dst);
+            }
         }
     }
 

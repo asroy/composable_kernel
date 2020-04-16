@@ -13,16 +13,16 @@ template <class T,
           class InLeftPads,
           class InRightPads>
 void device_convolution_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(InDesc,
-                                                          const Tensor<T>& in_nchw,
-                                                          WeiDesc,
-                                                          const Tensor<T>& wei_kcyx,
-                                                          OutDesc,
-                                                          Tensor<T>& out_nkhw,
-                                                          ConvStrides,
-                                                          ConvDilations,
-                                                          InLeftPads,
-                                                          InRightPads,
-                                                          ck::index_t nrepeat)
+                                                                 const Tensor<T>& in_nchw,
+                                                                 WeiDesc,
+                                                                 const Tensor<T>& wei_kcyx,
+                                                                 OutDesc,
+                                                                 Tensor<T>& out_nkhw,
+                                                                 ConvStrides,
+                                                                 ConvDilations,
+                                                                 InLeftPads,
+                                                                 InRightPads,
+                                                                 ck::index_t nrepeat)
 {
     using namespace ck;
 
@@ -58,7 +58,7 @@ void device_convolution_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMPerBlock = 128;
     constexpr index_t GemmNPerBlock = 128;
     constexpr index_t GemmKPerBlock = 16;
-    
+
     constexpr index_t GemmMPerWave = 64;
     constexpr index_t GemmNPerWave = 64;
 
@@ -85,50 +85,51 @@ void device_convolution_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(InDesc,
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
-    constexpr auto gridwise_conv = GridwiseConvolutionImplicitGemm_v4r4_xdlops_fwd_fp32_nchw_kcyx_nkhw<
-        GridSize,
-        BlockSize,
-        T,
-        T,
-        decltype(in_nchw_desc),
-        decltype(wei_kcyx_desc),
-        decltype(out_nkhw_desc),
-        ConvStrides,
-        ConvDilations,
-        InLeftPads,
-        InRightPads,
-        GemmMPerBlock,
-        GemmNPerBlock,
-        GemmKPerBlock,
-        GemmMPerWave,
-        GemmNPerWave,
-        ThreadGemmDataPerReadM,
-        ThreadGemmDataPerReadN,
-        GemmABlockCopyThreadSliceLengths_GemmK_GemmM,
-        GemmABlockCopyThreadClusterLengths_GemmK_GemmM,
-        GemmABlockCopySrcDataPerRead_GemmK,
-        GemmABlockCopyDstDataPerWrite_GemmM,
-        GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
-        GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
-        GemmBBlockCopySrcDataPerRead_GemmN,
-        GemmBBlockCopyDstDataPerWrite_GemmN>{};
+    constexpr auto gridwise_conv =
+        GridwiseConvolutionImplicitGemm_v4r4_xdlops_fwd_fp32_nchw_kcyx_nkhw<
+            GridSize,
+            BlockSize,
+            T,
+            T,
+            decltype(in_nchw_desc),
+            decltype(wei_kcyx_desc),
+            decltype(out_nkhw_desc),
+            ConvStrides,
+            ConvDilations,
+            InLeftPads,
+            InRightPads,
+            GemmMPerBlock,
+            GemmNPerBlock,
+            GemmKPerBlock,
+            GemmMPerWave,
+            GemmNPerWave,
+            ThreadGemmDataPerReadM,
+            ThreadGemmDataPerReadN,
+            GemmABlockCopyThreadSliceLengths_GemmK_GemmM,
+            GemmABlockCopyThreadClusterLengths_GemmK_GemmM,
+            GemmABlockCopySrcDataPerRead_GemmK,
+            GemmABlockCopyDstDataPerWrite_GemmM,
+            GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
+            GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
+            GemmBBlockCopySrcDataPerRead_GemmN,
+            GemmBBlockCopyDstDataPerWrite_GemmN>{};
 
     for(index_t i = 0; i < 10; ++i)
     {
         float time =
-	    launch_and_time_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
-				   dim3(GridSize),
-				   dim3(BlockSize),
-				   0,
-				   0,
-				   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-				   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-				   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+            launch_and_time_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
+                                   dim3(GridSize),
+                                   dim3(BlockSize),
+                                   0,
+                                   0,
+                                   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
+                                   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                                   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
 
-     	printf("Elapsed time : %f ms, %f TFlop/s\n",
-	       time,
-	       (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
-		   (std::size_t(1000) * 1000 * 1000) / time);
+        printf("Elapsed time : %f ms, %f TFlop/s\n",
+               time,
+               (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
+                   (std::size_t(1000) * 1000 * 1000) / time);
     }
 
     // warm up
@@ -136,14 +137,14 @@ void device_convolution_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(InDesc,
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
-	    launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
-				   dim3(GridSize),
-				   dim3(BlockSize),
-				   0,
-				   0,
-				   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-				   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-				   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+        launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
+                      dim3(GridSize),
+                      dim3(BlockSize),
+                      0,
+                      0,
+                      static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
+                      static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                      static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
     }
 
     printf("Start running %d times...\n", nrepeat);
@@ -153,26 +154,25 @@ void device_convolution_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(InDesc,
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
-            launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
-                                   dim3(GridSize),
-                                   dim3(BlockSize),
-                                   0,
-                                   0,
-                                   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-                                   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-                                   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
-
-    } 
+        launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
+                      dim3(GridSize),
+                      dim3(BlockSize),
+                      0,
+                      0,
+                      static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
+                      static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                      static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+    }
 
     cudaDeviceSynchronize();
     auto end = std::chrono::steady_clock::now();
-    
+
     float ave_time = std::chrono::duration<float, std::milli>(end - start).count() / nrepeat;
 
-	printf("Average elapsed time : %f ms, %f TFlop/s\n",
-	       ave_time,
-	       (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
-		   (std::size_t(1000) * 1000 * 1000) / ave_time);
+    printf("Average elapsed time : %f ms, %f TFlop/s\n",
+           ave_time,
+           (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
+               (std::size_t(1000) * 1000 * 1000) / ave_time);
 
     out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
 }

@@ -31,5 +31,4 @@
 #include "amd_xdlops_emulate.hpp"
 #endif
 
-
 #endif

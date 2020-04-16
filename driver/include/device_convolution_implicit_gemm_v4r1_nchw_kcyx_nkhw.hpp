@@ -111,8 +111,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 8;
     constexpr index_t GemmNLevel1Cluster = 8;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 1, 1, 2>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<4, 2, 16, 2>;
@@ -150,8 +150,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 8;
     constexpr index_t GemmNLevel1Cluster = 8;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 1, 1, 4>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<8, 2, 16, 1>;
@@ -189,8 +189,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 8;
     constexpr index_t GemmNLevel1Cluster = 8;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 2, 1, 4>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<16, 1, 16, 1>;
@@ -229,8 +229,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 4;
     constexpr index_t GemmNLevel1Cluster = 4;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<4, 1, 1, 2>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<4, 2, 16, 2>;
@@ -268,8 +268,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 4;
     constexpr index_t GemmNLevel1Cluster = 8;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 1, 1, 4>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<4, 2, 16, 1>;
@@ -307,8 +307,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 4;
     constexpr index_t GemmNLevel1Cluster = 8;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 2, 1, 4>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<8, 1, 16, 1>;
@@ -346,8 +346,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 2;
     constexpr index_t GemmNLevel1Cluster = 4;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<2, 2, 1, 4>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<8, 1, 16, 1>;
@@ -385,8 +385,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 8;
     constexpr index_t GemmNLevel1Cluster = 4;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 1, 1, 2>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<4, 2, 8, 2>;
@@ -424,8 +424,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 8;
     constexpr index_t GemmNLevel1Cluster = 4;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 1, 1, 4>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<8, 2, 8, 1>;
@@ -463,10 +463,10 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 8;
     constexpr index_t GemmNLevel1Cluster = 4;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
-    using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1,  2, 1, 4>;
+    using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 2, 1, 4>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<16, 1, 8, 1>;
     using InBlockCopyThreadClusterArrangeOrder = Sequence<0, 1, 3, 2>; // [E, N1, N2, B]
     using InBlockCopySrcAccessOrder            = Sequence<0, 2, 1, 3>; // [E, B, N1, N2]
@@ -502,8 +502,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 2;
     constexpr index_t GemmNLevel1Cluster = 2;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 2, 1, 4>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<8, 1, 8, 1>;
@@ -541,8 +541,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 1;
     constexpr index_t GemmNLevel1Cluster = 2;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<3, 1, 1, 2>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<1, 2, 8, 2>;
@@ -580,8 +580,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 1;
     constexpr index_t GemmNLevel1Cluster = 4;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<3, 1, 1, 2>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<1, 2, 16, 2>;
@@ -619,8 +619,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 4;
     constexpr index_t GemmNLevel1Cluster = 4;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<3, 1, 1, 1>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<1, 2, 8, 4>;
@@ -658,8 +658,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 2;
     constexpr index_t GemmNLevel1Cluster = 8;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 2, 1, 4>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<4, 1, 16, 1>;
@@ -697,8 +697,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 1;
     constexpr index_t GemmNLevel1Cluster = 4;
 
-    constexpr index_t GemmDataPerReadA   = 4;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 4;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<2, 2, 1, 4>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<4, 1, 16, 1>;
@@ -736,8 +736,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmMLevel1Cluster = 4;
     constexpr index_t GemmNLevel1Cluster = 4;
 
-    constexpr index_t GemmDataPerReadA   = 2;
-    constexpr index_t GemmDataPerReadB   = 4;
+    constexpr index_t GemmDataPerReadA = 2;
+    constexpr index_t GemmDataPerReadB = 4;
 
     using InBlockCopySubLengths_E_N1_B_N2      = Sequence<1, 1, 1, 4>;
     using InBlockCopyClusterLengths_E_N1_B_N2  = Sequence<8, 2, 16, 1>;
@@ -813,19 +813,19 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     for(index_t i = 0; i < 10; ++i)
     {
         float time =
-	    launch_and_time_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
-				   dim3(GridSize),
-				   dim3(BlockSize),
-				   0,
-				   0,
-				   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-				   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-				   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+            launch_and_time_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
+                                   dim3(GridSize),
+                                   dim3(BlockSize),
+                                   0,
+                                   0,
+                                   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
+                                   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                                   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
 
-     	printf("Elapsed time : %f ms, %f TFlop/s\n",
-	       time,
-	       (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
-		   (std::size_t(1000) * 1000 * 1000) / time);
+        printf("Elapsed time : %f ms, %f TFlop/s\n",
+               time,
+               (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
+                   (std::size_t(1000) * 1000 * 1000) / time);
     }
 
     // warm up
@@ -833,14 +833,14 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
-	    launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
-				   dim3(GridSize),
-				   dim3(BlockSize),
-				   0,
-				   0,
-				   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-				   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-				   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+        launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
+                      dim3(GridSize),
+                      dim3(BlockSize),
+                      0,
+                      0,
+                      static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
+                      static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                      static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
     }
 
     printf("Start running %d times...\n", nrepeat);
@@ -850,26 +850,25 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
-            launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
-                                   dim3(GridSize),
-                                   dim3(BlockSize),
-                                   0,
-                                   0,
-                                   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-                                   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-                                   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
-
-    } 
+        launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
+                      dim3(GridSize),
+                      dim3(BlockSize),
+                      0,
+                      0,
+                      static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
+                      static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                      static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+    }
 
     cudaDeviceSynchronize();
     auto end = std::chrono::steady_clock::now();
-    
+
     float ave_time = std::chrono::duration<float, std::milli>(end - start).count() / nrepeat;
 
-	printf("Average elapsed time : %f ms, %f TFlop/s\n",
-	       ave_time,
-	       (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
-		   (std::size_t(1000) * 1000 * 1000) / ave_time);
+    printf("Average elapsed time : %f ms, %f TFlop/s\n",
+           ave_time,
+           (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
+               (std::size_t(1000) * 1000 * 1000) / ave_time);
 
     out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
 }

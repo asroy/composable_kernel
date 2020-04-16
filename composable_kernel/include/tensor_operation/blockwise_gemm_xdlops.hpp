@@ -26,17 +26,22 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_xdlops
         index_t col;
     };
 
-    //static constexpr XdlopsGemm_t XdlopsGemm = XdlopsGemm_t<Float, GemmMPerWave, GemmNPerWave, GemmDataPerReadA, GemmDataPerReadB>{};
+    // static constexpr XdlopsGemm_t XdlopsGemm = XdlopsGemm_t<Float, GemmMPerWave, GemmNPerWave,
+    // GemmDataPerReadA, GemmDataPerReadB>{};
 
     index_t mMyWaveOffsetA;
     index_t mMyWaveOffsetB;
 
     static constexpr index_t WaveSize = 64;
 
-    __device__ constexpr auto GetOutputLayout() const { return XdlopsGemm_t<Float, GemmMPerWave, GemmNPerWave, GemmDataPerReadA, GemmDataPerReadB>{}.GetOutputLayout(); }
+    __device__ constexpr auto GetOutputLayout() const
+    {
+        return XdlopsGemm_t<Float, GemmMPerWave, GemmNPerWave, GemmDataPerReadA, GemmDataPerReadB>{}
+            .GetOutputLayout();
+    }
 
     __device__ BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_xdlops()
-    { 
+    {
         static_assert(BlockMatrixA::NRow() == BlockMatrixB::NRow(),
                       "wrong! K dimension not consistent\n");
 
@@ -67,8 +72,9 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_xdlops
         constexpr index_t N = BlockMatrixB::NCol();
         constexpr index_t K = BlockMatrixA::NRow();
 
-        XdlopsGemm_t<Float, GemmMPerWave, GemmNPerWave, GemmDataPerReadA, GemmDataPerReadB>{}.template Run<M, N, K>(
-            &p_a_block[mMyWaveOffsetA], &p_b_block[mMyWaveOffsetB], p_c_thread);
+        XdlopsGemm_t<Float, GemmMPerWave, GemmNPerWave, GemmDataPerReadA, GemmDataPerReadB>{}
+            .template Run<M, N, K>(
+                &p_a_block[mMyWaveOffsetA], &p_b_block[mMyWaveOffsetB], p_c_thread);
     }
 
     __device__ static MatrixIndex GetBeginOfThreadMatrixC(index_t i)
@@ -76,7 +82,9 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_xdlops
 
         const index_t waveId = get_thread_local_1d_id() / WaveSize;
 
-        const auto thread_mtx_on_blk = XdlopsGemm_t<Float, GemmMPerWave, GemmNPerWave, GemmDataPerReadA, GemmDataPerReadB>{}.GetBeginOfThreadBlk(i);
+        const auto thread_mtx_on_blk =
+            XdlopsGemm_t<Float, GemmMPerWave, GemmNPerWave, GemmDataPerReadA, GemmDataPerReadB>{}
+                .GetBeginOfThreadBlk(i);
 
         const index_t col = waveId % GemmNWaves * GemmNPerWave + thread_mtx_on_blk.col;
 
@@ -94,14 +102,16 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_xdlops
     __device__ void XdlopsMatrixCSetZero() const
     {
         constexpr auto thread_mtx_size = GemmMPerWave * GemmNPerWave / WaveSize;
-        XdlopsGemm_t<Float, GemmMPerWave, GemmNPerWave, GemmDataPerReadA, GemmDataPerReadB>{}.SetZeroXdlopsRegs(Number<thread_mtx_size>{});
+        XdlopsGemm_t<Float, GemmMPerWave, GemmNPerWave, GemmDataPerReadA, GemmDataPerReadB>{}
+            .SetZeroXdlopsRegs(Number<thread_mtx_size>{});
     }
 
     template <class FloatC>
     __device__ void XdlopsMatrixCRead(FloatC* __restrict__ p_c_thread) const
     {
         constexpr auto thread_mtx_size = GemmMPerWave * GemmNPerWave / WaveSize;
-        XdlopsGemm_t<Float, GemmMPerWave, GemmNPerWave, GemmDataPerReadA, GemmDataPerReadB>{}.ReadXdlopsRegs(Number<thread_mtx_size>{}, p_c_thread);
+        XdlopsGemm_t<Float, GemmMPerWave, GemmNPerWave, GemmDataPerReadA, GemmDataPerReadB>{}
+            .ReadXdlopsRegs(Number<thread_mtx_size>{}, p_c_thread);
     }
 };
 
