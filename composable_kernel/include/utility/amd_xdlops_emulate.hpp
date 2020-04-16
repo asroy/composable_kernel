@@ -12,8 +12,7 @@ __device__ void gcnasm_mfma_f32_32x32x1f32<64, 64>(const float& reg_a, const flo
     auto reg_c_ = reinterpret_cast<float_t*>(reg_c);
     for(index_t i = 0; i < 32; i++)
     {
-        reg_c_[i] += reg_a * reg_b;
-        reg_c_[i+32] = reg_c[i];
+        reg_c_[i + 32] = reg_c_[i] = reg_c_[i] + reg_a * reg_b;
     }
 }
 
@@ -24,7 +23,6 @@ __device__ void gcnasm_mfma_f32_32x32x1f32<32, 64>(const float& reg_a, const flo
     for(index_t i = 0; i < 16; i++)
     {
         reg_c_[i] += reg_a * reg_b;
-        reg_c_[i+16] = reg_c[i];
     }
 }
 
@@ -35,7 +33,6 @@ __device__ void gcnasm_mfma_f32_32x32x1f32<64, 32>(const float& reg_a, const flo
     for(index_t i = 0; i < 16; i++)
     {
         reg_c_[i] += reg_a * reg_b;
-        reg_c_[i+16] = reg_c[i];
     }
 }
 

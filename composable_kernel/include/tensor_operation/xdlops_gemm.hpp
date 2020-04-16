@@ -5,6 +5,8 @@
 #include "ConstantMatrixDescriptor.hpp"
 #include "math.hpp"
 
+#define CK_USE_AMD_XDLOPS_EMULATE 1
+
 namespace ck {
 
 enum struct mfma_instr
@@ -839,56 +841,18 @@ struct XdlopsGemm_t
 
             const index_t laneId = get_thread_local_1d_id() % mfma_type.wave_size;
 
-            FloatA a[K];
-            FloatB b[K];
-
-            // load into registers
             for(index_t k = 0; k < K; ++k)
             {
-                a[k] = p_a_wave[k * M + laneId];
-                b[k] = p_b_wave[k * N + laneId];
-            }
-
-            // get pointer of registers
-            auto pa = reinterpret_cast<const data_type*>(&a);
-            auto pb = reinterpret_cast<const data_type*>(&b);
-
-            for(index_t k = 0; k < K; ++k)
-            {
-                constexpr index_t nxdlops = sizeof(FloatA) / (mfma_type.k * sizeof(data_type));
-
-                for(index_t i = 0; i < nxdlops; ++i, pa += mfma_type.k, pb += mfma_type.k)
-                    mfma_type.run(Number<MPerWave>{}, Number<NPerWave>{}, pa, pb, p_c_thread);
+                mfma_type.run(Number<MPerWave>{}, Number<NPerWave>{}, p_a_wave, p_b_wave, p_c_thread);
             }
 
         }).Else([&](auto) {
 
             const index_t laneId = get_thread_local_1d_id() % mfma_type.wave_size;
 
-            FloatA a[K];
-            FloatB b[K];
-
-            const index_t blk_id = laneId / mfma_type.num_threads_blk;
-            const index_t blk_td = laneId % mfma_type.num_threads_blk;
-
-            // load into registers
             for(index_t k = 0; k < K; k += mfma_type.num_input_blks)
             {
-                a[k] = p_a_wave[(k + blk_id) * M + blk_td];
-                b[k] = p_b_wave[(k + blk_id) * N + blk_td];
-            }
-
-            // get pointer of registers
-            auto pa = reinterpret_cast<const data_type*>(&a);
-            auto pb = reinterpret_cast<const data_type*>(&b);
-
-            constexpr index_t nxdlops =
-                (sizeof(FloatA) * mfma_type.num_input_blks) / (mfma_type.k * sizeof(data_type));
-
-            for(index_t k = 0; k < K; k += mfma_type.num_input_blks)
-            {
-                for(index_t i = 0; i < nxdlops; ++i, pa += mfma_type.k, pb += mfma_type.k)
-                    mfma_type.run(Number<MPerWave>{}, Number<NPerWave>{}, pa, pb, p_c_thread);
+                mfma_type.run(Number<MPerWave>{}, Number<NPerWave>{}, p_a_wave, p_b_wave, p_c_thread);
             }
 
         });
@@ -942,7 +906,7 @@ struct XdlopsGemm_t
     __device__ void ReadXdlopsRegs(Number<Size>, FloatC* const __restrict__ p_c_thread) const
     {
 #if !CK_USE_AMD_XDLOPS_EMULATE
-        //constexpr auto mfma_type = GetMFMAInfo<data_type, MPerWave, NPerWave>();
+        constexpr auto mfma_type = GetMFMAInfo<data_type, MPerWave, NPerWave>();
         //gcnasm_nop<mfma_type.cycles>();
         //gcnasm_accvgpr_read<Size>(p_c_thread);
 #else
