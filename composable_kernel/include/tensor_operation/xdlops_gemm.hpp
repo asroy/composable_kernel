@@ -810,7 +810,7 @@ struct XdlopsGemm_t
                                         (mfma_type.group_size * mfma_type.num_input_blks);
                                 index_t bindex = blk_td;
                                 p_c_thread[m + c_off] += inner_product_with_conversion<FloatC>{}(
-                                        p_a_wave[aindex + a_off], p_b_wave[bindex + b_off]);
+                                    p_a_wave[aindex + a_off], p_b_wave[bindex + b_off]);
                             }
                         }
                     }

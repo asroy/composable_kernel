@@ -139,7 +139,6 @@ struct GridwiseConvolutionImplicitGemm_v4r4_xdlops_fwd_fp16_nchw_kcyx_nkhw
             make_tuple(Sequence<1>{}, Sequence<0>{}, Sequence<2>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}));
 
-
         constexpr auto out_gemmm_gemmn_global_desc =
             transform_tensor_descriptor(out_n_k_ho_wo_global_desc,
                                         make_tuple(PassThrough<K>{}, Merge<Sequence<N, Ho, Wo>>{}),

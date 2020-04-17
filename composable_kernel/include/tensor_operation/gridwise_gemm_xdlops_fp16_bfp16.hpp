@@ -219,12 +219,8 @@ struct GridwiseGemmTransposedANormalBNormalCXdlopsFp16Bfp16_v1
                 // 2D indexes are computed with vectorized value in mind (e.g. float, half2, half4),
                 // we recast datatype from a single half to 4 packed half/2 packed bfloat16
                 // respectively.
-                auto p_a_block_vec =
-                    reinterpret_cast<const half4_t*>(
-                        p_a_block_now);
-                auto p_b_block_vec =
-                    reinterpret_cast<const half4_t*>(
-                        p_b_block_now);
+                auto p_a_block_vec = reinterpret_cast<const half4_t*>(p_a_block_now);
+                auto p_b_block_vec = reinterpret_cast<const half4_t*>(p_b_block_now);
                 blockwise_gemm.Run(p_a_block_vec, p_b_block_vec, p_c_thread);
 
                 // LDS double buffer: store next data to LDS
@@ -252,12 +248,8 @@ struct GridwiseGemmTransposedANormalBNormalCXdlopsFp16Bfp16_v1
                 b_blockwise_copy.RunLoadThreadBuffer(p_b_global, p_b_thread_buffer);
 
                 // LDS double buffer: GEMM on 2nd-last data
-                auto p_a_block_vec =
-                    reinterpret_cast<const half4_t*>(
-                        p_a_block_double);
-                auto p_b_block_vec =
-                    reinterpret_cast<const half4_t*>(
-                        p_b_block_double);
+                auto p_a_block_vec = reinterpret_cast<const half4_t*>(p_a_block_double);
+                auto p_b_block_vec = reinterpret_cast<const half4_t*>(p_b_block_double);
                 blockwise_gemm.Run(p_a_block_vec, p_b_block_vec, p_c_thread);
 
                 // LDS double buffer: store last data to LDS
@@ -269,12 +261,8 @@ struct GridwiseGemmTransposedANormalBNormalCXdlopsFp16Bfp16_v1
                 __syncthreads();
 
                 // LDS double buffer: GEMM on current data
-                p_a_block_vec =
-                    reinterpret_cast<const half4_t*>(
-                        p_a_block_double + a_block_space);
-                p_b_block_vec =
-                    reinterpret_cast<const half4_t*>(
-                        p_b_block_double + b_block_space);
+                p_a_block_vec = reinterpret_cast<const half4_t*>(p_a_block_double + a_block_space);
+                p_b_block_vec = reinterpret_cast<const half4_t*>(p_b_block_double + b_block_space);
                 blockwise_gemm.Run(p_a_block_vec, p_b_block_vec, p_c_thread);
             }
             else // if has 1 iteration left
@@ -282,12 +270,8 @@ struct GridwiseGemmTransposedANormalBNormalCXdlopsFp16Bfp16_v1
                 __syncthreads();
 
                 // LDS double buffer: GEMM on last data
-                auto p_a_block_vec =
-                    reinterpret_cast<const half4_t*>(
-                        p_a_block_double);
-                auto p_b_block_vec =
-                    reinterpret_cast<const half4_t*>(
-                        p_b_block_double);
+                auto p_a_block_vec = reinterpret_cast<const half4_t*>(p_a_block_double);
+                auto p_b_block_vec = reinterpret_cast<const half4_t*>(p_b_block_double);
                 blockwise_gemm.Run(p_a_block_vec, p_b_block_vec, p_c_thread);
             }
         }
@@ -348,7 +332,6 @@ struct GridwiseGemmTransposedANormalBNormalCXdlopsFp16Bfp16_v1
         }
     }
 };
-
 }
 
 #endif

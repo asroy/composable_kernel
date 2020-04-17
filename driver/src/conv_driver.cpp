@@ -618,16 +618,16 @@ int main(int argc, char* argv[])
                                                          nrepeat);
 #elif 1
     device_convolution_implicit_gemm_v4r4_xdlops_fp16_nchw_kcyx_nkhw(in_nchw_desc,
-                                                                in_nchw,
-                                                                wei_kcyx_desc,
-                                                                wei_kcyx,
-                                                                out_nkhw_desc,
-                                                                out_nkhw_device,
-                                                                ConvStrides{},
-                                                                ConvDilations{},
-                                                                LeftPads{},
-                                                                RightPads{},
-                                                                nrepeat);
+                                                                     in_nchw,
+                                                                     wei_kcyx_desc,
+                                                                     wei_kcyx,
+                                                                     out_nkhw_desc,
+                                                                     out_nkhw_device,
+                                                                     ConvStrides{},
+                                                                     ConvDilations{},
+                                                                     LeftPads{},
+                                                                     RightPads{},
+                                                                     nrepeat);
 #endif
 
     if(do_verification)
