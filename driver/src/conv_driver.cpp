@@ -21,6 +21,7 @@
 #include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_implicit_gemm_v4r4_xdlops_fp16_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -524,8 +525,8 @@ int main(int argc, char* argv[])
     print_sequence("ConvStrides", ConvStrides{});
     print_sequence("ConvDilations", ConvDilations{});
 
-    using in_data_t  = float;
-    using out_data_t = float;
+    using in_data_t  = half;
+    using out_data_t = half;
     Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
     Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
     Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
@@ -616,7 +617,7 @@ int main(int argc, char* argv[])
                                                          RightPads{},
                                                          nrepeat);
 #elif 1
-    device_convolution_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(in_nchw_desc,
+    device_convolution_implicit_gemm_v4r4_xdlops_fp16_nchw_kcyx_nkhw(in_nchw_desc,
                                                                 in_nchw,
                                                                 wei_kcyx_desc,
                                                                 wei_kcyx,
