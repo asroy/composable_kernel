@@ -18,7 +18,7 @@
 //#include "device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v2_chwn_cyxk_khwn.hpp"
 //#include "device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
+//#include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 3>;
     using RightPads = Sequence<0, 3>;
-#elif 1
+#elif 0
     // 3x3, 299x299 stride=2
     constexpr index_t N  = 128;
     constexpr index_t C  =   3;
@@ -267,7 +267,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<1, 0>;
     using RightPads = Sequence<1, 0>;
-#elif 1
+#elif 0
     // 3x3, 147x147
     constexpr index_t N  = 128;
     constexpr index_t C  =  64;
@@ -298,7 +298,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<3, 0>;
     using RightPads = Sequence<3, 0>;
-#elif 1
+#elif 0
     // 3x3, 73x73
     constexpr index_t N  = 128;
     constexpr index_t C  =  64;
@@ -331,10 +331,10 @@ int main(int argc, char* argv[])
 #elif 0
     // 1x1, 14x14
     constexpr index_t N  = 128;
-    constexpr index_t C  =  1024;
+    constexpr index_t C  =  128;
     constexpr index_t HI =  14;
     constexpr index_t WI =  14;
-    constexpr index_t K  =  256;
+    constexpr index_t K  =  128;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
 
@@ -373,13 +373,13 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<1, 1>;
     using RightPads = Sequence<1, 1>;
-#elif 0
+#elif 1
     // 3x3, 14x14
     constexpr index_t N  = 128;
-    constexpr index_t C  = 256;
+    constexpr index_t C  = 128;
     constexpr index_t HI =  14;
     constexpr index_t WI =  14;
-    constexpr index_t K  = 256;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 

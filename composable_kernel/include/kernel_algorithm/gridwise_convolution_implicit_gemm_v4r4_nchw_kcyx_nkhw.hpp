@@ -45,7 +45,7 @@ template <index_t GridSize,
           index_t GemmCThreadCopyDstDataPerWrite_GemmN1>
 struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw
 {
-    __device__ void Run(const Float* const __restrict__ p_in_global,
+    __host__ __device__ void Run(const Float* const __restrict__ p_in_global,
                         const Float* const __restrict__ p_wei_global,
                         Float* const __restrict__ p_out_global) const
     {

@@ -118,7 +118,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
-#elif 0
+#elif 1
     // cdata = 64, BlockSize = 256, 128x128x8
     constexpr index_t BlockSize = 256;
 
@@ -1002,7 +1002,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 
     printf("Start running %d times...\n", nrepeat);
 
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
     auto start = std::chrono::steady_clock::now();
 
     for(index_t i = 0; i < nrepeat; ++i)
@@ -1018,7 +1018,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 
     } 
 
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
     auto end = std::chrono::steady_clock::now();
     
     float ave_time = std::chrono::duration<float, std::milli>(end - start).count() / nrepeat;
@@ -1029,4 +1029,9 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 		   (std::size_t(1000) * 1000 * 1000) / ave_time);
 
     out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
+
+    gridwise_conv.Run(
+                                   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
+                                   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                                   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
 }

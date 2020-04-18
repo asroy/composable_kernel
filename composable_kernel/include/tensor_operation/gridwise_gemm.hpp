@@ -9,6 +9,8 @@
 #include "threadwise_generic_tensor_slice_copy.hpp"
 #include "blockwise_gemm.hpp"
 
+#include<fstream>
+
 namespace ck {
 
 template <index_t GridSize,
@@ -384,6 +386,88 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
         __shared__ Float p_shared_block[shared_block_size];
 
         Run(p_a_global, p_b_global, p_c_global, p_shared_block);
+    }
+
+
+    __host__ void Run(const Float* __restrict__ p_a_global,
+                      const Float* __restrict__ p_b_global,
+                      Float* __restrict__ p_c_global) const
+    {
+        constexpr auto a_k_m_global_desc = AGlobalDesc{};
+        constexpr auto b_k_n_global_desc = BGlobalDesc{};
+        constexpr auto c_m_n_global_desc = CGlobalDesc{};
+
+        constexpr auto K = a_k_m_global_desc.GetLengths()[0];
+        constexpr auto M = a_k_m_global_desc.GetLengths()[1];
+        constexpr auto N = b_k_n_global_desc.GetLengths()[1];
+
+        constexpr index_t MBlockWork = M / MPerBlock;
+        constexpr index_t NBlockWork = N / NPerBlock;
+        constexpr index_t KBlockWork = K / KPerBlock;
+
+        using ACoord = typename TensorCoordinate<AGlobalDesc>::type;
+        using BCoord = typename TensorCoordinate<BGlobalDesc>::type;
+
+
+        for(index_t m_block_work_id = 0; m_block_work_id < MBlockWork; ++m_block_work_id)
+        {
+            for(index_t n_block_work_id = 0; n_block_work_id < NBlockWork; ++n_block_work_id)
+            {
+                // A matrix
+                {
+                    std::fstream afile;
+
+                    afile.open("a_mblock_" + std::to_string(m_block_work_id) + "_nblock_" + std::to_string(n_block_work_id) + ".csv", std::fstream::out);
+
+                    afile << "kblock, offset" << std::endl;
+
+                    for(index_t k_block_work_id = 0; k_block_work_id < KBlockWork; ++k_block_work_id)
+                    {
+                        for(index_t k = k_block_work_id * KPerBlock ; k < (k_block_work_id + 1) * KPerBlock; ++k)
+                        {
+                            for(index_t m = m_block_work_id * MPerBlock ; m < (m_block_work_id + 1) * MPerBlock; ++m)
+                            {
+                                auto a_coord = ACoord({k, m});
+
+                                if(a_coord.IsOffsetValidAssumingUpperIndexIsValid())
+                                {
+                                    afile << k_block_work_id * 100 << "," << a_coord.GetOffset() << std::endl;
+                                }
+                            }
+                        }
+                    }
+
+                    afile.close();
+                }
+
+                // B matrix
+                {
+                    std::fstream bfile;
+
+                    bfile.open("b_mblock_" + std::to_string(m_block_work_id) + "_nblock_" + std::to_string(n_block_work_id) + ".csv", std::fstream::out);
+
+                    bfile << "kblock, offset" << std::endl;
+
+                    for(index_t k_block_work_id = 0; k_block_work_id < KBlockWork; ++k_block_work_id)
+                    {
+                        for(index_t k = k_block_work_id * KPerBlock ; k < (k_block_work_id + 1) * KPerBlock; ++k)
+                        {
+                            for(index_t n = n_block_work_id * NPerBlock ; n < (n_block_work_id + 1) * NPerBlock; ++n)
+                            {
+                                auto b_coord = BCoord({k, n});
+
+                                if(b_coord.IsOffsetValidAssumingUpperIndexIsValid())
+                                {
+                                    bfile << k_block_work_id * 100<< "," << b_coord.GetOffset() << std::endl;
+                                }
+                            }
+                        }
+                    }
+
+                    bfile.close();
+                }
+            }
+        }
     }
 };
 
