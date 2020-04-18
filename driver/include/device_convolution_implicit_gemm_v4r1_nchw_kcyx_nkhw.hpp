@@ -170,7 +170,7 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t WeiBlockCopySrcDataPerRead_E  = 4;
     constexpr index_t WeiBlockCopyDstDataPerWrite_K = 1;
-#elif 0
+#elif 1
     // cdata = 64, BlockSize = 256, 128x128x16
     constexpr index_t BlockSize = 256;
 
@@ -184,10 +184,10 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmNPerThreadSubC = 4;
     constexpr index_t GemmKPerThreadLoop = 1;
 
-    constexpr index_t GemmMLevel0Cluster = 2;
-    constexpr index_t GemmNLevel0Cluster = 2;
-    constexpr index_t GemmMLevel1Cluster = 8;
-    constexpr index_t GemmNLevel1Cluster = 8;
+    constexpr index_t GemmMLevel0Cluster = 4;
+    constexpr index_t GemmNLevel0Cluster = 4;
+    constexpr index_t GemmMLevel1Cluster = 4;
+    constexpr index_t GemmNLevel1Cluster = 4;
 
     constexpr index_t GemmDataPerReadA = 4;
     constexpr index_t GemmDataPerReadB = 4;
@@ -561,7 +561,7 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t WeiBlockCopySrcDataPerRead_E  = 1;
     constexpr index_t WeiBlockCopyDstDataPerWrite_K = 1;
-#elif 1
+#elif 0
     // cdata = 64, BlockSize = 64, 32x128x3
     constexpr index_t BlockSize = 64;
 
@@ -810,6 +810,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
             WeiBlockCopySrcDataPerRead_E,
             WeiBlockCopyDstDataPerWrite_K>{};
 
+    // warm up
+    std::cout << "Warn up runs..." << std::endl;
+
     for(index_t i = 0; i < 10; ++i)
     {
         float time =
@@ -822,14 +825,11 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
                                    static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
                                    static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
 
-        printf("Elapsed time : %f ms, %f TFlop/s\n",
-               time,
-               (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
-                   (std::size_t(1000) * 1000 * 1000) / time);
-    }
+        float perf = (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
+                     (std::size_t(1000) * 1000 * 1000) / time;
 
-    // warm up
-    printf("Warn up running %d times...\n", nrepeat);
+        std::cout << "Elapsed time : " << time << " ms, " << perf << " TFlop/s" << std::endl;
+    }
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
@@ -845,8 +845,8 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     printf("Start running %d times...\n", nrepeat);
 
-    cudaDeviceSynchronize();
-    auto start = std::chrono::steady_clock::now();
+    KernelTimer timer;
+    timer.Start();
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
@@ -860,15 +860,14 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
                       static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
     }
 
-    cudaDeviceSynchronize();
-    auto end = std::chrono::steady_clock::now();
+    timer.End();
 
-    float ave_time = std::chrono::duration<float, std::milli>(end - start).count() / nrepeat;
+    float ave_time = timer.GetElapsedTime() / nrepeat;
 
-    printf("Average elapsed time : %f ms, %f TFlop/s\n",
-           ave_time,
-           (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
-               (std::size_t(1000) * 1000 * 1000) / ave_time);
+    float perf = (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
+                 (std::size_t(1000) * 1000 * 1000) / ave_time;
+
+    std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s" << std::endl;
 
     out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
 }

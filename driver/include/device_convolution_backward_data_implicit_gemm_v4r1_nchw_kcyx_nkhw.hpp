@@ -1,4 +1,4 @@
-1111gma once
+#pragma once
 #include <unistd.h>
 #include "device.hpp"
 #include "tensor.hpp"

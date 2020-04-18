@@ -176,7 +176,6 @@ struct inner_product_with_conversion
         }
         return acc;
     }
-
 };
 
 } // namespace ck

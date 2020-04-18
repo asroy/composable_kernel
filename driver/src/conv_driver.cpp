@@ -1,4 +1,4 @@
-#include <iostream>
+
 #include <numeric>
 #include <initializer_list>
 #include <cstdlib>
@@ -20,8 +20,8 @@
 //#include "device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v4r4_xdlops_fp16_nchw_kcyx_nkhw.hpp"
+//#include "device_convolution_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
+//#include "device_convolution_implicit_gemm_v4r4_xdlops_fp16_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 3>;
     using RightPads = Sequence<0, 3>;
-#elif 1
+#elif 0
     // 3x3, 299x299 stride=2
     constexpr index_t N  = 128;
     constexpr index_t C  = 1024;
@@ -209,10 +209,10 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
+#elif 1
     // 3x3, 35x35, stride 2
     constexpr index_t N  = 128;
-    constexpr index_t C  = 384;
+    constexpr index_t C  = 288;
     constexpr index_t HI = 35;
     constexpr index_t WI = 35;
     constexpr index_t K  = 384;
@@ -269,7 +269,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<1, 0>;
     using RightPads = Sequence<1, 0>;
-#elif 1
+#elif 0
     // 3x3, 147x147
     constexpr index_t N  = 128;
     constexpr index_t C  = 64;
@@ -300,7 +300,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<3, 0>;
     using RightPads = Sequence<3, 0>;
-#elif 1
+#elif 0
     // 3x3, 73x73
     constexpr index_t N  = 128;
     constexpr index_t C  = 64;
@@ -525,8 +525,8 @@ int main(int argc, char* argv[])
     print_sequence("ConvStrides", ConvStrides{});
     print_sequence("ConvDilations", ConvDilations{});
 
-    using in_data_t  = half;
-    using out_data_t = half;
+    using in_data_t  = float;
+    using out_data_t = float;
     Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
     Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
     Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
@@ -592,7 +592,7 @@ int main(int argc, char* argv[])
 #elif 0
     device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw(
         (in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
-#elif 0
+#elif 1
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
@@ -604,7 +604,7 @@ int main(int argc, char* argv[])
                                                          LeftPads{},
                                                          RightPads{},
                                                          nrepeat);
-#elif 0
+#elif 1
     device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,

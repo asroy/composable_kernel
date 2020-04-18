@@ -182,7 +182,6 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
         const index_t k_block_data_on_global = block_work_id[1] * KPerBlock;
 #endif
 
-
         // input tensor
         //     global tensor in global memory
         constexpr auto in_n_c_hip_wip_global_desc = transform_tensor_descriptor(
