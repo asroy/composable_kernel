@@ -68,8 +68,10 @@ struct KernelTimerImpl
     void Start()
     {
 #if CK_DEVICE_BACKEND_AMD
+        hipDeviceSynchronize();
         hipEventRecord(mStart, 0);
 #elif CK_DEVICE_BACKEND_NVIDIA
+        cudaDeviceSynchronize();
         cudaEventRecord(mStart, 0);
 #endif
     }

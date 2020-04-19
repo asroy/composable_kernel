@@ -26,6 +26,8 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 {
     using namespace ck;
 
+    using TDevice = typename conditional<is_same<half_float::half, T>::value, half_t, T>::type;
+
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
     constexpr auto I2 = Number<2>{};
@@ -185,7 +187,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 4;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 4;
-#elif 0
+#elif 1
     // cdata = 64, BlockSize = 256, 128x128x16
     constexpr index_t BlockSize = 256;
 
@@ -969,8 +971,8 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr auto gridwise_conv = GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw<
         GridSize,
         BlockSize,
-        T,
-        T,
+        TDevice,
+        TDevice,
         decltype(in_nchw_desc),
         decltype(wei_kcyx_desc),
         decltype(out_nkhw_desc),
@@ -1000,64 +1002,34 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
         GemmBBlockCopyDstDataPerWrite_GemmN,
         GemmCThreadCopyDstDataPerWrite_GemmN1>{};
 
-    // warm up
-    std::cout << "Warn up runs..." << std::endl;
-
-    for(index_t i = 0; i < 10; ++i)
+    for(index_t i = 0; i < 5; ++i)
     {
-        float time =
-            launch_and_time_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
-                                   dim3(GridSize),
-                                   dim3(BlockSize),
-                                   0,
-                                   0,
-                                   static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-                                   static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-                                   static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
+        std::cout << "Start running " << nrepeat << " times..." << std::endl;
+
+        KernelTimer timer;
+        timer.Start();
+
+        for(index_t j = 0; j < nrepeat; ++j)
+        {
+            launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), TDevice>,
+                          dim3(GridSize),
+                          dim3(BlockSize),
+                          0,
+                          0,
+                          static_cast<TDevice*>(in_nchw_device_buf.GetDeviceBuffer()),
+                          static_cast<TDevice*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                          static_cast<TDevice*>(out_nkhw_device_buf.GetDeviceBuffer()));
+        }
+
+        timer.End();
+
+        float ave_time = timer.GetElapsedTime() / nrepeat;
 
         float perf = (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
-                     (std::size_t(1000) * 1000 * 1000) / time;
+                     (std::size_t(1000) * 1000 * 1000) / ave_time;
 
-        std::cout << "Elapsed time : " << time << " ms, " << perf << " TFlop/s" << std::endl;
+        std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s" << std::endl;
     }
-
-    for(index_t i = 0; i < nrepeat; ++i)
-    {
-        launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
-                      dim3(GridSize),
-                      dim3(BlockSize),
-                      0,
-                      0,
-                      static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-                      static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-                      static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
-    }
-
-    printf("Start running %d times...\n", nrepeat);
-
-    KernelTimer timer;
-    timer.Start();
-
-    for(index_t i = 0; i < nrepeat; ++i)
-    {
-        launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), T>,
-                      dim3(GridSize),
-                      dim3(BlockSize),
-                      0,
-                      0,
-                      static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-                      static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-                      static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()));
-    }
-
-    timer.End();
-
-    float ave_time = timer.GetElapsedTime() / nrepeat;
-
-    float perf = (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
-                 (std::size_t(1000) * 1000 * 1000) / ave_time;
-
-    std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s" << std::endl;
 
     out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
 }

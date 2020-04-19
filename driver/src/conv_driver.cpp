@@ -3,6 +3,7 @@
 #include <initializer_list>
 #include <cstdlib>
 #include <stdlib.h>
+#include <half.hpp>
 #include "config.hpp"
 #include "ConstantTensorDescriptor_deprecated.hpp"
 #include "print_array.hpp"
@@ -525,8 +526,14 @@ int main(int argc, char* argv[])
     print_sequence("ConvStrides", ConvStrides{});
     print_sequence("ConvDilations", ConvDilations{});
 
+#if 0
     using in_data_t  = float;
     using out_data_t = float;
+#else
+    using in_data_t  = half_float::half;
+    using out_data_t = half_float::half;
+#endif
+
     Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
     Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
     Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
@@ -592,7 +599,7 @@ int main(int argc, char* argv[])
 #elif 0
     device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw(
         (in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
-#elif 1
+#elif 0
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
