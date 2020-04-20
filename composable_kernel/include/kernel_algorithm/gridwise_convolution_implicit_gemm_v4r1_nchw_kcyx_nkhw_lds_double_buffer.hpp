@@ -71,13 +71,13 @@ template <index_t GridSize,
           index_t KPerBlock,
           index_t EPerBlock,
           index_t GemmNRepeat,
-          index_t GemmMPerThreadSubC,
-          index_t GemmNPerThreadSubC,
+          index_t GemmMPerThread,
+          index_t GemmNPerThread,
+          index_t GemmKPerThread,
           index_t GemmMLevel0Cluster,
           index_t GemmNLevel0Cluster,
           index_t GemmMLevel1Cluster,
           index_t GemmNLevel1Cluster,
-          index_t GemmKPerThreadLoop,
           index_t GemmDataPerReadA,
           index_t GemmDataPerReadB,
           typename InBlockCopySubLengths_E_N1_B_N2,
@@ -114,12 +114,11 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
         // this is a mess
         // TODO: find more elegent way of specifying (or calculating) performance parameters
         constexpr index_t N1 = GemmNRepeat;
-        constexpr index_t N2 = GemmNPerThreadSubC;
+        constexpr index_t N2 = GemmNPerThread;
 
-        static_assert((N1 * N2 * BPerBlock) %
-                              (GemmNPerThreadSubC * GemmNLevel0Cluster * GemmNLevel1Cluster) ==
-                          0,
-                      "wrong!");
+        static_assert(
+            (N1 * N2 * BPerBlock) % (GemmNPerThread * GemmNLevel0Cluster * GemmNLevel1Cluster) == 0,
+            "wrong!");
 
         constexpr auto in_n_c_hi_wi_global_desc  = InGlobalDesc{};
         constexpr auto wei_k_c_y_x_global_desc   = WeiGlobalDesc{};
@@ -290,30 +289,29 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
             in_e_n1_b_n2_block_desc.GetStride(I0));
 
         // sanity check
-        static_assert(KPerBlock % (GemmMPerThreadSubC * GemmMLevel0Cluster * GemmMLevel1Cluster) ==
-                          0,
+        static_assert(KPerBlock % (GemmMPerThread * GemmMLevel0Cluster * GemmMLevel1Cluster) == 0,
                       "wrong!");
 
         constexpr index_t GemmMRepeat =
-            KPerBlock / (GemmMPerThreadSubC * GemmMLevel0Cluster * GemmMLevel1Cluster);
+            KPerBlock / (GemmMPerThread * GemmMLevel0Cluster * GemmMLevel1Cluster);
 
         // c_thread_mtx definition: this is a mess
         // TODO:: more elegent way of defining c_thread_mtx
         constexpr auto c_k0k1_n1n2_thread_mtx_desc = make_ConstantMatrixDescriptor_packed(
-            Number<GemmMRepeat * GemmMPerThreadSubC>{}, Number<GemmNRepeat * GemmNPerThreadSubC>{});
+            Number<GemmMRepeat * GemmMPerThread>{}, Number<GemmNRepeat * GemmNPerThread>{});
 
         const auto blockwise_gemm = BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2<
             BlockSize,
             decltype(a_e_k_block_mtx_desc),
             decltype(b_e_n1bn2_block_mtx_desc),
             decltype(c_k0k1_n1n2_thread_mtx_desc),
-            GemmMPerThreadSubC,
-            GemmNPerThreadSubC,
+            GemmMPerThread,
+            GemmNPerThread,
+            GemmKPerThread,
             GemmMLevel0Cluster,
             GemmNLevel0Cluster,
             GemmMLevel1Cluster,
             GemmNLevel1Cluster,
-            GemmKPerThreadLoop,
             GemmDataPerReadA,
             GemmDataPerReadB>{};
 
@@ -432,13 +430,13 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 
         // copy output: register to global memory
         {
-            constexpr index_t K1 = GemmMPerThreadSubC * GemmMLevel0Cluster * GemmMLevel1Cluster;
+            constexpr index_t K1 = GemmMPerThread * GemmMLevel0Cluster * GemmMLevel1Cluster;
             constexpr index_t K0 = K / K1;
 
             // define output tensor descriptor for threadwise copy
             //     thread output tensor, src of threadwise copy
             constexpr auto out_k0_k1_n1_b_n2_thread_desc = make_native_tensor_descriptor_packed(
-                Sequence<GemmMRepeat, GemmMPerThreadSubC, N1, 1, N2>{});
+                Sequence<GemmMRepeat, GemmMPerThread, N1, 1, N2>{});
 
             //     global output tensor
             constexpr auto out_n0_n1_n2_k0_k1_ho_wo_global_desc = transform_tensor_descriptor(

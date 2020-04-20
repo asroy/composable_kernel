@@ -186,7 +186,6 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
                       "wrong!");
 
         constexpr index_t GemmMRepeat = MPerBlock / (MPerThread * MLevel0Cluster * MLevel1Cluster);
-
         constexpr index_t GemmNRepeat = NPerBlock / (NPerThread * NLevel0Cluster * NLevel1Cluster);
 
         // c_thread_mtx definition: this is a mess
@@ -201,11 +200,11 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
             decltype(c_m0m1_n0n1_thread_mtx_desc),
             MPerThread,
             NPerThread,
+            KPerThread,
             MLevel0Cluster,
             NLevel0Cluster,
             MLevel1Cluster,
             NLevel1Cluster,
-            KPerThread,
             ThreadGemmAThreadCopySrcDataPerRead_M,
             ThreadGemmBThreadCopySrcDataPerRead_N>{};
 

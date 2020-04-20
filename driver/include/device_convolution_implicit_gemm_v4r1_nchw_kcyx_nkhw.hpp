@@ -65,9 +65,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 2;
     constexpr index_t GemmNLevel0Cluster = 2;
@@ -104,9 +104,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 2;
     constexpr index_t GemmNLevel0Cluster = 2;
@@ -143,9 +143,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 2;
     constexpr index_t GemmNLevel0Cluster = 2;
@@ -182,9 +182,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 4;
     constexpr index_t GemmNLevel0Cluster = 4;
@@ -222,9 +222,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 4;
     constexpr index_t GemmNLevel0Cluster = 4;
@@ -261,9 +261,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 2;
     constexpr index_t GemmNLevel0Cluster = 2;
@@ -300,9 +300,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 2;
     constexpr index_t GemmNLevel0Cluster = 2;
@@ -339,9 +339,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 4;
     constexpr index_t GemmNLevel0Cluster = 4;
@@ -378,9 +378,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 2;
     constexpr index_t GemmNLevel0Cluster = 2;
@@ -417,9 +417,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 2;
     constexpr index_t GemmNLevel0Cluster = 2;
@@ -456,9 +456,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 2;
     constexpr index_t GemmNLevel0Cluster = 2;
@@ -495,9 +495,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 4;
     constexpr index_t GemmNLevel0Cluster = 4;
@@ -534,9 +534,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 4;
     constexpr index_t GemmNLevel0Cluster = 4;
@@ -573,9 +573,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 4;
     constexpr index_t GemmNLevel0Cluster = 4;
@@ -612,9 +612,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 2;
     constexpr index_t GemmNLevel0Cluster = 2;
@@ -651,9 +651,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 2;
     constexpr index_t GemmNLevel0Cluster = 2;
@@ -690,9 +690,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 4;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 4;
     constexpr index_t GemmNLevel0Cluster = 4;
@@ -729,9 +729,9 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 
     constexpr index_t GemmNRepeat = 2;
 
-    constexpr index_t GemmMPerThreadSubC = 2;
-    constexpr index_t GemmNPerThreadSubC = 4;
-    constexpr index_t GemmKPerThreadLoop = 1;
+    constexpr index_t GemmMPerThread = 2;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
     constexpr index_t GemmMLevel0Cluster = 4;
     constexpr index_t GemmNLevel0Cluster = 4;
@@ -761,7 +761,7 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
 #endif
 
     constexpr index_t N1 = GemmNRepeat;
-    constexpr index_t N2 = GemmNPerThreadSubC;
+    constexpr index_t N2 = GemmNPerThread;
 
     constexpr index_t B = (N * Ho * Wo) / (N1 * N2);
 
@@ -788,13 +788,13 @@ void device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(InDesc,
             KPerBlock,
             EPerBlock,
             GemmNRepeat,
-            GemmMPerThreadSubC,
-            GemmNPerThreadSubC,
+            GemmMPerThread,
+            GemmNPerThread,
+            GemmKPerThread,
             GemmMLevel0Cluster,
             GemmNLevel0Cluster,
             GemmMLevel1Cluster,
             GemmNLevel1Cluster,
-            GemmKPerThreadLoop,
             GemmDataPerReadA,
             GemmDataPerReadB,
             InBlockCopySubLengths_E_N1_B_N2,

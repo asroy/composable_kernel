@@ -13,14 +13,9 @@
 #include "conv_common.hpp"
 #include "host_conv.hpp"
 #include "device_tensor.hpp"
-//#include "device_convolution_direct_v2_nchw_kcyx_nkhw.hpp"
-//#include "device_convolution_implicit_gemm_v1_chwn_cyxk_khwn.hpp"
-//#include "device_convolution_implicit_gemm_v1_chwn_cyxk_khwn_padded.hpp"
-//#include "device_convolution_implicit_gemm_v1_nchw_cyxk_nkhw.hpp"
-//#include "device_convolution_implicit_gemm_v2_chwn_cyxk_khwn.hpp"
-//#include "device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_fp16.hpp"
 //#include "device_convolution_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v4r4_xdlops_fp16_nchw_kcyx_nkhw.hpp"
 
@@ -611,7 +606,7 @@ int main(int argc, char* argv[])
                                                          LeftPads{},
                                                          RightPads{},
                                                          nrepeat);
-#elif 1
+#elif 0
     device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
@@ -623,6 +618,18 @@ int main(int argc, char* argv[])
                                                          LeftPads{},
                                                          RightPads{},
                                                          nrepeat);
+#elif 1
+    device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_fp16(in_nchw_desc,
+                                                              in_nchw,
+                                                              wei_kcyx_desc,
+                                                              wei_kcyx,
+                                                              out_nkhw_desc,
+                                                              out_nkhw_device,
+                                                              ConvStrides{},
+                                                              ConvDilations{},
+                                                              LeftPads{},
+                                                              RightPads{},
+                                                              nrepeat);
 #elif 1
     device_convolution_implicit_gemm_v4r4_xdlops_fp16_nchw_kcyx_nkhw(in_nchw_desc,
                                                                      in_nchw,

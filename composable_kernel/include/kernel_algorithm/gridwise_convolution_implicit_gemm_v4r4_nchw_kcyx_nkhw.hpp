@@ -159,7 +159,7 @@ struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw
                                                      1,
                                                      GemmBBlockCopySrcDataPerRead_GemmN,
                                                      GemmBBlockCopyDstDataPerWrite_GemmN,
-                                                     Sequence<0, 1, 2, 3>,
+                                                     Sequence<2, 3, 0, 1>,
                                                      3,
                                                      GemmCThreadCopyDstDataPerWrite_GemmN1>{};
 
