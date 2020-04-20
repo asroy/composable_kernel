@@ -150,6 +150,30 @@ struct inner_product_with_conversion
 
     __device__ T operator()(float a, float b) const { return convert(a) * convert(b); }
 
+#if 0
+    __device__ T operator()(half2_t a, half2_t b) const
+    {
+        const auto p_a_half = reinterpret_cast<const float*>(&a);
+        const auto p_b_half = reinterpret_cast<const float*>(&b);
+
+        T acc = convert(p_a_half[0]) * convert(p_b_half[0]);
+
+        return acc;
+    }
+
+    __device__ T operator()(half4_t a, half4_t b) const
+    {
+        const auto p_a_half = reinterpret_cast<const float*>(&a);
+        const auto p_b_half = reinterpret_cast<const float*>(&b);
+
+        T acc = 0;
+        for(index_t v = 0; v < 2; ++v)
+        {
+            acc += convert(p_a_half[v]) * convert(p_b_half[v]);
+        }
+        return acc;
+    }
+#else
     __device__ T operator()(half2_t a, half2_t b) const
     {
         const half* p_a_half = reinterpret_cast<const half*>(&a);
@@ -176,6 +200,8 @@ struct inner_product_with_conversion
         }
         return acc;
     }
+
+#endif
 
 };
 
