@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 0
+#if 1
     // 1x1, 17x17
     constexpr index_t N  = 128;
     constexpr index_t C  = 1024;
@@ -594,7 +594,7 @@ int main(int argc, char* argv[])
 #elif 0
     device_convolution_implicit_gemm_v3_nchw_cyxk_nkhw(
         (in_nchw_desc, in_nchw, wei_kcyx_desc, wei_kcyx, out_nkhw_desc, out_nkhw_device, nrepeat);
-#elif 0
+#elif 1
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,

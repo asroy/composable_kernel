@@ -50,7 +50,6 @@ include_directories(BEFORE
     ${PROJECT_SOURCE_DIR}/external/include
     ${PROJECT_SOURCE_DIR}/driver/include
     ${PROJECT_BINARY_DIR}/composable_kernel/include/utility
-    ${HALF_INCLUDE_DIR}
 )
 
 if(DEVICE_BACKEND STREQUAL "AMD")
