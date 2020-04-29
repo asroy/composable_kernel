@@ -187,7 +187,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 4;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 4;
-#elif 1
+#elif 0
     // cdata = 64, BlockSize = 256, 128x128x16
     constexpr index_t BlockSize = 256;
 
@@ -255,7 +255,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 4;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 4;
-#elif 1
+#elif 0
     // cdata = 64, BlockSize = 256, 128x128x16
     // GemmBBlockCopySrcDataPerRead_GemmN = 4
     // GemmCThreadCopyDstDataPerWrite_GemmN1 = 4
@@ -793,7 +793,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 2;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
-#elif 0
+#elif 1
     // cdata = 64, BlockSize = 64, 32x128x3
     constexpr index_t BlockSize = 64;
 

@@ -15,7 +15,7 @@
 #include "device_tensor.hpp"
 #include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_fp16.hpp"
+//#include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_fp16.hpp"
 //#include "device_convolution_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
 //#include "device_convolution_implicit_gemm_v4r4_xdlops_fp16_nchw_kcyx_nkhw.hpp"
 
@@ -128,17 +128,17 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 3>;
     using RightPads = Sequence<0, 3>;
-#elif 0
+#elif 1
     // 3x3, 299x299 stride=2
     constexpr index_t N  = 128;
-    constexpr index_t C  = 1024;
-    constexpr index_t HI = 14;
-    constexpr index_t WI = 14;
-    constexpr index_t K  = 1024;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
+    constexpr index_t C  = 3;
+    constexpr index_t HI = 299;
+    constexpr index_t WI = 299;
+    constexpr index_t K  = 32;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
 
-    using ConvStrides   = Sequence<1, 1>;
+    using ConvStrides   = Sequence<2, 2>;
     using ConvDilations = Sequence<1, 1>;
 
     using LeftPads  = Sequence<0, 0>;
@@ -521,7 +521,7 @@ int main(int argc, char* argv[])
     print_sequence("ConvStrides", ConvStrides{});
     print_sequence("ConvDilations", ConvDilations{});
 
-#if 0
+#if 1
     using in_data_t  = float;
     using out_data_t = float;
 #else
@@ -606,7 +606,7 @@ int main(int argc, char* argv[])
                                                          LeftPads{},
                                                          RightPads{},
                                                          nrepeat);
-#elif 0
+#elif 1
     device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
@@ -618,7 +618,7 @@ int main(int argc, char* argv[])
                                                          LeftPads{},
                                                          RightPads{},
                                                          nrepeat);
-#elif 1
+#elif 0
     device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_fp16(in_nchw_desc,
                                                               in_nchw,
                                                               wei_kcyx_desc,
@@ -630,7 +630,7 @@ int main(int argc, char* argv[])
                                                               LeftPads{},
                                                               RightPads{},
                                                               nrepeat);
-#elif 1
+#elif 0
     device_convolution_implicit_gemm_v4r4_xdlops_fp16_nchw_kcyx_nkhw(in_nchw_desc,
                                                                      in_nchw,
                                                                      wei_kcyx_desc,
