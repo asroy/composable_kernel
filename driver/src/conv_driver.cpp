@@ -29,7 +29,38 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 1
+#if 0
+ // 1x1 for vector memory access , 7x7 image size
+    constexpr index_t N  = 128;
+    constexpr index_t C  = 256;
+    constexpr index_t HI = 7;
+    constexpr index_t WI = 7;
+    constexpr index_t K  = 256;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
+#elif 1
+    // 1x1 for vector memory access, 13x13 image size
+    constexpr index_t N  = 128;
+    constexpr index_t C  = 256;//1024;
+    constexpr index_t HI = 13;
+    constexpr index_t WI = 13;
+    constexpr index_t K  = 256;//2048;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
+
+#elif 0
     // 1x1
     constexpr index_t N  = 64;
     constexpr index_t C  = 64;
