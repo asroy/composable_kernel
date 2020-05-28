@@ -29,4 +29,7 @@
 #include "amd_xdlops.hpp"
 #endif
 
+#define CK_EXTEND_IMAGE_SIZE_PAD_W 1  //fake pad 7x7 into 7x8 to make it dwordx4 
+#define CK_EXTEND_IMAGE_SIZE_PAD_HW 0  //fake pad 7x7 into 7x7+3 to make it dwordx4
+
 #endif

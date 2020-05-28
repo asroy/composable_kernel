@@ -75,6 +75,8 @@ struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw
         constexpr index_t ConvDilationH = ConvDilations{}[0];
         constexpr index_t ConvDilationW = ConvDilations{}[1];
 
+#if CK_EXTEND_IMAGE_SIZE_PAD_W
+#else
         // sanity-check for vectorized memory load
         static_assert((Wo == 1 || (ConvStrideW == 1 || GemmBBlockCopySrcDataPerRead_GemmN == 1)) &&
                           (X == 1 || ConvDilationW % GemmBBlockCopySrcDataPerRead_GemmN == 0) &&
@@ -82,6 +84,7 @@ struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw
                           InRightPads{}[1] % GemmBBlockCopySrcDataPerRead_GemmN == 0,
                       "wrong! aligment requirement for vectorized global load of input tensor will "
                       "be violated");
+#endif
 
         // weight tensor
         constexpr auto wei_e_k_global_desc = reorder_tensor_descriptor_given_upper2lower(
@@ -107,20 +110,83 @@ struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw
                        Embed<Wip, Sequence<X, Wo>, Sequence<ConvDilationW, ConvStrideW, 0>>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
+#if CK_EXTEND_IMAGE_SIZE_PAD_HW
+        constexpr auto in_n_c_y_ho_x_wo_global_desc_unfold = 
+            transform_tensor_descriptor(in_n_c_y_ho_x_wo_global_desc,
+                                        make_tuple(PassThrough<N>{},PassThrough<C>{},PassThrough<Y>{}, PassThrough<X>{}, Merge<Sequence<Ho, Wo>>{}),
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<4>{}, Sequence<3, 5>{}),
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}, Sequence<4>{}));
 
+        constexpr auto in_n_c_y_ho_x_wo_global_desc_unfold_padd =
+            transform_tensor_descriptor(in_n_c_y_ho_x_wo_global_desc_unfold,
+                                        make_tuple(PassThrough<N>{},PassThrough<C>{},PassThrough<Y>{}, PassThrough<X>{}, 
+                                                Pad<Sequence<Ho*Wo>, Sequence<0>, Sequence<3>>{}),//Transforms, 
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}, Sequence<4>{}),
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}, Sequence<4>{}));
+        constexpr auto in_e_b_global_desc = 
+        transform_tensor_descriptor(in_n_c_y_ho_x_wo_global_desc_unfold_padd,
+                                    make_tuple(Merge<Sequence<C, Y, X>>{}, Merge<Sequence<N, 52>>{}),
+                                    make_tuple(Sequence<1, 2, 3>{}, Sequence<0, 4>{}),
+                                    make_tuple(Sequence<0>{}, Sequence<1>{}));
+#else
         constexpr auto in_e_b_global_desc = transform_tensor_descriptor(
             in_n_c_y_ho_x_wo_global_desc,
             make_tuple(Merge<Sequence<C, Y, X>>{}, Merge<Sequence<N, Ho, Wo>>{}),
             make_tuple(Sequence<1, 2, 4>{}, Sequence<0, 3, 5>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
+#endif
+#if CK_EXTEND_IMAGE_SIZE_PAD_W
+        constexpr auto out_nkhw_desc  = make_ConstantTensorDescriptor_packed(Sequence<N, K, Hi, Wi>{});
+        constexpr auto out_nkhw_desc_native =
+            make_native_tensor_descriptor(out_nkhw_desc.GetLengths(), out_nkhw_desc.GetStrides());
 
+        constexpr auto out_n_k_ho_wo_global_desc_pad = transform_tensor_descriptor(
+            out_nkhw_desc_native,
+            make_tuple(PassThrough<N>{},
+                       PassThrough<K>{},
+                       Pad<Sequence<Hi, Wi>, InLeftPads, InRightPads>{}),//Transforms, 
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}),//LowDimensionIds,
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}));// UpDimensionIds
+
+        // output tensor
+        constexpr auto out_k_b_global_desc =
+            transform_tensor_descriptor(out_n_k_ho_wo_global_desc_pad,
+                                        make_tuple(PassThrough<K>{}, Merge<Sequence<N, Ho,Wo>>{}),
+                                        make_tuple(Sequence<1>{}, Sequence<0, 2, 3>{}),
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}));
+#elif CK_EXTEND_IMAGE_SIZE_PAD_HW
+        constexpr auto out_nkhw_desc  = make_ConstantTensorDescriptor_packed(Sequence<N, K, Hi, Wi>{});
+        constexpr auto out_nkhw_desc_native =
+            make_native_tensor_descriptor(out_nkhw_desc.GetLengths(), out_nkhw_desc.GetStrides());
+
+        constexpr auto out_nkhw_desc_unfold =
+            transform_tensor_descriptor(out_nkhw_desc_native,
+                                        make_tuple(PassThrough<N>{},PassThrough<K>{}, Merge<Sequence<Hi, Wi>>{}),
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}),
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}));
+
+        constexpr auto out_nkhw_desc_unfold_pad =
+            transform_tensor_descriptor(out_nkhw_desc_unfold,
+                                        make_tuple(PassThrough<N>{},
+                                                PassThrough<K>{},
+                                                Pad<Sequence<Hi*Wi>, Sequence<0>, Sequence<3>>{}),//Transforms, 
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}),//LowDimensionIds,
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}));// UpDimensionIds
+
+        constexpr auto out_k_b_global_desc =
+            transform_tensor_descriptor(out_nkhw_desc_unfold_pad,
+                                        make_tuple(PassThrough<K>{}, Merge<Sequence<N, 52>>{}),
+                                        make_tuple(Sequence<1>{}, Sequence<0, 2>{}),
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}));
+                                        
+#else
         // output tensor
         constexpr auto out_k_b_global_desc =
             transform_tensor_descriptor(unfold_tensor_descriptor(out_n_k_ho_wo_global_desc, I2, I3),
                                         make_tuple(PassThrough<K>{}, Merge<Sequence<N, Ho * Wo>>{}),
                                         make_tuple(Sequence<1>{}, Sequence<0, 2>{}),
                                         make_tuple(Sequence<0>{}, Sequence<1>{}));
-
+#endif                                        
         // GEMM
         constexpr auto gridwise_gemm =
             GridwiseGemmTransposedANormalBNormalC_v1<GridSize,

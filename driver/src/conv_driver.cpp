@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 0
+#if 1
  // 1x1 for vector memory access , 7x7 image size
     constexpr index_t N  = 128;
     constexpr index_t C  = 256;
@@ -43,7 +43,11 @@ int main(int argc, char* argv[])
     using ConvDilations = Sequence<1, 1>;
 
     using LeftPads  = Sequence<0, 0>;
+#if CK_EXTEND_IMAGE_SIZE_PAD_W    
+    using RightPads = Sequence<0, 1>;
+#else
     using RightPads = Sequence<0, 0>;
+#endif
 #elif 1
     // 1x1 for vector memory access, 13x13 image size
     constexpr index_t N  = 128;
@@ -379,6 +383,10 @@ int main(int argc, char* argv[])
     auto wei_kcyx_desc = make_ConstantTensorDescriptor_packed(Sequence<K, C, Y, X>{});
     auto out_nkhw_desc = get_convolution_output_default_4d_tensor_descriptor_deprecated(
         in_nchw_desc, wei_kcyx_desc, ConvStrides{}, ConvDilations{}, LeftPads{}, RightPads{});
+#if CK_EXTEND_IMAGE_SIZE_PAD_W    
+    auto out_nkhw_desc_nopadd = get_convolution_output_default_4d_tensor_descriptor_deprecated(
+        in_nchw_desc, wei_kcyx_desc, ConvStrides{}, ConvDilations{}, LeftPads{}, Sequence<0,0>{});//RightPads{});
+#endif
 
     ostream_ConstantTensorDescriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
     ostream_ConstantTensorDescriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
@@ -392,7 +400,11 @@ int main(int argc, char* argv[])
     using out_data_t = float;
     Tensor<in_data_t> in_nchw(make_TensorDescriptor(in_nchw_desc));
     Tensor<in_data_t> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
+#if CK_EXTEND_IMAGE_SIZE_PAD_W   
+    Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc_nopadd));
+#else
     Tensor<out_data_t> out_nkhw_host(make_TensorDescriptor(out_nkhw_desc));
+#endif    
     Tensor<out_data_t> out_nkhw_device(make_TensorDescriptor(out_nkhw_desc));
 
     std::size_t num_thread = std::thread::hardware_concurrency();
