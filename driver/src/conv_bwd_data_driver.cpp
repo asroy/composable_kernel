@@ -9,7 +9,7 @@
 #include "print_array.hpp"
 #include "print_sequence.hpp"
 #include "device.hpp"
-#include "tensor_generator.hpp"
+#include "host_tensor_generator.hpp"
 #include "device_tensor.hpp"
 #include "conv_common.hpp"
 #include "host_conv_bwd_data.hpp"
@@ -209,19 +209,19 @@ int main(int argc, char* argv[])
     constexpr auto out_nkhw_desc = get_convolution_output_default_4d_tensor_descriptor(
         in_nchw_desc, wei_kcyx_desc, ConvStrides{}, ConvDilations{}, LeftPads{}, RightPads{});
 
-    ostream_ConstantTensorDescriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
-    ostream_ConstantTensorDescriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
-    ostream_ConstantTensorDescriptor(out_nkhw_desc, std::cout << "out_nkhw_desc: ");
+    ostream_tensor_descriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
+    ostream_tensor_descriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
+    ostream_tensor_descriptor(out_nkhw_desc, std::cout << "out_nkhw_desc: ");
     print_sequence("LeftPads", LeftPads{});
     print_sequence("LeftPads", LeftPads{});
     print_sequence("RightPads", RightPads{});
     print_sequence("ConvStrides", ConvStrides{});
     print_sequence("ConvDilations", ConvDilations{});
 
-    Tensor<float> in_nchw_device(make_TensorDescriptor(in_nchw_desc));
-    Tensor<float> in_nchw_host(make_TensorDescriptor(in_nchw_desc));
-    Tensor<float> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
-    Tensor<float> out_nkhw(make_TensorDescriptor(out_nkhw_desc));
+    Tensor<float> in_nchw_device(make_HostTensorDescriptor(in_nchw_desc));
+    Tensor<float> in_nchw_host(make_HostTensorDescriptor(in_nchw_desc));
+    Tensor<float> wei_kcyx(make_HostTensorDescriptor(wei_kcyx_desc));
+    Tensor<float> out_nkhw(make_HostTensorDescriptor(out_nkhw_desc));
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 

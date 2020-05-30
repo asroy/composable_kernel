@@ -1,7 +1,7 @@
 #pragma once
 #include <unistd.h>
 #include "device.hpp"
-#include "tensor.hpp"
+#include "host_tensor.hpp"
 #include "gridwise_operation_wrapper.hpp"
 #include "gridwise_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer.hpp"
 
