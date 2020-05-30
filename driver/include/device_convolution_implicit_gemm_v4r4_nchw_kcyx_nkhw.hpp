@@ -1,7 +1,7 @@
 #include <unistd.h>
 #include "device.hpp"
 #include "tensor.hpp"
-#include "gridwise_convolution_kernel_wrapper.hpp"
+#include "gridwise_operation_wrapper.hpp"
 #include "gridwise_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 
 template <class T,
@@ -120,7 +120,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
-#elif 0
+#elif 1
     // cdata = 64, BlockSize = 256, 128x128x8
     constexpr index_t BlockSize = 256;
 
@@ -793,7 +793,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 2;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
-#elif 1
+#elif 0
     // cdata = 64, BlockSize = 64, 32x128x3
     constexpr index_t BlockSize = 64;
 
@@ -968,7 +968,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
-    constexpr auto gridwise_conv = GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw<
+    using gridwise_conv = GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw<
         GridSize,
         BlockSize,
         TDevice,
@@ -1000,7 +1000,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
         GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
         GemmBBlockCopySrcDataPerRead_GemmN,
         GemmBBlockCopyDstDataPerWrite_GemmN,
-        GemmCThreadCopyDstDataPerWrite_GemmN1>{};
+        GemmCThreadCopyDstDataPerWrite_GemmN1>;
 
     for(index_t i = 0; i < 5; ++i)
     {
@@ -1011,7 +1011,10 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
 
         for(index_t j = 0; j < nrepeat; ++j)
         {
-            launch_kernel(run_gridwise_convolution_kernel<decltype(gridwise_conv), TDevice>,
+            launch_kernel(run_gridwise_operation<gridwise_conv,
+                                                 const TDevice* const __restrict__,
+                                                 const TDevice* const __restrict__,
+                                                 TDevice* const __restrict__>,
                           dim3(GridSize),
                           dim3(BlockSize),
                           0,
