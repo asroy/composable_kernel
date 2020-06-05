@@ -144,6 +144,13 @@ struct BlockwiseGenericTensorSliceCopy_v4
     {
         mThreadwiseStore.MoveDstSliceWindow(step_sizes, positive_direction);
     }
+    
+#if CK_VECTORIZE_FLAG
+    __device__ void SetVectorizeFlag()
+    {
+        mThreadwiseLoad.SetVectorizeFlag();
+    }
+#endif
 
     private:
     using ThreadBufferDesc = decltype(make_native_tensor_descriptor_packed(ThreadSliceLengths{}));

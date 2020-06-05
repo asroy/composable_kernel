@@ -228,6 +228,9 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
         // LDS double buffer: preload data into LDS
         {
             a_blockwise_copy.Run(p_a_global, p_a_block_double);
+#if CK_VECTORIZE_FLAG
+            b_blockwise_copy.SetVectorizeFlag();
+#endif
             b_blockwise_copy.Run(p_b_global, p_b_block_double);
         }
 
@@ -285,7 +288,7 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
 
                 a_blockwise_copy.MoveSrcSliceWindow(a_block_slice_copy_steps, True);
                 b_blockwise_copy.MoveSrcSliceWindow(b_block_slice_copy_steps, True);
-
+                
                 __syncthreads();
 
                 // LDS double buffer: load last data from device mem
