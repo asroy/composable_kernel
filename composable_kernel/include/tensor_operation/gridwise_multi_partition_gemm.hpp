@@ -156,7 +156,7 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
 
         if(bIsHave1stPartition && get_block_1d_id() < Gemm128BlockNum)
         {
-            
+            static_if<bIsHave1stPartition>{}([&](auto){
                 constexpr auto out_k_b_global_1st_desc = transform_tensor_descriptor(
                     out_k_b_global_desc,
                     make_tuple(Slice<Sequence<GemmM>, Sequence<0>, Sequence<GemmOBeginM>>{},
@@ -205,11 +205,11 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                                                              GemmBlockID<0>>{};
 
                 gridwise_gemm.Run(p_wei_global, p_in_global, p_out_global, p_shared_block);
-            
+            });
         }
         else if(bIsHave2ndPartition && (get_block_1d_id() < Gemm128BlockNum + GemmN128BlockNum))
         {
-            
+            static_if<bIsHave2ndPartition>{}([&](auto){
                 // BlockSize = 128, GemmKPerBlock = 8  32X128
                 constexpr index_t BlockSize1 = 256;
 
@@ -288,11 +288,11 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                     GemmBlockID<Gemm128BlockNum>>{};
 
                 gridwise_gemm1.Run(p_wei_global, p_in_global, p_out_global, p_shared_block);
-            
+            });
         }
         else if(bIsHave3rdPartition && (get_block_1d_id() < bolck_begin_3rd + GemmM128BlockNum))
         {
-            
+            static_if<bIsHave3rdPartition>{}([&](auto){
                 // BlockSize = 128, GemmKPerBlock = 8  128X32
                 constexpr index_t BlockSize2 = 256;
 
@@ -372,6 +372,7 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                     GemmBlockID<bolck_begin_3rd>>{};
 
                 gridwise_gemm2.Run(p_wei_global, p_in_global, p_out_global, p_shared_block);
+            });
             
         }
         else if(bIsHave4thPartition)
@@ -380,7 +381,7 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
             if(waveid >= 1)
                 return;
 
-            
+            static_if<bIsHave4thPartition>{}([&](auto){
                 // BlockSize = 64, GemmKPerBlock = 8
                 constexpr index_t BlockSize3 = 64;
 
@@ -460,7 +461,7 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                     GemmBlockID<Gemm128BlockNum + GemmN128BlockNum + GemmM128BlockNum>>{};
 
                 gridwise_gemm3.Run(p_wei_global, p_in_global, p_out_global, p_shared_block);
-            
+            });
         }
     }
 };
