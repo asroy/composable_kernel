@@ -8,6 +8,53 @@
 #include "gridwise_multi_partition_gemm.hpp"
 
 namespace ck {
+template <index_t GemmBlockSize,
+          index_t GemmMPerBlock,
+          index_t GemmNPerBlock,
+          index_t GemmKPerBlock,
+          index_t GemmMPerThread,
+          index_t GemmNPerThread,
+          index_t GemmKPerThread,
+          index_t GemmMLevel0Cluster,
+          index_t GemmNLevel0Cluster,
+          index_t GemmMLevel1Cluster,
+          index_t GemmNLevel1Cluster,
+          index_t ThreadGemmDataPerRead_GemmM,
+          index_t ThreadGemmDataPerRead_GemmN,
+          typename GemmABlockCopyThreadSliceLengths_GemmK_GemmM,
+          typename GemmABlockCopyThreadClusterLengths_GemmK_GemmM,
+          index_t GemmABlockCopySrcDataPerRead_GemmK,
+          index_t GemmABlockCopyDstDataPerWrite_GemmM,
+          typename GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
+          typename GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
+          index_t GemmBBlockCopySrcDataPerRead_GemmN,
+          index_t GemmBBlockCopyDstDataPerWrite_GemmN,
+          index_t GemmCThreadCopyDstDataPerWrite_GemmN1>
+struct GemmParameters{
+    using ABlockCopyThreadSliceLengths_K_M                           = GemmABlockCopyThreadSliceLengths_GemmK_GemmM;
+    using ABlockCopyThreadClusterLengths_K_M                         = GemmABlockCopyThreadClusterLengths_GemmK_GemmM;
+    using BBlockCopyThreadSliceLengths_K_N                           = GemmBBlockCopyThreadSliceLengths_GemmK_GemmN;
+    using BBlockCopyThreadClusterLengths_K_N                         = GemmBBlockCopyThreadClusterLengths_GemmK_GemmN;
+
+     static constexpr index_t BlockSize                              = GemmBlockSize;
+     static constexpr index_t MPerBlock                              = GemmMPerBlock;
+     static constexpr index_t NPerBlock                         = GemmNPerBlock;
+     static constexpr index_t KPerBlock                         = GemmKPerBlock;
+     static constexpr index_t MPerThread                        = GemmMPerThread;
+     static constexpr index_t NPerThread                        = GemmNPerThread;
+     static constexpr index_t KPerThread                        = GemmKPerThread;
+     static constexpr index_t MLevel0Cluster                    = GemmMLevel0Cluster;
+     static constexpr index_t NLevel0Cluster                    = GemmNLevel0Cluster;
+     static constexpr index_t MLevel1Cluster                    = GemmMLevel1Cluster;
+     static constexpr index_t NLevel1Cluster                    = GemmNLevel1Cluster;
+     static constexpr index_t ThreadGemmAThreadCopySrcDataPerRead_M           = ThreadGemmDataPerRead_GemmM;
+     static constexpr index_t ThreadGemmBThreadCopySrcDataPerRead_N           = ThreadGemmDataPerRead_GemmN;
+     static constexpr index_t ABlockCopySrcDataPerRead_K    = GemmABlockCopySrcDataPerRead_GemmK;
+     static constexpr index_t ABlockCopyDstDataPerWrite_M   = GemmABlockCopyDstDataPerWrite_GemmM;
+     static constexpr index_t BBlockCopySrcDataPerRead_N    = GemmBBlockCopySrcDataPerRead_GemmN;
+     static constexpr index_t BBlockCopyDstDataPerWrite_N   = GemmBBlockCopyDstDataPerWrite_GemmN;
+     static constexpr index_t CThreadCopyDstDataPerWrite    = GemmCThreadCopyDstDataPerWrite_GemmN1;
+};
 // GemmM = K
 // GemmN = N * Ho * Wo
 // GemmK = C * Y * X
@@ -42,7 +89,8 @@ template <index_t GridSize,
           typename GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
           index_t GemmBBlockCopySrcDataPerRead_GemmN,
           index_t GemmBBlockCopyDstDataPerWrite_GemmN,
-          index_t GemmCThreadCopyDstDataPerWrite_GemmN1>
+          index_t GemmCThreadCopyDstDataPerWrite_GemmN1,
+          typename GemmParamters1>
 struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw_mp
 {
     __device__ void Run(const Float* const __restrict__ p_in_global,
@@ -131,35 +179,15 @@ struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw_mp
                                                      decltype(in_e_b_global_desc),
                                                      decltype(out_k_b_global_desc),
                                                      InMemoryDataOperation::Set,
-                                                     GemmMPerBlock,
-                                                     GemmNPerBlock,
-                                                     GemmKPerBlock,
-                                                     GemmMPerThread,
-                                                     GemmNPerThread,
-                                                     GemmKPerThread,
-                                                     GemmMLevel0Cluster,
-                                                     GemmNLevel0Cluster,
-                                                     GemmMLevel1Cluster,
-                                                     GemmNLevel1Cluster,
-                                                     ThreadGemmDataPerRead_GemmM,
-                                                     ThreadGemmDataPerRead_GemmN,
-                                                     GemmABlockCopyThreadSliceLengths_GemmK_GemmM,
-                                                     GemmABlockCopyThreadClusterLengths_GemmK_GemmM,
                                                      Sequence<1, 0>,
                                                      Sequence<1, 0>,
                                                      0,
-                                                     GemmABlockCopySrcDataPerRead_GemmK,
-                                                     GemmABlockCopyDstDataPerWrite_GemmM,
-                                                     GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
-                                                     GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
                                                      Sequence<0, 1>,
                                                      Sequence<0, 1>,
                                                      1,
-                                                     GemmBBlockCopySrcDataPerRead_GemmN,
-                                                     GemmBBlockCopyDstDataPerWrite_GemmN,
                                                      Sequence<0, 1, 2, 3>,
                                                      3,
-                                                     GemmCThreadCopyDstDataPerWrite_GemmN1>{};
+                                                     GemmParamters1>{};
 
         gridwise_gemm.Run(p_wei_global, p_in_global, p_out_global);
         

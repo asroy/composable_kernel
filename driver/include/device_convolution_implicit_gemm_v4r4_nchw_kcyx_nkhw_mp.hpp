@@ -85,6 +85,31 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
 
+    using partition1 = GemmParameters<
+                         BlockSize,
+                         GemmMPerBlock,
+                         GemmNPerBlock,
+                         GemmKPerBlock,
+                         GemmMPerThreadSubC,
+                         GemmNPerThreadSubC,
+                         GemmKPerThreadLoop,
+                         GemmMLevel0Cluster,
+                         GemmNLevel0Cluster,
+                         GemmMLevel1Cluster,
+                         GemmNLevel1Cluster,
+                         ThreadGemmDataPerReadM,
+                         ThreadGemmDataPerReadN,
+                         GemmABlockCopyThreadSliceLengths_GemmK_GemmM,
+                         GemmABlockCopyThreadClusterLengths_GemmK_GemmM,
+                         GemmABlockCopySrcDataPerRead_GemmK,
+                         GemmABlockCopyDstDataPerWrite_GemmM,
+                         GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
+                         GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
+                         GemmBBlockCopySrcDataPerRead_GemmN,
+                         GemmBBlockCopyDstDataPerWrite_GemmN,
+                         GemmCThreadCopyDstDataPerWrite_GemmN1
+                         >;
+
 #elif 0
     // BlockSize = 256, GemmKPerBlock = 8
     constexpr index_t BlockSize = 256;
@@ -191,7 +216,8 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
         GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
         GemmBBlockCopySrcDataPerRead_GemmN,
         GemmBBlockCopyDstDataPerWrite_GemmN,
-        GemmCThreadCopyDstDataPerWrite_GemmN1>{};
+        GemmCThreadCopyDstDataPerWrite_GemmN1,
+        partition1>{};
 
     for(index_t i = 0; i < nrepeat; ++i)
     {

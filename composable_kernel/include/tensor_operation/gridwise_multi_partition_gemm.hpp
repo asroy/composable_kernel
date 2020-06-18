@@ -24,53 +24,34 @@ template <index_t GridSize,
           typename BGlobalDesc,
           typename CGlobalDesc,
           InMemoryDataOperation CGlobalMemoryDataOperation,
-          index_t MPerBlock,
-          index_t NPerBlock,
-          index_t KPerBlock,
-          index_t MPerThread,
-          index_t NPerThread,
-          index_t KPerThread,
-          index_t MLevel0Cluster,
-          index_t NLevel0Cluster,
-          index_t MLevel1Cluster,
-          index_t NLevel1Cluster,
-          index_t ThreadGemmAThreadCopySrcDataPerRead_M,
-          index_t ThreadGemmBThreadCopySrcDataPerRead_N,
-          typename ABlockCopyThreadSliceLengths_K_M,
-          typename ABlockCopyThreadClusterLengths_K_M,
           typename ABlockCopyThreadClusterArrangeOrder,
           typename ABlockCopySrcAccessOrder,
           index_t ABlockCopySrcVectorReadDim,
-          index_t ABlockCopySrcDataPerRead,
-          index_t ABlockCopyDstDataPerWrite_M,
-          typename BBlockCopyThreadSliceLengths_K_N,
-          typename BBlockCopyThreadClusterLengths_K_N,
           typename BBlockCopyThreadClusterArrangeOrder,
           typename BBlockCopySrcAccessOrder,
           index_t BBlockCopySrcVectorReadDim,
-          index_t BBlockCopySrcDataPerRead,
-          index_t BBlockCopyDstDataPerWrite_N,
           typename CThreadCopySrcDstAccessOrder,
           index_t CThreadCopySrcDstVectorReadWriteDim,
-          index_t CThreadCopyDstDataPerWrite>
+          typename GemmParameters1>
 struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
 {
+    static constexpr auto partition1 = GemmParameters1{};
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
-        constexpr index_t max_lds_align = math::lcm(ABlockCopyDstDataPerWrite_M,
-                                                    BBlockCopyDstDataPerWrite_N,
-                                                    ThreadGemmAThreadCopySrcDataPerRead_M,
-                                                    ThreadGemmBThreadCopySrcDataPerRead_N);
+        constexpr index_t max_lds_align = math::lcm(partition1.ABlockCopyDstDataPerWrite_M,
+                                                    partition1.BBlockCopyDstDataPerWrite_N,
+                                                    partition1.ThreadGemmAThreadCopySrcDataPerRead_M,
+                                                    partition1.ThreadGemmBThreadCopySrcDataPerRead_N);
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
         constexpr auto a_k_m_block_desc = make_native_tensor_descriptor_aligned(
-            Sequence<KPerBlock, MPerBlock>{}, Number<max_lds_align>{});
+            Sequence<partition1.KPerBlock, partition1.MPerBlock>{}, Number<max_lds_align>{});
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
         constexpr auto b_k_n_block_desc = make_native_tensor_descriptor_aligned(
-            Sequence<KPerBlock, NPerBlock>{}, Number<max_lds_align>{});
+            Sequence<partition1.KPerBlock, partition1.NPerBlock>{}, Number<max_lds_align>{});
 
         // LDS allocation for A and B: be careful of alignment
         constexpr index_t a_block_space =
@@ -173,35 +154,35 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                                                              decltype(in_e_b_global_1st_desc),
                                                              decltype(out_k_b_global_1st_desc),
                                                              InMemoryDataOperation::Set,
-                                                             MPerBlock,
-                                                             NPerBlock,
-                                                             KPerBlock,
-                                                             MPerThread,
-                                                             NPerThread,
-                                                             KPerThread,
-                                                             MLevel0Cluster,
-                                                             NLevel0Cluster,
-                                                             MLevel1Cluster,
-                                                             NLevel1Cluster,
-                                                             ThreadGemmAThreadCopySrcDataPerRead_M,
-                                                             ThreadGemmBThreadCopySrcDataPerRead_N,
-                                                             ABlockCopyThreadSliceLengths_K_M,
-                                                             ABlockCopyThreadClusterLengths_K_M,
+                                                             partition1.MPerBlock,
+                                                             partition1.NPerBlock,
+                                                             partition1.KPerBlock,
+                                                             partition1.MPerThread,
+                                                             partition1.NPerThread,
+                                                             partition1.KPerThread,
+                                                             partition1.MLevel0Cluster,
+                                                             partition1.NLevel0Cluster,
+                                                             partition1.MLevel1Cluster,
+                                                             partition1.NLevel1Cluster,
+                                                             partition1.ThreadGemmAThreadCopySrcDataPerRead_M,
+                                                             partition1.ThreadGemmBThreadCopySrcDataPerRead_N,
+                                                             typename GemmParameters1::ABlockCopyThreadSliceLengths_K_M,
+                                                             typename GemmParameters1::ABlockCopyThreadClusterLengths_K_M,
                                                              ABlockCopyThreadClusterArrangeOrder,
                                                              ABlockCopySrcAccessOrder,
                                                              ABlockCopySrcVectorReadDim,
-                                                             ABlockCopySrcDataPerRead,
-                                                             ABlockCopyDstDataPerWrite_M,
-                                                             BBlockCopyThreadSliceLengths_K_N,
-                                                             BBlockCopyThreadClusterLengths_K_N,
+                                                             partition1.ABlockCopySrcDataPerRead_K,
+                                                             partition1.ABlockCopyDstDataPerWrite_M,
+                                                             typename GemmParameters1::BBlockCopyThreadSliceLengths_K_N,
+                                                             typename GemmParameters1::BBlockCopyThreadClusterLengths_K_N,
                                                              BBlockCopyThreadClusterArrangeOrder,
                                                              BBlockCopySrcAccessOrder,
                                                              BBlockCopySrcVectorReadDim,
-                                                             BBlockCopySrcDataPerRead,
-                                                             BBlockCopyDstDataPerWrite_N,
+                                                             partition1.BBlockCopySrcDataPerRead_N,
+                                                             partition1.BBlockCopyDstDataPerWrite_N,
                                                              CThreadCopySrcDstAccessOrder,
                                                              CThreadCopySrcDstVectorReadWriteDim,
-                                                             CThreadCopyDstDataPerWrite,
+                                                             partition1.CThreadCopyDstDataPerWrite,
                                                              GemmBlockID<0>>{};
 
                 gridwise_gemm.Run(p_wei_global, p_in_global, p_out_global, p_shared_block);
