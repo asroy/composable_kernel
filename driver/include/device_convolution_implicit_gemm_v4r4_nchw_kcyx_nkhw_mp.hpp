@@ -53,6 +53,31 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
     wei_kcyx_device_buf.ToDevice(wei_kcyx.mData.data());
     out_nkhw_device_buf.ToDevice(out_nkhw.mData.data());
 
+    constexpr index_t GemmM = K;
+    constexpr index_t GemmN = N * Ho * Wo;
+//just for simple, let GemmM and GemmN >=128
+    static_assert(GemmM >= 128 && (GemmM % 128 == 0 || GemmM % 128 == 32),"GemmM >= 128 && (GemmM % 128 == 0 || GemmM % 128 == 32)");
+    static_assert(GemmN >= 128 && (GemmN % 128 == 0 || GemmN % 128 == 32),"GemmN >= 128 && (GemmN % 128 == 0 || GemmN % 128 == 32) ");
+
+    constexpr index_t GemmM128BlockNum = GemmM / 128;
+    constexpr index_t GemmN128BlockNum = GemmN / 128;
+
+    constexpr index_t GemmMBlockNum = (GemmM + 127) / 128;
+    constexpr index_t GemmNBlockNum = (GemmN + 127) / 128;
+
+    constexpr index_t GemmOBeginM = GemmM128BlockNum * 128;
+    constexpr index_t GemmOBeginN = GemmN128BlockNum * 128;
+
+    constexpr index_t Gemm128BlockNum  = GemmM128BlockNum * GemmN128BlockNum;
+    constexpr bool bIsHave1stPartition = Gemm128BlockNum > 0;
+    constexpr bool bIsHave2ndPartition = GemmMBlockNum > GemmM128BlockNum;
+    constexpr bool bIsHave3rdPartition = GemmNBlockNum > GemmN128BlockNum;
+    constexpr bool bIsHave4thPartition = bIsHave2ndPartition && bIsHave3rdPartition;
+
+    constexpr index_t GemmBlockBegin1st = 0;
+    constexpr index_t GemmBlockBegin2nd = Gemm128BlockNum;
+    constexpr index_t GemmBlockBegin3rd = GemmBlockBegin2nd + GemmN128BlockNum;
+    constexpr index_t GemmBlockBegin4th = GemmBlockBegin3rd + GemmM128BlockNum;
 #if 1
     // BlockSize = 256, GemmKPerBlock = 8
     constexpr index_t BlockSize = 256;
@@ -107,8 +132,9 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
                          GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
                          GemmBBlockCopySrcDataPerRead_GemmN,
                          GemmBBlockCopyDstDataPerWrite_GemmN,
-                         GemmCThreadCopyDstDataPerWrite_GemmN1
-                         >;
+                         GemmCThreadCopyDstDataPerWrite_GemmN1,
+                         GemmBlockBegin1st,
+                         GemmBlockBegin2nd>;
 
 #elif 0
     // BlockSize = 256, GemmKPerBlock = 8
@@ -198,8 +224,9 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
                          Sequence<8, 32>, //GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
                          1,               //GemmBBlockCopySrcDataPerRead_GemmN,
                          1,               //GemmBBlockCopyDstDataPerWrite_GemmN,
-                         1               //GemmCThreadCopyDstDataPerWrite_GemmN1
-                         >;
+                         1,               //GemmCThreadCopyDstDataPerWrite_GemmN1
+                         GemmBlockBegin2nd,
+                         GemmBlockBegin3rd>;
     using partition3 = GemmParameters<
                          BlockSize,
                          128,             //GemmMPerBlock
@@ -222,8 +249,9 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
                          Sequence<8, 32>, //GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
                          1,               //GemmBBlockCopySrcDataPerRead_GemmN,
                          1,               //GemmBBlockCopyDstDataPerWrite_GemmN,
-                         1               //GemmCThreadCopyDstDataPerWrite_GemmN1
-                         >;
+                         1,               //GemmCThreadCopyDstDataPerWrite_GemmN1
+                         GemmBlockBegin3rd,
+                         GemmBlockBegin4th>;
 
     using partition4 = GemmParameters<
                          64,              //BlockSize,
@@ -247,11 +275,11 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
                          Sequence<2, 32>, //GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
                          1,               //GemmBBlockCopySrcDataPerRead_GemmN,
                          1,               //GemmBBlockCopyDstDataPerWrite_GemmN,
-                         1                //GemmCThreadCopyDstDataPerWrite_GemmN1
-                         >;
+                         1,                //GemmCThreadCopyDstDataPerWrite_GemmN1
+                         GemmBlockBegin4th,
+                         GemmBlockBegin4th + 1>;
 
-    constexpr index_t GemmM = K;
-    constexpr index_t GemmN = N * Ho * Wo;
+    
 
     constexpr index_t GridSize = math::integer_divide_ceil(GemmM, GemmMPerBlock) *
                                  math::integer_divide_ceil(GemmN, GemmNPerBlock);
@@ -273,7 +301,9 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
         partition1,
         partition2,
         partition3,
-        partition4>{};
+        partition4,
+        GemmOBeginM,
+        GemmOBeginN>{};
 
     for(index_t i = 0; i < nrepeat; ++i)
     {

@@ -35,7 +35,9 @@ template <index_t GridSize,
           typename GemmParameters1,
           typename GemmParameters2,
           typename GemmParameters3,
-          typename GemmParameters4>
+          typename GemmParameters4,
+          index_t  GemmOBeginM,
+          index_t  GemmOBeginN>
 struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
 {
     static constexpr auto partition1 = GemmParameters1{};
@@ -83,18 +85,6 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
         constexpr auto GemmK = wei_e_k_global_desc.GetLengths()[0];
         constexpr auto GemmM = wei_e_k_global_desc.GetLengths()[1];
         constexpr auto GemmN = in_e_b_global_desc.GetLengths()[1];
-        //just for simple, let GemmM and GemmN >=128
-        static_assert(GemmM >= 128 && (GemmM % 128 == 0 || GemmM % 128 == 32),"GemmM >= 128 && (GemmM % 128 == 0 || GemmM % 128 == 32)");
-        static_assert(GemmN >= 128 && (GemmN % 128 == 0 || GemmN % 128 == 32),"GemmN >= 128 && (GemmN % 128 == 0 || GemmN % 128 == 32) ");
-
-        constexpr index_t GemmM128BlockNum = GemmM / 128;
-        constexpr index_t GemmN128BlockNum = GemmN / 128;
-
-        constexpr index_t GemmMBlockNum = (GemmM + 127) / 128;
-        constexpr index_t GemmNBlockNum = (GemmN + 127) / 128;
-
-        constexpr index_t GemmOBeginM = GemmM128BlockNum * 128;
-        constexpr index_t GemmOBeginN = GemmN128BlockNum * 128;
 
         // partition W
         constexpr auto wei_e_k_global_1st_desc = transform_tensor_descriptor(
@@ -124,24 +114,15 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
             make_tuple(Sequence<0>{}, Sequence<1>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
-        constexpr auto block_work_desc =
-            make_cluster_descriptor(Sequence<GemmMBlockNum, GemmNBlockNum>{});
+        constexpr bool bIsHave1stPartition = partition1.IsValid();
+        constexpr bool bIsHave2ndPartition = partition2.IsValid();
+        constexpr bool bIsHave3rdPartition = partition3.IsValid();
+        constexpr bool bIsHave4thPartition = partition4.IsValid();
 
-// GEMM
-        constexpr index_t Gemm128BlockNum = GemmM128BlockNum * GemmN128BlockNum;
-        constexpr bool bIsHave1stPartition = Gemm128BlockNum > 0;
-        constexpr bool bIsHave2ndPartition = GemmMBlockNum > GemmM128BlockNum && GemmN >= 128;
-        constexpr bool bIsHave3rdPartition = GemmNBlockNum > GemmN128BlockNum && GemmM >= 128;
-        constexpr bool bIsHave4thPartition = bIsHave2ndPartition && bIsHave3rdPartition;
+        const index_t blockId = get_block_1d_id();
+        const auto    getwaveid = []() { return get_thread_local_1d_id() / 64; };
 
-        
-
-        constexpr index_t bolck_begin_3rd =
-            bIsHave2ndPartition ? Gemm128BlockNum + GemmN128BlockNum : Gemm128BlockNum;
-
-        const auto getwaveid = []() { return get_thread_local_1d_id() / 64; };
-
-        if(bIsHave1stPartition && get_block_1d_id() < Gemm128BlockNum)
+        if(bIsHave1stPartition && (blockId >= partition1.BlockBeginId) && (blockId < partition1.BlockEndId))
         {
             static_if<bIsHave1stPartition>{}([&](auto){
                 constexpr auto out_k_b_global_1st_desc = transform_tensor_descriptor(
@@ -189,12 +170,12 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                     CThreadCopySrcDstAccessOrder,
                     CThreadCopySrcDstVectorReadWriteDim,
                     partition1.CThreadCopyDstDataPerWrite,
-                    GemmBlockID<0>>{};
+                    GemmBlockID<partition1.BlockBeginId>>{};
 
                 gridwise_gemm.Run(p_wei_global, p_in_global, p_out_global, p_shared_block);
             });
         }
-        else if(bIsHave2ndPartition && (get_block_1d_id() < Gemm128BlockNum + GemmN128BlockNum))
+        else if(bIsHave2ndPartition &&  (blockId >= partition2.BlockBeginId) && (blockId < partition2.BlockEndId))
         {
             static_if<bIsHave2ndPartition>{}([&](auto){
                 constexpr auto out_k_b_global_2nd_desc = transform_tensor_descriptor(
@@ -241,12 +222,12 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                     CThreadCopySrcDstAccessOrder,
                     CThreadCopySrcDstVectorReadWriteDim,
                     partition2.CThreadCopyDstDataPerWrite,
-                    GemmBlockID<Gemm128BlockNum>>{};
+                    GemmBlockID<partition2.BlockBeginId>>{};
 
                 gridwise_gemm.Run(p_wei_global, p_in_global, p_out_global, p_shared_block);
             });
         }
-        else if(bIsHave3rdPartition && (get_block_1d_id() < bolck_begin_3rd + GemmM128BlockNum))
+        else if(bIsHave3rdPartition &&  (blockId >= partition3.BlockBeginId) && (blockId < partition3.BlockEndId))
         {
             static_if<bIsHave3rdPartition>{}([&](auto){
                 constexpr auto out_k_b_global_3rd_desc = transform_tensor_descriptor(
@@ -294,13 +275,13 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                     CThreadCopySrcDstAccessOrder,
                     CThreadCopySrcDstVectorReadWriteDim,
                     partition3.CThreadCopyDstDataPerWrite,
-                    GemmBlockID<bolck_begin_3rd>>{};
+                    GemmBlockID<partition3.BlockBeginId>>{};
 
                 gridwise_gemm.Run(p_wei_global, p_in_global, p_out_global, p_shared_block);
             });
             
         }
-        else if(bIsHave4thPartition)
+        else if(bIsHave4thPartition && (blockId >= partition4.BlockBeginId) && (blockId < partition4.BlockEndId))
         {
             const index_t waveid = getwaveid();
             if(waveid >= 1)
@@ -352,7 +333,7 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                     CThreadCopySrcDstAccessOrder,
                     CThreadCopySrcDstVectorReadWriteDim,
                     partition4.CThreadCopyDstDataPerWrite,
-                    GemmBlockID<Gemm128BlockNum + GemmN128BlockNum + GemmM128BlockNum>>{};
+                    GemmBlockID<partition4.BlockBeginId>>{};
 
                 gridwise_gemm.Run(p_wei_global, p_in_global, p_out_global, p_shared_block);
             });

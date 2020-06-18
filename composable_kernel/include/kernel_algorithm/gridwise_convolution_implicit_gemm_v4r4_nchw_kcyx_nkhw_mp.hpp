@@ -29,7 +29,9 @@ template <index_t GemmBlockSize,
           typename GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
           index_t GemmBBlockCopySrcDataPerRead_GemmN,
           index_t GemmBBlockCopyDstDataPerWrite_GemmN,
-          index_t GemmCThreadCopyDstDataPerWrite_GemmN1>
+          index_t GemmCThreadCopyDstDataPerWrite_GemmN1,
+          index_t GemmBlockBeginId,
+          index_t GemmBlockEndId>
 struct GemmParameters{
     using ABlockCopyThreadSliceLengths_K_M                           = GemmABlockCopyThreadSliceLengths_GemmK_GemmM;
     using ABlockCopyThreadClusterLengths_K_M                         = GemmABlockCopyThreadClusterLengths_GemmK_GemmM;
@@ -54,9 +56,11 @@ struct GemmParameters{
      static constexpr index_t BBlockCopySrcDataPerRead_N             = GemmBBlockCopySrcDataPerRead_GemmN;
      static constexpr index_t BBlockCopyDstDataPerWrite_N            = GemmBBlockCopyDstDataPerWrite_GemmN;
      static constexpr index_t CThreadCopyDstDataPerWrite             = GemmCThreadCopyDstDataPerWrite_GemmN1;
+     static constexpr index_t BlockBeginId                           = GemmBlockBeginId;
+     static constexpr index_t BlockEndId                             = GemmBlockEndId;
 
      __host__ __device__ static constexpr bool IsValid(){
-         return (NPerBlock != 0 && MPerBlock != 0);
+         return (BlockEndId - BlockBeginId) > 0;
      }
 };
 // GemmM = K
@@ -76,7 +80,9 @@ template <index_t GridSize,
           typename GemmParamters1,
           typename GemmParamters2,
           typename GemmParamters3,
-          typename GemmParamters4>
+          typename GemmParamters4,
+          index_t  GemmOBeginM,
+          index_t  GemmOBeginN>
 struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw_mp
 {
     __device__ void Run(const Float* const __restrict__ p_in_global,
@@ -177,7 +183,9 @@ struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw_mp
                                                      GemmParamters1,
                                                      GemmParamters2,
                                                      GemmParamters3,
-                                                     GemmParamters4>{};
+                                                     GemmParamters4,
+                                                     GemmOBeginM,
+                                                     GemmOBeginN>{};
 
         gridwise_gemm.Run(p_wei_global, p_in_global, p_out_global);
         
