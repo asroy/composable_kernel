@@ -23,7 +23,9 @@ template <typename SrcDesc,
           index_t DstDataPerWrite,
           AddressSpace SrcAddressSpace     = AddressSpace::Generic,
           AddressSpace DstAddressSpace     = AddressSpace::Generic,
-          InMemoryDataOperation DstInMemOp = InMemoryDataOperation::Set>
+          InMemoryDataOperation DstInMemOp = InMemoryDataOperation::Set,
+          index_t SrcDataStride            = 1,
+          index_t DstDataStride            = 1>
 struct ThreadwiseGenericTensorSliceCopy_v4r2
 {
     static constexpr index_t nDim = SliceLengths::Size();

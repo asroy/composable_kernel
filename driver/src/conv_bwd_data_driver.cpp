@@ -160,10 +160,10 @@ int main(int argc, char* argv[])
 #elif 0
     // 1x7 filter, 0x3 pad, 17x17 input
     constexpr index_t N  = 128;
-    constexpr index_t C  = 128;
+    constexpr index_t C  = 1024;
     constexpr index_t HI = 17;
     constexpr index_t WI = 17;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 1024;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 7;
 
@@ -247,7 +247,7 @@ int main(int argc, char* argv[])
 
 #if 0
     device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw
-#elif 0
+#elif 1
     device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw
 #elif 0
     device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw

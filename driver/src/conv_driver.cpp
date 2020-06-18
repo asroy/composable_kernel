@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 1
+#if 0
     // 1x1, 17x17
     constexpr index_t N  = 128;
     constexpr index_t C  = 1024;
@@ -97,10 +97,10 @@ int main(int argc, char* argv[])
 #elif 0
     // 7x1, 17x17
     constexpr index_t N  = 128;
-    constexpr index_t C  = 256;
+    constexpr index_t C  = 128;
     constexpr index_t HI = 17;
     constexpr index_t WI = 17;
-    constexpr index_t K  = 320;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 7;
     constexpr index_t X  = 1;
 
@@ -109,13 +109,13 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<3, 0>;
     using RightPads = Sequence<3, 0>;
-#elif 0
+#elif 1
     // 1x7, 17x17
     constexpr index_t N  = 128;
-    constexpr index_t C  = 224;
+    constexpr index_t C  = 128;
     constexpr index_t HI = 17;
     constexpr index_t WI = 17;
-    constexpr index_t K  = 224;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 7;
 
@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 3>;
     using RightPads = Sequence<0, 3>;
-#elif 1
+#elif 0
     // 3x3, 299x299 stride=2
     constexpr index_t N  = 128;
     constexpr index_t C  = 3;
@@ -565,7 +565,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 0
+#if 1
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
