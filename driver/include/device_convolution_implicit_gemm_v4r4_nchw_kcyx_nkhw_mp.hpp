@@ -110,31 +110,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
 
-    using partition1 = GemmParameters<
-                         BlockSize,
-                         GemmMPerBlock,
-                         GemmNPerBlock,
-                         GemmKPerBlock,
-                         GemmMPerThreadSubC,
-                         GemmNPerThreadSubC,
-                         GemmKPerThreadLoop,
-                         GemmMLevel0Cluster,
-                         GemmNLevel0Cluster,
-                         GemmMLevel1Cluster,
-                         GemmNLevel1Cluster,
-                         ThreadGemmDataPerReadM,
-                         ThreadGemmDataPerReadN,
-                         GemmABlockCopyThreadSliceLengths_GemmK_GemmM,
-                         GemmABlockCopyThreadClusterLengths_GemmK_GemmM,
-                         GemmABlockCopySrcDataPerRead_GemmK,
-                         GemmABlockCopyDstDataPerWrite_GemmM,
-                         GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
-                         GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
-                         GemmBBlockCopySrcDataPerRead_GemmN,
-                         GemmBBlockCopyDstDataPerWrite_GemmN,
-                         GemmCThreadCopyDstDataPerWrite_GemmN1,
-                         GemmBlockBegin1st,
-                         GemmBlockBegin2nd>;
+    
 
 #elif 0
     // BlockSize = 256, GemmKPerBlock = 8
@@ -201,85 +177,106 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 2;
 
 #endif
+    using partition1 = GemmParameters<BlockSize,
+                                      GemmMPerBlock,
+                                      GemmNPerBlock,
+                                      GemmKPerBlock,
+                                      GemmMPerThreadSubC,
+                                      GemmNPerThreadSubC,
+                                      GemmKPerThreadLoop,
+                                      GemmMLevel0Cluster,
+                                      GemmNLevel0Cluster,
+                                      GemmMLevel1Cluster,
+                                      GemmNLevel1Cluster,
+                                      ThreadGemmDataPerReadM,
+                                      ThreadGemmDataPerReadN,
+                                      GemmABlockCopyThreadSliceLengths_GemmK_GemmM,
+                                      GemmABlockCopyThreadClusterLengths_GemmK_GemmM,
+                                      GemmABlockCopySrcDataPerRead_GemmK,
+                                      GemmABlockCopyDstDataPerWrite_GemmM,
+                                      GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
+                                      GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
+                                      GemmBBlockCopySrcDataPerRead_GemmN,
+                                      GemmBBlockCopyDstDataPerWrite_GemmN,
+                                      GemmCThreadCopyDstDataPerWrite_GemmN1,
+                                      GemmBlockBegin1st,
+                                      GemmBlockBegin2nd>;
+    using partition2 =
+        GemmParameters<BlockSize,
+                       32,              // GemmMPerBlock
+                       128,             // GemmNPerBlock,
+                       8,               // GemmKPerBlock,
+                       4,               // GemmMPerThreadSubC,
+                       4,               // GemmNPerThreadSubC,
+                       1,               // GemmKPerThreadLoop,
+                       4,               // GemmMLevel0Cluster,
+                       4,               // GemmNLevel0Cluster,
+                       2,               // GemmMLevel1Cluster,
+                       8,               // GemmNLevel1Cluster,
+                       1,               // ThreadGemmDataPerReadM
+                       1,               // ThreadGemmDataPerReadN
+                       Sequence<1, 1>,  // GemmABlockCopyThreadSliceLengths_GemmK_GemmM
+                       Sequence<8, 32>, // GemmABlockCopyThreadClusterLengths_GemmK_GemmM
+                       1,               // GemmABlockCopySrcDataPerRead_GemmK,
+                       1,               // GemmABlockCopyDstDataPerWrite_GemmM,
+                       Sequence<1, 4>,  // GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
+                       Sequence<8, 32>, // GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
+                       1,               // GemmBBlockCopySrcDataPerRead_GemmN,
+                       1,               // GemmBBlockCopyDstDataPerWrite_GemmN,
+                       1,               // GemmCThreadCopyDstDataPerWrite_GemmN1
+                       GemmBlockBegin2nd,
+                       GemmBlockBegin3rd>;
+    using partition3 =
+        GemmParameters<BlockSize,
+                       128,             // GemmMPerBlock
+                       32,              // GemmNPerBlock,
+                       8,               // GemmKPerBlock,
+                       4,               // GemmMPerThreadSubC,
+                       4,               // GemmNPerThreadSubC,
+                       1,               // GemmKPerThreadLoop,
+                       4,               // GemmMLevel0Cluster,
+                       4,               // GemmNLevel0Cluster,
+                       8,               // GemmMLevel1Cluster,
+                       2,               // GemmNLevel1Cluster,
+                       1,               // ThreadGemmDataPerReadM
+                       1,               // ThreadGemmDataPerReadN
+                       Sequence<1, 4>,  // GemmABlockCopyThreadSliceLengths_GemmK_GemmM
+                       Sequence<8, 32>, // GemmABlockCopyThreadClusterLengths_GemmK_GemmM
+                       1,               // GemmABlockCopySrcDataPerRead_GemmK,
+                       1,               // GemmABlockCopyDstDataPerWrite_GemmM,
+                       Sequence<1, 1>,  // GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
+                       Sequence<8, 32>, // GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
+                       1,               // GemmBBlockCopySrcDataPerRead_GemmN,
+                       1,               // GemmBBlockCopyDstDataPerWrite_GemmN,
+                       1,               // GemmCThreadCopyDstDataPerWrite_GemmN1
+                       GemmBlockBegin3rd,
+                       GemmBlockBegin4th>;
 
-    using partition2 = GemmParameters<
-                         BlockSize,
-                         32,              //GemmMPerBlock
-                         128,             //GemmNPerBlock,
-                         8,               //GemmKPerBlock,
-                         4,               //GemmMPerThreadSubC,
-                         4,               //GemmNPerThreadSubC,
-                         1,               //GemmKPerThreadLoop,
-                         4,               //GemmMLevel0Cluster,
-                         4,               //GemmNLevel0Cluster,
-                         2,               //GemmMLevel1Cluster,
-                         8,               //GemmNLevel1Cluster,
-                         1,               //ThreadGemmDataPerReadM
-                         1,               //ThreadGemmDataPerReadN
-                         Sequence<1, 1>,  //GemmABlockCopyThreadSliceLengths_GemmK_GemmM
-                         Sequence<8, 32>, //GemmABlockCopyThreadClusterLengths_GemmK_GemmM
-                         1,               //GemmABlockCopySrcDataPerRead_GemmK,
-                         1,               //GemmABlockCopyDstDataPerWrite_GemmM,
-                         Sequence<1, 4>,  //GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
-                         Sequence<8, 32>, //GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
-                         1,               //GemmBBlockCopySrcDataPerRead_GemmN,
-                         1,               //GemmBBlockCopyDstDataPerWrite_GemmN,
-                         1,               //GemmCThreadCopyDstDataPerWrite_GemmN1
-                         GemmBlockBegin2nd,
-                         GemmBlockBegin3rd>;
-    using partition3 = GemmParameters<
-                         BlockSize,
-                         128,             //GemmMPerBlock
-                         32,              //GemmNPerBlock,
-                         8,               //GemmKPerBlock,
-                         4,               //GemmMPerThreadSubC,
-                         4,               //GemmNPerThreadSubC,
-                         1,               //GemmKPerThreadLoop,
-                         4,               //GemmMLevel0Cluster,
-                         4,               //GemmNLevel0Cluster,
-                         8,               //GemmMLevel1Cluster,
-                         2,               //GemmNLevel1Cluster,
-                         1,               //ThreadGemmDataPerReadM
-                         1,               //ThreadGemmDataPerReadN
-                         Sequence<1, 4>,  //GemmABlockCopyThreadSliceLengths_GemmK_GemmM
-                         Sequence<8, 32>, //GemmABlockCopyThreadClusterLengths_GemmK_GemmM
-                         1,               //GemmABlockCopySrcDataPerRead_GemmK,
-                         1,               //GemmABlockCopyDstDataPerWrite_GemmM,
-                         Sequence<1, 1>,  //GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
-                         Sequence<8, 32>, //GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
-                         1,               //GemmBBlockCopySrcDataPerRead_GemmN,
-                         1,               //GemmBBlockCopyDstDataPerWrite_GemmN,
-                         1,               //GemmCThreadCopyDstDataPerWrite_GemmN1
-                         GemmBlockBegin3rd,
-                         GemmBlockBegin4th>;
-
-    using partition4 = GemmParameters<
-                         64,              //BlockSize,
-                         32,             //GemmMPerBlock
-                         32,              //GemmNPerBlock,
-                         8,               //GemmKPerBlock,
-                         4,               //GemmMPerThreadSubC,
-                         4,               //GemmNPerThreadSubC,
-                         1,               //GemmKPerThreadLoop,
-                         4,               //GemmMLevel0Cluster,
-                         4,               //GemmNLevel0Cluster,
-                         2,               //GemmMLevel1Cluster,
-                         2,               //GemmNLevel1Cluster,
-                         1,               //ThreadGemmDataPerReadM
-                         1,               //ThreadGemmDataPerReadN
-                         Sequence<4, 1>,  //GemmABlockCopyThreadSliceLengths_GemmK_GemmM
-                         Sequence<2, 32>, //GemmABlockCopyThreadClusterLengths_GemmK_GemmM
-                         1,               //GemmABlockCopySrcDataPerRead_GemmK,
-                         1,               //GemmABlockCopyDstDataPerWrite_GemmM,
-                         Sequence<4, 1>,  //GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
-                         Sequence<2, 32>, //GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
-                         1,               //GemmBBlockCopySrcDataPerRead_GemmN,
-                         1,               //GemmBBlockCopyDstDataPerWrite_GemmN,
-                         1,                //GemmCThreadCopyDstDataPerWrite_GemmN1
-                         GemmBlockBegin4th,
-                         GemmBlockBegin4th + 1>;
-
-    
+    using partition4 =
+        GemmParameters<64,              // BlockSize,
+                       32,              // GemmMPerBlock
+                       32,              // GemmNPerBlock,
+                       8,               // GemmKPerBlock,
+                       4,               // GemmMPerThreadSubC,
+                       4,               // GemmNPerThreadSubC,
+                       1,               // GemmKPerThreadLoop,
+                       4,               // GemmMLevel0Cluster,
+                       4,               // GemmNLevel0Cluster,
+                       2,               // GemmMLevel1Cluster,
+                       2,               // GemmNLevel1Cluster,
+                       1,               // ThreadGemmDataPerReadM
+                       1,               // ThreadGemmDataPerReadN
+                       Sequence<4, 1>,  // GemmABlockCopyThreadSliceLengths_GemmK_GemmM
+                       Sequence<2, 32>, // GemmABlockCopyThreadClusterLengths_GemmK_GemmM
+                       1,               // GemmABlockCopySrcDataPerRead_GemmK,
+                       1,               // GemmABlockCopyDstDataPerWrite_GemmM,
+                       Sequence<4, 1>,  // GemmBBlockCopyThreadSliceLengths_GemmK_GemmN,
+                       Sequence<2, 32>, // GemmBBlockCopyThreadClusterLengths_GemmK_GemmN,
+                       1,               // GemmBBlockCopySrcDataPerRead_GemmN,
+                       1,               // GemmBBlockCopyDstDataPerWrite_GemmN,
+                       1,               // GemmCThreadCopyDstDataPerWrite_GemmN1
+                       GemmBlockBegin4th,
+                       GemmBlockBegin4th + 1>;
 
     constexpr index_t GridSize = math::integer_divide_ceil(GemmM, GemmMPerBlock) *
                                  math::integer_divide_ceil(GemmN, GemmNPerBlock);
