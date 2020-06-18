@@ -307,37 +307,6 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                 return;
 
             static_if<bIsHave4thPartition>{}([&](auto){
-                // BlockSize = 64, GemmKPerBlock = 8
-                constexpr index_t BlockSize3 = 64;
-
-                constexpr index_t GemmMPerBlock3 = 32;
-                constexpr index_t GemmNPerBlock3 = 32;
-                constexpr index_t GemmKPerBlock3 = 8;
-
-                constexpr index_t GemmMPerThreadSubC3     = 4;
-                constexpr index_t GemmNPerThreadSubC3     = 4;
-                constexpr index_t GemmMLevel0Cluster3     = 4;
-                constexpr index_t GemmNLevel0Cluster3     = 4;
-                constexpr index_t GemmMLevel1Cluster3     = 2;
-                constexpr index_t GemmNLevel1Cluster3     = 2;
-                constexpr index_t GemmKPerThreadLoop3     = 1;
-                constexpr index_t ThreadGemmDataPerReadM3 = 4;
-                constexpr index_t ThreadGemmDataPerReadN3 = 4;
-
-                using GemmABlockCopyThreadSliceLengths_GemmK_GemmM3   = Sequence<4, 1>;
-                using GemmABlockCopyThreadClusterLengths_GemmK_GemmM3 = Sequence<2, 32>;
-
-                constexpr index_t GemmABlockCopySrcDataPerRead_GemmK3  = 1;
-                constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM3 = 1;
-
-                using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN3   = Sequence<4, 1>;
-                using GemmBBlockCopyThreadClusterLengths_GemmK_GemmN3 = Sequence<2, 32>;
-
-                constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN3  = 1;
-                constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN3 = 1;
-
-                constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN13 = 1;
-
                 constexpr auto out_k_b_global_4th_desc = transform_tensor_descriptor(
                     out_k_b_global_desc,
                     make_tuple(Slice<Sequence<GemmM>, Sequence<GemmOBeginM>, Sequence<GemmM>>{},
