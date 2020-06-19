@@ -8,7 +8,7 @@
 #include "gridwise_multi_partition_gemm.hpp"
 
 namespace ck {
-template <bool    GemmIsValid,
+template <bool GemmIsValid,
           index_t GemmBlockSize,
           index_t GemmMPerBlock,
           index_t GemmNPerBlock,
@@ -33,36 +33,35 @@ template <bool    GemmIsValid,
           index_t GemmCThreadCopyDstDataPerWrite_GemmN1,
           index_t GemmBlockBeginId,
           index_t GemmBlockEndId>
-struct GemmParameters{
-    using ABlockCopyThreadSliceLengths_K_M                           = GemmABlockCopyThreadSliceLengths_GemmK_GemmM;
-    using ABlockCopyThreadClusterLengths_K_M                         = GemmABlockCopyThreadClusterLengths_GemmK_GemmM;
-    using BBlockCopyThreadSliceLengths_K_N                           = GemmBBlockCopyThreadSliceLengths_GemmK_GemmN;
-    using BBlockCopyThreadClusterLengths_K_N                         = GemmBBlockCopyThreadClusterLengths_GemmK_GemmN;
+struct GemmParameters
+{
+    using ABlockCopyThreadSliceLengths_K_M   = GemmABlockCopyThreadSliceLengths_GemmK_GemmM;
+    using ABlockCopyThreadClusterLengths_K_M = GemmABlockCopyThreadClusterLengths_GemmK_GemmM;
+    using BBlockCopyThreadSliceLengths_K_N   = GemmBBlockCopyThreadSliceLengths_GemmK_GemmN;
+    using BBlockCopyThreadClusterLengths_K_N = GemmBBlockCopyThreadClusterLengths_GemmK_GemmN;
 
-     static constexpr index_t BlockSize                              = GemmBlockSize;
-     static constexpr index_t MPerBlock                              = GemmMPerBlock;
-     static constexpr index_t NPerBlock                              = GemmNPerBlock;
-     static constexpr index_t KPerBlock                              = GemmKPerBlock;
-     static constexpr index_t MPerThread                             = GemmMPerThread;
-     static constexpr index_t NPerThread                             = GemmNPerThread;
-     static constexpr index_t KPerThread                             = GemmKPerThread;
-     static constexpr index_t MLevel0Cluster                         = GemmMLevel0Cluster;
-     static constexpr index_t NLevel0Cluster                         = GemmNLevel0Cluster;
-     static constexpr index_t MLevel1Cluster                         = GemmMLevel1Cluster;
-     static constexpr index_t NLevel1Cluster                         = GemmNLevel1Cluster;
-     static constexpr index_t ThreadGemmAThreadCopySrcDataPerRead_M  = ThreadGemmDataPerRead_GemmM;
-     static constexpr index_t ThreadGemmBThreadCopySrcDataPerRead_N  = ThreadGemmDataPerRead_GemmN;
-     static constexpr index_t ABlockCopySrcDataPerRead_K             = GemmABlockCopySrcDataPerRead_GemmK;
-     static constexpr index_t ABlockCopyDstDataPerWrite_M            = GemmABlockCopyDstDataPerWrite_GemmM;
-     static constexpr index_t BBlockCopySrcDataPerRead_N             = GemmBBlockCopySrcDataPerRead_GemmN;
-     static constexpr index_t BBlockCopyDstDataPerWrite_N            = GemmBBlockCopyDstDataPerWrite_GemmN;
-     static constexpr index_t CThreadCopyDstDataPerWrite             = GemmCThreadCopyDstDataPerWrite_GemmN1;
-     static constexpr index_t BlockBeginId                           = GemmBlockBeginId;
-     static constexpr index_t BlockEndId                             = GemmBlockEndId;
+    static constexpr index_t BlockSize                             = GemmBlockSize;
+    static constexpr index_t MPerBlock                             = GemmMPerBlock;
+    static constexpr index_t NPerBlock                             = GemmNPerBlock;
+    static constexpr index_t KPerBlock                             = GemmKPerBlock;
+    static constexpr index_t MPerThread                            = GemmMPerThread;
+    static constexpr index_t NPerThread                            = GemmNPerThread;
+    static constexpr index_t KPerThread                            = GemmKPerThread;
+    static constexpr index_t MLevel0Cluster                        = GemmMLevel0Cluster;
+    static constexpr index_t NLevel0Cluster                        = GemmNLevel0Cluster;
+    static constexpr index_t MLevel1Cluster                        = GemmMLevel1Cluster;
+    static constexpr index_t NLevel1Cluster                        = GemmNLevel1Cluster;
+    static constexpr index_t ThreadGemmAThreadCopySrcDataPerRead_M = ThreadGemmDataPerRead_GemmM;
+    static constexpr index_t ThreadGemmBThreadCopySrcDataPerRead_N = ThreadGemmDataPerRead_GemmN;
+    static constexpr index_t ABlockCopySrcDataPerRead_K  = GemmABlockCopySrcDataPerRead_GemmK;
+    static constexpr index_t ABlockCopyDstDataPerWrite_M = GemmABlockCopyDstDataPerWrite_GemmM;
+    static constexpr index_t BBlockCopySrcDataPerRead_N  = GemmBBlockCopySrcDataPerRead_GemmN;
+    static constexpr index_t BBlockCopyDstDataPerWrite_N = GemmBBlockCopyDstDataPerWrite_GemmN;
+    static constexpr index_t CThreadCopyDstDataPerWrite  = GemmCThreadCopyDstDataPerWrite_GemmN1;
+    static constexpr index_t BlockBeginId                = GemmBlockBeginId;
+    static constexpr index_t BlockEndId                  = GemmBlockEndId;
 
-     __host__ __device__ static constexpr bool IsValid(){
-         return GemmIsValid;
-     }
+    __host__ __device__ static constexpr bool IsValid() { return GemmIsValid; }
 };
 // GemmM = K
 // GemmN = N * Ho * Wo
@@ -82,8 +81,8 @@ template <index_t GridSize,
           typename GemmParamters2,
           typename GemmParamters3,
           typename GemmParamters4,
-          index_t  GemmOBeginM,
-          index_t  GemmOBeginN>
+          index_t GemmOBeginM,
+          index_t GemmOBeginN>
 struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw_mp
 {
     __device__ void Run(const Float* const __restrict__ p_in_global,
@@ -118,12 +117,13 @@ struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw_mp
 
         // sanity-check for vectorized memory load
         constexpr auto partition1 = GemmParamters1{};
-        static_assert((Wo == 1 || (ConvStrideW == 1 || partition1.BBlockCopySrcDataPerRead_N == 1)) &&
-                          (X == 1 || ConvDilationW % partition1.BBlockCopySrcDataPerRead_N == 0) &&
-                          InLeftPads{}[1] % partition1.BBlockCopySrcDataPerRead_N == 0 &&
-                          InRightPads{}[1] % partition1.BBlockCopySrcDataPerRead_N == 0,
-                      "wrong! aligment requirement for vectorized global load of input tensor will "
-                      "be violated");
+        static_assert(
+            (Wo == 1 || (ConvStrideW == 1 || partition1.BBlockCopySrcDataPerRead_N == 1)) &&
+                (X == 1 || ConvDilationW % partition1.BBlockCopySrcDataPerRead_N == 0) &&
+                InLeftPads{}[1] % partition1.BBlockCopySrcDataPerRead_N == 0 &&
+                InRightPads{}[1] % partition1.BBlockCopySrcDataPerRead_N == 0,
+            "wrong! aligment requirement for vectorized global load of input tensor will "
+            "be violated");
 
         // weight tensor
         constexpr auto wei_e_k_global_desc = reorder_tensor_descriptor_given_upper2lower(
@@ -166,30 +166,29 @@ struct GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw_mp
         // GEMM
         constexpr auto gridwise_gemm =
             GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1<GridSize,
-                                                     BlockSize,
-                                                     Float,
-                                                     AccFloat,
-                                                     decltype(wei_e_k_global_desc),
-                                                     decltype(in_e_b_global_desc),
-                                                     decltype(out_k_b_global_desc),
-                                                     InMemoryDataOperation::Set,
-                                                     Sequence<1, 0>,
-                                                     Sequence<1, 0>,
-                                                     0,
-                                                     Sequence<0, 1>,
-                                                     Sequence<0, 1>,
-                                                     1,
-                                                     Sequence<0, 1, 2, 3>,
-                                                     3,
-                                                     GemmParamters1,
-                                                     GemmParamters2,
-                                                     GemmParamters3,
-                                                     GemmParamters4,
-                                                     GemmOBeginM,
-                                                     GemmOBeginN>{};
+                                                                   BlockSize,
+                                                                   Float,
+                                                                   AccFloat,
+                                                                   decltype(wei_e_k_global_desc),
+                                                                   decltype(in_e_b_global_desc),
+                                                                   decltype(out_k_b_global_desc),
+                                                                   InMemoryDataOperation::Set,
+                                                                   Sequence<1, 0>,
+                                                                   Sequence<1, 0>,
+                                                                   0,
+                                                                   Sequence<0, 1>,
+                                                                   Sequence<0, 1>,
+                                                                   1,
+                                                                   Sequence<0, 1, 2, 3>,
+                                                                   3,
+                                                                   GemmParamters1,
+                                                                   GemmParamters2,
+                                                                   GemmParamters3,
+                                                                   GemmParamters4,
+                                                                   GemmOBeginM,
+                                                                   GemmOBeginN>{};
 
         gridwise_gemm.Run(p_wei_global, p_in_global, p_out_global);
-        
     }
 };
 

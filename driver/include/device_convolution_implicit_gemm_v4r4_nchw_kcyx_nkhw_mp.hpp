@@ -14,16 +14,16 @@ template <class T,
           class InLeftPads,
           class InRightPads>
 void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
-                                                          const Tensor<T>& in_nchw,
-                                                          WeiDesc,
-                                                          const Tensor<T>& wei_kcyx,
-                                                          OutDesc,
-                                                          Tensor<T>& out_nkhw,
-                                                          ConvStrides,
-                                                          ConvDilations,
-                                                          InLeftPads,
-                                                          InRightPads,
-                                                          ck::index_t nrepeat)
+                                                             const Tensor<T>& in_nchw,
+                                                             WeiDesc,
+                                                             const Tensor<T>& wei_kcyx,
+                                                             OutDesc,
+                                                             Tensor<T>& out_nkhw,
+                                                             ConvStrides,
+                                                             ConvDilations,
+                                                             InLeftPads,
+                                                             InRightPads,
+                                                             ck::index_t nrepeat)
 {
     using namespace ck;
 
@@ -55,9 +55,11 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
 
     constexpr index_t GemmM = K;
     constexpr index_t GemmN = N * Ho * Wo;
-    //just for simple, let GemmM and GemmN >=128
-    static_assert(GemmM >= 128 && (GemmM % 128 == 0 || GemmM % 128 == 32),"GemmM >= 128 && (GemmM % 128 == 0 || GemmM % 128 == 32)");
-    static_assert(GemmN >= 128 && (GemmN % 128 == 0 || GemmN % 128 == 32),"GemmN >= 128 && (GemmN % 128 == 0 || GemmN % 128 == 32) ");
+    // just for simple, let GemmM and GemmN >=128
+    static_assert(GemmM >= 128 && (GemmM % 128 == 0 || GemmM % 128 == 32),
+                  "GemmM >= 128 && (GemmM % 128 == 0 || GemmM % 128 == 32)");
+    static_assert(GemmN >= 128 && (GemmN % 128 == 0 || GemmN % 128 == 32),
+                  "GemmN >= 128 && (GemmN % 128 == 0 || GemmN % 128 == 32) ");
 
     constexpr index_t GemmM128BlockNum = GemmM / 128;
     constexpr index_t GemmN128BlockNum = GemmN / 128;
@@ -76,7 +78,8 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
 
     constexpr index_t GemmBlockBegin1st = 0;
     constexpr index_t GemmBlockBegin2nd = Gemm128BlockNum;
-    constexpr index_t GemmBlockBegin3rd = bIsHave2ndPartition ? GemmBlockBegin2nd + GemmN128BlockNum : Gemm128BlockNum;
+    constexpr index_t GemmBlockBegin3rd =
+        bIsHave2ndPartition ? GemmBlockBegin2nd + GemmN128BlockNum : Gemm128BlockNum;
     constexpr index_t GemmBlockBegin4th = GemmBlockBegin3rd + GemmM128BlockNum;
 #if 1
     // BlockSize = 256, GemmKPerBlock = 8
@@ -109,8 +112,6 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
-
-    
 
 #elif 0
     // BlockSize = 256, GemmKPerBlock = 8
@@ -177,8 +178,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 2;
 
 #endif
-    using partition1 = GemmParameters<
-                                      bIsHave1stPartition,
+    using partition1 = GemmParameters<bIsHave1stPartition,
                                       BlockSize,
                                       GemmMPerBlock,
                                       GemmNPerBlock,
@@ -204,8 +204,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
                                       GemmBlockBegin1st,
                                       GemmBlockBegin2nd>;
     using partition2 =
-        GemmParameters<
-                       bIsHave2ndPartition,
+        GemmParameters<bIsHave2ndPartition,
                        BlockSize,
                        32,              // GemmMPerBlock
                        128,             // GemmNPerBlock,
@@ -231,8 +230,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
                        GemmBlockBegin2nd,
                        GemmBlockBegin3rd>;
     using partition3 =
-        GemmParameters<
-                       bIsHave3rdPartition,
+        GemmParameters<bIsHave3rdPartition,
                        BlockSize,
                        128,             // GemmMPerBlock
                        32,              // GemmNPerBlock,
@@ -259,8 +257,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
                        GemmBlockBegin4th>;
 
     using partition4 =
-        GemmParameters<
-                       bIsHave4thPartition,
+        GemmParameters<bIsHave4thPartition,
                        64,              // BlockSize,
                        32,              // GemmMPerBlock
                        32,              // GemmNPerBlock,
@@ -289,26 +286,31 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
     constexpr index_t GridSize = math::integer_divide_ceil(GemmM, GemmMPerBlock) *
                                  math::integer_divide_ceil(GemmN, GemmNPerBlock);
 
-    printf("%s: BlockSize %u, GridSize %u GemmM %d, GemmN %d\n", __func__, BlockSize, GridSize, GemmM,GemmN);
+    printf("%s: BlockSize %u, GridSize %u GemmM %d, GemmN %d\n",
+           __func__,
+           BlockSize,
+           GridSize,
+           GemmM,
+           GemmN);
 
-    constexpr auto gridwise_conv = GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw_mp<
-        GridSize,
-        BlockSize,
-        T,
-        T,
-        decltype(in_nchw_desc),
-        decltype(wei_kcyx_desc),
-        decltype(out_nkhw_desc),
-        ConvStrides,
-        ConvDilations,
-        InLeftPads,
-        InRightPads,
-        partition1,
-        partition2,
-        partition3,
-        partition4,
-        GemmOBeginM,
-        GemmOBeginN>{};
+    constexpr auto gridwise_conv =
+        GridwiseConvolutionImplicitGemm_v4r4_nchw_kcyx_nkhw_mp<GridSize,
+                                                               BlockSize,
+                                                               T,
+                                                               T,
+                                                               decltype(in_nchw_desc),
+                                                               decltype(wei_kcyx_desc),
+                                                               decltype(out_nkhw_desc),
+                                                               ConvStrides,
+                                                               ConvDilations,
+                                                               InLeftPads,
+                                                               InRightPads,
+                                                               partition1,
+                                                               partition2,
+                                                               partition3,
+                                                               partition4,
+                                                               GemmOBeginM,
+                                                               GemmOBeginN>{};
 
     for(index_t i = 0; i < nrepeat; ++i)
     {
