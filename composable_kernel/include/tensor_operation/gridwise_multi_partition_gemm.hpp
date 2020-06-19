@@ -235,7 +235,6 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
             static_if<bIsHave3rdPartition>{}([&](auto) {
                 if(get_thread_local_1d_id() >= partition3.BlockSize)
                     return;
-
                 constexpr auto out_k_b_global_3rd_desc = transform_tensor_descriptor(
                     out_k_b_global_desc,
                     make_tuple(Slice<Sequence<GemmM>, Sequence<0>, Sequence<GemmOBeginM>>{},
@@ -292,7 +291,6 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
             static_if<bIsHave4thPartition>{}([&](auto) {
                 if(get_thread_local_1d_id() >= partition4.BlockSize)
                     return;
-
                 constexpr auto out_k_b_global_4th_desc = transform_tensor_descriptor(
                     out_k_b_global_desc,
                     make_tuple(Slice<Sequence<GemmM>, Sequence<GemmOBeginM>, Sequence<GemmM>>{},
