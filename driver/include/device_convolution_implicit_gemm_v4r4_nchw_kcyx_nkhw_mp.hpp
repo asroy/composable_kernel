@@ -55,7 +55,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
 
     constexpr index_t GemmM = K;
     constexpr index_t GemmN = N * Ho * Wo;
-//just for simple, let GemmM and GemmN >=128
+    //just for simple, let GemmM and GemmN >=128
     static_assert(GemmM >= 128 && (GemmM % 128 == 0 || GemmM % 128 == 32),"GemmM >= 128 && (GemmM % 128 == 0 || GemmM % 128 == 32)");
     static_assert(GemmN >= 128 && (GemmN % 128 == 0 || GemmN % 128 == 32),"GemmN >= 128 && (GemmN % 128 == 0 || GemmN % 128 == 32) ");
 
@@ -76,7 +76,7 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
 
     constexpr index_t GemmBlockBegin1st = 0;
     constexpr index_t GemmBlockBegin2nd = Gemm128BlockNum;
-    constexpr index_t GemmBlockBegin3rd = GemmBlockBegin2nd + GemmN128BlockNum;
+    constexpr index_t GemmBlockBegin3rd = bIsHave2ndPartition ? GemmBlockBegin2nd + GemmN128BlockNum : Gemm128BlockNum;
     constexpr index_t GemmBlockBegin4th = GemmBlockBegin3rd + GemmM128BlockNum;
 #if 1
     // BlockSize = 256, GemmKPerBlock = 8
@@ -177,7 +177,9 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 2;
 
 #endif
-    using partition1 = GemmParameters<BlockSize,
+    using partition1 = GemmParameters<
+                                      bIsHave1stPartition,
+                                      BlockSize,
                                       GemmMPerBlock,
                                       GemmNPerBlock,
                                       GemmKPerBlock,
@@ -202,7 +204,9 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
                                       GemmBlockBegin1st,
                                       GemmBlockBegin2nd>;
     using partition2 =
-        GemmParameters<BlockSize,
+        GemmParameters<
+                       bIsHave2ndPartition,
+                       BlockSize,
                        32,              // GemmMPerBlock
                        128,             // GemmNPerBlock,
                        8,               // GemmKPerBlock,
@@ -227,7 +231,9 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
                        GemmBlockBegin2nd,
                        GemmBlockBegin3rd>;
     using partition3 =
-        GemmParameters<BlockSize,
+        GemmParameters<
+                       bIsHave3rdPartition,
+                       BlockSize,
                        128,             // GemmMPerBlock
                        32,              // GemmNPerBlock,
                        8,               // GemmKPerBlock,
@@ -253,7 +259,9 @@ void device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw_mp(InDesc,
                        GemmBlockBegin4th>;
 
     using partition4 =
-        GemmParameters<64,              // BlockSize,
+        GemmParameters<
+                       bIsHave4thPartition,
+                       64,              // BlockSize,
                        32,              // GemmMPerBlock
                        32,              // GemmNPerBlock,
                        8,               // GemmKPerBlock,

@@ -8,7 +8,8 @@
 #include "gridwise_multi_partition_gemm.hpp"
 
 namespace ck {
-template <index_t GemmBlockSize,
+template <bool    GemmIsValid,
+          index_t GemmBlockSize,
           index_t GemmMPerBlock,
           index_t GemmNPerBlock,
           index_t GemmKPerBlock,
@@ -60,7 +61,7 @@ struct GemmParameters{
      static constexpr index_t BlockEndId                             = GemmBlockEndId;
 
      __host__ __device__ static constexpr bool IsValid(){
-         return (BlockEndId - BlockBeginId) > 0;
+         return GemmIsValid;
      }
 };
 // GemmM = K
