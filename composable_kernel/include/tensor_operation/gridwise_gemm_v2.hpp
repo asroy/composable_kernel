@@ -9,7 +9,6 @@
 #include "threadwise_generic_tensor_slice_copy.hpp"
 #include "blockwise_gemm.hpp"
 
-
 namespace ck {
 
 template <index_t GridSize,
@@ -116,9 +115,10 @@ struct GridwiseGemmTransposedANormalBNormalC_v2
         constexpr auto block_work_desc =
             make_cluster_descriptor(Sequence<MBlockWork, NBlockWork>{});
 
-        const auto block_work_id = block_work_desc.CalculateClusterIndex(CaculateBlockID{}.get_gemm_block_id());
-        
-        const index_t m_block_data_on_global = block_work_id[0] * MPerBlock ;
+        const auto block_work_id =
+            block_work_desc.CalculateClusterIndex(CaculateBlockID{}.get_gemm_block_id());
+
+        const index_t m_block_data_on_global = block_work_id[0] * MPerBlock;
         const index_t n_block_data_on_global = block_work_id[1] * NPerBlock;
 
         // A matrix in LDS memory, dst of blockwise copy
@@ -195,7 +195,7 @@ struct GridwiseGemmTransposedANormalBNormalC_v2
         // TODO:: more elegent way of defining c_thread_mtx
         constexpr auto c_m0m1_n0n1_thread_mtx_desc = make_ConstantMatrixDescriptor_packed(
             Number<GemmMRepeat * MPerThread>{}, Number<GemmNRepeat * NPerThread>{});
-        //ltqin
+        // ltqin
 
         const auto blockwise_gemm = BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2<
             BlockSize,
@@ -366,7 +366,6 @@ struct GridwiseGemmTransposedANormalBNormalC_v2
                  n_thread_data_on_global % N1})
                 .Run(p_c_thread, p_c_global);
         }
-
     }
 
     __device__ void Run(const Float* __restrict__ p_a_global,

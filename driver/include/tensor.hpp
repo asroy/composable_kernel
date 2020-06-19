@@ -292,9 +292,12 @@ void check_error(const Tensor<T>& ref, const Tensor<T>& result)
     float ref_value = 0, result_value = 0;
     for(int i = 0; i < ref.mData.size(); ++i)
     {
-         float evar = std::abs(double(ref.mData[i]) - double(result.mData[i]));
+        float evar = std::abs(double(ref.mData[i]) - double(result.mData[i]));
         if(evar > 0.1)
-            printf("=========check %d %f %f===========\n",i,double(ref.mData[i]),double(result.mData[i]));
+            printf("=========check %d %f %f===========\n",
+                   i,
+                   double(ref.mData[i]),
+                   double(result.mData[i]));
         error += evar;
         float diff = std::abs(double(ref.mData[i]) - double(result.mData[i]));
         if(max_diff < diff)

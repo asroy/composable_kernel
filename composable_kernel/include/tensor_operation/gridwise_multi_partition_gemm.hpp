@@ -7,13 +7,11 @@
 #include "gridwise_gemm_v2.hpp"
 
 namespace ck {
-template<index_t begin>
+template <index_t begin>
 struct GemmBlockID
 {
     /* data */
-    __device__ const index_t get_gemm_block_id() const {
-         return blockIdx.x - begin;
-    }
+    __device__ const index_t get_gemm_block_id() const { return blockIdx.x - begin; }
 };
 
 template <index_t GridSize,
@@ -36,8 +34,8 @@ template <index_t GridSize,
           typename GemmParameters2,
           typename GemmParameters3,
           typename GemmParameters4,
-          index_t  GemmOBeginM,
-          index_t  GemmOBeginN>
+          index_t GemmOBeginM,
+          index_t GemmOBeginN>
 struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
 {
     static constexpr auto partition1 = GemmParameters1{};
@@ -46,10 +44,11 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
     static constexpr auto partition4 = GemmParameters4{};
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
-        constexpr index_t max_lds_align = math::lcm(partition1.ABlockCopyDstDataPerWrite_M,
-                                                    partition1.BBlockCopyDstDataPerWrite_N,
-                                                    partition1.ThreadGemmAThreadCopySrcDataPerRead_M,
-                                                    partition1.ThreadGemmBThreadCopySrcDataPerRead_N);
+        constexpr index_t max_lds_align =
+            math::lcm(partition1.ABlockCopyDstDataPerWrite_M,
+                      partition1.BBlockCopyDstDataPerWrite_N,
+                      partition1.ThreadGemmAThreadCopySrcDataPerRead_M,
+                      partition1.ThreadGemmBThreadCopySrcDataPerRead_N);
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -120,11 +119,12 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
         constexpr bool bIsHave4thPartition = partition4.IsValid();
 
         const index_t blockId = get_block_1d_id();
-        const auto    getwaveid = []() { return get_thread_local_1d_id() / 64; };
+        const auto getwaveid  = []() { return get_thread_local_1d_id() / 64; };
 
-        if(bIsHave1stPartition && (blockId >= partition1.BlockBeginId) && (blockId < partition1.BlockEndId))
+        if(bIsHave1stPartition && (blockId >= partition1.BlockBeginId) &&
+           (blockId < partition1.BlockEndId))
         {
-            static_if<bIsHave1stPartition>{}([&](auto){
+            static_if<bIsHave1stPartition>{}([&](auto) {
                 constexpr auto out_k_b_global_1st_desc = transform_tensor_descriptor(
                     out_k_b_global_desc,
                     make_tuple(Slice<Sequence<GemmM>, Sequence<0>, Sequence<GemmOBeginM>>{},
@@ -175,9 +175,10 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                 gridwise_gemm.Run(p_wei_global, p_in_global, p_out_global, p_shared_block);
             });
         }
-        else if(bIsHave2ndPartition &&  (blockId >= partition2.BlockBeginId) && (blockId < partition2.BlockEndId))
+        else if(bIsHave2ndPartition && (blockId >= partition2.BlockBeginId) &&
+                (blockId < partition2.BlockEndId))
         {
-            static_if<bIsHave2ndPartition>{}([&](auto){
+            static_if<bIsHave2ndPartition>{}([&](auto) {
                 constexpr auto out_k_b_global_2nd_desc = transform_tensor_descriptor(
                     out_k_b_global_desc,
                     make_tuple(Slice<Sequence<GemmM>, Sequence<GemmOBeginM>, Sequence<GemmM>>{},
@@ -227,9 +228,10 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                 gridwise_gemm.Run(p_wei_global, p_in_global, p_out_global, p_shared_block);
             });
         }
-        else if(bIsHave3rdPartition &&  (blockId >= partition3.BlockBeginId) && (blockId < partition3.BlockEndId))
+        else if(bIsHave3rdPartition && (blockId >= partition3.BlockBeginId) &&
+                (blockId < partition3.BlockEndId))
         {
-            static_if<bIsHave3rdPartition>{}([&](auto){
+            static_if<bIsHave3rdPartition>{}([&](auto) {
                 constexpr auto out_k_b_global_3rd_desc = transform_tensor_descriptor(
                     out_k_b_global_desc,
                     make_tuple(Slice<Sequence<GemmM>, Sequence<0>, Sequence<GemmOBeginM>>{},
@@ -279,15 +281,15 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
 
                 gridwise_gemm.Run(p_wei_global, p_in_global, p_out_global, p_shared_block);
             });
-            
         }
-        else if(bIsHave4thPartition && (blockId >= partition4.BlockBeginId) && (blockId < partition4.BlockEndId))
+        else if(bIsHave4thPartition && (blockId >= partition4.BlockBeginId) &&
+                (blockId < partition4.BlockEndId))
         {
             const index_t waveid = getwaveid();
             if(waveid >= 1)
                 return;
 
-            static_if<bIsHave4thPartition>{}([&](auto){
+            static_if<bIsHave4thPartition>{}([&](auto) {
                 constexpr auto out_k_b_global_4th_desc = transform_tensor_descriptor(
                     out_k_b_global_desc,
                     make_tuple(Slice<Sequence<GemmM>, Sequence<GemmOBeginM>, Sequence<GemmM>>{},
