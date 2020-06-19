@@ -119,8 +119,6 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
         constexpr bool bIsHave4thPartition = partition4.IsValid();
 
         const index_t blockId = get_block_1d_id();
-        const auto getwaveid  = []() { return get_thread_local_1d_id() / 64; };
-
         if(bIsHave1stPartition && (blockId >= partition1.BlockBeginId) &&
            (blockId < partition1.BlockEndId))
         {
@@ -179,6 +177,9 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                 (blockId < partition2.BlockEndId))
         {
             static_if<bIsHave2ndPartition>{}([&](auto) {
+                if(get_thread_local_1d_id() >= partition2.BlockSize)
+                    return;
+
                 constexpr auto out_k_b_global_2nd_desc = transform_tensor_descriptor(
                     out_k_b_global_desc,
                     make_tuple(Slice<Sequence<GemmM>, Sequence<GemmOBeginM>, Sequence<GemmM>>{},
@@ -232,6 +233,9 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
                 (blockId < partition3.BlockEndId))
         {
             static_if<bIsHave3rdPartition>{}([&](auto) {
+                if(get_thread_local_1d_id() >= partition3.BlockSize)
+                    return;
+
                 constexpr auto out_k_b_global_3rd_desc = transform_tensor_descriptor(
                     out_k_b_global_desc,
                     make_tuple(Slice<Sequence<GemmM>, Sequence<0>, Sequence<GemmOBeginM>>{},
@@ -285,11 +289,10 @@ struct GridwiseMultiPartitionGemmTransposedANormalBNormalC_v1
         else if(bIsHave4thPartition && (blockId >= partition4.BlockBeginId) &&
                 (blockId < partition4.BlockEndId))
         {
-            const index_t waveid = getwaveid();
-            if(waveid >= 1)
-                return;
-
             static_if<bIsHave4thPartition>{}([&](auto) {
+                if(get_thread_local_1d_id() >= partition4.BlockSize)
+                    return;
+
                 constexpr auto out_k_b_global_4th_desc = transform_tensor_descriptor(
                     out_k_b_global_desc,
                     make_tuple(Slice<Sequence<GemmM>, Sequence<GemmOBeginM>, Sequence<GemmM>>{},
