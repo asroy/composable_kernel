@@ -15,6 +15,8 @@ namespace ck {
 // The dimension access order can be different for src and dst.
 // Will do valid mapping check on src data: Read 0 if src data has a invalid mapping
 // Will do valid mapping check on dst data: No write if dst data has a invalid mapping
+// BlockSize can be equal or larger than ThreadCluster size, which means some threads may not do
+// threadwise copy
 template <index_t BlockSize,
           typename BlockSrcDesc,
           typename BlockDstDesc,
