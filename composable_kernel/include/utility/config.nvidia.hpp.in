@@ -1,10 +1,9 @@
 #ifndef CK_CONFIG_NVIDIA_HPP
 #define CK_CONFIG_NVIDIA_HPP
 
-#include "cuda_runtime.h"
-#include "cuda_fp16.h"
-#include "nvToolsExt.h"
-#include "helper_cuda.h"
+#include <cuda_runtime.h>
+#include <cuda_fp16.h>
+#include <nvToolsExt.h>
 
 // index type: unsigned or signed
 #define CK_UNSIGNED_INDEX_TYPE 0
