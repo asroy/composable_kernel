@@ -112,17 +112,18 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                 // Check src data's valid mapping situation, only check the first data in this src
                 //   vector. It's user's responsiblity to make sure all data in the src vector
                 //   has the valid/invalid mapping situation
-                if(src_coord.IsOffsetValidAssumingUpperIndexIsValid())
-                {
-                    transfer_data<SrcData,
-                                  SrcDataPerRead,
-                                  SrcAddressSpace,
-                                  AddressSpace::Vgpr,
-                                  InMemoryDataOperation::Set,
-                                  SrcDataStride,
-                                  1>(
-                        p_src, src_coord.GetOffset(), p_src_long_vector, buffer_offset);
-                }
+                transfer_data<SrcData,
+                              SrcDataPerRead,
+                              SrcAddressSpace,
+                              AddressSpace::Vgpr,
+                              InMemoryDataOperation::Set,
+                              SrcDataStride,
+                              1>(p_src,
+                                 src_coord.GetOffset(),
+                                 src_coord.IsOffsetValidAssumingUpperIndexIsValid(),
+                                 p_src_long_vector,
+                                 buffer_offset,
+                                 true);
             }
 
             // SrcData to DstData conversion
@@ -146,17 +147,18 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                 // Check dst data's valid mapping situation, only check the first data in this dst
                 //   vector. It's user's responsiblity to make sure all data in the dst vector
                 //   has the valid/invalid mapping situation
-                if(dst_coord.IsOffsetValidAssumingUpperIndexIsValid())
-                {
-                    transfer_data<DstData,
-                                  DstDataPerWrite,
-                                  AddressSpace::Vgpr,
-                                  DstAddressSpace,
-                                  DstInMemOp,
-                                  1,
-                                  DstDataStride>(
-                        p_dst_long_vector, buffer_offset, p_dst, dst_coord.GetOffset());
-                }
+                transfer_data<DstData,
+                              DstDataPerWrite,
+                              AddressSpace::Vgpr,
+                              DstAddressSpace,
+                              DstInMemOp,
+                              1,
+                              DstDataStride>(p_dst_long_vector,
+                                             buffer_offset,
+                                             true,
+                                             p_dst,
+                                             dst_coord.GetOffset(),
+                                             dst_coord.IsOffsetValidAssumingUpperIndexIsValid());
             }
         });
     }
@@ -266,18 +268,17 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                     // src
                     //   vector. It's user's responsiblity to make sure all data in the src vector
                     //   has the valid/invalid mapping situation
-                    if(src_coord.IsOffsetValidAssumingUpperIndexIsValid())
-                    {
-                        transfer_data<SrcData,
-                                      SrcDataPerRead,
-                                      SrcAddressSpace,
-                                      AddressSpace::Vgpr,
-                                      InMemoryDataOperation::Set>(p_src,
-                                                                  src_nonlinear_coord.GetOffset() +
-                                                                      src_linear_offset,
-                                                                  p_src_long_vector,
-                                                                  buffer_offset);
-                    }
+                    transfer_data<SrcData,
+                                  SrcDataPerRead,
+                                  SrcAddressSpace,
+                                  AddressSpace::Vgpr,
+                                  InMemoryDataOperation::Set>(
+                        p_src,
+                        src_nonlinear_coord.GetOffset() + src_linear_offset,
+                        src_coord.IsOffsetValidAssumingUpperIndexIsValid(),
+                        p_src_long_vector,
+                        buffer_offset,
+                        true);
                 }
 
                 // SrcData to DstData conversion
@@ -305,15 +306,16 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                     // dst
                     //   vector. It's user's responsiblity to make sure all data in the dst vector
                     //   has the valid/invalid mapping situation
-                    if(dst_coord.IsOffsetValidAssumingUpperIndexIsValid())
-                    {
-                        transfer_data<DstData,
-                                      DstDataPerWrite,
-                                      AddressSpace::Vgpr,
-                                      DstAddressSpace,
-                                      DstInMemOp>(
-                            p_dst_long_vector, buffer_offset, p_dst, dst_coord.GetOffset());
-                    }
+                    transfer_data<DstData,
+                                  DstDataPerWrite,
+                                  AddressSpace::Vgpr,
+                                  DstAddressSpace,
+                                  DstInMemOp>(p_dst_long_vector,
+                                              buffer_offset,
+                                              true,
+                                              p_dst,
+                                              dst_coord.GetOffset(),
+                                              dst_coord.IsOffsetValidAssumingUpperIndexIsValid());
                 }
             });
         });
@@ -405,15 +407,17 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                     // src
                     //   vector. It's user's responsiblity to make sure all data in the src vector
                     //   has the valid/invalid mapping situation
-                    if(src_coord.IsOffsetValidAssumingUpperIndexIsValid())
-                    {
-                        transfer_data<SrcData,
-                                      SrcDataPerRead,
-                                      SrcAddressSpace,
-                                      AddressSpace::Vgpr,
-                                      InMemoryDataOperation::Set>(
-                            p_src, src_coord.GetOffset(), p_src_long_vector, buffer_offset);
-                    }
+                    transfer_data<SrcData,
+                                  SrcDataPerRead,
+                                  SrcAddressSpace,
+                                  AddressSpace::Vgpr,
+                                  InMemoryDataOperation::Set>(
+                        p_src,
+                        src_coord.GetOffset(),
+                        src_coord.IsOffsetValidAssumingUpperIndexIsValid(),
+                        p_src_long_vector,
+                        buffer_offset,
+                        true);
                 }
 
                 // SrcData to DstData conversion
@@ -450,18 +454,16 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                     // dst
                     //   vector. It's user's responsiblity to make sure all data in the dst vector
                     //   has the valid/invalid mapping situation
-                    if(dst_coord.IsOffsetValidAssumingUpperIndexIsValid())
-                    {
-                        transfer_data<DstData,
-                                      DstDataPerWrite,
-                                      AddressSpace::Vgpr,
-                                      DstAddressSpace,
-                                      DstInMemOp>(p_dst_long_vector,
-                                                  buffer_offset,
-                                                  p_dst,
-                                                  dst_nonlinear_coord.GetOffset() +
-                                                      dst_linear_offset);
-                    }
+                    transfer_data<DstData,
+                                  DstDataPerWrite,
+                                  AddressSpace::Vgpr,
+                                  DstAddressSpace,
+                                  DstInMemOp>(p_dst_long_vector,
+                                              buffer_offset,
+                                              true,
+                                              p_dst,
+                                              dst_nonlinear_coord.GetOffset() + dst_linear_offset,
+                                              dst_coord.IsOffsetValidAssumingUpperIndexIsValid());
                 }
             });
         });
