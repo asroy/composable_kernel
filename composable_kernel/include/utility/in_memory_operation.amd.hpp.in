@@ -72,8 +72,8 @@ struct SetData
 
 #if CK_USE_AMD_BUFFER_ADDRESSING
     // buffer_load requires:
-    //   1) p_src must be in global memory space, d_dst must be vgpr
-    //   2) p_src to be a block-invariant pointer.
+    //   1) p_src_thread must be in global memory space, p_dst_thread must be vgpr
+    //   2) p_src_thread to be a wavewise pointer.
     // It is user's responsibility to make sure that is true.
     template <>
     __device__ void Run<AddressSpace::Global, AddressSpace::Vgpr>(const T* p_src,
@@ -88,13 +88,13 @@ struct SetData
         if(dst_valid)
         {
             *reinterpret_cast<vector_t*>(&p_dst[dst_offset]) =
-                amd_buffer_load<T, DataPerAccess>(p_src, src_offset, 0, src_valid, src_range);
+                amd_buffer_load<T, DataPerAccess>(p_src, src_offset, src_valid, src_range);
         }
     }
 
     // buffer_store requires:
-    //   1) p_src must be in vgpr space, d_dst must be global memory
-    //   2) p_dst to be a block-invariant pointer.
+    //   1) p_src_thread must be in vgpr space, p_dst_thread must be global memory
+    //   2) p_dst_thread to be a wavewise pointer.
     // It is user's responsibility to make sure that is true.
     template <>
     __device__ void Run<AddressSpace::Vgpr, AddressSpace::Global>(const T* p_src,
@@ -109,7 +109,7 @@ struct SetData
         const auto zeros = vector_t(0);
 
         amd_buffer_store<T, DataPerAccess>(
-            src_valid ? &(p_src[src_offset]) : &zeros, p_dst, dst_offset, 0, dst_valid, dst_range);
+            src_valid ? &(p_src[src_offset]) : &zeros, p_dst, dst_offset, dst_valid, dst_range);
     }
 #endif
 };
@@ -138,9 +138,9 @@ struct AtomicAddData
     }
 
 #if CK_USE_AMD_BUFFER_ADDRESSING && CK_USE_AMD_BUFFER_ATOMIC_ADD
-    // buffer_atomic_add requires:
-    //   1) p_src must be in vgpr space, d_dst must be global memory
-    //   2) p_dst to be a block-invariant pointer.
+    // buffer_atomic requires:
+    //   1) p_src_thread must be in vgpr space, p_dst_thread must be global memory
+    //   2) p_dst_thread to be a wavewise pointer.
     // It is user's responsibility to make sure that is true.
     template <>
     __device__ void Run<AddressSpace::Vgpr, AddressSpace::Global>(const T* p_src,
@@ -156,7 +156,6 @@ struct AtomicAddData
         amd_buffer_atomic_add<T, DataPerAccess>(src_valid ? &(p_src[src_offset]) : &zeros,
                                                 p_dst,
                                                 dst_offset,
-                                                0,
                                                 dst_valid,
                                                 index_t dst_range);
     }
