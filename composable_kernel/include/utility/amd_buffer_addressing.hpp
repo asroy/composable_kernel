@@ -196,6 +196,7 @@ __device__ float amd_buffer_load<float, 1>(const float* p_src_wave,
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
 
+#if 1 // debug
 #if !CK_EXPERIMENTAL_AMD_BUFFER_ADDRESSING_USE_OFFSET_TRICK
     return __llvm_amdgcn_buffer_load_f32(src_wave_buffer_resource.data,
                                          0,
@@ -204,10 +205,16 @@ __device__ float amd_buffer_load<float, 1>(const float* p_src_wave,
                                          false,
                                          false);
 #else
-    index_t src_addr_base = src_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
 
     return __llvm_amdgcn_buffer_load_f32(
-        src_wave_buffer_resource.data, 0, src_addr_base + src_thread_addr_offset, false, false);
+        src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
+#endif
+#else
+    return src_thread_data_valid
+               ? __llvm_amdgcn_buffer_load_f32(
+                     src_wave_buffer_resource.data, 0, src_thread_addr_offset, false, false)
+               : 0;
 #endif
 }
 
@@ -236,10 +243,10 @@ __device__ float2_t amd_buffer_load<float, 2>(const float* p_src_wave,
                                            false,
                                            false);
 #else
-    index_t src_addr_base = src_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
 
     return __llvm_amdgcn_buffer_load_f32x2(
-        src_wave_buffer_resource.data, 0, src_addr_base + src_thread_addr_offset, false, false);
+        src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #endif
 }
 
@@ -268,10 +275,10 @@ __device__ float4_t amd_buffer_load<float, 4>(const float* p_src_wave,
                                            false,
                                            false);
 #else
-    index_t src_addr_base = src_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
 
     return __llvm_amdgcn_buffer_load_f32x4(
-        src_wave_buffer_resource.data, 0, src_addr_base + src_thread_addr_offset, false, false);
+        src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #endif
 }
 
@@ -301,10 +308,10 @@ __device__ half_t amd_buffer_load<half_t, 1>(const half_t* p_src_wave,
                                          false,
                                          false);
 #else
-    index_t src_addr_base = src_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
 
     return __llvm_amdgcn_buffer_load_f16(
-        src_wave_buffer_resource.data, 0, src_addr_base + src_thread_addr_offset, false, false);
+        src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #endif
 #else
     return src_thread_data_valid ? p_src_wave[src_thread_data_offset] : 0;
@@ -336,10 +343,10 @@ __device__ half2_t amd_buffer_load<half_t, 2>(const half_t* p_src_wave,
                                       false,
                                       false);
 #else
-    index_t src_addr_base = src_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
 
     float dst_out_tmp = __llvm_amdgcn_buffer_load_f32(
-        src_wave_buffer_resource.data, 0, src_addr_base + src_thread_addr_offset, false, false);
+        src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #endif
 
     return *reinterpret_cast<half2_t*>(&dst_out_tmp);
@@ -370,10 +377,10 @@ __device__ half4_t amd_buffer_load<half_t, 4>(const half_t* p_src_wave,
                                         false,
                                         false);
 #else
-    index_t src_addr_base = src_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
 
     float2_t dst_out_tmp = __llvm_amdgcn_buffer_load_f32x2(
-        src_wave_buffer_resource.data, 0, src_addr_base + src_thread_addr_offset, false, false);
+        src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #endif
 
     return *reinterpret_cast<half4_t*>(&dst_out_tmp);
@@ -404,10 +411,10 @@ __device__ half8_t amd_buffer_load<half_t, 8>(const half_t* p_src_wave,
                                         false,
                                         false);
 #else
-    index_t src_addr_base = src_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
 
     float4_t dst_out_tmp = __llvm_amdgcn_buffer_load_f32x4(
-        src_wave_buffer_resource.data, 0, src_addr_base + src_thread_addr_offset, false, false);
+        src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #endif
 
     return *reinterpret_cast<half8_t*>(&dst_out_tmp);
@@ -439,10 +446,10 @@ __device__ ushort amd_buffer_load<ushort, 1>(const ushort* p_src_wave,
                                           false,
                                           false);
 #else
-    index_t src_addr_base = src_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
 
     return __llvm_amdgcn_buffer_load_bf16(
-        src_wave_buffer_resource.data, 0, src_addr_base + src_thread_addr_offset, false, false);
+        src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #endif
 
 #else
@@ -475,10 +482,10 @@ __device__ ushort2_t amd_buffer_load<ushort, 2>(const ushort* p_src_wave,
                                       false,
                                       false);
 #else
-    index_t src_addr_base = src_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
 
     float dst_out_tmp = __llvm_amdgcn_buffer_load_f32(
-        src_wave_buffer_resource.data, 0, src_addr_base + src_thread_addr_offset, false, false);
+        src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #endif
 
     return *reinterpret_cast<ushort2_t*>(&dst_out_tmp);
@@ -509,10 +516,10 @@ __device__ ushort4_t amd_buffer_load<ushort, 4>(const ushort* p_src_wave,
                                         false,
                                         false);
 #else
-    index_t src_addr_base = src_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
 
     float2_t dst_out_tmp = __llvm_amdgcn_buffer_load_f32x2(
-        src_wave_buffer_resource.data, 0, src_addr_base + src_thread_addr_offset, false, false);
+        src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #endif
 
     return *reinterpret_cast<ushort4_t*>(&dst_out_tmp);
@@ -543,10 +550,10 @@ __device__ ushort8_t amd_buffer_load<ushort, 8>(const ushort* p_src_wave,
                                         false,
                                         false);
 #else
-    index_t src_addr_base = src_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
 
     float4_t dst_out_tmp = __llvm_amdgcn_buffer_load_f32x4(
-        src_wave_buffer_resource.data, 0, src_addr_base + src_thread_addr_offset, false, false);
+        src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #endif
 
     return *reinterpret_cast<ushort8_t*>(&dst_out_tmp);
@@ -570,6 +577,7 @@ __device__ void amd_buffer_store<float, 1>(const float* p_src_thread,
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
 
+#if 1 // debug
 #if !CK_EXPERIMENTAL_AMD_BUFFER_ADDRESSING_USE_OFFSET_TRICK
     __llvm_amdgcn_buffer_store_f32(*p_src_thread,
                                    dst_wave_buffer_resource.data,
@@ -578,14 +586,21 @@ __device__ void amd_buffer_store<float, 1>(const float* p_src_thread,
                                    false,
                                    false);
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     __llvm_amdgcn_buffer_store_f32(*p_src_thread,
                                    dst_wave_buffer_resource.data,
                                    0,
-                                   dst_addr_base + dst_thread_addr_offset,
+                                   dst_addr_shift + dst_thread_addr_offset,
                                    false,
                                    false);
+#endif
+#else
+    if(dst_thread_data_valid)
+    {
+        __llvm_amdgcn_buffer_store_f32(
+            *p_src_thread, dst_wave_buffer_resource.data, 0, dst_thread_addr_offset, false, false);
+    }
 #endif
 }
 
@@ -615,12 +630,12 @@ __device__ void amd_buffer_store<float, 2>(const float* p_src_thread,
                                      false,
                                      false);
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     __llvm_amdgcn_buffer_store_f32x2(*reinterpret_cast<const float2_t*>(p_src_thread),
                                      dst_wave_buffer_resource.data,
                                      0,
-                                     dst_addr_base + dst_thread_addr_offset,
+                                     dst_addr_shift + dst_thread_addr_offset,
                                      false,
                                      false);
 #endif
@@ -652,12 +667,12 @@ __device__ void amd_buffer_store<float, 4>(const float* p_src_thread,
                                      false,
                                      false);
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     __llvm_amdgcn_buffer_store_f32x4(*reinterpret_cast<const float4_t*>(p_src_thread),
                                      dst_wave_buffer_resource.data,
                                      0,
-                                     dst_addr_base + dst_thread_addr_offset,
+                                     dst_addr_shift + dst_thread_addr_offset,
                                      false,
                                      false);
 #endif
@@ -690,12 +705,12 @@ __device__ void amd_buffer_store<half_t, 1>(const half_t* p_src_thread,
                                    false,
                                    false);
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     __llvm_amdgcn_buffer_store_f16(*p_src_thread,
                                    dst_wave_buffer_resource.data,
                                    0,
-                                   dst_addr_base + dst_thread_addr_offset,
+                                   dst_addr_shift + dst_thread_addr_offset,
                                    false,
                                    false);
 #endif
@@ -736,12 +751,12 @@ __device__ void amd_buffer_store<half_t, 2>(const half_t* p_src_thread,
                                    false,
                                    false);
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     __llvm_amdgcn_buffer_store_f32(*p_src_tmp,
                                    dst_wave_buffer_resource.data,
                                    0,
-                                   dst_addr_base + dst_thread_addr_offset,
+                                   dst_addr_shift + dst_thread_addr_offset,
                                    false,
                                    false);
 #endif
@@ -771,18 +786,16 @@ __device__ void amd_buffer_store<half_t, 4>(const half_t* p_src_thread,
     __llvm_amdgcn_buffer_store_f32x2(*p_src_tmp,
                                      dst_wave_buffer_resource.data,
                                      0,
-                                     dst_thread_data_valid
-                                     ? dst_thread_addr_offset,
-                                     : 0xffffffff,
+                                     dst_thread_data_valid ? dst_thread_addr_offset : 0xffffffff,
                                      false,
                                      false);
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     __llvm_amdgcn_buffer_store_f32x2(*p_src_tmp,
                                      dst_wave_buffer_resource.data,
                                      0,
-                                     dst_addr_base + dst_thread_addr_offset,
+                                     dst_addr_shift + dst_thread_addr_offset,
                                      false,
                                      false);
 #endif
@@ -816,12 +829,12 @@ __device__ void amd_buffer_store<half_t, 8>(const half_t* p_src_thread,
                                      false,
                                      false);
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     __llvm_amdgcn_buffer_store_f32x4(*p_src_tmp,
                                      dst_wave_buffer_resource.data,
                                      0,
-                                     dst_addr_base + dst_thread_addr_offset,
+                                     dst_addr_shift + dst_thread_addr_offset,
                                      false,
                                      false);
 #endif
@@ -854,12 +867,12 @@ __device__ void amd_buffer_store<ushort, 1>(const ushort* p_src_thread,
                                     false,
                                     false);
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     __llvm_amdgcn_buffer_store_bf16(*p_src_thread,
                                     dst_wave_buffer_resource.data,
                                     0,
-                                    dst_addr_base + dst_thread_addr_offset,
+                                    dst_addr_shift + dst_thread_addr_offset,
                                     false,
                                     false);
 #endif
@@ -900,12 +913,12 @@ __device__ void amd_buffer_store<ushort, 2>(const ushort* p_src_thread,
                                    false,
                                    false);
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     __llvm_amdgcn_buffer_store_f32(*p_src_tmp,
                                    dst_wave_buffer_resource.data,
                                    0,
-                                   dst_addr_base + dst_thread_addr_offset,
+                                   dst_addr_shift + dst_thread_addr_offset,
                                    false,
                                    false);
 #endif
@@ -939,12 +952,12 @@ __device__ void amd_buffer_store<ushort, 4>(const ushort* p_src_thread,
                                      false,
                                      false);
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     __llvm_amdgcn_buffer_store_f32x2(*p_src_tmp,
                                      dst_wave_buffer_resource.data,
                                      0,
-                                     dst_addr_base + dst_thread_addr_offset,
+                                     dst_addr_shift + dst_thread_addr_offset,
                                      false,
                                      false);
 #endif
@@ -978,12 +991,12 @@ __device__ void amd_buffer_store<ushort, 8>(const ushort* p_src_thread,
                                      false,
                                      false);
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     __llvm_amdgcn_buffer_store_f32x4(*p_src_tmp,
                                      dst_wave_buffer_resource.data,
                                      0,
-                                     dst_addr_base + dst_thread_addr_offset,
+                                     dst_addr_shift + dst_thread_addr_offset,
                                      false,
                                      false);
 #endif
@@ -1014,12 +1027,12 @@ __device__ void amd_buffer_atomic_add<float, 1>(const float* p_src_thread,
                                         dst_thread_data_valid ? dst_thread_addr_offset : 0xffffffff,
                                         false);
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     __llvm_amdgcn_buffer_atomic_add_f32(*p_src_thread,
                                         dst_wave_buffer_resource.data,
                                         0,
-                                        dst_addr_base + dst_thread_addr_offset,
+                                        dst_addr_shift + dst_thread_addr_offset,
                                         false);
 #endif
 }
@@ -1053,14 +1066,14 @@ __device__ void amd_buffer_atomic_add<float, 2>(const float* p_src_thread,
             false);
     }
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     for(index_t i = 0; i < 2; ++i)
     {
         __llvm_amdgcn_buffer_atomic_add_f32(p_src_thread[i],
                                             dst_wave_buffer_resource.data,
                                             0,
-                                            dst_addr_base + dst_thread_addr_offset +
+                                            dst_addr_shift + dst_thread_addr_offset +
                                                 i * sizeof(float),
                                             false);
     }
@@ -1096,14 +1109,14 @@ __device__ void amd_buffer_atomic_add<float, 4>(const float* p_src_thread,
             false);
     }
 #else
-    index_t dst_addr_base = dst_thread_data_valid ? 0 : 0x7fffffff;
+    uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
     for(index_t i = 0; i < 4; ++i)
     {
         __llvm_amdgcn_buffer_atomic_add_f32(p_src_thread[i],
                                             dst_wave_buffer_resource.data,
                                             0,
-                                            dst_addr_base + dst_thread_addr_offset +
+                                            dst_addr_shift + dst_thread_addr_offset +
                                                 i * sizeof(float),
                                             false);
     }
