@@ -96,31 +96,26 @@ struct DummyStaticTransform
 
         auto coord = typename TensorCoordinate<decltype(in_gemmk_gemmn_global_desc)>::type(k0, n0);
 
-        if(get_block_1d_id() < coord.GetOffset())
+#pragma unroll 1
+        for(index_t k = 0; k < 100; ++k)
         {
-            for(index_t k = 0; k < 1; ++k)
-            {
-                for(index_t n = 0; n < 4; ++n)
-                {
-                    auto tmp = coord + Array<index_t, 2>{k, n};
+            coord += Array<index_t, 2>{8, 0};
 
-                    Float value = 1;
-                    transfer_data<Float,
-                                  1,
-                                  AddressSpace::Vgpr,
-                                  AddressSpace::Global,
-                                  InMemoryDataOperation::Set,
-                                  1,
-                                  1>(&value,
-                                     0,
-                                     true,
-                                     1,
-                                     p_in_global,
-                                     tmp.GetOffset(),
-                                     tmp.IsOffsetValidAssumingUpperIndexIsValid(),
-                                     in_gemmk_gemmn_global_desc.GetElementSpace());
-                }
-            }
+            Float value = 1;
+            transfer_data<Float,
+                          1,
+                          AddressSpace::Vgpr,
+                          AddressSpace::Global,
+                          InMemoryDataOperation::Set,
+                          1,
+                          1>(&value,
+                             0,
+                             true,
+                             1,
+                             p_in_global,
+                             coord.GetOffset(),
+                             coord.IsOffsetValidAssumingUpperIndexIsValid(),
+                             in_gemmk_gemmn_global_desc.GetElementSpace());
         }
     }
 };

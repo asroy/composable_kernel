@@ -12,17 +12,17 @@ template <class T,
           class ConvDilations,
           class InLeftPads,
           class InRightPads>
-void device_dummy_transform(InDesc,
-                            const Tensor<T>& in_nchw,
-                            WeiDesc,
-                            const Tensor<T>& wei_kcyx,
-                            OutDesc,
-                            Tensor<T>& out_nkhw,
-                            ConvStrides,
-                            ConvDilations,
-                            InLeftPads,
-                            InRightPads,
-                            ck::index_t nrepeat)
+void device_dummy_static_transform(InDesc,
+                                   const Tensor<T>& in_nchw,
+                                   WeiDesc,
+                                   const Tensor<T>& wei_kcyx,
+                                   OutDesc,
+                                   Tensor<T>& out_nkhw,
+                                   ConvStrides,
+                                   ConvDilations,
+                                   InLeftPads,
+                                   InRightPads,
+                                   ck::index_t nrepeat)
 {
     using namespace ck;
 

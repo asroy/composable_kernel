@@ -20,6 +20,7 @@
 
 #if CK_USE_AMD_INLINE_ASM
 #include "amd_inline_asm.hpp"
+#include "amd_llvm_intrinsic.hpp"
 #endif
 
 #if CK_USE_AMD_XDLOPS
