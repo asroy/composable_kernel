@@ -18,6 +18,7 @@
 #include "device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v3r1_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_backward_data_implicit_gemm_v5r1_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -172,7 +173,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 3>;
     using RightPads = Sequence<0, 3>;
-#elif 0
+#elif 1
     // 7x1 filter, 3x0 pad, 17x17 input
     constexpr index_t N  = 128;
     constexpr index_t C  = 1024;
@@ -187,13 +188,13 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<3, 0>;
     using RightPads = Sequence<3, 0>;
-#elif 1
+#elif 0
     // 3x3 filter, 2x2 stride, 35x35 input, 17x17 output
     constexpr index_t N  = 128;
-    constexpr index_t C  = 1024;
+    constexpr index_t C  = 128;
     constexpr index_t HI = 35;
     constexpr index_t WI = 35;
-    constexpr index_t K  = 1024;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -255,6 +256,8 @@ int main(int argc, char* argv[])
     device_convolution_backward_data_implicit_gemm_v3r1_nchw_kcyx_nkhw
 #elif 1
     device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw
+#elif 1
+    device_convolution_backward_data_implicit_gemm_v5r1_nchw_kcyx_nkhw
 #endif
     (in_nchw_desc,
      in_nchw_device,
