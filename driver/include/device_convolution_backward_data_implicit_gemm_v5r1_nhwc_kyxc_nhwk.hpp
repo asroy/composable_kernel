@@ -3,7 +3,7 @@
 #include "device.hpp"
 #include "host_tensor.hpp"
 #include "gridwise_operation_wrapper.hpp"
-#include "gridwise_convolution_backward_data_implicit_gemm_v5r1_nchw_kcyx_nkhw.hpp"
+#include "gridwise_convolution_backward_data_implicit_gemm_v5r1_nhwc_kyxc_nhwk.hpp"
 
 namespace launcher {
 
@@ -17,7 +17,7 @@ template <typename T,
           typename ConvDilations,
           typename InLeftPads,
           typename InRightPads>
-void device_convolution_backward_data_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc in_nchw_desc,
+void device_convolution_backward_data_implicit_gemm_v5r1_nhwc_kyxc_nhwk(InDesc in_nchw_desc,
                                                                         Tensor<T>& in_nchw,
                                                                         WeiDesc wei_kcyx_desc,
                                                                         const Tensor<T>& wei_kcyx,
@@ -48,17 +48,41 @@ void device_convolution_backward_data_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t ConvDilationH = ConvDilations{}[0];
     constexpr index_t ConvDilationW = ConvDilations{}[1];
 
+    constexpr auto in_nhwc_desc  = make_native_tensor_descriptor_packed(Sequence<N, Hi, Wi, C>{});
+    constexpr auto wei_kyxc_desc = make_native_tensor_descriptor_packed(Sequence<K, Y, X, C>{});
+    constexpr auto out_nhwk_desc = make_native_tensor_descriptor_packed(Sequence<N, Ho, Wo, K>{});
+
+    Tensor<float> in_nhwc(make_HostTensorDescriptor(in_nhwc_desc));
+    Tensor<float> wei_kyxc(make_HostTensorDescriptor(wei_kyxc_desc));
+    Tensor<float> out_nhwk(make_HostTensorDescriptor(out_nhwk_desc));
+
+    auto f_nchw2nhwc = [&](auto n, auto hi, auto wi, auto c) {
+        in_nhwc(n, hi, wi, c) = in_nchw(n, c, hi, wi);
+    };
+
+    auto f_kcyx2kyxc = [&](auto k, auto y, auto x, auto c) {
+        wei_kyxc(k, y, x, c) = wei_kcyx(k, c, y, x);
+    };
+
+    auto f_nkhw2nhwk = [&](auto n, auto ho, auto wo, auto k) {
+        out_nhwk(n, ho, wo, k) = out_nkhw(n, k, ho, wo);
+    };
+
+    make_ParallelTensorFunctor(f_nchw2nhwc, N, Hi, Wi, C)(std::thread::hardware_concurrency());
+    make_ParallelTensorFunctor(f_kcyx2kyxc, K, Y, X, C)(std::thread::hardware_concurrency());
+    make_ParallelTensorFunctor(f_nkhw2nhwk, N, Ho, Wo, K)(std::thread::hardware_concurrency());
+
     std::size_t data_sz = sizeof(T);
-    DeviceMem in_nchw_device_buf(data_sz * in_nchw.mDesc.GetElementSpace());
-    DeviceMem wei_kcyx_device_buf(data_sz * wei_kcyx.mDesc.GetElementSpace());
-    DeviceMem out_nkhw_device_buf(data_sz * out_nkhw.mDesc.GetElementSpace());
+    DeviceMem in_nhwc_device_buf(data_sz * in_nhwc.mDesc.GetElementSpace());
+    DeviceMem wei_kyxc_device_buf(data_sz * wei_kyxc.mDesc.GetElementSpace());
+    DeviceMem out_nhwk_device_buf(data_sz * out_nhwk.mDesc.GetElementSpace());
 
-    in_nchw_device_buf.ToDevice(in_nchw.mData.data());
-    wei_kcyx_device_buf.ToDevice(wei_kcyx.mData.data());
-    out_nkhw_device_buf.ToDevice(out_nkhw.mData.data());
+    in_nhwc_device_buf.ToDevice(in_nhwc.mData.data());
+    wei_kyxc_device_buf.ToDevice(wei_kyxc.mData.data());
+    out_nhwk_device_buf.ToDevice(out_nhwk.mData.data());
 
-#if 1
-    // BlockSize = 256, each thread hold 64 data
+#if 0
+    // cdata = 64, BlockSize = 256, 128x128x8
     constexpr index_t BlockSize = 256;
 
     constexpr index_t GemmMPerBlock              = 128;
@@ -74,16 +98,46 @@ void device_convolution_backward_data_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc i
     constexpr index_t GemmThreadGemmDataPerReadM = 4;
     constexpr index_t GemmThreadGemmDataPerReadN = 4;
 
-    using GemmABlockCopyThreadSliceLengths_GemmK0_GemmK1_GemmK2_GemmM   = Sequence<1, 1, 4, 1>;
-    using GemmABlockCopyThreadClusterLengths_GemmK0_GemmK1_GemmK2_GemmM = Sequence<1, 1, 2, 128>;
+    using GemmABlockCopyThreadSliceLengths_GemmK0_GemmK1_GemmK2_GemmM   = Sequence<1, 1, 1, 4>;
+    using GemmABlockCopyThreadClusterLengths_GemmK0_GemmK1_GemmK2_GemmM = Sequence<1, 1, 8, 32>;
 
-    constexpr index_t GemmABlockCopySrcDataPerRead_GemmM  = 1;
-    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmM  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 4;
 
     using GemmBBlockCopyThreadSliceLengths_GemmK0_GemmK1_GemmK2_GemmN   = Sequence<1, 1, 4, 1>;
     using GemmBBlockCopyThreadClusterLengths_GemmK0_GemmK1_GemmK2_GemmN = Sequence<1, 1, 2, 128>;
 
-    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN  = 1;
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmK2 = 4;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
+
+    constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
+#elif 1
+    // cdata = 64, BlockSize = 256, 128x128x16
+    constexpr index_t BlockSize = 256;
+
+    constexpr index_t GemmMPerBlock              = 128;
+    constexpr index_t GemmNPerBlock              = 128;
+    constexpr index_t GemmKPerBlock              = 16;
+    constexpr index_t GemmMPerThread             = 4;
+    constexpr index_t GemmNPerThread             = 4;
+    constexpr index_t GemmKPerThread             = 1;
+    constexpr index_t GemmMLevel0Cluster         = 4;
+    constexpr index_t GemmNLevel0Cluster         = 4;
+    constexpr index_t GemmMLevel1Cluster         = 4;
+    constexpr index_t GemmNLevel1Cluster         = 4;
+    constexpr index_t GemmThreadGemmDataPerReadM = 4;
+    constexpr index_t GemmThreadGemmDataPerReadN = 4;
+
+    using GemmABlockCopyThreadSliceLengths_GemmK0_GemmK1_GemmK2_GemmM   = Sequence<1, 1, 2, 4>;
+    using GemmABlockCopyThreadClusterLengths_GemmK0_GemmK1_GemmK2_GemmM = Sequence<1, 1, 8, 32>;
+
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmM  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 4;
+
+    using GemmBBlockCopyThreadSliceLengths_GemmK0_GemmK1_GemmK2_GemmN   = Sequence<1, 1, 8, 1>;
+    using GemmBBlockCopyThreadClusterLengths_GemmK0_GemmK1_GemmK2_GemmN = Sequence<1, 1, 2, 128>;
+
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmK2 = 4;
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 1;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
@@ -132,14 +186,14 @@ void device_convolution_backward_data_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc i
         for(index_t i = 0; i < nrepeat; ++i)
         {
             using GridwiseConvBwdData =
-                GridwiseConvolutionBackwardDataImplicitGemm_v5r1_nchw_kcyx_nkhw<
+                GridwiseConvolutionBackwardDataImplicitGemm_v5r1_nhwc_kyxc_nhwk<
                     GridSize,
                     BlockSize,
                     T,
                     T,
-                    decltype(in_nchw_desc),
-                    decltype(wei_kcyx_desc),
-                    decltype(out_nkhw_desc),
+                    decltype(in_nhwc_desc),
+                    decltype(wei_kyxc_desc),
+                    decltype(out_nhwk_desc),
                     ConvStrides,
                     ConvDilations,
                     InLeftPads,
@@ -162,14 +216,14 @@ void device_convolution_backward_data_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc i
                     GemmABlockCopyDstDataPerWrite_GemmM,
                     GemmBBlockCopyThreadSliceLengths_GemmK0_GemmK1_GemmK2_GemmN,
                     GemmBBlockCopyThreadClusterLengths_GemmK0_GemmK1_GemmK2_GemmN,
-                    GemmBBlockCopySrcDataPerRead_GemmN,
+                    GemmBBlockCopySrcDataPerRead_GemmK2,
                     GemmBBlockCopyDstDataPerWrite_GemmN,
                     GemmCThreadCopyDstDataPerWrite_GemmN1>;
 
             static_for<0, GridwiseConvBwdData::GetNumberOfGemm(), 1>{}([&](auto gemm_id) {
                 constexpr auto gemm_sizes        = GridwiseConvBwdData::GetGemmSize(gemm_id);
-                constexpr index_t gemm_k         = gemm_sizes.At(2);
-                constexpr bool is_gemm_not_empty = gemm_k > 0;
+                constexpr index_t gemm_k2        = gemm_sizes.At(4);
+                constexpr bool is_gemm_not_empty = gemm_k2 > 0;
 
                 // only compile and run if GEMM is no empty
                 static_if<is_gemm_not_empty>{}([&](auto fwd) {
@@ -182,9 +236,9 @@ void device_convolution_backward_data_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc i
                                   dim3(BlockSize),
                                   0,
                                   0,
-                                  static_cast<T*>(in_nchw_device_buf.GetDeviceBuffer()),
-                                  static_cast<T*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-                                  static_cast<T*>(out_nkhw_device_buf.GetDeviceBuffer()),
+                                  static_cast<T*>(in_nhwc_device_buf.GetDeviceBuffer()),
+                                  static_cast<T*>(wei_kyxc_device_buf.GetDeviceBuffer()),
+                                  static_cast<T*>(out_nhwk_device_buf.GetDeviceBuffer()),
                                   fwd(gemm_id));
                 });
             });
@@ -200,7 +254,13 @@ void device_convolution_backward_data_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc i
         std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s" << std::endl;
     }
 
-    in_nchw_device_buf.FromDevice(in_nchw.mData.data());
+    in_nhwc_device_buf.FromDevice(in_nhwc.mData.data());
+
+    auto f_nhwc2nchw = [&](auto n, auto c, auto hi, auto wi) {
+        in_nchw(n, c, hi, wi) = in_nhwc(n, hi, wi, c);
+    };
+
+    make_ParallelTensorFunctor(f_nhwc2nchw, N, C, Hi, Wi)(std::thread::hardware_concurrency());
 }
 
 } // namespace launcher
