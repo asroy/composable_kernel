@@ -75,11 +75,7 @@ void device_dummy_dynamic_transform(InDesc,
                                                  const Array<index_t, 2>,
                                                  const Array<index_t, 2>,
                                                  const Array<index_t, 2>,
-                                                 const Array<index_t, 2>,
-                                                 index_t,
-                                                 index_t,
-                                                 index_t,
-                                                 index_t>,
+                                                 const Array<index_t, 2>>,
                           dim3(GridSize),
                           dim3(BlockSize),
                           0,
@@ -93,11 +89,7 @@ void device_dummy_dynamic_transform(InDesc,
                           conv_strides,
                           conv_dilations,
                           in_left_pads,
-                          in_right_pads,
-                          10,
-                          10,
-                          10,
-                          10);
+                          in_right_pads);
         }
     }
 

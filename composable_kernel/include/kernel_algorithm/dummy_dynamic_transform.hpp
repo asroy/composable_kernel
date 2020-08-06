@@ -12,73 +12,6 @@ namespace ck {
 template <index_t BlockSize>
 struct DummyDynamicTransform
 {
-    __device__ void Run_(index_t* const __restrict__ p_wei_global,
-                         index_t* const __restrict__ p_in_global,
-                         float* const __restrict__ p_out_global,
-                         const DynamicNativeTensorDescriptor<4> wei_k_c_y_x_global_desc,
-                         const DynamicNativeTensorDescriptor<4> in_n_c_hi_wi_global_desc,
-                         const DynamicNativeTensorDescriptor<4> out_n_k_ho_wo_global_desc,
-                         const Array<index_t, 2> conv_strides,
-                         const Array<index_t, 2> conv_dilations,
-                         const Array<index_t, 2> in_left_pads,
-                         const Array<index_t, 2> in_right_pads,
-                         index_t k_block_num,
-                         index_t c_block_num,
-                         index_t y_block_num,
-                         index_t x_block_num) const
-    {
-        const index_t N  = in_n_c_hi_wi_global_desc.GetLength(0);
-        const index_t C  = in_n_c_hi_wi_global_desc.GetLength(1);
-        const index_t Hi = in_n_c_hi_wi_global_desc.GetLength(2);
-        const index_t Wi = in_n_c_hi_wi_global_desc.GetLength(3);
-
-        const index_t K  = out_n_k_ho_wo_global_desc.GetLength(1);
-        const index_t Ho = out_n_k_ho_wo_global_desc.GetLength(2);
-        const index_t Wo = out_n_k_ho_wo_global_desc.GetLength(3);
-
-        const index_t Y = wei_k_c_y_x_global_desc.GetLength(2);
-        const index_t X = wei_k_c_y_x_global_desc.GetLength(3);
-
-        const index_t ConvStrideH = conv_strides[0];
-        const index_t ConvStrideW = conv_strides[1];
-
-        const index_t ConvDilationH = conv_dilations[0];
-        const index_t ConvDilationW = conv_dilations[1];
-
-        p_wei_global[0] = wei_k_c_y_x_global_desc.GetElementSize();
-        p_wei_global[1] = wei_k_c_y_x_global_desc.GetElementSpace();
-
-        const index_t k_block_num_stride = c_block_num * y_block_num * x_block_num;
-        const index_t c_block_num_stride = y_block_num * x_block_num;
-        const index_t y_block_num_stride = x_block_num;
-
-        index_t tmp = get_block_1d_id();
-#if 0
-        const index_t k_block = tmp / k_block_num_stride;
-        tmp -= k_block * k_block_num_stride;
-        const index_t c_block = tmp / c_block_num_stride;
-        tmp -= c_block * c_block_num_stride;
-        const index_t y_block = tmp / y_block_num_stride;
-        tmp -= y_block * y_block_num_stride;
-        const index_t x_block = tmp;
-#else
-        const index_t k_block = __llvm_amdgcn_readfirstlane_i32(tmp / k_block_num_stride);
-        tmp -= k_block * k_block_num_stride;
-        const index_t c_block = __llvm_amdgcn_readfirstlane_i32(tmp / c_block_num_stride);
-        tmp -= c_block * c_block_num_stride;
-        const index_t y_block = __llvm_amdgcn_readfirstlane_i32(tmp / y_block_num_stride);
-        tmp -= y_block * y_block_num_stride;
-        const index_t x_block = __llvm_amdgcn_readfirstlane_i32(tmp);
-#endif
-        const index_t k_thread = p_in_global[get_thread_local_1d_id()];
-        const index_t c_thread = p_in_global[get_thread_local_1d_id() + 1];
-        const index_t y_thread = p_in_global[get_thread_local_1d_id() + 2];
-        const index_t x_thread = p_in_global[get_thread_local_1d_id() + 3];
-
-        p_wei_global[3] = wei_k_c_y_x_global_desc.CalculateOffset(
-            {k_block + k_thread, c_block + c_thread, y_block + y_thread, x_block + x_thread});
-    }
-
     __device__ void Run(index_t* const __restrict__ p_wei_global,
                         index_t* const __restrict__ p_in_global,
                         float* const __restrict__ p_out_global,
@@ -88,11 +21,7 @@ struct DummyDynamicTransform
                         const Array<index_t, 2> conv_strides,
                         const Array<index_t, 2> conv_dilations,
                         const Array<index_t, 2> in_left_pads,
-                        const Array<index_t, 2> in_right_pads,
-                        index_t,
-                        index_t,
-                        index_t,
-                        index_t) const
+                        const Array<index_t, 2> in_right_pads) const
     {
 #if 1
         const index_t N = in_n_c_hi_wi_global_desc.GetLength(0);
@@ -189,7 +118,7 @@ struct DummyDynamicTransform
                                          const index_t& idx_low_bound) {
                 index_t idx_low_tmp = idx_low_old + carry + idx_low_diff_const;
 
-#if 0 // positive
+#if 1 // positive
                 bool do_carry = idx_low_tmp >= idx_low_bound;
 
                 index_t idx_low_new = do_carry ? idx_low_tmp - idx_low_bound : idx_low_tmp;
@@ -389,23 +318,6 @@ struct DummyDynamicTransform
                                       Y,
                                       X);
 
-#if 0
-            // Merge(N, Ho, Wo) => GemmN
-            f_lower_idx_diff_merge(idx_diff[9],
-                                   idx_diff[12],
-                                   idx_diff[14],
-                                   idx_diff[16],
-                                   idx[9],
-                                   idx[12],
-                                   idx[14],
-                                   const_tmp[3],
-                                   const_tmp[4],
-                                   const_tmp[5],
-                                   N,
-                                   Ho,
-                                   Wo);
-#endif
-
             // stage 2
             // PassThrough(N) => N
             f_lower_idx_diff_passthrough(idx_diff[5], idx_diff[9]);
@@ -495,6 +407,19 @@ struct DummyDynamicTransform
                              is_in_bound,
                              out_n_k_ho_wo_global_desc.GetElementSpace());
         }
+    }
+
+    __device__ void Run_(index_t* const __restrict__ p_wei_global,
+                        index_t* const __restrict__ p_in_global,
+                        float* const __restrict__ p_out_global,
+                        const DynamicNativeTensorDescriptor<4> wei_k_c_y_x_global_desc,
+                        const DynamicNativeTensorDescriptor<4> in_n_c_hi_wi_global_desc,
+                        const DynamicNativeTensorDescriptor<4> out_n_k_ho_wo_global_desc,
+                        const Array<index_t, 2> conv_strides,
+                        const Array<index_t, 2> conv_dilations,
+                        const Array<index_t, 2> in_left_pads,
+                        const Array<index_t, 2> in_right_pads) const
+    {
     }
 };
 
