@@ -16,6 +16,8 @@
 #include "device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_backward_data_implicit_gemm_v4r2_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_backward_data_implicit_gemm_v4r3_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v5r1_nhwc_kyxc_nhwk.hpp"
 
 int main(int argc, char* argv[])
@@ -250,6 +252,10 @@ int main(int argc, char* argv[])
     device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw
 #elif 0
     device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw
+#elif 0
+    device_convolution_backward_data_implicit_gemm_v4r2_nchw_kcyx_nkhw
+#elif 1
+    device_convolution_backward_data_implicit_gemm_v4r3_nchw_kcyx_nkhw
 #elif 1
     device_convolution_backward_data_implicit_gemm_v5r1_nhwc_kyxc_nhwk
 #endif
