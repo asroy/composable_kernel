@@ -9,23 +9,22 @@
 #include "print_array.hpp"
 #include "print_sequence.hpp"
 #include "device.hpp"
-#include "tensor_generator.hpp"
+#include "host_tensor_generator.hpp"
 #include "device_tensor.hpp"
 #include "conv_common.hpp"
 #include "host_conv_bwd_data.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_backward_data_implicit_gemm_v3r1_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v4r2_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_backward_data_implicit_gemm_v4r3_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_backward_data_implicit_gemm_v5r1_nhwc_kyxc_nhwk.hpp"
 
 int main(int argc, char* argv[])
 {
     using namespace launcher;
 
-#if 1
+#if 0
     constexpr index_t N  = 64;
     constexpr index_t C  = 256;
     constexpr index_t HI = 56;
@@ -57,7 +56,7 @@ int main(int argc, char* argv[])
 #elif 0
     // 3x3, 28x28
     constexpr index_t N  = 128;
-    constexpr index_t C  = 1024;
+    constexpr index_t C  = 256;
     constexpr index_t HI = 28;
     constexpr index_t WI = 28;
     constexpr index_t K  = 1024;
@@ -162,10 +161,10 @@ int main(int argc, char* argv[])
 #elif 0
     // 1x7 filter, 0x3 pad, 17x17 input
     constexpr index_t N  = 128;
-    constexpr index_t C  = 128;
+    constexpr index_t C  = 256;
     constexpr index_t HI = 17;
     constexpr index_t WI = 17;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 1024;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 7;
 
@@ -177,7 +176,7 @@ int main(int argc, char* argv[])
 #elif 0
     // 7x1 filter, 3x0 pad, 17x17 input
     constexpr index_t N  = 128;
-    constexpr index_t C  = 1024;
+    constexpr index_t C  = 256;
     constexpr index_t HI = 17;
     constexpr index_t WI = 17;
     constexpr index_t K  = 1024;
@@ -192,10 +191,10 @@ int main(int argc, char* argv[])
 #elif 1
     // 3x3 filter, 2x2 stride, 35x35 input, 17x17 output
     constexpr index_t N  = 128;
-    constexpr index_t C  = 1024;
+    constexpr index_t C  = 256;
     constexpr index_t HI = 35;
     constexpr index_t WI = 35;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 1280;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -211,19 +210,19 @@ int main(int argc, char* argv[])
     constexpr auto out_nkhw_desc = get_convolution_output_default_4d_tensor_descriptor(
         in_nchw_desc, wei_kcyx_desc, ConvStrides{}, ConvDilations{}, LeftPads{}, RightPads{});
 
-    ostream_ConstantTensorDescriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
-    ostream_ConstantTensorDescriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
-    ostream_ConstantTensorDescriptor(out_nkhw_desc, std::cout << "out_nkhw_desc: ");
+    ostream_tensor_descriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
+    ostream_tensor_descriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
+    ostream_tensor_descriptor(out_nkhw_desc, std::cout << "out_nkhw_desc: ");
     print_sequence("LeftPads", LeftPads{});
     print_sequence("LeftPads", LeftPads{});
     print_sequence("RightPads", RightPads{});
     print_sequence("ConvStrides", ConvStrides{});
     print_sequence("ConvDilations", ConvDilations{});
 
-    Tensor<float> in_nchw_device(make_TensorDescriptor(in_nchw_desc));
-    Tensor<float> in_nchw_host(make_TensorDescriptor(in_nchw_desc));
-    Tensor<float> wei_kcyx(make_TensorDescriptor(wei_kcyx_desc));
-    Tensor<float> out_nkhw(make_TensorDescriptor(out_nkhw_desc));
+    Tensor<float> in_nchw_device(make_HostTensorDescriptor(in_nchw_desc));
+    Tensor<float> in_nchw_host(make_HostTensorDescriptor(in_nchw_desc));
+    Tensor<float> wei_kcyx(make_HostTensorDescriptor(wei_kcyx_desc));
+    Tensor<float> out_nkhw(make_HostTensorDescriptor(out_nkhw_desc));
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
@@ -247,32 +246,30 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 1
+#if 0
     device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw
 #elif 0
     device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw
-#elif 0
-    device_convolution_backward_data_implicit_gemm_v2r1_nchw_kcyx_nkhw
-#elif 0
-    device_convolution_backward_data_implicit_gemm_v3r1_nchw_kcyx_nkhw
 #elif 0
     device_convolution_backward_data_implicit_gemm_v4r1_nchw_kcyx_nkhw
 #elif 0
     device_convolution_backward_data_implicit_gemm_v4r2_nchw_kcyx_nkhw
 #elif 1
     device_convolution_backward_data_implicit_gemm_v4r3_nchw_kcyx_nkhw
+#elif 1
+    device_convolution_backward_data_implicit_gemm_v5r1_nhwc_kyxc_nhwk
 #endif
-        (in_nchw_desc,
-         in_nchw_device,
-         wei_kcyx_desc,
-         wei_kcyx,
-         out_nkhw_desc,
-         out_nkhw,
-         ConvStrides{},
-         ConvDilations{},
-         LeftPads{},
-         RightPads{},
-         nrepeat);
+    (in_nchw_desc,
+     in_nchw_device,
+     wei_kcyx_desc,
+     wei_kcyx,
+     out_nkhw_desc,
+     out_nkhw,
+     ConvStrides{},
+     ConvDilations{},
+     LeftPads{},
+     RightPads{},
+     nrepeat);
 
     if(do_verification)
     {
