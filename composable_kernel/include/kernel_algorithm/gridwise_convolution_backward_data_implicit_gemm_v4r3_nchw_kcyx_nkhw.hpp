@@ -441,11 +441,11 @@ struct GridwiseConvolutionBackwardDataImplicitGemm_v4r3_nchw_kcyx_nkhw
                                         decltype(c_m_n_thread_mtx_desc),
                                         GemmMPerThread,
                                         GemmNPerThread,
+                                        GemmKPerThread,
                                         GemmMLevel0Cluster,
                                         GemmNLevel0Cluster,
                                         GemmMLevel1Cluster,
                                         GemmNLevel1Cluster,
-                                        GemmKPerThread,
                                         ThreadGemmDataPerRead_GemmM,
                                         ThreadGemmDataPerRead_GemmN>{};
 
