@@ -15,6 +15,5 @@ __host__ __device__ constexpr auto make_dynamic_native_tensor_descriptor(const L
     return DynamicNativeTensorDescriptor<Lengths::GetSize()>(lengths, strides);
 }
 
-
 } // namespace ck
 #endif

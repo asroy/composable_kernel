@@ -12,16 +12,16 @@ namespace ck {
 template <index_t BlockSize>
 struct DummyDynamicTransform
 {
-    __device__ void Run(index_t* const __restrict__ p_wei_global,
-                        index_t* const __restrict__ p_in_global,
-                        float* const __restrict__ p_out_global,
-                        const DynamicNativeTensorDescriptor<4> wei_k_c_y_x_global_desc,
-                        const DynamicNativeTensorDescriptor<4> in_n_c_hi_wi_global_desc,
-                        const DynamicNativeTensorDescriptor<4> out_n_k_ho_wo_global_desc,
-                        const Array<index_t, 2> conv_strides,
-                        const Array<index_t, 2> conv_dilations,
-                        const Array<index_t, 2> in_left_pads,
-                        const Array<index_t, 2> in_right_pads) const
+    __device__ void Run_v1(index_t* const __restrict__ p_wei_global,
+                           index_t* const __restrict__ p_in_global,
+                           float* const __restrict__ p_out_global,
+                           const DynamicNativeTensorDescriptor<4> wei_k_c_y_x_global_desc,
+                           const DynamicNativeTensorDescriptor<4> in_n_c_hi_wi_global_desc,
+                           const DynamicNativeTensorDescriptor<4> out_n_k_ho_wo_global_desc,
+                           const Array<index_t, 2> conv_strides,
+                           const Array<index_t, 2> conv_dilations,
+                           const Array<index_t, 2> in_left_pads,
+                           const Array<index_t, 2> in_right_pads) const
     {
 #if 1
         const index_t N = in_n_c_hi_wi_global_desc.GetLength(0);
@@ -48,8 +48,8 @@ struct DummyDynamicTransform
         const index_t InRightPadH = in_right_pads[0];
         const index_t InRightPadW = in_right_pads[1];
 #else
-        const index_t N       = in_n_c_hi_wi_global_desc.GetLength(0);
-        const index_t C       = in_n_c_hi_wi_global_desc.GetLength(1);
+        const index_t N = in_n_c_hi_wi_global_desc.GetLength(0);
+        const index_t C = in_n_c_hi_wi_global_desc.GetLength(1);
 
         const index_t Y = 3;
         const index_t X = 3;
@@ -234,7 +234,7 @@ struct DummyDynamicTransform
 
                 idx_low_diff -= negative_carry;
 
-                negative_carry = do_borrow ? 1 : negative_carry;
+                negative_carry        = do_borrow ? 1 : negative_carry;
 #endif
             };
 
@@ -267,9 +267,9 @@ struct DummyDynamicTransform
             const_tmp[i] = p_wei_global[i + 1];
         }
 #else
-        const_tmp[0]           = 0;
-        const_tmp[1]           = 2;
-        const_tmp[2]           = 2;
+        const_tmp[0]                  = 0;
+        const_tmp[1]                  = 2;
+        const_tmp[2]                  = 2;
 #endif
 
         // initialize idx
@@ -302,8 +302,9 @@ struct DummyDynamicTransform
             // PassThrough GemmN => GemmN
             f_lower_idx_diff_passthrough(idx_diff[16], idx_diff[19]);
 
-            // stage 3
-            // Merge(C, Y, X) => GemmKTotal
+// stage 3
+// Merge(C, Y, X) => GemmKTotal
+#if 0
             f_lower_idx_diff_merge_v2(idx_diff[10],
                                       idx_diff[11],
                                       idx_diff[13],
@@ -317,6 +318,47 @@ struct DummyDynamicTransform
                                       C,
                                       Y,
                                       X);
+#elif 0
+            index_t tmp               = idx_diff[15];
+            const index_t const_tmp_0 = tmp / (Y * X);
+            tmp -= const_tmp_0 * (Y * X);
+            const index_t const_tmp_1 = tmp / X;
+            const index_t const_tmp_2 = tmp - const_tmp_1 * X;
+
+            f_lower_idx_diff_merge_v2(idx_diff[10],
+                                      idx_diff[11],
+                                      idx_diff[13],
+                                      idx_diff[15],
+                                      idx[10],
+                                      idx[11],
+                                      idx[13],
+                                      const_tmp_0,
+                                      const_tmp_1,
+                                      const_tmp_2,
+                                      C,
+                                      Y,
+                                      X);
+#elif 1
+            index_t tmp               = idx_diff[15];
+            const index_t const_tmp_0 = __llvm_amdgcn_readfirstlane_i32(tmp / (Y * X));
+            tmp -= const_tmp_0 * (Y * X);
+            const index_t const_tmp_1 = __llvm_amdgcn_readfirstlane_i32(tmp / X);
+            const index_t const_tmp_2 = __llvm_amdgcn_readfirstlane_i32(tmp - const_tmp_1 * X);
+
+            f_lower_idx_diff_merge_v2(idx_diff[10],
+                                      idx_diff[11],
+                                      idx_diff[13],
+                                      idx_diff[15],
+                                      idx[10],
+                                      idx[11],
+                                      idx[13],
+                                      const_tmp_0,
+                                      const_tmp_1,
+                                      const_tmp_2,
+                                      C,
+                                      Y,
+                                      X);
+#endif
 
             // stage 2
             // PassThrough(N) => N
@@ -372,7 +414,7 @@ struct DummyDynamicTransform
             idx[13] += idx_diff[13];
 
             // padding check
-            bool is_in_bound = true;
+            bool is_in_bound                       = true;
 #else   // pad
             // offset
             idx[0] += idx_diff[0];
@@ -409,7 +451,39 @@ struct DummyDynamicTransform
         }
     }
 
-    __device__ void Run_(index_t* const __restrict__ p_wei_global,
+    __device__ void Run_v2(index_t* const __restrict__ p_wei_global,
+                           index_t* const __restrict__ p_in_global,
+                           float* const __restrict__ p_out_global,
+                           const DynamicNativeTensorDescriptor<4> wei_k_c_y_x_global_desc,
+                           const DynamicNativeTensorDescriptor<4> in_n_c_hi_wi_global_desc,
+                           const DynamicNativeTensorDescriptor<4> out_n_k_ho_wo_global_desc,
+                           const Array<index_t, 2> conv_strides,
+                           const Array<index_t, 2> conv_dilations,
+                           const Array<index_t, 2> in_left_pads,
+                           const Array<index_t, 2> in_right_pads) const
+    {
+
+        Index idx_up;
+
+        idx_up(0) = in_n_c_hi_wi_global_desc.GetLength(0);
+        idx_up(1) = in_n_c_hi_wi_global_desc.GetLength(1);
+        idx_up(2) = in_n_c_hi_wi_global_desc.GetLength(2);
+        idx_up(3) = in_n_c_hi_wi_global_desc.GetLength(3);
+
+#if 0
+        constexpr auto trans = GetTransforms();
+
+        auto idx_low = trans[0]->CalculateLowerIndex(idx_up);
+#elif 1
+        constexpr DynamicCoordinateTransform* tran = &embed;
+
+        auto idx_low = tran->CalculateLowerIndex(idx_up);
+#endif
+
+        p_out_global[get_thread_local_1d_id()] = idx_low[0];
+    }
+
+    __device__ void Run(index_t* const __restrict__ p_wei_global,
                         index_t* const __restrict__ p_in_global,
                         float* const __restrict__ p_out_global,
                         const DynamicNativeTensorDescriptor<4> wei_k_c_y_x_global_desc,
@@ -420,6 +494,16 @@ struct DummyDynamicTransform
                         const Array<index_t, 2> in_left_pads,
                         const Array<index_t, 2> in_right_pads) const
     {
+        Run_v2(p_wei_global,
+               p_in_global,
+               p_out_global,
+               wei_k_c_y_x_global_desc,
+               in_n_c_hi_wi_global_desc,
+               out_n_k_ho_wo_global_desc,
+               conv_strides,
+               conv_dilations,
+               in_left_pads,
+               in_right_pads);
     }
 };
 
