@@ -12,186 +12,188 @@ __host__ __device__ void print_array(const char* s, T a)
     using data_type         = typename decltype(a)::data_type;
     constexpr index_t nsize = a.Size();
 
-    static_assert(nsize > 0 && nsize <= 10, "wrong!");
+    static_assert(nsize >= 0 && nsize <= 10, "wrong!");
 
-    if
-        constexpr(is_same<data_type, uint32_t>{})
+    if constexpr(is_same<data_type, uint32_t>{})
+    {
+        if constexpr(nsize == 0)
         {
-            static_if<nsize == 1>{}([&](auto) { printf("%s size %u, {%u}\n", s, nsize, a[0]); });
-
-            static_if<nsize == 2>{}(
-                [&](auto) { printf("%s size %u, {%u %u}\n", s, nsize, a[0], a[1]); });
-
-            static_if<nsize == 3>{}(
-                [&](auto) { printf("%s size %u, {%u %u %u}\n", s, nsize, a[0], a[1], a[2]); });
-
-            static_if<nsize == 4>{}([&](auto) {
-                printf("%s size %u, {%u %u %u %u}\n", s, nsize, a[0], a[1], a[2], a[3]);
-            });
-
-            static_if<nsize == 5>{}([&](auto) {
-                printf("%s size %u, {%u %u %u %u %u}\n", s, nsize, a[0], a[1], a[2], a[3], a[4]);
-            });
-
-            static_if<nsize == 6>{}([&](auto) {
-                printf("%s size %u, {%u %u %u %u %u %u}\n",
-                       s,
-                       nsize,
-                       a[0],
-                       a[1],
-                       a[2],
-                       a[3],
-                       a[4],
-                       a[5]);
-            });
-
-            static_if<nsize == 7>{}([&](auto) {
-                printf("%s size %u, {%u %u %u %u %u %u %u}\n",
-                       s,
-                       nsize,
-                       a[0],
-                       a[1],
-                       a[2],
-                       a[3],
-                       a[4],
-                       a[5],
-                       a[6]);
-            });
-
-            static_if<nsize == 8>{}([&](auto) {
-                printf("%s size %u, {%u %u %u %u %u %u %u %u}\n",
-                       s,
-                       nsize,
-                       a[0],
-                       a[1],
-                       a[2],
-                       a[3],
-                       a[4],
-                       a[5],
-                       a[6],
-                       a[7]);
-            });
-
-            static_if<nsize == 9>{}([&](auto) {
-                printf("%s size %u, {%u %u %u %u %u %u %u %u %u}\n",
-                       s,
-                       nsize,
-                       a[0],
-                       a[1],
-                       a[2],
-                       a[3],
-                       a[4],
-                       a[5],
-                       a[6],
-                       a[7],
-                       a[8]);
-            });
-
-            static_if<nsize == 10>{}([&](auto) {
-                printf("%s size %u, {%u %u %u %u %u %u %u %u %u %u}\n",
-                       s,
-                       nsize,
-                       a[0],
-                       a[1],
-                       a[2],
-                       a[3],
-                       a[4],
-                       a[5],
-                       a[6],
-                       a[7],
-                       a[8],
-                       a[9]);
-            });
+            printf("%s size %u\n", s, nsize);
         }
-    else if
-        constexpr(is_same<data_type, int32_t>{})
+        else if constexpr(nsize == 1)
         {
-            static_if<nsize == 1>{}([&](auto) { printf("%s size %d, {%d}\n", s, nsize, a[0]); });
-
-            static_if<nsize == 2>{}(
-                [&](auto) { printf("%s size %d, {%d %d}\n", s, nsize, a[0], a[1]); });
-
-            static_if<nsize == 3>{}(
-                [&](auto) { printf("%s size %d, {%d %d %d}\n", s, nsize, a[0], a[1], a[2]); });
-
-            static_if<nsize == 4>{}([&](auto) {
-                printf("%s size %d, {%d %d %d %d}\n", s, nsize, a[0], a[1], a[2], a[3]);
-            });
-
-            static_if<nsize == 5>{}([&](auto) {
-                printf("%s size %d, {%d %d %d %d %d}\n", s, nsize, a[0], a[1], a[2], a[3], a[4]);
-            });
-
-            static_if<nsize == 6>{}([&](auto) {
-                printf("%s size %d, {%d %d %d %d %d %d}\n",
-                       s,
-                       nsize,
-                       a[0],
-                       a[1],
-                       a[2],
-                       a[3],
-                       a[4],
-                       a[5]);
-            });
-
-            static_if<nsize == 7>{}([&](auto) {
-                printf("%s size %d, {%d %d %d %d %d %d %d}\n",
-                       s,
-                       nsize,
-                       a[0],
-                       a[1],
-                       a[2],
-                       a[3],
-                       a[4],
-                       a[5],
-                       a[6]);
-            });
-
-            static_if<nsize == 8>{}([&](auto) {
-                printf("%s size %d, {%d %d %d %d %d %d %d %d}\n",
-                       s,
-                       nsize,
-                       a[0],
-                       a[1],
-                       a[2],
-                       a[3],
-                       a[4],
-                       a[5],
-                       a[6],
-                       a[7]);
-            });
-
-            static_if<nsize == 9>{}([&](auto) {
-                printf("%s size %d, {%d %d %d %d %d %d %d %d %d}\n",
-                       s,
-                       nsize,
-                       a[0],
-                       a[1],
-                       a[2],
-                       a[3],
-                       a[4],
-                       a[5],
-                       a[6],
-                       a[7],
-                       a[8]);
-            });
-
-            static_if<nsize == 10>{}([&](auto) {
-                printf("%s size %d, {%d %d %d %d %d %d %d %d %d %d}\n",
-                       s,
-                       nsize,
-                       a[0],
-                       a[1],
-                       a[2],
-                       a[3],
-                       a[4],
-                       a[5],
-                       a[6],
-                       a[7],
-                       a[8],
-                       a[9]);
-            });
+            printf("%s size %u, {%u}\n", s, nsize, a[0]);
         }
+        else if constexpr(nsize == 2)
+        {
+            printf("%s size %u, {%u %u}\n", s, nsize, a[0], a[1]);
+        }
+        else if constexpr(nsize == 3)
+        {
+            printf("%s size %u, {%u %u %u}\n", s, nsize, a[0], a[1], a[2]);
+        }
+        else if constexpr(nsize == 4)
+        {
+            printf("%s size %u, {%u %u %u %u}\n", s, nsize, a[0], a[1], a[2], a[3]);
+        }
+        else if constexpr(nsize == 5)
+        {
+            printf("%s size %u, {%u %u %u %u %u}\n", s, nsize, a[0], a[1], a[2], a[3], a[4]);
+        }
+        else if constexpr(nsize == 6)
+        {
+            printf(
+                "%s size %u, {%u %u %u %u %u %u}\n", s, nsize, a[0], a[1], a[2], a[3], a[4], a[5]);
+        }
+        else if constexpr(nsize == 7)
+        {
+            printf("%s size %u, {%u %u %u %u %u %u %u}\n",
+                   s,
+                   nsize,
+                   a[0],
+                   a[1],
+                   a[2],
+                   a[3],
+                   a[4],
+                   a[5],
+                   a[6]);
+        }
+        else if constexpr(nsize == 8)
+        {
+            printf("%s size %u, {%u %u %u %u %u %u %u %u}\n",
+                   s,
+                   nsize,
+                   a[0],
+                   a[1],
+                   a[2],
+                   a[3],
+                   a[4],
+                   a[5],
+                   a[6],
+                   a[7]);
+        }
+        else if constexpr(nsize == 9)
+        {
+            printf("%s size %u, {%u %u %u %u %u %u %u %u %u}\n",
+                   s,
+                   nsize,
+                   a[0],
+                   a[1],
+                   a[2],
+                   a[3],
+                   a[4],
+                   a[5],
+                   a[6],
+                   a[7],
+                   a[8]);
+        }
+        else if constexpr(nsize == 10)
+        {
+            printf("%s size %u, {%u %u %u %u %u %u %u %u %u %u}\n",
+                   s,
+                   nsize,
+                   a[0],
+                   a[1],
+                   a[2],
+                   a[3],
+                   a[4],
+                   a[5],
+                   a[6],
+                   a[7],
+                   a[8],
+                   a[9]);
+        }
+    }
+    else if constexpr(is_same<data_type, int32_t>{})
+    {
+        if constexpr(nsize == 0)
+        {
+            printf("%s size %d\n", s, nsize);
+        }
+        else if constexpr(nsize == 1)
+        {
+            printf("%s size %d, {%d}\n", s, nsize, a[0]);
+        }
+        else if constexpr(nsize == 2)
+        {
+            printf("%s size %d, {%d %d}\n", s, nsize, a[0], a[1]);
+        }
+        else if constexpr(nsize == 3)
+        {
+            printf("%s size %d, {%d %d %d}\n", s, nsize, a[0], a[1], a[2]);
+        }
+        else if constexpr(nsize == 4)
+        {
+            printf("%s size %d, {%d %d %d %d}\n", s, nsize, a[0], a[1], a[2], a[3]);
+        }
+        else if constexpr(nsize == 5)
+        {
+            printf("%s size %d, {%d %d %d %d %d}\n", s, nsize, a[0], a[1], a[2], a[3], a[4]);
+        }
+        else if constexpr(nsize == 6)
+        {
+            printf(
+                "%s size %d, {%d %d %d %d %d %d}\n", s, nsize, a[0], a[1], a[2], a[3], a[4], a[5]);
+        }
+        else if constexpr(nsize == 7)
+        {
+            printf("%s size %d, {%d %d %d %d %d %d %d}\n",
+                   s,
+                   nsize,
+                   a[0],
+                   a[1],
+                   a[2],
+                   a[3],
+                   a[4],
+                   a[5],
+                   a[6]);
+        }
+        else if constexpr(nsize == 8)
+        {
+            printf("%s size %d, {%d %d %d %d %d %d %d %d}\n",
+                   s,
+                   nsize,
+                   a[0],
+                   a[1],
+                   a[2],
+                   a[3],
+                   a[4],
+                   a[5],
+                   a[6],
+                   a[7]);
+        }
+        else if constexpr(nsize == 9)
+        {
+            printf("%s size %d, {%d %d %d %d %d %d %d %d %d}\n",
+                   s,
+                   nsize,
+                   a[0],
+                   a[1],
+                   a[2],
+                   a[3],
+                   a[4],
+                   a[5],
+                   a[6],
+                   a[7],
+                   a[8]);
+        }
+        else if constexpr(nsize == 10)
+        {
+            printf("%s size %d, {%d %d %d %d %d %d %d %d %d %d}\n",
+                   s,
+                   nsize,
+                   a[0],
+                   a[1],
+                   a[2],
+                   a[3],
+                   a[4],
+                   a[5],
+                   a[6],
+                   a[7],
+                   a[8],
+                   a[9]);
+        }
+    }
 }
 
 } // namespace ck
