@@ -244,7 +244,7 @@ __host__ __device__ constexpr auto operator*(TData v, Array<TData, NSize> a)
 
 template <typename TData, index_t NSize, typename Reduce>
 __host__ __device__ constexpr TData
-accumulate_on_array(const Array<TData, NSize>& a, Reduce f, TData init)
+reduce_on_array(const Array<TData, NSize>& a, Reduce f, TData init)
 {
     TData result = init;
 
@@ -288,9 +288,39 @@ reverse_exclusive_scan_on_array(const Array<TData, NSize>& x, Reduce f, TData in
         r    = f(r, x[i]);
     }
 
-    y(i) = r;
+    y(NSize - 1) = r;
 
     return y;
+}
+
+template <typename X, typename... Ys>
+__host__ __device__ constexpr auto merge_arrays(const X& x, const Ys&... ys)
+{
+    return merge_arrays(x, merge_arrays(ys...));
+}
+
+template <typename T, index_t NX, index_t NY>
+__host__ __device__ constexpr auto merge_arrays(const Array<T, NX>& x, const Array<T, NY>& y)
+{
+    Array<T, NX + NY> z;
+
+    for(index_t i = 0; i < NX; ++i)
+    {
+        z(i) = x[i];
+    }
+
+    for(index_t i = 0; i < NY; ++i)
+    {
+        z(i + NX) = y[i];
+    }
+
+    return z;
+}
+
+template <typename X>
+__host__ __device__ constexpr auto merge_arrays(const X& x)
+{
+    return x;
 }
 
 } // namespace ck

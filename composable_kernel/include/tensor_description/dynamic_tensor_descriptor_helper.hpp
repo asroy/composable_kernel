@@ -15,5 +15,21 @@ __host__ __device__ constexpr auto make_dynamic_native_tensor_descriptor(const L
     return DynamicNativeTensorDescriptor<Lengths::GetSize()>(lengths, strides);
 }
 
+template <typename LowTensorDescriptor,
+          typename Transforms,
+          typename LowDimensionIds,
+          typename UpDimensionIds>
+__host__ __device__ constexpr auto
+transform_dynamic_tensor_descriptor(const LowTensorDescriptor& low_tensor_desc,
+                                    const Transforms& transforms,
+                                    LowDimensionIds,
+                                    UpDimensionIds)
+{
+    return DynamicTransformedTensorDescriptor<LowTensorDescriptor,
+                                              Transforms,
+                                              LowDimensionIds,
+                                              UpDimensionIds>{low_tensor_desc, transforms};
+}
+
 } // namespace ck
 #endif

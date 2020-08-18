@@ -12,8 +12,9 @@ struct Array
     using type      = Array<TData, NSize>;
     using data_type = TData;
 
+    // hack: add extra element to allow empty array
     // TODO: implement empty Array
-    TData mData[NSize] = {0};
+    TData mData[NSize + 1] = {0};
 
     __host__ __device__ explicit constexpr Array() {}
 
@@ -136,16 +137,16 @@ struct ArrayElementPicker
         return mArray(IP);
     }
 
-    template <typename I>
-    __host__ __device__ constexpr const data_type& operator[](I i) const
+    __host__ __device__ constexpr const data_type& operator[](index_t i) const
     {
-        return At(i);
+        index_t ip = Picks{}[i];
+        return mArray[ip];
     }
 
-    template <typename I>
-    __host__ __device__ constexpr data_type& operator()(I i)
+    __host__ __device__ constexpr data_type& operator()(index_t i)
     {
-        return At(i);
+        index_t ip = Picks{}[i];
+        return mArray(ip);
     }
 
     template <typename T>
