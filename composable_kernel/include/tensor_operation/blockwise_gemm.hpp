@@ -336,9 +336,9 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
         constexpr index_t MRepeat = MPerThread / MPerThreadSubC;
         constexpr index_t NRepeat = NPerThread / NPerThreadSubC;
 
-        static_if<MRepeat == 2 && NRepeat == 2>{}([&](auto) {
-            Run_pipelined_2x2(p_a_block, p_b_block, p_c_thread);
-        }).Else([&](auto) { Run_naive(p_a_block, p_b_block, p_c_thread); });
+        static_if<MRepeat == 2 && NRepeat == 2>{}(
+            [&](auto) { Run_pipelined_2x2(p_a_block, p_b_block, p_c_thread); })
+            .Else([&](auto) { Run_naive(p_a_block, p_b_block, p_c_thread); });
 #else
         Run_naive(p_a_block, p_b_block, p_c_thread);
 #endif

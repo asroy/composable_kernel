@@ -28,7 +28,7 @@ void device_dummy_dynamic_transform(InDesc,
 
     using TDevice = typename conditional<is_same<half_float::half, T>::value, half_t, T>::type;
 
-    const auto in_nchw_desc = make_dynamic_native_tensor_descriptor(to_array(InDesc::GetLengths()),
+    const auto in_nchw_desc  = make_dynamic_native_tensor_descriptor(to_array(InDesc::GetLengths()),
                                                                     to_array(InDesc::GetStrides()));
     const auto wei_kcyx_desc = make_dynamic_native_tensor_descriptor(
         to_array(WeiDesc::GetLengths()), to_array(WeiDesc::GetStrides()));

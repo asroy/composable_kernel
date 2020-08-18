@@ -195,7 +195,7 @@ struct DummyDynamicTransform
 
                 carry = do_carry ? 1 : 0;
 #else // negative
-                bool do_borrow    = idx_low_tmp < 0;
+                bool do_borrow = idx_low_tmp < 0;
 
                 index_t idx_low_new = do_borrow ? idx_low_tmp + idx_low_bound : idx_low_tmp;
 
@@ -304,7 +304,7 @@ struct DummyDynamicTransform
 
                 idx_low_diff -= negative_carry;
 
-                negative_carry        = do_borrow ? 1 : negative_carry;
+                negative_carry = do_borrow ? 1 : negative_carry;
 #endif
             };
 
@@ -337,9 +337,9 @@ struct DummyDynamicTransform
             const_tmp[i] = p_wei_global[i + 1];
         }
 #else
-        const_tmp[0]                  = 0;
-        const_tmp[1]                  = 2;
-        const_tmp[2]                  = 2;
+        const_tmp[0] = 0;
+        const_tmp[1] = 2;
+        const_tmp[2] = 2;
 #endif
 
         // initialize idx
@@ -475,7 +475,7 @@ struct DummyDynamicTransform
             // padding check
             bool is_in_bound = idx[3] >= 0 && idx[3] < Hi && idx[4] >= 0 && idx[4] < Wi;
 #elif 0 // no pad
-            // offset
+        // offset
             idx[0] += idx_diff[0];
 
             // C, Y, X
@@ -486,7 +486,7 @@ struct DummyDynamicTransform
             // padding check
             bool is_in_bound = true;
 #else   // pad
-            // offset
+        // offset
             idx[0] += idx_diff[0];
 
             // C, Y, X

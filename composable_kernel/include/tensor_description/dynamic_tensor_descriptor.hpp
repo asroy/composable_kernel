@@ -316,14 +316,13 @@ struct DynamicTransformedTensorDescriptor
             constexpr bool is_valid_up_always_mapped_to_valid_low =
                 decltype(tran)::IsValidUpperIndexAlwaysMappedToValidLowerIndex();
 
-            if
-                constexpr(!is_valid_up_always_mapped_to_valid_low)
-                {
-                    const auto up_dims_part = UpDimensionIds{}.At(itran);
-                    const auto idx_up_part  = pick_array_element(idx_up, up_dims_part);
+            if constexpr(!is_valid_up_always_mapped_to_valid_low)
+            {
+                const auto up_dims_part = UpDimensionIds{}.At(itran);
+                const auto idx_up_part  = pick_array_element(idx_up, up_dims_part);
 
-                    flag = flag && IsValidUpperIndexMappedToValidLowerIndex(idx_up_part);
-                }
+                flag = flag && IsValidUpperIndexMappedToValidLowerIndex(idx_up_part);
+            }
         });
 
         return flag;

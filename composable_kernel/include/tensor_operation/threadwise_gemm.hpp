@@ -153,9 +153,8 @@ struct ThreadwiseGemmTransANormalBNormalC
                                       (is_same<FloatA, half2_t>{} && is_same<FloatB, half2_t>{}) ||
                                       (is_same<FloatA, half4_t>{} && is_same<FloatB, half4_t>{}));
 
-        static_if<has_amd_asm>{}([&](auto fwd) {
-            Run_amd_asm(p_a, p_b, fwd(p_c));
-        }).Else([&](auto) { Run_source(p_a, p_b, p_c); });
+        static_if<has_amd_asm>{}([&](auto fwd) { Run_amd_asm(p_a, p_b, fwd(p_c)); })
+            .Else([&](auto) { Run_source(p_a, p_b, p_c); });
 #else
         Run_source(p_a, p_b, p_c);
 #endif
