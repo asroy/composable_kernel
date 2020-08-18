@@ -1,10 +1,10 @@
 #ifndef CK_FUNCTIONAL3_HPP
 #define CK_FUNCTIONAL3_HPP
 
+#include "array.hpp"
 #include "functional.hpp"
 #include "functional2.hpp"
 #include "sequence.hpp"
-#include "array.hpp"
 
 namespace ck {
 
@@ -83,8 +83,10 @@ struct ford_impl<Sequence<>, Orders>
 
 } // namespace detail
 
-// Lengths is Sequence<...>, it is the length of each dimension for N-dimensional loop
-// Orders is Sequence<...>, it is the order of dimension in which static_ford will loop over each
+// Lengths is Sequence<...>, it is the length of each dimension for
+// N-dimensional loop
+// Orders is Sequence<...>, it is the order of dimension in which static_ford
+// will loop over each
 // dimension
 template <class Lengths,
           class Orders = typename arithmetic_sequence_gen<0, Lengths::GetSize(), 1>::type>
@@ -106,8 +108,10 @@ struct static_ford
     }
 };
 
-// Lengths is Sequence<...>, it is the length of each dimension for N-dimensional loop
-// Orders is Sequence<...>, it is the order of dimension in which ford will loop over each
+// Lengths is Sequence<...>, it is the length of each dimension for
+// N-dimensional loop
+// Orders is Sequence<...>, it is the order of dimension in which ford will loop
+// over each
 // dimension
 template <class Lengths,
           class Orders = typename arithmetic_sequence_gen<0, Lengths::GetSize(), 1>::type>

@@ -168,10 +168,13 @@ struct DynamicTransformedTensorDescriptor
                           is_valid_sequence_map<sorted_low_dimension_ids>{},
                       "wrong! LowDimensionIds is not configured correctly");
 
-        // TODO: sanity check: while a up-dimension could be associated with multille
-        //   transformation, a low-dimension should be associated with only one transformation
+        // TODO: sanity check: while a up-dimension could be associated with
+        // multille
+        //   transformation, a low-dimension should be associated with only one
+        //   transformation
 
-        // TODO: sanity-check: GetLowerLengths of each transform should be consistent with lengths
+        // TODO: sanity-check: GetLowerLengths of each transform should be
+        // consistent with lengths
         //   of lower-tensor-descriptor
     }
 
@@ -222,14 +225,16 @@ struct DynamicTransformedTensorDescriptor
         return low_tensor_desc_.GetElementSpace();
     }
 
+    __host__ __device__ constexpr auto GetLowerTensorDescriptor() const { return low_tensor_desc_; }
+
     template <typename LowIdx, typename UpIdx>
     __host__ __device__ void CalculateLowerIndex(LowIdx& idx_low, const UpIdx& idx_up) const
     {
         static_for<0, NTransform, 1>{}([&](auto itran) constexpr {
-            auto tran = transforms_.At(itran);
+            const auto tran = transforms_.At(itran);
 
-            auto idx_up_part  = pick_array_element(idx_up, UpDimensionIds{}.At(itran));
-            auto idx_low_part = pick_array_element(idx_low, LowDimensionIds{}.At(itran));
+            const auto idx_up_part = pick_array_element(idx_up, UpDimensionIds{}.At(itran));
+            auto idx_low_part      = pick_array_element(idx_low, LowDimensionIds{}.At(itran));
 
             tran.CalculateLowerIndex(idx_low_part, idx_up_part);
         });

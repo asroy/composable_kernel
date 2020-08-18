@@ -288,7 +288,7 @@ reverse_exclusive_scan_on_array(const Array<TData, NSize>& x, Reduce f, TData in
         r    = f(r, x[i]);
     }
 
-    y(NSize - 1) = r;
+    y(0) = r;
 
     return y;
 }

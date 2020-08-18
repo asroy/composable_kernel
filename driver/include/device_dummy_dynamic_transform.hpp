@@ -40,6 +40,31 @@ void device_dummy_dynamic_transform(InDesc,
     const auto in_left_pads   = to_array(InLeftPads{});
     const auto in_right_pads  = to_array(InRightPads{});
 
+    {
+        const auto tensor_descs = map_convolution_into_gemm(wei_kcyx_desc,
+                                                            in_nchw_desc,
+                                                            out_nkhw_desc,
+                                                            conv_strides,
+                                                            conv_dilations,
+                                                            in_left_pads,
+                                                            in_right_pads);
+
+        const auto in_gemmk_gemmn_global_desc = tensor_descs.At(Number<0>{});
+        print_array("cpu: in_gemmk_gemmn_global_desc:", in_gemmk_gemmn_global_desc.GetLengths());
+
+        const auto idx0 = MultiIndex<2>({2591, 36991});
+        const auto idx1 = in_gemmk_gemmn_global_desc.CalculateLowerIndex(idx0);
+        const auto idx2 =
+            in_gemmk_gemmn_global_desc.GetLowerTensorDescriptor().CalculateLowerIndex(idx1);
+
+        const index_t offset = in_gemmk_gemmn_global_desc.CalculateOffset(idx0);
+
+        print_array("idx0:", idx0);
+        print_array("idx1:", idx1);
+        print_array("idx2:", idx2);
+        printf("offset %d\n", offset);
+    }
+
     std::size_t data_sz = sizeof(T);
     DeviceMem in_nchw_device_buf(data_sz * in_nchw.mDesc.GetElementSpace());
     DeviceMem wei_kcyx_device_buf(data_sz * wei_kcyx.mDesc.GetElementSpace());
@@ -54,6 +79,7 @@ void device_dummy_dynamic_transform(InDesc,
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
+#if 0
     using dummy_transform = DummyDynamicTransform<BlockSize>;
 
     for(index_t i = 0; i < 5; ++i)
@@ -92,6 +118,7 @@ void device_dummy_dynamic_transform(InDesc,
                           in_right_pads);
         }
     }
+#endif
 
     out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
 }
