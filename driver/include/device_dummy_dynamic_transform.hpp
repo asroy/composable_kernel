@@ -50,19 +50,37 @@ void device_dummy_dynamic_transform(InDesc,
                                                             in_right_pads);
 
         const auto in_gemmk_gemmn_global_desc = tensor_descs.At(Number<0>{});
-        print_array("cpu: in_gemmk_gemmn_global_desc:", in_gemmk_gemmn_global_desc.GetLengths());
 
-        const auto idx0 = MultiIndex<2>({2591, 36991});
-        const auto idx1 = in_gemmk_gemmn_global_desc.CalculateLowerIndex(idx0);
-        const auto idx2 =
-            in_gemmk_gemmn_global_desc.GetLowerTensorDescriptor().CalculateLowerIndex(idx1);
+        auto in_gemmk_gemmn_coord =
+            make_dynamic_tensor_coordinate(in_gemmk_gemmn_global_desc, MultiIndex<2>{0, 0});
 
-        const index_t offset = in_gemmk_gemmn_global_desc.CalculateOffset(idx0);
+        for(index_t iter = 0; iter < 100; ++iter)
+        {
+            constexpr auto gemmk1_gemmn0 = MultiIndex<2>{1, 0};
 
-        print_array("idx0:", idx0);
-        print_array("idx1:", idx1);
-        print_array("idx2:", idx2);
-        printf("offset %d\n", offset);
+            printf("iter %d\n", iter);
+
+            print_array("idx0: ", in_gemmk_gemmn_coord.GetIndex());
+            print_array("idx1: ", in_gemmk_gemmn_coord.GetLowerCoordinate().GetIndex());
+            print_array("idx2: ",
+                        in_gemmk_gemmn_coord.GetLowerCoordinate().GetLowerCoordinate().GetIndex());
+            print_array("idx3: ",
+                        in_gemmk_gemmn_coord.GetLowerCoordinate()
+                            .GetLowerCoordinate()
+                            .GetLowerCoordinate()
+                            .GetIndex());
+            print_array("idx4: ",
+                        in_gemmk_gemmn_coord.GetLowerCoordinate()
+                            .GetLowerCoordinate()
+                            .GetLowerCoordinate()
+                            .GetLowerCoordinate()
+                            .GetIndex());
+            printf("offset: %d\n", in_gemmk_gemmn_coord.GetOffset());
+
+            printf("\n");
+
+            in_gemmk_gemmn_coord += gemmk1_gemmn0;
+        }
     }
 
     std::size_t data_sz = sizeof(T);
@@ -79,7 +97,6 @@ void device_dummy_dynamic_transform(InDesc,
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
-#if 0
     using dummy_transform = DummyDynamicTransform<BlockSize>;
 
     for(index_t i = 0; i < 5; ++i)
@@ -93,7 +110,7 @@ void device_dummy_dynamic_transform(InDesc,
         {
             launch_kernel(run_gridwise_operation<dummy_transform,
                                                  index_t* const,
-                                                 index_t* const,
+                                                 float* const,
                                                  float* const,
                                                  const DynamicNativeTensorDescriptor<4>,
                                                  const DynamicNativeTensorDescriptor<4>,
@@ -106,8 +123,8 @@ void device_dummy_dynamic_transform(InDesc,
                           dim3(BlockSize),
                           0,
                           0,
-                          static_cast<index_t*>(in_nchw_device_buf.GetDeviceBuffer()),
                           static_cast<index_t*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                          static_cast<float*>(in_nchw_device_buf.GetDeviceBuffer()),
                           static_cast<float*>(out_nkhw_device_buf.GetDeviceBuffer()),
                           wei_kcyx_desc,
                           in_nchw_desc,
@@ -118,7 +135,6 @@ void device_dummy_dynamic_transform(InDesc,
                           in_right_pads);
         }
     }
-#endif
 
     out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
 }

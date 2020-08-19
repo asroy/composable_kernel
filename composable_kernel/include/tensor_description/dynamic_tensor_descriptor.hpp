@@ -20,6 +20,11 @@ struct DynamicNativeTensorDescriptor
     {
     }
 
+    __host__ __device__ explicit constexpr DynamicNativeTensorDescriptor()
+        : lengths_{make_zero_array<index_t, NDim>()}, strides_{make_zero_array<index_t, NDim>()}
+    {
+    }
+
     __host__ __device__ static constexpr index_t GetNumOfDimension() { return NDim; }
 
     __host__ __device__ constexpr auto GetLengths() const { return lengths_; }
@@ -62,12 +67,10 @@ struct DynamicNativeTensorDescriptor
         return offset;
     }
 
-    template <typename UpIdxDiff, typename UpIdx, typename LowIdx>
-    __host__ __device__ constexpr index_t CalculateOffsetDiff(const UpIdxDiff& idx_up_diff,
-                                                              const LowIdx& /* idx_low_old */,
-                                                              const UpIdx& /* idx_up_old */) const
+    template <typename IdxDiff>
+    __host__ __device__ constexpr index_t CalculateOffsetDiff(const IdxDiff& idx_diff) const
     {
-        return CalculateOffset(idx_up_diff);
+        return CalculateOffset(idx_diff);
     }
 
     template <typename Idx>
@@ -92,13 +95,16 @@ template <typename LowTensorDescriptor, // DynamicNativeTensorDescriptor or
           typename UpDimensionIds>      // Tuple<Sequence<...>>
 struct DynamicTransformedTensorDescriptor
 {
-    const LowTensorDescriptor low_tensor_desc_;
-    const Transforms transforms_;
+    using LowerDesc = LowTensorDescriptor;
+    using UpperDesc = DynamicTransformedTensorDescriptor;
+
     static constexpr index_t NTransform = Transforms::Size();
+    const LowerDesc low_tensor_desc_;
+    const Transforms transforms_;
 
     __host__ __device__ static constexpr index_t GetNumOfLowerDimension()
     {
-        return LowTensorDescriptor::GetNumOfDimension();
+        return LowerDesc::GetNumOfDimension();
     }
 
     __host__ __device__ static constexpr index_t GetNumOfUpperDimension()
@@ -138,7 +144,7 @@ struct DynamicTransformedTensorDescriptor
     };
 
     __host__ __device__ explicit constexpr DynamicTransformedTensorDescriptor(
-        const LowTensorDescriptor& low_tensor_desc, const Transforms& transforms)
+        const LowerDesc& low_tensor_desc, const Transforms& transforms)
         : low_tensor_desc_{low_tensor_desc}, transforms_{transforms}
     {
         static_assert(NTransform == Transforms::Size() && NTransform == LowDimensionIds::Size() &&
@@ -178,7 +184,12 @@ struct DynamicTransformedTensorDescriptor
         //   of lower-tensor-descriptor
     }
 
-    __host__ __device__ static constexpr auto GetNumOfDimension()
+    __host__ __device__ explicit constexpr DynamicTransformedTensorDescriptor()
+        : low_tensor_desc_{}, transforms_{}
+    {
+    }
+
+    __host__ __device__ static constexpr index_t GetNumOfDimension()
     {
         return GetNumOfUpperDimension();
     }
@@ -281,7 +292,7 @@ struct DynamicTransformedTensorDescriptor
     {
         LowerIndex idx_low_diff;
 
-        CalculateLowerIndex(idx_low_diff, idx_up_diff, idx_low_old, idx_up_old);
+        CalculateLowerIndexDiff(idx_low_diff, idx_up_diff, idx_low_old, idx_up_old);
 
         return idx_low_diff;
     }
@@ -321,7 +332,7 @@ struct DynamicTransformedTensorDescriptor
                 const auto up_dims_part = UpDimensionIds{}.At(itran);
                 const auto idx_up_part  = pick_array_element(idx_up, up_dims_part);
 
-                flag = flag && IsValidUpperIndexMappedToValidLowerIndex(idx_up_part);
+                flag = flag && tran.IsValidUpperIndexMappedToValidLowerIndex(idx_up_part);
             }
         });
 

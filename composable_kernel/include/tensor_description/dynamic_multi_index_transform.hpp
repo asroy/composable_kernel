@@ -344,7 +344,8 @@ struct DynamicMerge
         // If neither 1) nor 2) is satisfied, then the calculation will also be
         // computed at
         //   run-time each time this function is called, and can be very expensive.
-        LowerIndex idx_low_diff_const = CalculateLowerIndex(idx_up_diff);
+        LowerIndex idx_low_diff_const;
+        CalculateLowerIndex(idx_low_diff_const, idx_up_diff);
 
         // do carry check on each low dimension in reversed order
         // do not need to check the first dimension
@@ -361,15 +362,15 @@ struct DynamicMerge
                 low_lengths_[i] + idx_low_diff_const[i];
 #endif
 
-            index_t idx_low_tmp[i] = idx_low_old[i] + carry;
+            index_t idx_low_tmp = idx_low_old[i] + carry;
 
-            bool do_carry = idx_low_tmp[i] >= idx_low_length_minus_idx_low_diff_const;
+            bool do_carry = idx_low_tmp >= idx_low_length_minus_idx_low_diff_const;
 #if 0
-            bool do_borrow = idx_low_tmp[i] < -idx_low_diff_const[i];
+            bool do_borrow = idx_low_tmp < -idx_low_diff_const[i];
 #endif
 
             idx_low_diff(i) =
-                do_carry ? -idx_low_length_minus_idx_low_diff_const : idx_low_diff_const;
+                do_carry ? -idx_low_length_minus_idx_low_diff_const : idx_low_diff_const[i];
 #if 0
             idx_low_diff(i) =
                 do_borrow ? idx_low_length_plus_idx_low_diff_const : idx_low_diff[i];

@@ -2,10 +2,9 @@
 #define CK_DUMMY_DYNAMIC_TRANSFORM_HPP
 
 #include "common_header.hpp"
-#include "tensor_descriptor.hpp"
-#include "tensor_descriptor_helper.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
+#include "dynamic_tensor_coordinate.hpp"
 
 namespace ck {
 __host__ __device__ constexpr auto
@@ -83,7 +82,7 @@ template <index_t BlockSize>
 struct DummyDynamicTransform
 {
     __device__ void Run_v1(index_t* const __restrict__ p_wei_global,
-                           index_t* const __restrict__ p_in_global,
+                           float* const __restrict__ p_in_global,
                            float* const __restrict__ p_out_global,
                            const DynamicNativeTensorDescriptor<4> wei_k_c_y_x_global_desc,
                            const DynamicNativeTensorDescriptor<4> in_n_c_hi_wi_global_desc,
@@ -522,7 +521,7 @@ struct DummyDynamicTransform
     }
 
     __device__ void Run_v2(index_t* const __restrict__ p_wei_global,
-                           index_t* const __restrict__ p_in_global,
+                           float* const __restrict__ p_in_global,
                            float* const __restrict__ p_out_global,
                            const DynamicNativeTensorDescriptor<4> wei_k_c_y_x_global_desc,
                            const DynamicNativeTensorDescriptor<4> in_n_c_hi_wi_global_desc,
@@ -542,24 +541,23 @@ struct DummyDynamicTransform
 
         const auto in_gemmk_gemmn_global_desc = transformed_tensor_descs.At(Number<0>{});
 
-#pragma unroll 1
+        MultiIndex<2> idx;
+
+        // initialize idx
+        for(index_t i = 0; i < 2; ++i)
+        {
+            idx(i) = p_wei_global[get_thread_local_1d_id() + i];
+        }
+
+        const index_t niter = p_wei_global[10];
+
+        auto in_gemmk_gemmn_coord = make_dynamic_tensor_coordinate(in_gemmk_gemmn_global_desc, idx);
+
         for(index_t iter = 0; iter < 100; ++iter)
         {
-            //
-            MultiIndex<2> idx;
+            constexpr auto gemmk1_gemmn0 = MultiIndex<2>{1, 0};
 
-            // initialize idx
-            for(index_t i = 0; i < 2; ++i)
-            {
-                idx(i) = p_wei_global[10 * iter + get_thread_local_1d_id() + i];
-            }
-
-            // offset
-            index_t offset = in_gemmk_gemmn_global_desc.CalculateOffset(idx);
-
-            // is_in_bound
-            bool is_in_bound =
-                in_gemmk_gemmn_global_desc.IsValidUpperIndexMappedToValidLowerIndex(idx);
+            in_gemmk_gemmn_coord += gemmk1_gemmn0;
 
             // write
             float value = 1;
@@ -575,14 +573,14 @@ struct DummyDynamicTransform
                              true,
                              1,
                              p_out_global,
-                             offset,
-                             is_in_bound,
-                             out_n_k_ho_wo_global_desc.GetElementSpace());
+                             in_gemmk_gemmn_coord.GetOffset(),
+                             in_gemmk_gemmn_coord.IsOffsetValidAssumingUpperIndexIsValid(),
+                             in_gemmk_gemmn_global_desc.GetElementSpace());
         }
     }
 
     __device__ void Run(index_t* const __restrict__ p_wei_global,
-                        index_t* const __restrict__ p_in_global,
+                        float* const __restrict__ p_in_global,
                         float* const __restrict__ p_out_global,
                         const DynamicNativeTensorDescriptor<4> wei_k_c_y_x_global_desc,
                         const DynamicNativeTensorDescriptor<4> in_n_c_hi_wi_global_desc,
