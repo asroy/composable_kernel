@@ -14,6 +14,12 @@ __host__ __device__ constexpr auto make_multi_index(Xs... xs)
     return MultiIndex<sizeof...(Xs)>(xs...);
 }
 
+template <index_t NSize>
+__host__ __device__ constexpr auto make_zero_multi_index()
+{
+    make_zero_array<index_t, NSize>();
+}
+
 template <index_t Length>
 struct PassThrough
 {

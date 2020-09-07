@@ -553,7 +553,7 @@ struct DummyDynamicTransform
 
         auto in_gemmk_gemmn_coord = make_dynamic_tensor_coordinate(in_gemmk_gemmn_global_desc, idx);
 
-        for(index_t iter = 0; iter < 100; ++iter)
+        for(index_t iter = 0; iter < niter; ++iter)
         {
             constexpr auto gemmk1_gemmn0 = MultiIndex<2>{1, 0};
 
@@ -574,7 +574,11 @@ struct DummyDynamicTransform
                              1,
                              p_out_global,
                              in_gemmk_gemmn_coord.GetOffset(),
+#if 0
                              in_gemmk_gemmn_coord.IsOffsetValidAssumingUpperIndexIsValid(),
+#else
+                             true,
+#endif
                              in_gemmk_gemmn_global_desc.GetElementSpace());
         }
     }
