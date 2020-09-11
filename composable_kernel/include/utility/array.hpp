@@ -16,23 +16,6 @@ struct Array
     // TODO: implement empty Array
     TData mData[NSize + 1] = {0};
 
-#if 0
-    __host__ __device__ explicit constexpr Array(TData x)
-        : mData{x}
-    {}
-
-    __host__ __device__ explicit constexpr Array()
-        : Array(TData{0})
-    {}
-
-    template <typename... Xs>
-    __host__ __device__ constexpr Array(Xs... xs)
-        : mData{static_cast<TData>(xs)...}
-    {
-        static_assert(sizeof...(Xs) == NSize, "wrong! size");
-    }
-#endif
-
     __host__ __device__ static constexpr index_t Size() { return NSize; }
 
     // TODO: remove

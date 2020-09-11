@@ -696,7 +696,7 @@ struct DummyDynamicTransform
         auto in_gemmk_gemmn_coord =
             make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, idx);
 
-        constexpr auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
+        const auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
             in_gemmk_gemmn_global_desc, MultiIndex<2>{{1, 0}});
 
         for(index_t iter = 0; iter < niter; ++iter)
