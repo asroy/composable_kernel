@@ -115,6 +115,7 @@ struct lambda_array_math
     }
 };
 
+#if 0
 // Array = Array + Array
 template <typename TData, index_t NSize>
 __host__ __device__ constexpr auto operator+(Array<TData, NSize> a, Array<TData, NSize> b)
@@ -210,6 +211,7 @@ __host__ __device__ constexpr auto operator*(Array<TData, NSize> a, Sequence<Is.
 
     return result;
 }
+#endif
 
 // Array = Sequence - Array
 template <typename TData, index_t NSize, index_t... Is>
@@ -242,15 +244,15 @@ __host__ __device__ constexpr auto operator*(TData v, Array<TData, NSize> a)
     return result;
 }
 
-template <typename TData, index_t NSize, typename Reduce>
-__host__ __device__ constexpr TData
-reduce_on_array(const Array<TData, NSize>& a, Reduce f, TData init)
+template <typename TData, typename Arr, typename Reduce>
+__host__ __device__ constexpr TData reduce_on_array(const Arr& a, Reduce f, TData init)
 {
+    static_assert(is_same<typename Arr::data_type, TData>::value, "wrong! different data type");
+    static_assert(Arr::Size() > 0, "wrong");
+
     TData result = init;
 
-    static_assert(NSize > 0, "wrong");
-
-    static_for<0, NSize, 1>{}([&](auto I) { result = f(result, a[I]); });
+    static_for<0, Arr::Size(), 1>{}([&](auto I) { result = f(result, a[I]); });
 
     return result;
 }

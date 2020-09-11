@@ -11,6 +11,19 @@ __host__ __device__ constexpr auto make_tuple(Xs&&... xs)
     return Tuple<remove_cv_t<remove_reference_t<Xs>>...>(std::forward<Xs>(xs)...);
 }
 
+template <typename F, index_t N>
+__host__ __device__ constexpr auto generate_tuple(F&& f, Number<N>)
+{
+    return unpack([&f](auto&&... xs) { return make_tuple(f(xs)...); },
+                  typename arithmetic_sequence_gen<0, N, 1>::type{});
+}
+
+template <typename... Tuples>
+__host__ __device__ constexpr auto merge_tuples(Tuples... tuples)
+{
+    return unpack([&tuples...](auto... xs) { return make_tuple(xs...); }, tuples...);
+}
+
 namespace detail {
 
 template <typename F, typename X, index_t... Is>

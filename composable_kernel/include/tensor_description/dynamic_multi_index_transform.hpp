@@ -212,9 +212,9 @@ struct DynamicEmbed
     {
     }
 
-    __host__ __device__ static constexpr index_t GetNumOfUpperDimension() { return 1; }
+    __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
 
-    __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return NDimUp; }
+    __host__ __device__ static constexpr index_t GetNumOfUpperDimension() { return NDimUp; }
 
     __host__ __device__ constexpr auto GetUpperLengths() const { return up_lengths_; }
 

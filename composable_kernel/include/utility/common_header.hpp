@@ -14,6 +14,7 @@
 #include "math.hpp"
 #include "number.hpp"
 #include "sequence.hpp"
+#include "sequence_helper.hpp"
 #include "synchronization.hpp"
 #include "tuple.hpp"
 #include "tuple_helper.hpp"

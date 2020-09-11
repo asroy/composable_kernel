@@ -99,7 +99,7 @@ struct DummyStaticTransform
 #pragma unroll 1
         for(index_t k = 0; k < 100; ++k)
         {
-            coord += Array<index_t, 2>{8, 0};
+            coord += Array<index_t, 2>{{8, 0}};
 
             Float value = 1;
             transfer_data<Float,

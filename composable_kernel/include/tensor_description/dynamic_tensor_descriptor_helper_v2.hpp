@@ -6,44 +6,52 @@
 
 namespace ck {
 
-template <typename LowerTensorDescriptor,
-          typename Transforms,
-          typename LowerVisibleDimensionLowerVisibleIdss,
-          typename UpperVisibleDimensionUpperVisibleIdss>
+template <index_t N>
 __host__ __device__ constexpr auto
-transform_dynamic_tensor_descriptor_v2(const LowerTensorDescriptor& low_tensor_desc,
-                                       const Transforms& transforms,
-                                       LowerVisibleDimensionLowerVisibleIdss,
-                                       UpperVisibleDimensionUpperVisibleIdss)
+make_dynamic_native_tensor_descriptor_packed_v2(const MultiIndex<N>& lengths)
 {
-    // convert lower visible dimension idss (tuple of sequences) to hidden dimension idss (tuple of sequences)
-    constexpr auto low_visible_dimension_hidden_idss = transform_tuples(
-        // convert lower visible dimension ids (a sequence) to hidden dimension ids (a sequence)
-        [](auto low_visible_dim_ids) {
-            return transform_sequences(
-                // convert lower visible dimension id to hidden dimension id
-                [](auto low_visible_dim_id) {
-                    return low_tensor_desc.GetVisibleDimensionIds()[low_visible_dim_id];
-                },
-                low_visible_dim_ids);
-        },
-        LowerVisibleDimensionLowerVisibleIdss{});
 
-    constexpr auto up_visible_dims_
+    const auto transforms              = make_tuple(DynamicUnMerge<N>{lengths});
+    constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
+    constexpr auto up_dim_hidden_idss =
+        make_tuple(typename arithmetic_sequence_gen<1, N + 1, 1>::type{});
+    constexpr auto visible_dim_hidden_ids = typename arithmetic_sequence_gen<0, N, 1>::type{};
 
-    const auto all_transforms = merge_tuples(old_tensor_desc.GetTransforms(), new_transforms);
-    constexpr auto all_low_dim_idss =
-        merge_tuples(old_tensor_desc.GetLowerDimensionIdss(), new_low_dim_idss);
-    constexpr auto all_up_dim_idss =
-        merge_tuples(old_tensor_desc.GetUpperDimensionIdss(), new_up_dim_idss);
+    const index_t element_space_size =
+        reduce_on_array(lengths, math::multiplies<index_t>{}, index_t{1});
 
-    constexpr auto new_visible_dim_ids = new_up_dim_idss
+    return DynamicTensorDescriptor_v2<decltype(transforms),
+                                      decltype(low_dim_hidden_idss),
+                                      decltype(up_dim_hidden_idss),
+                                      decltype(visible_dim_hidden_ids)>{transforms,
+                                                                        element_space_size};
+}
 
-        return DynamicTensorDescriptor_v2<decltype(all_transforms),
-                                          decltype(all_low_dim_idss),
-                                          decltype(all_up_dim_idss),
-                                          decltype(new_visible_dim_ids)>{
-            all_transforms, old_tensor_desc.GetElementSpaceSize()};
+template <index_t N>
+__host__ __device__ constexpr auto
+make_dynamic_native_tensor_descriptor_v2(const MultiIndex<N>& lengths, const MultiIndex<N>& strides)
+{
+    const auto coefficients = strides.PushBack(index_t{0});
+
+    const auto transforms              = make_tuple(DynamicEmbed<N>{lengths, coefficients});
+    constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
+    constexpr auto up_dim_hidden_idss =
+        make_tuple(typename arithmetic_sequence_gen<1, N + 1, 1>::type{});
+    constexpr auto visible_dim_hidden_ids = typename arithmetic_sequence_gen<0, N, 1>::type{};
+
+    index_t element_space_size = 1;
+
+#pragma unroll
+    for(index_t i = 0; i < N; ++i)
+    {
+        element_space_size += (lengths[i] - 1) * strides[i];
+    }
+
+    return DynamicTensorDescriptor_v2<decltype(transforms),
+                                      decltype(low_dim_hidden_idss),
+                                      decltype(up_dim_hidden_idss),
+                                      decltype(visible_dim_hidden_ids)>{transforms,
+                                                                        element_space_size};
 }
 
 } // namespace ck

@@ -17,7 +17,7 @@ __host__ __device__ constexpr auto make_multi_index(Xs... xs)
 template <index_t NSize>
 __host__ __device__ constexpr auto make_zero_multi_index()
 {
-    make_zero_array<index_t, NSize>();
+    return make_zero_array<index_t, NSize>();
 }
 
 template <index_t Length>
@@ -425,7 +425,7 @@ struct Embed
 
     __host__ __device__ static constexpr auto CalculateLowerIndex(const UpperIndex& idx_up)
     {
-        LowerIndex idx_low(Coefficients{}[nDimUp]);
+        LowerIndex idx_low = {Coefficients{}[nDimUp]};
 
         for(index_t i = 0; i < nDimUp; ++i)
         {

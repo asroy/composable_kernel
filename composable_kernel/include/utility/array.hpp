@@ -16,14 +16,22 @@ struct Array
     // TODO: implement empty Array
     TData mData[NSize + 1] = {0};
 
-    __host__ __device__ explicit constexpr Array() {}
+#if 0
+    __host__ __device__ explicit constexpr Array(TData x)
+        : mData{x}
+    {}
 
-    template <typename X, typename... Xs>
-    __host__ __device__ constexpr Array(X x, Xs... xs)
-        : mData{static_cast<TData>(x), static_cast<TData>(xs)...}
+    __host__ __device__ explicit constexpr Array()
+        : Array(TData{0})
+    {}
+
+    template <typename... Xs>
+    __host__ __device__ constexpr Array(Xs... xs)
+        : mData{static_cast<TData>(xs)...}
     {
-        static_assert(sizeof...(Xs) + 1 == NSize, "wrong! size");
+        static_assert(sizeof...(Xs) == NSize, "wrong! size");
     }
+#endif
 
     __host__ __device__ static constexpr index_t Size() { return NSize; }
 
@@ -63,11 +71,69 @@ struct Array
     }
 
     template <typename T>
-    __host__ __device__ constexpr type& operator=(const T& x)
+    __host__ __device__ constexpr auto operator=(const T& a)
     {
-        static_for<0, Size(), 1>{}([&](auto i) { operator()(i) = x[i]; });
+        static_assert(T::Size() == Size(), "wrong! size not the same");
+
+        static_for<0, Size(), 1>{}([&](auto i) { operator()(i) = a[i]; });
 
         return *this;
+    }
+
+    template <typename T>
+    __host__ __device__ constexpr auto operator+=(const T& a)
+    {
+        static_assert(T::Size() == Size(), "wrong! size not the same");
+
+        static_for<0, Size(), 1>{}([&](auto i) { operator()(i) += a[i]; });
+
+        return *this;
+    }
+
+    template <typename T>
+    __host__ __device__ constexpr auto operator-=(const T& a)
+    {
+        static_assert(T::Size() == Size(), "wrong! size not the same");
+
+        static_for<0, Size(), 1>{}([&](auto i) { operator()(i) -= a[i]; });
+
+        return *this;
+    }
+
+    template <typename T>
+    __host__ __device__ constexpr auto operator+(const T& a) const
+    {
+        static_assert(T::Size() == Size(), "wrong! size not the same");
+
+        type r;
+
+        static_for<0, Size(), 1>{}([&](auto i) { r(i) = operator[](i) + a[i]; });
+
+        return r;
+    }
+
+    template <typename T>
+    __host__ __device__ constexpr auto operator-(const T& a) const
+    {
+        static_assert(T::Size() == Size(), "wrong! size not the same");
+
+        type r;
+
+        static_for<0, Size(), 1>{}([&](auto i) { r(i) = operator[](i) - a[i]; });
+
+        return r;
+    }
+
+    template <typename T>
+    __host__ __device__ constexpr auto operator*(const T& a) const
+    {
+        static_assert(T::Size() == Size(), "wrong! size not the same");
+
+        type r;
+
+        static_for<0, Size(), 1>{}([&](auto i) { r(i) = operator[](i) * a[i]; });
+
+        return r;
     }
 
     struct lambda_PushBack // emulate constexpr lambda
@@ -150,13 +216,30 @@ struct ArrayElementPicker
     }
 
     template <typename T>
-    __host__ __device__ constexpr type& operator=(const T& a)
+    __host__ __device__ constexpr auto operator=(const T& a)
     {
         static_for<0, Size(), 1>{}([&](auto i) { operator()(i) = a[i]; });
 
         return *this;
     }
 
+    template <typename T>
+    __host__ __device__ constexpr auto operator+=(const T& a)
+    {
+        static_for<0, Size(), 1>{}([&](auto i) { operator()(i) += a[i]; });
+
+        return *this;
+    }
+
+    template <typename T>
+    __host__ __device__ constexpr auto operator-=(const T& a)
+    {
+        static_for<0, Size(), 1>{}([&](auto i) { operator()(i) -= a[i]; });
+
+        return *this;
+    }
+
+    private:
     Arr& mArray;
 };
 
