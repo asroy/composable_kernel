@@ -15,7 +15,7 @@ make_dynamic_native_tensor_descriptor_packed_v2(const MultiIndex<N>& lengths)
     constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
     constexpr auto up_dim_hidden_idss =
         make_tuple(typename arithmetic_sequence_gen<1, N + 1, 1>::type{});
-    constexpr auto visible_dim_hidden_ids = typename arithmetic_sequence_gen<0, N, 1>::type{};
+    constexpr auto visible_dim_hidden_ids = typename arithmetic_sequence_gen<1, N + 1, 1>::type{};
 
     const index_t element_space_size =
         reduce_on_array(lengths, math::multiplies<index_t>{}, index_t{1});
@@ -37,7 +37,7 @@ make_dynamic_native_tensor_descriptor_v2(const MultiIndex<N>& lengths, const Mul
     constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
     constexpr auto up_dim_hidden_idss =
         make_tuple(typename arithmetic_sequence_gen<1, N + 1, 1>::type{});
-    constexpr auto visible_dim_hidden_ids = typename arithmetic_sequence_gen<0, N, 1>::type{};
+    constexpr auto visible_dim_hidden_ids = typename arithmetic_sequence_gen<1, N + 1, 1>::type{};
 
     index_t element_space_size = 1;
 

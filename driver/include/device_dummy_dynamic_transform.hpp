@@ -54,7 +54,7 @@ void device_dummy_dynamic_transform(InDesc,
         auto in_gemmk_gemmn_coord =
             make_dynamic_tensor_coordinate(in_gemmk_gemmn_global_desc, MultiIndex<2>{0, 0});
 
-        for(index_t iter = 0; iter < 100; ++iter)
+        for(index_t iter = 0; iter < 10; ++iter)
         {
             constexpr auto gemmk1_gemmn0 = MultiIndex<2>{1, 0};
 
@@ -190,17 +190,14 @@ void device_dummy_dynamic_transform_v2(InDesc,
             make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, MultiIndex<2>{0, 0});
 
         const auto in_gemmk_gemmn_coord_step =
-            make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_global_desc, MultiIndex<2>{1, 0});
+            make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_global_desc, MultiIndex<2>{0, 1});
 
         for(index_t iter = 0; iter < 100; ++iter)
         {
-            constexpr auto gemmk1_gemmn0 = MultiIndex<2>{1, 0};
-
             printf("iter %d\n", iter);
-
-            print_array("idx: ", in_gemmk_gemmn_coord.GetIndex());
+            print_array_v2("visible idx: ", in_gemmk_gemmn_coord.GetIndex());
+            print_array_v2("hidden idx: ", in_gemmk_gemmn_coord.GetHiddenIndex());
             printf("offset: %d\n", in_gemmk_gemmn_coord.GetOffset());
-
             printf("\n");
 
             move_dynamic_tensor_coordinate_v2(

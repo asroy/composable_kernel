@@ -5,6 +5,12 @@
 
 namespace ck {
 
+template <typename X, typename... Xs>
+__host__ __device__ constexpr auto make_array(const X& x, const Xs&... xs)
+{
+    return Array<X, sizeof...(xs) + 1>{{x, xs...}};
+}
+
 template <typename Arr, typename Picks>
 __host__ __device__ constexpr auto pick_array_element(Arr& a, Picks)
 {

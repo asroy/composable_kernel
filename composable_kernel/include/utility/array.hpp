@@ -147,6 +147,18 @@ struct Array
 
         return new_array;
     }
+
+    template <index_t NAppend>
+    __host__ __device__ constexpr auto Append(const Array<TData, NAppend>& xs) const
+    {
+        Array<TData, NSize + NAppend> r;
+
+        static_for<0, NSize, 1>{}([&r, this ](auto i) constexpr { r(i) = (*this)[i]; });
+
+        static_for<0, NAppend, 1>{}([&r, &xs ](auto i) constexpr { r(NSize + i) = xs[i]; });
+
+        return r;
+    }
 };
 
 // Arr: Array

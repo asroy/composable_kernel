@@ -282,6 +282,8 @@ struct DynamicTensorCoordinateStep_v2
     {
     }
 
+    __host__ __device__ constexpr const auto& GetIndexDiff() const { return GetVisibleIndexDiff(); }
+
     // private:
     __host__ __device__ constexpr const auto& GetVisibleIndexDiff() const
     {
@@ -510,7 +512,12 @@ __host__ __device__ void move_dynamic_tensor_coordinate_v2(const TensorDesc& ten
     // this is what needs to be updated
     auto& idx_hidden = coord.GetHiddenIndex();
 
-    // update hidden index
+    // update visible index
+    auto idx_hidden_pick_visible =
+        pick_array_element(idx_hidden, TensorDesc::GetVisibleDimensionIds());
+    idx_hidden_pick_visible += coord_step.GetIndexDiff();
+
+    // update rest of hidden index
     static_for<ntransform - 1, -1, -1>{}([&](auto itran) {
         const auto& tran        = tensor_desc.GetTransforms().At(itran);
         constexpr auto dims_low = TensorDesc::GetLowerDimensionIdss().At(itran);
