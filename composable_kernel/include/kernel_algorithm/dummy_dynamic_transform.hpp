@@ -154,19 +154,19 @@ map_convolution_into_gemm_v2(const WeiDesc& wei_k_c_y_x_global_desc,
 }
 
 template <index_t BlockSize>
-struct DummyDynamicTransform
+struct DummyDynamicTransform_1
 {
     template <typename WeiDesc, typename InDesc, typename OutDesc>
-    __device__ void Run_v0(index_t* const __restrict__ p_wei_global,
-                           float* const __restrict__ p_in_global,
-                           float* const __restrict__ p_out_global,
-                           const WeiDesc wei_k_c_y_x_global_desc,
-                           const InDesc in_n_c_hi_wi_global_desc,
-                           const OutDesc out_n_k_ho_wo_global_desc,
-                           const Array<index_t, 2> conv_strides,
-                           const Array<index_t, 2> conv_dilations,
-                           const Array<index_t, 2> in_left_pads,
-                           const Array<index_t, 2> in_right_pads) const
+    __device__ void Run_0(index_t* const __restrict__ p_wei_global,
+                          float* const __restrict__ p_in_global,
+                          float* const __restrict__ p_out_global,
+                          const WeiDesc wei_k_c_y_x_global_desc,
+                          const InDesc in_n_c_hi_wi_global_desc,
+                          const OutDesc out_n_k_ho_wo_global_desc,
+                          const Array<index_t, 2> conv_strides,
+                          const Array<index_t, 2> conv_dilations,
+                          const Array<index_t, 2> in_left_pads,
+                          const Array<index_t, 2> in_right_pads) const
     {
 #if 1
         const index_t N = in_n_c_hi_wi_global_desc.GetLength(0);
@@ -597,16 +597,16 @@ struct DummyDynamicTransform
     }
 
     template <typename WeiDesc, typename InDesc, typename OutDesc>
-    __device__ void Run_v1(index_t* const __restrict__ p_wei_global,
-                           float* const __restrict__ p_in_global,
-                           float* const __restrict__ p_out_global,
-                           const WeiDesc wei_k_c_y_x_global_desc,
-                           const InDesc in_n_c_hi_wi_global_desc,
-                           const OutDesc out_n_k_ho_wo_global_desc,
-                           const Array<index_t, 2> conv_strides,
-                           const Array<index_t, 2> conv_dilations,
-                           const Array<index_t, 2> in_left_pads,
-                           const Array<index_t, 2> in_right_pads) const
+    __device__ void Run_1(index_t* const __restrict__ p_wei_global,
+                          float* const __restrict__ p_in_global,
+                          float* const __restrict__ p_out_global,
+                          const WeiDesc wei_k_c_y_x_global_desc,
+                          const InDesc in_n_c_hi_wi_global_desc,
+                          const OutDesc out_n_k_ho_wo_global_desc,
+                          const Array<index_t, 2> conv_strides,
+                          const Array<index_t, 2> conv_dilations,
+                          const Array<index_t, 2> in_left_pads,
+                          const Array<index_t, 2> in_right_pads) const
     {
         const auto transformed_tensor_descs = map_convolution_into_gemm(wei_k_c_y_x_global_desc,
                                                                         in_n_c_hi_wi_global_desc,
@@ -661,16 +661,16 @@ struct DummyDynamicTransform
     }
 
     template <typename WeiDesc, typename InDesc, typename OutDesc>
-    __device__ void Run_v2(index_t* const __restrict__ p_wei_global,
-                           float* const __restrict__ p_in_global,
-                           float* const __restrict__ p_out_global,
-                           const WeiDesc wei_k_c_y_x_global_desc,
-                           const InDesc in_n_c_hi_wi_global_desc,
-                           const OutDesc out_n_k_ho_wo_global_desc,
-                           const Array<index_t, 2> conv_strides,
-                           const Array<index_t, 2> conv_dilations,
-                           const Array<index_t, 2> in_left_pads,
-                           const Array<index_t, 2> in_right_pads) const
+    __device__ void Run_2(index_t* const __restrict__ p_wei_global,
+                          float* const __restrict__ p_in_global,
+                          float* const __restrict__ p_out_global,
+                          const WeiDesc wei_k_c_y_x_global_desc,
+                          const InDesc in_n_c_hi_wi_global_desc,
+                          const OutDesc out_n_k_ho_wo_global_desc,
+                          const Array<index_t, 2> conv_strides,
+                          const Array<index_t, 2> conv_dilations,
+                          const Array<index_t, 2> in_left_pads,
+                          const Array<index_t, 2> in_right_pads) const
     {
         const auto transformed_tensor_descs =
             map_convolution_into_gemm_v2(wei_k_c_y_x_global_desc,
@@ -737,16 +737,164 @@ struct DummyDynamicTransform
                         const Array<index_t, 2> in_left_pads,
                         const Array<index_t, 2> in_right_pads) const
     {
-        Run_v2(p_wei_global,
-               p_in_global,
-               p_out_global,
-               wei_k_c_y_x_global_desc,
-               in_n_c_hi_wi_global_desc,
-               out_n_k_ho_wo_global_desc,
-               conv_strides,
-               conv_dilations,
-               in_left_pads,
-               in_right_pads);
+        Run_2(p_wei_global,
+              p_in_global,
+              p_out_global,
+              wei_k_c_y_x_global_desc,
+              in_n_c_hi_wi_global_desc,
+              out_n_k_ho_wo_global_desc,
+              conv_strides,
+              conv_dilations,
+              in_left_pads,
+              in_right_pads);
+    }
+};
+
+template <index_t BlockSize>
+struct DummyDynamicTransform_2
+{
+    template <typename WeiDesc, typename InDesc, typename OutDesc>
+    __device__ void Run(index_t* const __restrict__ p_wei_global,
+                        float* const __restrict__ p_in_global,
+                        float* const __restrict__ p_out_global,
+                        const WeiDesc wei_k_c_y_x_global_desc,
+                        const InDesc in_n_c_hi_wi_global_desc,
+                        const OutDesc out_n_k_ho_wo_global_desc,
+                        const Array<index_t, 2> conv_strides,
+                        const Array<index_t, 2> conv_dilations,
+                        const Array<index_t, 2> in_left_pads,
+                        const Array<index_t, 2> in_right_pads) const
+    {
+        const index_t N = in_n_c_hi_wi_global_desc.GetLength(0);
+        const index_t C = in_n_c_hi_wi_global_desc.GetLength(1);
+        const index_t K = out_n_k_ho_wo_global_desc.GetLength(1);
+
+        const index_t Y = wei_k_c_y_x_global_desc.GetLength(2);
+        const index_t X = wei_k_c_y_x_global_desc.GetLength(3);
+
+        const index_t Hi = in_n_c_hi_wi_global_desc.GetLength(2);
+        const index_t Wi = in_n_c_hi_wi_global_desc.GetLength(3);
+
+        const index_t Ho = out_n_k_ho_wo_global_desc.GetLength(2);
+        const index_t Wo = out_n_k_ho_wo_global_desc.GetLength(3);
+
+        const index_t ConvStrideH = conv_strides[0];
+        const index_t ConvStrideW = conv_strides[1];
+
+        const index_t ConvDilationH = conv_dilations[0];
+        const index_t ConvDilationW = conv_dilations[1];
+
+        const index_t InLeftPadH  = in_left_pads[0];
+        const index_t InLeftPadW  = in_left_pads[1];
+        const index_t InRightPadH = in_right_pads[0];
+        const index_t InRightPadW = in_right_pads[1];
+
+        const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor_v2(
+            in_n_c_hi_wi_global_desc,
+            make_tuple(DynamicPassThrough{N},
+                       DynamicPassThrough{C},
+                       DynamicLeftPad{Hi, InLeftPadH},
+                       DynamicLeftPad{Wi, InLeftPadW}),
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
+
+        MultiIndex<4> idx;
+
+        // initialize idx
+        for(index_t i = 0; i < 4; ++i)
+        {
+            idx(i) = p_wei_global[get_thread_local_1d_id() + i];
+        }
+
+        const index_t niter = p_wei_global[10];
+
+        auto in_coord = make_dynamic_tensor_coordinate_v2(in_n_c_hip_wip_global_desc, idx);
+
+        const auto in_coord_step = make_dynamic_tensor_coordinate_step_v2(
+            in_n_c_hip_wip_global_desc, MultiIndex<4>{{1, 0, 0, 0}});
+
+        for(index_t iter = 0; iter < niter; ++iter)
+        {
+            move_dynamic_tensor_coordinate_v2(in_n_c_hip_wip_global_desc, in_coord, in_coord_step);
+
+            // write
+            float value = 1;
+
+            transfer_data<float,
+                          1,
+                          AddressSpace::Vgpr,
+                          AddressSpace::Global,
+                          InMemoryDataOperation::Set,
+                          1,
+                          1>(&value,
+                             0,
+                             true,
+                             1,
+                             p_out_global,
+                             in_coord.GetOffset(),
+                             coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                                 in_n_c_hip_wip_global_desc, in_coord),
+                             in_n_c_hip_wip_global_desc.GetElementSpaceSize());
+        }
+    }
+};
+
+template <index_t BlockSize>
+struct DummyDynamicTransform_3
+{
+    template <typename WeiDesc, typename InDesc, typename OutDesc, typename TransformInDesc>
+    __device__ void Run(index_t* const __restrict__ p_wei_global,
+                        float* const __restrict__ p_in_global,
+                        float* const __restrict__ p_out_global,
+                        const WeiDesc wei_k_c_y_x_global_desc,
+                        const InDesc in_n_c_hi_wi_global_desc,
+                        const OutDesc out_n_k_ho_wo_global_desc,
+                        const TransformInDesc in_gemmk_gemmn_global_desc,
+                        const Array<index_t, 2> conv_strides,
+                        const Array<index_t, 2> conv_dilations,
+                        const Array<index_t, 2> in_left_pads,
+                        const Array<index_t, 2> in_right_pads) const
+    {
+        MultiIndex<2> idx;
+
+        // initialize idx
+        for(index_t i = 0; i < 2; ++i)
+        {
+            idx(i) = p_wei_global[get_thread_local_1d_id() + i];
+        }
+
+        const index_t niter = p_wei_global[10];
+
+        auto in_gemmk_gemmn_coord =
+            make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, idx);
+
+        const auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
+            in_gemmk_gemmn_global_desc, MultiIndex<2>{{1, 0}});
+
+        for(index_t iter = 0; iter < niter; ++iter)
+        {
+            move_dynamic_tensor_coordinate_v2(
+                in_gemmk_gemmn_global_desc, in_gemmk_gemmn_coord, in_gemmk_gemmn_coord_step);
+
+            // write
+            float value = 1;
+
+            transfer_data<float,
+                          1,
+                          AddressSpace::Vgpr,
+                          AddressSpace::Global,
+                          InMemoryDataOperation::Set,
+                          1,
+                          1>(&value,
+                             0,
+                             true,
+                             1,
+                             p_out_global,
+                             in_gemmk_gemmn_coord.GetOffset(),
+                             coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                                 in_gemmk_gemmn_global_desc, in_gemmk_gemmn_coord),
+                             in_gemmk_gemmn_global_desc.GetElementSpaceSize());
+        }
     }
 };
 
