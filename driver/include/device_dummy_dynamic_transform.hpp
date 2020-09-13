@@ -192,7 +192,7 @@ void device_dummy_dynamic_transform_v2(InDesc,
         const auto in_gemmk_gemmn_coord_step =
             make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_global_desc, MultiIndex<2>{0, 1});
 
-        for(index_t iter = 0; iter < 100; ++iter)
+        for(index_t iter = 0; iter < 20; ++iter)
         {
             printf("iter %d\n", iter);
             print_array_v2("visible idx: ", in_gemmk_gemmn_coord.GetIndex());
