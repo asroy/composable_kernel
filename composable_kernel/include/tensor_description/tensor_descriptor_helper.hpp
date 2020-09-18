@@ -196,7 +196,7 @@ struct ClusterDescriptor
 
     __host__ __device__ static constexpr auto CalculateClusterIndex(index_t idx_1d)
     {
-        return mDesc.CalculateLowerIndex(MultiIndex<1>{idx_1d});
+        return mDesc.CalculateLowerIndex(MultiIndex<1>{{idx_1d}});
     }
 };
 

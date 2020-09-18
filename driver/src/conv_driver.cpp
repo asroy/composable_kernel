@@ -585,18 +585,18 @@ int main(int argc, char* argv[])
                                   RightPads{},
                                   nrepeat);
 #elif 0
-    device_dummy_dynamic_transform(in_nchw_desc,
-                                   in_nchw,
-                                   wei_kcyx_desc,
-                                   wei_kcyx,
-                                   out_nkhw_desc,
-                                   out_nkhw_device,
-                                   ConvStrides{},
-                                   ConvDilations{},
-                                   LeftPads{},
-                                   RightPads{},
-                                   nrepeat);
-#elif 0
+    device_dummy_dynamic_transform_1(in_nchw_desc,
+                                     in_nchw,
+                                     wei_kcyx_desc,
+                                     wei_kcyx,
+                                     out_nkhw_desc,
+                                     out_nkhw_device,
+                                     ConvStrides{},
+                                     ConvDilations{},
+                                     LeftPads{},
+                                     RightPads{},
+                                     nrepeat);
+#elif 1
     device_dummy_dynamic_transform_2(in_nchw_desc,
                                      in_nchw,
                                      wei_kcyx_desc,

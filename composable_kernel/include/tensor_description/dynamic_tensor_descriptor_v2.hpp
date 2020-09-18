@@ -150,7 +150,7 @@ struct DynamicTensorDescriptor_v2
                                                                       index_t element_space_size)
     {
         // zero initialization
-        HiddenIndex hidden_lengths{0};
+        HiddenIndex hidden_lengths{{0}};
 
         // this is the orignal tensor element space size
         hidden_lengths(0) = element_space_size;
@@ -319,7 +319,8 @@ struct lambda_get_up_dim_num
     template <typename I>
     __host__ __device__ constexpr auto operator()(I) const
     {
-        return Number<NewTransforms{}.At(I{}).GetNumOfUpperDimension()>{};
+        using Tran = remove_reference_t<decltype(NewTransforms{}.At(I{}))>;
+        return Number<Tran::GetNumOfUpperDimension()>{};
     }
 };
 
@@ -488,7 +489,7 @@ __host__ __device__ void move_dynamic_tensor_coordinate_v2(const TensorDesc& ten
     using HiddenIndex = MultiIndex<ndim_hidden>;
 
     // this is what needs to be calculated
-    auto idx_diff_hidden = HiddenIndex{0};
+    auto idx_diff_hidden = HiddenIndex{{0}};
 
     // initialize visible index diff
     //   idx_diff_hidden_pick_visible contains reference to idx_diff_hidden

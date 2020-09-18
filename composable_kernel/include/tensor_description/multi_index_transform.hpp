@@ -364,7 +364,7 @@ struct UnMerge
 
     __host__ __device__ static constexpr auto CalculateLowerIndex(const UpperIndex& idx_up)
     {
-        LowerIndex idx_low{0};
+        LowerIndex idx_low{{0}};
 
         constexpr auto pseudo_up_strides =
             reverse_inclusive_scan_sequence(
@@ -425,7 +425,7 @@ struct Embed
 
     __host__ __device__ static constexpr auto CalculateLowerIndex(const UpperIndex& idx_up)
     {
-        LowerIndex idx_low = {Coefficients{}[nDimUp]};
+        LowerIndex idx_low{{Coefficients{}[nDimUp]}};
 
         for(index_t i = 0; i < nDimUp; ++i)
         {

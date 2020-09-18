@@ -72,11 +72,12 @@ map_convolution_into_gemm(const WeiDesc& wei_k_c_y_x_global_desc,
         make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
         make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 
-    const auto in_gemmk_gemmn_global_desc = transform_dynamic_tensor_descriptor(
-        in_n_c_y_ho_x_wo_global_desc,
-        make_tuple(DynamicMerge<3>{{C, Y, X}}, DynamicMerge<3>{{N, Ho, Wo}}),
-        make_tuple(Sequence<1, 2, 4>{}, Sequence<0, 3, 5>{}),
-        make_tuple(Sequence<0>{}, Sequence<1>{}));
+    const auto in_gemmk_gemmn_global_desc =
+        transform_dynamic_tensor_descriptor(in_n_c_y_ho_x_wo_global_desc,
+                                            make_tuple(DynamicMerge<3>{MultiIndex<3>{{C, Y, X}}},
+                                                       DynamicMerge<3>{MultiIndex<3>{{N, Ho, Wo}}}),
+                                            make_tuple(Sequence<1, 2, 4>{}, Sequence<0, 3, 5>{}),
+                                            make_tuple(Sequence<0>{}, Sequence<1>{}));
 
     return make_tuple(in_gemmk_gemmn_global_desc);
 }
@@ -146,7 +147,8 @@ map_convolution_into_gemm_v2(const WeiDesc& wei_k_c_y_x_global_desc,
 
     const auto in_gemmk_gemmn_global_desc = transform_dynamic_tensor_descriptor_v2(
         in_n_c_y_ho_x_wo_global_desc,
-        make_tuple(DynamicMerge<3>{{C, Y, X}}, DynamicMerge<3>{{N, Ho, Wo}}),
+        make_tuple(DynamicMerge<3>{MultiIndex<3>{{C, Y, X}}},
+                   DynamicMerge<3>{MultiIndex<3>{{N, Ho, Wo}}}),
         make_tuple(Sequence<1, 2, 4>{}, Sequence<0, 3, 5>{}),
         make_tuple(Sequence<0>{}, Sequence<1>{}));
 
@@ -632,7 +634,7 @@ struct DummyDynamicTransform_1
 
         for(index_t iter = 0; iter < niter; ++iter)
         {
-            constexpr auto gemmk1_gemmn0 = MultiIndex<2>{1, 0};
+            constexpr auto gemmk1_gemmn0 = MultiIndex<2>{{1, 0}};
 
             in_gemmk_gemmn_coord += gemmk1_gemmn0;
 
@@ -793,8 +795,8 @@ struct DummyDynamicTransform_2
             in_n_c_hi_wi_global_desc,
             make_tuple(DynamicPassThrough{N},
                        DynamicPassThrough{C},
-                       DynamicLeftPad{Hi, InLeftPadH},
-                       DynamicLeftPad{Wi, InLeftPadW}),
+                       DynamicPassThrough{Hi},
+                       DynamicPassThrough{Wi}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 

@@ -12,17 +12,17 @@ template <class T,
           class ConvDilations,
           class InLeftPads,
           class InRightPads>
-void device_dummy_dynamic_transform(InDesc,
-                                    const Tensor<T>& in_nchw,
-                                    WeiDesc,
-                                    const Tensor<T>& wei_kcyx,
-                                    OutDesc,
-                                    Tensor<T>& out_nkhw,
-                                    ConvStrides,
-                                    ConvDilations,
-                                    InLeftPads,
-                                    InRightPads,
-                                    ck::index_t nrepeat)
+void device_dummy_dynamic_transform_1(InDesc,
+                                      const Tensor<T>& in_nchw,
+                                      WeiDesc,
+                                      const Tensor<T>& wei_kcyx,
+                                      OutDesc,
+                                      Tensor<T>& out_nkhw,
+                                      ConvStrides,
+                                      ConvDilations,
+                                      InLeftPads,
+                                      InRightPads,
+                                      ck::index_t nrepeat)
 {
     using namespace ck;
 
@@ -52,11 +52,11 @@ void device_dummy_dynamic_transform(InDesc,
         const auto in_gemmk_gemmn_global_desc = tensor_descs.At(Number<0>{});
 
         auto in_gemmk_gemmn_coord =
-            make_dynamic_tensor_coordinate(in_gemmk_gemmn_global_desc, MultiIndex<2>{0, 0});
+            make_dynamic_tensor_coordinate(in_gemmk_gemmn_global_desc, MultiIndex<2>{{0, 0}});
 
         for(index_t iter = 0; iter < 10; ++iter)
         {
-            constexpr auto gemmk1_gemmn0 = MultiIndex<2>{1, 0};
+            constexpr auto gemmk1_gemmn0 = MultiIndex<2>{{1, 0}};
 
             printf("iter %d\n", iter);
 
@@ -147,17 +147,17 @@ template <class T,
           class ConvDilations,
           class InLeftPads,
           class InRightPads>
-void device_dummy_dynamic_transform_v2(InDesc,
-                                       const Tensor<T>& in_nchw,
-                                       WeiDesc,
-                                       const Tensor<T>& wei_kcyx,
-                                       OutDesc,
-                                       Tensor<T>& out_nkhw,
-                                       ConvStrides,
-                                       ConvDilations,
-                                       InLeftPads,
-                                       InRightPads,
-                                       ck::index_t nrepeat)
+void device_dummy_dynamic_transform_2(InDesc,
+                                      const Tensor<T>& in_nchw,
+                                      WeiDesc,
+                                      const Tensor<T>& wei_kcyx,
+                                      OutDesc,
+                                      Tensor<T>& out_nkhw,
+                                      ConvStrides,
+                                      ConvDilations,
+                                      InLeftPads,
+                                      InRightPads,
+                                      ck::index_t nrepeat)
 {
     using namespace ck;
 
@@ -187,10 +187,10 @@ void device_dummy_dynamic_transform_v2(InDesc,
         const auto in_gemmk_gemmn_global_desc = tensor_descs.At(Number<0>{});
 
         auto in_gemmk_gemmn_coord =
-            make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, MultiIndex<2>{0, 0});
+            make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, MultiIndex<2>{{0, 0}});
 
-        const auto in_gemmk_gemmn_coord_step =
-            make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_global_desc, MultiIndex<2>{0, 1});
+        const auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
+            in_gemmk_gemmn_global_desc, MultiIndex<2>{{0, 1}});
 
         for(index_t iter = 0; iter < 20; ++iter)
         {
