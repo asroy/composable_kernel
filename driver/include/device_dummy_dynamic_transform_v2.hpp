@@ -50,6 +50,26 @@ void device_dummy_dynamic_transform_v2(InDesc,
 
     const auto in_gemmk_gemmn_global_desc = tensor_descs.At(Number<0>{});
 
+    // test on cpu
+    {
+        auto in_gemmk_gemmn_coord =
+            make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, MultiIndex<2>{{0, 0}});
+
+        const auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
+            in_gemmk_gemmn_global_desc, MultiIndex<2>{{1, 0}});
+
+        for(index_t iter = 0; iter < 10; ++iter)
+        {
+            printf("iter %d\n", iter);
+            print_array("idx: ", in_gemmk_gemmn_coord.GetIndex());
+            printf("offset: %d\n", in_gemmk_gemmn_coord.GetOffset());
+            printf("\n");
+
+            move_dynamic_tensor_coordinate_v2(
+                in_gemmk_gemmn_global_desc, in_gemmk_gemmn_coord, in_gemmk_gemmn_coord_step);
+        }
+    }
+
     std::size_t data_sz = sizeof(T);
     DeviceMem in_nchw_device_buf(data_sz * in_nchw.mDesc.GetElementSpace());
     DeviceMem wei_kcyx_device_buf(data_sz * wei_kcyx.mDesc.GetElementSpace());
@@ -64,8 +84,6 @@ void device_dummy_dynamic_transform_v2(InDesc,
 
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
-    using dummy_transform = DummyDynamicTransform_v2<BlockSize>;
-
     for(index_t i = 0; i < 5; ++i)
     {
         std::cout << "Start running " << nrepeat << " times..." << std::endl;
@@ -75,14 +93,14 @@ void device_dummy_dynamic_transform_v2(InDesc,
 
         for(index_t j = 0; j < nrepeat; ++j)
         {
-            launch_kernel(run_gridwise_operation<dummy_transform,
+#if 1
+            launch_kernel(run_gridwise_operation<DummyDynamicTransform_v2_1<BlockSize>,
                                                  index_t* const,
                                                  float* const,
                                                  float* const,
                                                  const decltype(wei_kcyx_desc),
                                                  const decltype(in_nchw_desc),
                                                  const decltype(out_nkhw_desc),
-                                                 const decltype(in_gemmk_gemmn_global_desc),
                                                  const Array<index_t, 2>,
                                                  const Array<index_t, 2>,
                                                  const Array<index_t, 2>,
@@ -97,11 +115,33 @@ void device_dummy_dynamic_transform_v2(InDesc,
                           wei_kcyx_desc,
                           in_nchw_desc,
                           out_nkhw_desc,
+                          conv_strides,
+                          conv_dilations,
+                          in_left_pads,
+                          in_right_pads);
+#else
+            launch_kernel(run_gridwise_operation<DummyDynamicTransform_v2_2<BlockSize>,
+                                                 index_t* const,
+                                                 float* const,
+                                                 float* const,
+                                                 const decltype(in_gemmk_gemmn_global_desc),
+                                                 const Array<index_t, 2>,
+                                                 const Array<index_t, 2>,
+                                                 const Array<index_t, 2>,
+                                                 const Array<index_t, 2>>,
+                          dim3(GridSize),
+                          dim3(BlockSize),
+                          0,
+                          0,
+                          static_cast<index_t*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                          static_cast<float*>(in_nchw_device_buf.GetDeviceBuffer()),
+                          static_cast<float*>(out_nkhw_device_buf.GetDeviceBuffer()),
                           in_gemmk_gemmn_global_desc,
                           conv_strides,
                           conv_dilations,
                           in_left_pads,
                           in_right_pads);
+#endif
         }
     }
 

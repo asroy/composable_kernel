@@ -81,16 +81,15 @@ map_convolution_into_gemm_v2(const WeiDesc& wei_k_c_y_x_global_desc,
 }
 
 template <index_t BlockSize>
-struct DummyDynamicTransform_v2
+struct DummyDynamicTransform_v2_1
 {
-    template <typename WeiDesc, typename InDesc, typename OutDesc, typename TransformInDesc>
+    template <typename WeiDesc, typename InDesc, typename OutDesc>
     __device__ void Run_1(index_t* const __restrict__ p_wei_global,
                           float* const __restrict__ p_in_global,
                           float* const __restrict__ p_out_global,
                           const WeiDesc wei_k_c_y_x_global_desc,
                           const InDesc in_n_c_hi_wi_global_desc,
                           const OutDesc out_n_k_ho_wo_global_desc,
-                          const TransformInDesc /* in_gemmk_gemmn_global_desc */,
                           const Array<index_t, 2> conv_strides,
                           const Array<index_t, 2> conv_dilations,
                           const Array<index_t, 2> in_left_pads,
@@ -131,14 +130,13 @@ struct DummyDynamicTransform_v2
         }
     }
 
-    template <typename WeiDesc, typename InDesc, typename OutDesc, typename TransformInDesc>
+    template <typename WeiDesc, typename InDesc, typename OutDesc>
     __device__ void Run_2(index_t* const __restrict__ p_wei_global,
                           float* const __restrict__ p_in_global,
                           float* const __restrict__ p_out_global,
                           const WeiDesc wei_k_c_y_x_global_desc,
                           const InDesc in_n_c_hi_wi_global_desc,
                           const OutDesc out_n_k_ho_wo_global_desc,
-                          const TransformInDesc /* in_gemmk_gemmn_global_desc */,
                           const Array<index_t, 2> conv_strides,
                           const Array<index_t, 2> conv_dilations,
                           const Array<index_t, 2> in_left_pads,
@@ -187,21 +185,21 @@ struct DummyDynamicTransform_v2
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 #else
-    const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor_v2(
-        transform_dynamic_tensor_descriptor_v2(
-            move(in_n_c_hi_wi_global_desc),
+        const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor_v2(
+            transform_dynamic_tensor_descriptor_v2(
+                move(in_n_c_hi_wi_global_desc),
+                make_tuple(DynamicPassThrough{N},
+                           DynamicPassThrough{C},
+                           DynamicLeftPad{Hi, InLeftPadH},
+                           DynamicLeftPad{Wi, InLeftPadW}),
+                make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
+                make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{})),
             make_tuple(DynamicPassThrough{N},
                        DynamicPassThrough{C},
-                       DynamicLeftPad{Hi, InLeftPadH},
-                       DynamicLeftPad{Wi, InLeftPadW}),
+                       DynamicRightPad{Hi + InLeftPadH, InRightPadH},
+                       DynamicRightPad{Wi + InLeftPadW, InRightPadW}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
-            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{})),
-        make_tuple(DynamicPassThrough{N},
-                   DynamicPassThrough{C},
-                   DynamicRightPad{Hi + InLeftPadH, InRightPadH},
-                   DynamicRightPad{Wi + InLeftPadW, InRightPadW}),
-        make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
-        make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 #endif
 
         MultiIndex<4> idx;
@@ -251,18 +249,39 @@ struct DummyDynamicTransform_v2
 #endif
     }
 
-    template <typename WeiDesc, typename InDesc, typename OutDesc, typename TransformInDesc>
-    __device__ void Run_3(index_t* const __restrict__ p_wei_global,
-                          float* const __restrict__ p_in_global,
-                          float* const __restrict__ p_out_global,
-                          const WeiDesc /* wei_k_c_y_x_global_desc */,
-                          const InDesc /* in_n_c_hi_wi_global_desc */,
-                          const OutDesc /* out_n_k_ho_wo_global_desc */,
-                          const TransformInDesc in_gemmk_gemmn_global_desc,
-                          const Array<index_t, 2> conv_strides,
-                          const Array<index_t, 2> conv_dilations,
-                          const Array<index_t, 2> in_left_pads,
-                          const Array<index_t, 2> in_right_pads) const
+    template <typename WeiDesc, typename InDesc, typename OutDesc>
+    __device__ void Run(index_t* const __restrict__ p_wei_global,
+                        float* const __restrict__ p_in_global,
+                        float* const __restrict__ p_out_global,
+                        const WeiDesc wei_k_c_y_x_global_desc,
+                        const InDesc in_n_c_hi_wi_global_desc,
+                        const OutDesc out_n_k_ho_wo_global_desc,
+                        const Array<index_t, 2> conv_strides,
+                        const Array<index_t, 2> conv_dilations,
+                        const Array<index_t, 2> in_left_pads,
+                        const Array<index_t, 2> in_right_pads) const
+    {
+        Run_1(p_wei_global,
+              p_in_global,
+              p_out_global,
+              wei_k_c_y_x_global_desc,
+              in_n_c_hi_wi_global_desc,
+              out_n_k_ho_wo_global_desc,
+              conv_strides,
+              conv_dilations,
+              in_left_pads,
+              in_right_pads);
+    }
+};
+
+template <index_t BlockSize>
+struct DummyDynamicTransform_v2_2
+{
+    template <typename TransformInDesc>
+    __device__ void Run(index_t* const __restrict__ p_wei_global,
+                        float* const __restrict__ p_in_global,
+                        float* const __restrict__ p_out_global,
+                        const TransformInDesc in_gemmk_gemmn_global_desc) const
     {
         MultiIndex<2> idx;
 
@@ -308,32 +327,6 @@ struct DummyDynamicTransform_v2
 #else
         p_out_global[in_gemmk_gemmn_global_desc.CalculateOffset(idx)] = 1;
 #endif
-    }
-
-    template <typename WeiDesc, typename InDesc, typename OutDesc, typename TransformInDesc>
-    __device__ void Run(index_t* const __restrict__ p_wei_global,
-                        float* const __restrict__ p_in_global,
-                        float* const __restrict__ p_out_global,
-                        const WeiDesc wei_k_c_y_x_global_desc,
-                        const InDesc in_n_c_hi_wi_global_desc,
-                        const OutDesc out_n_k_ho_wo_global_desc,
-                        const TransformInDesc in_gemmk_gemmn_global_desc,
-                        const Array<index_t, 2> conv_strides,
-                        const Array<index_t, 2> conv_dilations,
-                        const Array<index_t, 2> in_left_pads,
-                        const Array<index_t, 2> in_right_pads) const
-    {
-        Run_1(p_wei_global,
-              p_in_global,
-              p_out_global,
-              wei_k_c_y_x_global_desc,
-              in_n_c_hi_wi_global_desc,
-              out_n_k_ho_wo_global_desc,
-              in_gemmk_gemmn_global_desc,
-              conv_strides,
-              conv_dilations,
-              in_left_pads,
-              in_right_pads);
     }
 };
 
