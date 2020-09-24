@@ -125,7 +125,34 @@ struct DynamicTensorDescriptor_v2
     {
         static_assert(Idx::Size() == GetNumOfDimension(), "wrong! inconsistent # of dimension");
 
+#if 0 // debug
         return make_dynamic_tensor_coordinate_v2(*this, idx).GetOffset();
+#else
+        constexpr index_t ntransform   = GetNumOfTransform();
+        constexpr index_t ndim_hidden  = GetNumOfHiddenDimension();
+        constexpr index_t ndim_visible = GetNumOfVisibleDimension();
+        constexpr auto visible_dim_ids = GetVisibleDimensionIds();
+
+        MultiIndex<ndim_hidden> idx_hidden;
+
+        // initialize visible index
+        auto idx_hidden_pick_visible = pick_array_element(idx_hidden, visible_dim_ids);
+        idx_hidden_pick_visible      = idx;
+
+        // calculate hidden index
+        static_for<ntransform - 1, -1, -1>{}([this, &idx_hidden](auto itran) {
+            const auto& tran        = this->GetTransforms().At(itran);
+            constexpr auto dims_low = GetLowerDimensionIdss().At(itran);
+            constexpr auto dims_up  = GetUpperDimensionIdss().At(itran);
+
+            const auto idx_up = pick_array_element(idx_hidden, dims_up);
+            auto idx_low      = pick_array_element(idx_hidden, dims_low);
+
+            tran.CalculateLowerIndex(idx_low, idx_up);
+        });
+
+        return idx_hidden[0];
+#endif
     }
 
     // private:
