@@ -386,43 +386,5 @@ struct StaticallyIndexedArray<TData, 22> : Tuple<TData,
     using data_type = TData;
 };
 
-template <typename TData, index_t NSize, typename X>
-__host__ __device__ constexpr auto operator+=(StaticallyIndexedArray<TData, NSize>& y, const X& x)
-{
-    static_assert(X::Size() == NSize, "wrong! size not the same");
-    static_for<0, NSize, 1>{}([&](auto i) { y(i) += x[i]; });
-    return y;
-}
-
-template <typename TData, index_t NSize, typename X>
-__host__ __device__ constexpr auto operator-=(StaticallyIndexedArray<TData, NSize>& y, const X& x)
-{
-    static_assert(X::Size() == NSize, "wrong! size not the same");
-    static_for<0, NSize, 1>{}([&](auto i) { y(i) -= x[i]; });
-    return y;
-}
-
-template <typename TData, index_t NSize, typename T>
-__host__ __device__ constexpr auto operator+(const StaticallyIndexedArray<TData, NSize>& a,
-                                             const T& b)
-{
-    using type = StaticallyIndexedArray<TData, NSize>;
-    static_assert(T::Size() == NSize, "wrong! size not the same");
-    type r;
-    static_for<0, NSize, 1>{}([&](auto i) { r(i) = a[i] + b[i]; });
-    return r;
-}
-
-template <typename TData, index_t NSize, typename T>
-__host__ __device__ constexpr auto operator-(const StaticallyIndexedArray<TData, NSize>& a,
-                                             const T& b)
-{
-    using type = StaticallyIndexedArray<TData, NSize>;
-    static_assert(T::Size() == NSize, "wrong! size not the same");
-    type r;
-    static_for<0, NSize, 1>{}([&](auto i) { r(i) = a[i] - b[i]; });
-    return r;
-}
-
 } // namespace ck
 #endif

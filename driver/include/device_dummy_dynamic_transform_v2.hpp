@@ -29,16 +29,16 @@ void device_dummy_dynamic_transform_v2(InDesc,
     using TDevice = typename conditional<is_same<half_float::half, T>::value, half_t, T>::type;
 
     const auto in_nchw_desc = make_dynamic_native_tensor_descriptor_v2(
-        to_array(InDesc::GetLengths()), to_array(InDesc::GetStrides()));
+        to_multi_index(InDesc::GetLengths()), to_multi_index(InDesc::GetStrides()));
     const auto wei_kcyx_desc = make_dynamic_native_tensor_descriptor_v2(
-        to_array(WeiDesc::GetLengths()), to_array(WeiDesc::GetStrides()));
+        to_multi_index(WeiDesc::GetLengths()), to_multi_index(WeiDesc::GetStrides()));
     const auto out_nkhw_desc = make_dynamic_native_tensor_descriptor_v2(
-        to_array(OutDesc::GetLengths()), to_array(OutDesc::GetStrides()));
+        to_multi_index(OutDesc::GetLengths()), to_multi_index(OutDesc::GetStrides()));
 
-    const auto conv_strides   = to_array(ConvStrides{});
-    const auto conv_dilations = to_array(ConvDilations{});
-    const auto in_left_pads   = to_array(InLeftPads{});
-    const auto in_right_pads  = to_array(InRightPads{});
+    const auto conv_strides   = to_multi_index(ConvStrides{});
+    const auto conv_dilations = to_multi_index(ConvDilations{});
+    const auto in_left_pads   = to_multi_index(InLeftPads{});
+    const auto in_right_pads  = to_multi_index(InRightPads{});
 
     const auto tensor_descs = map_convolution_into_gemm_v2(wei_kcyx_desc,
                                                            in_nchw_desc,

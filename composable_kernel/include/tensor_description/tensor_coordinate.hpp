@@ -270,7 +270,7 @@ struct TensorCoordinate
     MakeDummyTensorCoordinate(NativeTensorDescriptor<Ts...>)
     {
         return NativeTensorCoordinate<NativeTensorDescriptor<Ts...>>(
-            make_zero_array<index_t, TensorDesc::GetNumOfDimension()>());
+            make_zero_multi_index<TensorDesc::GetNumOfDimension()>());
     }
 
     template <typename... Ts>
@@ -278,7 +278,7 @@ struct TensorCoordinate
     MakeDummyTensorCoordinate(TransformedTensorDescriptor<Ts...>)
     {
         return TransformedTensorCoordinate<TransformedTensorDescriptor<Ts...>>(
-            make_zero_array<index_t, TensorDesc::GetNumOfDimension()>());
+            make_zero_multi_index<TensorDesc::GetNumOfDimension()>());
     }
 
     public:

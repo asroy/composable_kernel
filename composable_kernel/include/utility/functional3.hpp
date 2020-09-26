@@ -63,7 +63,7 @@ struct ford_impl
         for(index_t i = 0; i < RemainLengths::Front(); ++i)
         {
             ford_impl<decltype(RemainLengths::PopFront()), Orders>{}(
-                f, current_ordered_id.PushBack(i));
+                f, push_back(current_ordered_id, i));
         }
     }
 };

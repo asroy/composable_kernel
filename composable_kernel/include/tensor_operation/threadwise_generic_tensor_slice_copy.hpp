@@ -54,8 +54,8 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     }
 
     __device__ constexpr ThreadwiseGenericTensorSliceCopy_v4r2()
-        : ThreadwiseGenericTensorSliceCopy_v4r2(make_zero_array<index_t, nDim>(),
-                                                make_zero_array<index_t, nDim>())
+        : ThreadwiseGenericTensorSliceCopy_v4r2(make_zero_multi_index<nDim>(),
+                                                make_zero_multi_index<nDim>())
     {
     }
 
@@ -104,7 +104,7 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                 // load data from src to the long-vector buffer
                 for(index_t i = 0; i < long_vector_size / src_data_per_access; ++i)
                 {
-                    auto scalar_id               = make_zero_array<index_t, nDim>();
+                    auto scalar_id               = make_zero_multi_index<nDim>();
                     scalar_id(vector_access_dim) = i * src_data_per_access;
 
                     const index_t buffer_offset = i * src_data_per_access;
@@ -143,7 +143,7 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                 // store data from the long-vector buffer to dst
                 for(index_t i = 0; i < long_vector_size / dst_data_per_access; ++i)
                 {
-                    auto scalar_id               = make_zero_array<index_t, nDim>();
+                    auto scalar_id               = make_zero_multi_index<nDim>();
                     scalar_id(vector_access_dim) = i * dst_data_per_access;
 
                     const index_t buffer_offset = i * dst_data_per_access;
@@ -177,9 +177,9 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     __device__ void MoveSrcSliceWindow(const T& step_sizes_,
                                        integral_constant<bool, PositiveDirection>)
     {
-        const auto step_sizes = to_array(step_sizes_);
+        const auto step_sizes = to_multi_index(step_sizes_);
 
-        static_if<PositiveDirection>{}([&](auto) { mSrcSliceOrigin += to_array(step_sizes); })
+        static_if<PositiveDirection>{}([&](auto) { mSrcSliceOrigin += to_multi_index(step_sizes); })
             .Else([&](auto) { mSrcSliceOrigin -= step_sizes; });
     }
 
@@ -187,7 +187,7 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
     __device__ void MoveDstSliceWindow(const T& step_sizes_,
                                        integral_constant<bool, PositiveDirection>)
     {
-        const auto step_sizes = to_array(step_sizes_);
+        const auto step_sizes = to_multi_index(step_sizes_);
 
         static_if<PositiveDirection>{}([&](auto) { mDstSliceOrigin += step_sizes; })
             .Else([&](auto) { mDstSliceOrigin -= step_sizes; });

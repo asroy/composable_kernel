@@ -183,7 +183,7 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                                                AddressSpace::Vgpr,
                                                AddressSpace::Lds,
                                                InMemoryDataOperation::Set>(
-                MultiIndex<4>{0, 0, b_block_data_on_global, 0}, MultiIndex<4>{0, 0, 0, 0});
+                MultiIndex<4>{{0, 0, b_block_data_on_global, 0}}, MultiIndex<4>{{0, 0, 0, 0}});
 
         // weight tensor
         //     global tensor in global memory, src of blockwise copy

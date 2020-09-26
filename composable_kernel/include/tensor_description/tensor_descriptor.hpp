@@ -317,7 +317,7 @@ struct TransformedTensorDescriptor
             // this assume each lower (single) index is only assocaited with one transformation,
             //   which is required for index transformation, and has been checked during constructor
             //   of TransformedTensorDescriptor
-            idx_low_part = tran.CalculateLowerIndex(to_array(idx_up_part));
+            idx_low_part = tran.CalculateLowerIndex(to_multi_index(idx_up_part));
         });
 
         return idx_low;
@@ -345,8 +345,9 @@ struct TransformedTensorDescriptor
             // this assume each lower (single) index is associated with only one transformation,
             //   which is required for index transformation, and has been checked during constructor
             //   of TransformedTensorDescriptor
-            idx_low_diff_part = tran.CalculateLowerIndexDiff(
-                to_array(idx_up_diff_part), to_array(idx_up_old_part), to_array(idx_low_old_part));
+            idx_low_diff_part = tran.CalculateLowerIndexDiff(to_multi_index(idx_up_diff_part),
+                                                             to_multi_index(idx_up_old_part),
+                                                             to_multi_index(idx_low_old_part));
         });
 
         return idx_low_diff;
@@ -506,7 +507,8 @@ struct TransformedTensorDescriptor
                 constexpr auto low_dims_part = LowDimensionIds{}.At(itran);
                 constexpr auto low_lengths_part =
                     GetLowerTensorDescriptor().GetLengths(low_dims_part);
-                const auto idx_low_part = to_array(pick_array_element(idx_low, low_dims_part));
+                const auto idx_low_part =
+                    to_multi_index(pick_array_element(idx_low, low_dims_part));
 
                 for(index_t i = 0; i < low_dims_part.Size(); ++i)
                 {

@@ -234,7 +234,7 @@ struct Merge
     {
         if(idx_up_diff[0] == 0)
         {
-            return make_zero_array<index_t, nDimLow>();
+            return make_zero_multi_index<nDimLow>();
         }
         else
         {
@@ -459,7 +459,7 @@ struct Embed
         for(index_t icorner = 0; icorner < ncorner; ++icorner)
         {
             // generate upper index for each corner
-            auto idx_up = make_zero_array<index_t, nDimUp>();
+            auto idx_up = make_zero_multi_index<nDimUp>();
 
             index_t itmp = icorner;
 
@@ -512,7 +512,7 @@ struct Freeze
                             const UpperIndex& /* idx_up_old */,
                             const LowerIndex& /* idx_low_old */)
     {
-        return make_zero_array<index_t, nDimLow>();
+        return make_zero_multi_index<nDimLow>();
     }
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
