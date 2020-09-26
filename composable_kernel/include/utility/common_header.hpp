@@ -3,6 +3,8 @@
 
 #include "array.hpp"
 #include "array_helper.hpp"
+#include "statically_indexed_array.hpp"
+#include "array_element_picker.hpp"
 #include "config.hpp"
 #include "float_type.hpp"
 #include "functional.hpp"

@@ -31,7 +31,7 @@ struct DynamicPassThrough
         static_assert(LowIdx::Size() == 1 && UpIdx::Size() == 1,
                       "wrong! inconsistent # of dimension");
 
-        idx_low(0) = idx_up[0];
+        idx_low(Number<0>{}) = idx_up[Number<0>{}];
     }
 
     template <typename LowIdxDiff, typename UpIdxDiff, typename LowIdx, typename UpIdx>
@@ -44,7 +44,7 @@ struct DynamicPassThrough
                           UpIdx::Size() == 1,
                       "wrong! inconsistent # of dimension");
 
-        idx_diff_low(0) = idx_diff_up[0];
+        idx_diff_low(Number<0>{}) = idx_diff_up[Number<0>{}];
     }
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
@@ -92,7 +92,7 @@ struct DynamicLeftPad
         static_assert(LowIdx::Size() == 1 && UpIdx::Size() == 1,
                       "wrong! inconsistent # of dimension");
 
-        idx_low(0) = idx_up[0] - left_pad_;
+        idx_low(Number<0>{}) = idx_up[Number<0>{}] - left_pad_;
     }
 
     template <typename LowIdxDiff, typename UpIdxDiff, typename LowIdx, typename UpIdx>
@@ -106,7 +106,7 @@ struct DynamicLeftPad
                           UpIdx::Size() == 1,
                       "wrong! inconsistent # of dimension");
 
-        idx_diff_low(0) = idx_diff_up[0];
+        idx_diff_low(Number<0>{}) = idx_diff_up[Number<0>{}];
     }
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
@@ -120,7 +120,7 @@ struct DynamicLeftPad
     __host__ __device__ constexpr bool
     IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& idx_up) const
     {
-        return SkipIsValidCheck || (idx_up[0] >= left_pad_);
+        return SkipIsValidCheck || (idx_up[Number<0>{}] >= left_pad_);
     }
 };
 
@@ -158,7 +158,7 @@ struct DynamicRightPad
         static_assert(LowIdx::Size() == 1 && UpIdx::Size() == 1,
                       "wrong! inconsistent # of dimension");
 
-        idx_low(0) = idx_up[0];
+        idx_low(Number<0>{}) = idx_up[Number<0>{}];
     }
 
     template <typename LowIdxDiff, typename UpIdxDiff, typename LowIdx, typename UpIdx>
@@ -172,7 +172,7 @@ struct DynamicRightPad
                           UpIdx::Size() == 1,
                       "wrong! inconsistent # of dimension");
 
-        idx_diff_low(0) = idx_diff_up[0];
+        idx_diff_low(Number<0>{}) = idx_diff_up[Number<0>{}];
     }
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
@@ -186,7 +186,7 @@ struct DynamicRightPad
     __host__ __device__ constexpr bool
     IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& idx_up) const
     {
-        return SkipIsValidCheck || (idx_up[0] < low_length_);
+        return SkipIsValidCheck || (idx_up[Number<0>{}] < low_length_);
     }
 };
 
@@ -228,13 +228,11 @@ struct DynamicEmbed
         static_assert(LowIdx::Size() == 1 && UpIdx::Size() == NDimUp,
                       "wrong! inconsistent # of dimension");
 
-        idx_low(0) = coefficients_[NDimUp];
+        idx_low(Number<0>{}) = coefficients_[Number<NDimUp>{}];
 
-#pragma unroll
-        for(index_t i = 0; i < NDimUp; ++i)
-        {
-            idx_low(0) += idx_up[i] * coefficients_[i];
-        }
+        static_for<0, NDimUp, 1>{}([&idx_low, &idx_up, this](auto i) {
+            idx_low(Number<0>{}) += idx_up[i] * this->coefficients_[i];
+        });
     }
 
     template <typename LowIdxDiff, typename UpIdxDiff, typename LowIdx, typename UpIdx>
@@ -247,13 +245,10 @@ struct DynamicEmbed
                           LowIdx::Size() == 1 && UpIdx::Size() == NDimUp,
                       "wrong! inconsistent # of dimension");
 
-        idx_diff_low(0) = 0;
+        idx_diff_low(Number<0>{}) = 0;
 
-#pragma unroll
-        for(index_t i = 0; i < NDimUp; ++i)
-        {
-            idx_diff_low(0) += idx_diff_up[i] * coefficients_[i];
-        }
+        static_for<0, NDimUp, 1>{}(
+            [&](auto i) { idx_diff_low(Number<0>{}) += idx_diff_up[i] * coefficients_[i]; });
     }
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
@@ -310,16 +305,14 @@ struct DynamicMerge
         static_assert(LowIdx::Size() == NDimLow && UpIdx::Size() == 1,
                       "wrong! inconsistent # of dimension");
 
-        index_t tmp = idx_up[0];
+        index_t tmp = idx_up[Number<0>{}];
 
-#pragma unroll
-        for(index_t i = 0; i < NDimLow - 1; ++i)
-        {
-            idx_low(i) = tmp / low_lengths_scan_[i];
-            tmp -= idx_low[i] * low_lengths_scan_[i];
-        }
+        static_for<0, NDimLow - 1, 1>{}([&idx_low, &tmp, this](auto i) {
+            idx_low(i) = tmp / this->low_lengths_scan_[i];
+            tmp -= idx_low[i] * this->low_lengths_scan_[i];
+        });
 
-        idx_low(NDimLow - 1) = tmp;
+        idx_low(Number<NDimLow - 1>{}) = tmp;
     }
 
     // idx_diff_low depends on idx_low_old, so idx_low need to be up-to-date
@@ -336,15 +329,13 @@ struct DynamicMerge
                           LowIdx::Size() == NDimLow && UpIdx::Size() == 1,
                       "wrong! inconsistent # of dimension");
 
-#if 1
+#if 0
         // I only want to do this check, if idx_diff_up is know at compile-time
-        if(idx_diff_up[0] == 0)
+        if(idx_diff_up[Number<0>{}] == 0)
         {
-#pragma unroll
-            for(index_t i = 0; i < NDimLow; ++i)
-            {
+            static_for<0, NDimLow, 1>{}([&idx_diff_low](auto i){
                 idx_diff_low(i) = 0;
-            }
+            });
 
             return;
         }
@@ -370,9 +361,7 @@ struct DynamicMerge
         // do not need to check the first dimension
         index_t carry = 0;
 
-#pragma unroll
-        for(index_t i = NDimLow - 1; i > 0; --i)
-        {
+        static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
             // this should be saved in SGPR as well
             index_t idx_low_length_minus_idx_diff_low_const =
                 low_lengths_[i] - idx_diff_low_const[i];
@@ -401,9 +390,9 @@ struct DynamicMerge
 #if 0
             carry = do_borrow ? -1 : carry;
 #endif
-        }
+        });
 
-        idx_diff_low(0) = idx_diff_low_const[0] + carry;
+        idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + carry;
     }
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return false; }
@@ -453,13 +442,10 @@ struct DynamicUnMerge
     __host__ __device__ constexpr void CalculateLowerIndex(LowIdx& idx_low,
                                                            const UpIdx& idx_up) const
     {
-        idx_low(0) = idx_up[NDimUp];
+        idx_low(Number<0>{}) = idx_up[Number<NDimUp>{}];
 
-#pragma unroll
-        for(index_t i = 0; i < NDimUp - 1; ++i)
-        {
-            idx_low(0) += idx_up[i] * up_lengths_scan_[i];
-        }
+        static_for<0, NDimUp - 1, 1>{}(
+            [&](auto i) { idx_low(Number<0>{}) += idx_up[i] * up_lengths_scan_[i]; });
     }
 
     template <typename LowIdxDiff, typename UpIdxDiff, typename LowIdx, typename UpIdx>
@@ -512,7 +498,7 @@ struct DynamicFreeze
         static_assert(LowIdx::Size() == 1 && UpIdx::Size() == 1,
                       "wrong! inconsistent # of dimension");
 
-        idx_low(0) = low_idx_;
+        idx_low(Number<0>{}) = low_idx_;
     }
 
     template <typename LowIdxDiff, typename UpIdxDiff, typename LowIdx, typename UpIdx>
@@ -521,7 +507,7 @@ struct DynamicFreeze
                                                             const LowIdx& /* idx_low_old */,
                                                             const UpIdx& /* idx_up_old */)
     {
-        idx_diff_low(0) = index_t{0};
+        idx_diff_low(Number<0>{}) = index_t{Number<0>{}};
     }
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }

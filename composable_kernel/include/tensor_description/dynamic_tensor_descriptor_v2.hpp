@@ -105,9 +105,10 @@ struct DynamicTensorDescriptor_v2
         return GetNumOfVisibleDimension();
     }
 
-    __host__ __device__ constexpr index_t GetLength(index_t idim) const
+    template <index_t IDim>
+    __host__ __device__ constexpr index_t GetLength(Number<IDim>) const
     {
-        return visible_lengths_[idim];
+        return visible_lengths_[Number<IDim>{}];
     }
 
     __host__ __device__ constexpr const auto& GetLengths() const { return visible_lengths_; }

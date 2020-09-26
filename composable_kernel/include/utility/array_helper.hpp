@@ -2,37 +2,15 @@
 #define CK_ARRAY_HELPER_HPP
 
 #include "array.hpp"
+#include "statically_indexed_array.hpp"
+#include "array_element_picker.hpp"
 
 namespace ck {
-
-template <typename X, typename... Xs>
-__host__ __device__ constexpr auto make_array(const X& x, const Xs&... xs)
-{
-    return Array<X, sizeof...(xs) + 1>{{x, xs...}};
-}
 
 template <typename Arr, typename Picks>
 __host__ __device__ constexpr auto pick_array_element(Arr& a, Picks)
 {
     return ArrayElementPicker<Arr, Picks>(a);
-}
-
-template <typename T>
-__host__ __device__ constexpr auto to_array(const T& x)
-{
-    Array<typename T::data_type, T::Size()> y;
-
-    static_for<0, T::Size(), 1>{}([&](auto i) { y.At(i) = x.At(i); });
-
-    return y;
-}
-
-template <typename TData, index_t NSize>
-__host__ __device__ constexpr auto make_zero_array()
-{
-    constexpr auto zero_sequence = typename uniform_sequence_gen<NSize, 0>::type{};
-    constexpr auto zero_array    = to_array(zero_sequence);
-    return zero_array;
 }
 
 template <typename TData, index_t NSize, index_t... IRs>

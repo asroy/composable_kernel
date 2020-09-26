@@ -89,6 +89,8 @@ struct Tuple : detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(X
     {
     }
 
+    __host__ __device__ static constexpr index_t Size() { return sizeof...(Xs); }
+
     template <index_t I>
     __host__ __device__ constexpr const auto& At(Number<I>) const
     {
@@ -101,6 +103,28 @@ struct Tuple : detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(X
     {
         static_assert(I < base::Size(), "wrong! out of range");
         return base::GetElementByKey(detail::TupleElementKey<I>{});
+    }
+
+    template <index_t I>
+    __host__ __device__ constexpr const auto& operator[](Number<I> i) const
+    {
+        return At(i);
+    }
+
+    template <index_t I>
+    __host__ __device__ constexpr auto& operator()(Number<I> i)
+    {
+        return At(i);
+    }
+
+    template <typename T>
+    __host__ __device__ constexpr auto operator=(const T& a)
+    {
+        static_assert(T::Size() == Size(), "wrong! size not the same");
+
+        static_for<0, Size(), 1>{}([&](auto i) { operator()(i) = a[i]; });
+
+        return *this;
     }
 };
 

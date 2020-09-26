@@ -17,29 +17,34 @@ map_convolution_into_gemm_v2(const WeiDesc& wei_k_c_y_x_global_desc,
                              const Array<index_t, 2> in_left_pads,
                              const Array<index_t, 2> in_right_pads)
 {
-    const index_t N = in_n_c_hi_wi_global_desc.GetLength(0);
-    const index_t C = in_n_c_hi_wi_global_desc.GetLength(1);
-    const index_t K = out_n_k_ho_wo_global_desc.GetLength(1);
+    constexpr auto i0 = Number<0>{};
+    constexpr auto i1 = Number<1>{};
+    constexpr auto i2 = Number<2>{};
+    constexpr auto i3 = Number<3>{};
 
-    const index_t Y = wei_k_c_y_x_global_desc.GetLength(2);
-    const index_t X = wei_k_c_y_x_global_desc.GetLength(3);
+    const index_t N = in_n_c_hi_wi_global_desc.GetLength(i0);
+    const index_t C = in_n_c_hi_wi_global_desc.GetLength(i1);
+    const index_t K = out_n_k_ho_wo_global_desc.GetLength(i1);
 
-    const index_t Hi = in_n_c_hi_wi_global_desc.GetLength(2);
-    const index_t Wi = in_n_c_hi_wi_global_desc.GetLength(3);
+    const index_t Y = wei_k_c_y_x_global_desc.GetLength(i2);
+    const index_t X = wei_k_c_y_x_global_desc.GetLength(i3);
 
-    const index_t Ho = out_n_k_ho_wo_global_desc.GetLength(2);
-    const index_t Wo = out_n_k_ho_wo_global_desc.GetLength(3);
+    const index_t Hi = in_n_c_hi_wi_global_desc.GetLength(i2);
+    const index_t Wi = in_n_c_hi_wi_global_desc.GetLength(i3);
 
-    const index_t ConvStrideH = conv_strides[0];
-    const index_t ConvStrideW = conv_strides[1];
+    const index_t Ho = out_n_k_ho_wo_global_desc.GetLength(i2);
+    const index_t Wo = out_n_k_ho_wo_global_desc.GetLength(i3);
 
-    const index_t ConvDilationH = conv_dilations[0];
-    const index_t ConvDilationW = conv_dilations[1];
+    const index_t ConvStrideH = conv_strides[i0];
+    const index_t ConvStrideW = conv_strides[i1];
 
-    const index_t InLeftPadH  = in_left_pads[0];
-    const index_t InLeftPadW  = in_left_pads[1];
-    const index_t InRightPadH = in_right_pads[0];
-    const index_t InRightPadW = in_right_pads[1];
+    const index_t ConvDilationH = conv_dilations[i0];
+    const index_t ConvDilationW = conv_dilations[i1];
+
+    const index_t InLeftPadH  = in_left_pads[i0];
+    const index_t InLeftPadW  = in_left_pads[i1];
+    const index_t InRightPadH = in_right_pads[i0];
+    const index_t InRightPadW = in_right_pads[i1];
 
     // input tensor
     const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor_v2(
@@ -58,8 +63,8 @@ map_convolution_into_gemm_v2(const WeiDesc& wei_k_c_y_x_global_desc,
         make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
         make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 
-    const index_t Hip = in_n_c_hip_wip_global_desc.GetLength(2);
-    const index_t Wip = in_n_c_hip_wip_global_desc.GetLength(3);
+    const index_t Hip = in_n_c_hip_wip_global_desc.GetLength(i2);
+    const index_t Wip = in_n_c_hip_wip_global_desc.GetLength(i3);
 
     const auto in_n_c_y_ho_x_wo_global_desc = transform_dynamic_tensor_descriptor_v2(
         in_n_c_hip_wip_global_desc,

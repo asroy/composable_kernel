@@ -161,82 +161,29 @@ struct Array
     }
 };
 
-// Arr: Array
-// Picks: Sequence<...>
-template <typename Arr, typename Picks>
-struct ArrayElementPicker
+template <typename X, typename... Xs>
+__host__ __device__ constexpr auto make_array(const X& x, const Xs&... xs)
 {
-    using type      = ArrayElementPicker;
-    using data_type = typename Arr::data_type;
+    return Array<X, sizeof...(xs) + 1>{{x, xs...}};
+}
 
-    __host__ __device__ constexpr ArrayElementPicker() = delete;
+template <typename T>
+__host__ __device__ constexpr auto to_array(const T& x)
+{
+    Array<typename T::data_type, T::Size()> y;
 
-    __host__ __device__ explicit constexpr ArrayElementPicker(Arr& array) : mArray{array}
-    {
-        constexpr index_t imax = reduce_on_sequence(Picks{}, math::maxer<index_t>{}, Number<0>{});
+    static_for<0, T::Size(), 1>{}([&](auto i) { y.At(i) = x.At(i); });
 
-        static_assert(imax < Arr::Size(), "wrong! exceeding # array element");
-    }
+    return y;
+}
 
-    __host__ __device__ static constexpr auto Size() { return Picks::Size(); }
-
-    template <index_t I>
-    __host__ __device__ constexpr const data_type& At(Number<I>) const
-    {
-        static_assert(I < Size(), "wrong!");
-
-        constexpr auto IP = Picks{}[I];
-        return mArray[IP];
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr data_type& At(Number<I>)
-    {
-        static_assert(I < Size(), "wrong!");
-
-        constexpr auto IP = Picks{}[I];
-        return mArray(IP);
-    }
-
-    __host__ __device__ constexpr const data_type& operator[](index_t i) const
-    {
-        index_t ip = Picks{}[i];
-        return mArray[ip];
-    }
-
-    __host__ __device__ constexpr data_type& operator()(index_t i)
-    {
-        index_t ip = Picks{}[i];
-        return mArray(ip);
-    }
-
-    template <typename T>
-    __host__ __device__ constexpr auto operator=(const T& a)
-    {
-        static_for<0, Size(), 1>{}([&](auto i) { operator()(i) = a[i]; });
-
-        return *this;
-    }
-
-    template <typename T>
-    __host__ __device__ constexpr auto operator+=(const T& a)
-    {
-        static_for<0, Size(), 1>{}([&](auto i) { operator()(i) += a[i]; });
-
-        return *this;
-    }
-
-    template <typename T>
-    __host__ __device__ constexpr auto operator-=(const T& a)
-    {
-        static_for<0, Size(), 1>{}([&](auto i) { operator()(i) -= a[i]; });
-
-        return *this;
-    }
-
-    private:
-    Arr& mArray;
-};
+template <typename TData, index_t NSize>
+__host__ __device__ constexpr auto make_zero_array()
+{
+    constexpr auto zero_sequence = typename uniform_sequence_gen<NSize, 0>::type{};
+    constexpr auto zero_array    = to_array(zero_sequence);
+    return zero_array;
+}
 
 } // namespace ck
 #endif
