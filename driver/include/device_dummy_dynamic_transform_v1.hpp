@@ -52,11 +52,11 @@ void device_dummy_dynamic_transform_v1(InDesc,
         const auto in_gemmk_gemmn_global_desc = tensor_descs.At(Number<0>{});
 
         auto in_gemmk_gemmn_coord =
-            make_dynamic_tensor_coordinate(in_gemmk_gemmn_global_desc, MultiIndex<2>{{0, 0}});
+            make_dynamic_tensor_coordinate(in_gemmk_gemmn_global_desc, make_multi_index(0, 0));
 
         for(index_t iter = 0; iter < 10; ++iter)
         {
-            constexpr auto gemmk1_gemmn0 = MultiIndex<2>{{1, 0}};
+            constexpr auto gemmk1_gemmn0 = make_multi_index(1, 0);
 
             printf("iter %d\n", iter);
 

@@ -567,7 +567,7 @@ struct DummyDynamicTransform_v1
 
         for(index_t iter = 0; iter < niter; ++iter)
         {
-            constexpr auto gemmk1_gemmn0 = MultiIndex<2>{{1, 0}};
+            constexpr auto gemmk1_gemmn0 = make_multi_index(1, 0);
 
             in_gemmk_gemmn_coord += gemmk1_gemmn0;
 

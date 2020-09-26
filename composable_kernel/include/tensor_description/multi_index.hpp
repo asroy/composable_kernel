@@ -21,7 +21,7 @@ using MultiIndex = StaticallyIndexedArray<index_t, N>;
 template <typename... Xs>
 __host__ __device__ constexpr auto make_multi_index(Xs... xs)
 {
-    return MultiIndex<sizeof...(Xs)>(static_cast<index_t>(xs)... r);
+    return make_statically_indexed_array<index_t>(xs...);
 }
 #endif
 

@@ -53,10 +53,10 @@ void device_dummy_dynamic_transform_v2(InDesc,
     // test on cpu
     {
         auto in_gemmk_gemmn_coord =
-            make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, MultiIndex<2>{{0, 0}});
+            make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, make_multi_index(0, 0));
 
         const auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
-            in_gemmk_gemmn_global_desc, MultiIndex<2>{{1, 0}});
+            in_gemmk_gemmn_global_desc, make_multi_index(1, 0));
 
         for(index_t iter = 0; iter < 10; ++iter)
         {

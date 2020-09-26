@@ -17,11 +17,6 @@ struct StaticallyIndexedArray<TData, 0> : Tuple<>
 {
     using data_type = TData;
     using base      = Tuple<>;
-
-    template <typename... Ys>
-    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
-    {
-    }
 };
 
 template <typename TData>
@@ -385,6 +380,12 @@ struct StaticallyIndexedArray<TData, 22> : Tuple<TData,
 {
     using data_type = TData;
 };
+
+template <typename X, typename... Xs>
+__host__ __device__ constexpr auto make_statically_indexed_array(const X& x, const Xs&... xs)
+{
+    return StaticallyIndexedArray<X, sizeof...(Xs) + 1>(x, static_cast<X>(xs)...);
+}
 
 } // namespace ck
 #endif

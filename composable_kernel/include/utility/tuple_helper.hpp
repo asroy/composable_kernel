@@ -5,12 +5,6 @@
 
 namespace ck {
 
-template <typename... Xs>
-__host__ __device__ constexpr auto make_tuple(Xs&&... xs)
-{
-    return Tuple<remove_cv_t<remove_reference_t<Xs>>...>(std::forward<Xs>(xs)...);
-}
-
 template <typename F, index_t N>
 __host__ __device__ constexpr auto generate_tuple(F&& f, Number<N>)
 {
