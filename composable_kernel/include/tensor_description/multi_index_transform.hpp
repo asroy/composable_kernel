@@ -2,23 +2,9 @@
 #define CK_MULTI_INDEX_TRANSFORM_HPP
 
 #include "common_header.hpp"
+#include "multi_index.hpp"
 
 namespace ck {
-
-template <index_t N>
-using MultiIndex = Array<index_t, N>;
-
-template <typename... Xs>
-__host__ __device__ constexpr auto make_multi_index(Xs... xs)
-{
-    return MultiIndex<sizeof...(Xs)>(xs...);
-}
-
-template <index_t NSize>
-__host__ __device__ constexpr auto make_zero_multi_index()
-{
-    return make_zero_array<index_t, NSize>();
-}
 
 template <index_t Length>
 struct PassThrough

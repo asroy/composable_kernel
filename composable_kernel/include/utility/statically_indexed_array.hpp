@@ -16,48 +16,96 @@ template <typename TData>
 struct StaticallyIndexedArray<TData, 0> : Tuple<>
 {
     using data_type = TData;
+    using base      = Tuple<>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    {
+    }
 };
 
 template <typename TData>
 struct StaticallyIndexedArray<TData, 1> : Tuple<TData>
 {
     using data_type = TData;
+    using base      = Tuple<TData>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    {
+    }
 };
 
 template <typename TData>
 struct StaticallyIndexedArray<TData, 2> : Tuple<TData, TData>
 {
     using data_type = TData;
+    using base      = Tuple<TData, TData>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    {
+    }
 };
 
 template <typename TData>
 struct StaticallyIndexedArray<TData, 3> : Tuple<TData, TData, TData>
 {
     using data_type = TData;
+    using base      = Tuple<TData, TData, TData>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    {
+    }
 };
 
 template <typename TData>
 struct StaticallyIndexedArray<TData, 4> : Tuple<TData, TData, TData, TData>
 {
     using data_type = TData;
+    using base      = Tuple<TData, TData, TData, TData>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    {
+    }
 };
 
 template <typename TData>
 struct StaticallyIndexedArray<TData, 5> : Tuple<TData, TData, TData, TData, TData>
 {
     using data_type = TData;
+    using base      = Tuple<TData, TData, TData, TData, TData>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    {
+    }
 };
 
 template <typename TData>
 struct StaticallyIndexedArray<TData, 6> : Tuple<TData, TData, TData, TData, TData, TData>
 {
     using data_type = TData;
+    using base      = Tuple<TData, TData, TData, TData, TData, TData>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    {
+    }
 };
 
 template <typename TData>
 struct StaticallyIndexedArray<TData, 7> : Tuple<TData, TData, TData, TData, TData, TData, TData>
 {
     using data_type = TData;
+    using base      = Tuple<TData, TData, TData, TData, TData, TData, TData>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    {
+    }
 };
 
 template <typename TData>
@@ -65,6 +113,12 @@ struct StaticallyIndexedArray<TData, 8>
     : Tuple<TData, TData, TData, TData, TData, TData, TData, TData>
 {
     using data_type = TData;
+    using base      = Tuple<TData, TData, TData, TData, TData, TData, TData, TData>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    {
+    }
 };
 
 template <typename TData>
@@ -72,6 +126,12 @@ struct StaticallyIndexedArray<TData, 9>
     : Tuple<TData, TData, TData, TData, TData, TData, TData, TData, TData>
 {
     using data_type = TData;
+    using base      = Tuple<TData, TData, TData, TData, TData, TData, TData, TData, TData>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    {
+    }
 };
 
 template <typename TData>
@@ -79,6 +139,12 @@ struct StaticallyIndexedArray<TData, 10>
     : Tuple<TData, TData, TData, TData, TData, TData, TData, TData, TData, TData>
 {
     using data_type = TData;
+    using base      = Tuple<TData, TData, TData, TData, TData, TData, TData, TData, TData, TData>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    {
+    }
 };
 
 template <typename TData>

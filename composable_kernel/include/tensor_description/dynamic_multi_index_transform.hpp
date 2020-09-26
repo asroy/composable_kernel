@@ -2,6 +2,7 @@
 #define CK_DYNAMIC_MULTI_INDEX_TRANSFORM_HPP
 
 #include "common_header.hpp"
+#include "multi_index.hpp"
 
 namespace ck {
 
@@ -13,11 +14,11 @@ struct DynamicPassThrough
     const UpperIndex up_lengths_;
 
     __host__ __device__ explicit constexpr DynamicPassThrough(const index_t& low_length)
-        : up_lengths_{{low_length}}
+        : up_lengths_{low_length}
     {
     }
 
-    __host__ __device__ explicit constexpr DynamicPassThrough() : up_lengths_{{0}} {}
+    __host__ __device__ explicit constexpr DynamicPassThrough() : up_lengths_{0} {}
 
     __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
 
@@ -73,11 +74,11 @@ struct DynamicLeftPad
 
     __host__ __device__ explicit constexpr DynamicLeftPad(const index_t& low_length,
                                                           const index_t& left_pad)
-        : up_lengths_{{low_length + left_pad}}, left_pad_{left_pad}
+        : up_lengths_{low_length + left_pad}, left_pad_{left_pad}
     {
     }
 
-    __host__ __device__ explicit constexpr DynamicLeftPad() : up_lengths_{{0}}, left_pad_{0} {}
+    __host__ __device__ explicit constexpr DynamicLeftPad() : up_lengths_{0}, left_pad_{0} {}
 
     __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
 
@@ -136,12 +137,12 @@ struct DynamicRightPad
 
     __host__ __device__ explicit constexpr DynamicRightPad(const index_t& low_length,
                                                            const index_t& right_pad)
-        : up_lengths_{{low_length + right_pad}}, low_length_{low_length}, right_pad_{right_pad}
+        : up_lengths_{low_length + right_pad}, low_length_{low_length}, right_pad_{right_pad}
     {
     }
 
     __host__ __device__ explicit constexpr DynamicRightPad()
-        : up_lengths_{{0}}, low_length_{0}, right_pad_{0}
+        : up_lengths_{0}, low_length_{0}, right_pad_{0}
     {
     }
 
@@ -190,8 +191,7 @@ struct DynamicRightPad
     }
 };
 
-// idx_low = coefficients[0, ...nDimUp-1] * idx_up[0, ...nDimUp-1] +
-// coefficients[nDimUp]
+// idx_low = coefficients[0, ...nDimUp-1] * idx_up[0, ...nDimUp-1]
 template <index_t NDimUp>
 struct DynamicEmbed
 {
@@ -199,11 +199,10 @@ struct DynamicEmbed
     using UpperIndex = MultiIndex<NDimUp>;
 
     const UpperIndex up_lengths_;
-    const Array<index_t, NDimUp + 1> coefficients_;
+    const UpperIndex coefficients_;
 
-    __host__
-        __device__ explicit constexpr DynamicEmbed(const UpperIndex& up_lengths,
-                                                   const Array<index_t, NDimUp + 1>& coefficients)
+    __host__ __device__ explicit constexpr DynamicEmbed(const UpperIndex& up_lengths,
+                                                        const UpperIndex& coefficients)
         : up_lengths_{up_lengths}, coefficients_{coefficients}
     {
         static_assert(UpperIndex::Size() == NDimUp, "wrong! # of dimensions not consistent");
@@ -211,7 +210,7 @@ struct DynamicEmbed
 
     __host__ __device__ explicit constexpr DynamicEmbed()
         : up_lengths_{make_zero_array<index_t, NDimUp>()},
-          coefficients_{make_zero_array<index_t, NDimUp + 1>()}
+          coefficients_{make_zero_array<index_t, NDimUp>()}
     {
     }
 
@@ -228,7 +227,7 @@ struct DynamicEmbed
         static_assert(LowIdx::Size() == 1 && UpIdx::Size() == NDimUp,
                       "wrong! inconsistent # of dimension");
 
-        idx_low(Number<0>{}) = coefficients_[Number<NDimUp>{}];
+        idx_low(Number<0>{}) = 0;
 
         static_for<0, NDimUp, 1>{}([&idx_low, &idx_up, this](auto i) {
             idx_low(Number<0>{}) += idx_up[i] * this->coefficients_[i];
@@ -288,7 +287,7 @@ struct DynamicMerge
     __host__ __device__ explicit constexpr DynamicMerge()
         : low_lengths_{make_zero_array<index_t, NDimLow>()},
           low_lengths_scan_{make_zero_array<index_t, NDimLow>()},
-          up_lengths_{{0}}
+          up_lengths_{0}
     {
     }
 

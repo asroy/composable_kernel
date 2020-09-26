@@ -31,9 +31,7 @@ template <index_t N>
 __host__ __device__ constexpr auto
 make_dynamic_native_tensor_descriptor_v2(const MultiIndex<N>& lengths, const MultiIndex<N>& strides)
 {
-    const auto coefficients = strides.PushBack(index_t{0});
-
-    const auto transforms              = make_tuple(DynamicEmbed<N>{lengths, coefficients});
+    const auto transforms              = make_tuple(DynamicEmbed<N>{lengths, strides});
     constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
     constexpr auto up_dim_hidden_idss =
         make_tuple(typename arithmetic_sequence_gen<1, N + 1, 1>::type{});
@@ -41,11 +39,7 @@ make_dynamic_native_tensor_descriptor_v2(const MultiIndex<N>& lengths, const Mul
 
     index_t element_space_size = 1;
 
-#pragma unroll
-    for(index_t i = 0; i < N; ++i)
-    {
-        element_space_size += (lengths[i] - 1) * strides[i];
-    }
+    static_for<0, N, 1>{}([&](auto i) { element_space_size += (lengths[i] - 1) * strides[i]; });
 
     return DynamicTensorDescriptor_v2<decltype(transforms),
                                       decltype(low_dim_hidden_idss),

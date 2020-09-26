@@ -68,17 +68,18 @@ map_convolution_into_gemm_v2(const WeiDesc& wei_k_c_y_x_global_desc,
 
     const auto in_n_c_y_ho_x_wo_global_desc = transform_dynamic_tensor_descriptor_v2(
         in_n_c_hip_wip_global_desc,
-        make_tuple(DynamicPassThrough{N},
-                   DynamicPassThrough{C},
-                   DynamicEmbed<2>{{Y, Ho}, {ConvDilationH, ConvStrideH, 0}},
-                   DynamicEmbed<2>{{X, Wo}, {ConvDilationW, ConvStrideW, 0}}),
+        make_tuple(
+            DynamicPassThrough{N},
+            DynamicPassThrough{C},
+            DynamicEmbed<2>{make_multi_index(Y, Ho), make_multi_index(ConvDilationH, ConvStrideH)},
+            DynamicEmbed<2>{make_multi_index(X, Wo), make_multi_index(ConvDilationW, ConvStrideW)}),
         make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
         make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 
     const auto in_gemmk_gemmn_global_desc = transform_dynamic_tensor_descriptor_v2(
         in_n_c_y_ho_x_wo_global_desc,
-        make_tuple(DynamicMerge<3>{MultiIndex<3>{{C, Y, X}}},
-                   DynamicMerge<3>{MultiIndex<3>{{N, Ho, Wo}}}),
+        make_tuple(DynamicMerge<3>{make_multi_index(C, Y, X)},
+                   DynamicMerge<3>{make_multi_index(N, Ho, Wo)}),
         make_tuple(Sequence<1, 2, 4>{}, Sequence<0, 3, 5>{}),
         make_tuple(Sequence<0>{}, Sequence<1>{}));
 

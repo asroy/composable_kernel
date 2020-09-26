@@ -10,15 +10,14 @@ cmake                                                                           
 -D CMAKE_INSTALL_PREFIX=${MY_PROJECT_INSTALL}                                                                                      \
 -D CMAKE_BUILD_TYPE=Debug                                                                                                          \
 -D DEVICE_BACKEND="AMD"                                                                                                            \
--D CMAKE_CXX_FLAGS="-O3 --amdgpu-target=gfx906 -mllvm --amdgpu-spill-vgpr-to-agpr=0 -save-temps=$CWD"       \
+-D CMAKE_CXX_FLAGS="-O3 --amdgpu-target=gfx906 -mllvm --amdgpu-spill-vgpr-to-agpr=0 -save-temps=$CWD"                              \
 -D CMAKE_CXX_COMPILER=/opt/rocm/bin/hipcc                                                                                          \
 -D CMAKE_PREFIX_PATH="/opt/rocm"                                                                                                   \
 -D CMAKE_VERBOSE_MAKEFILE:BOOL=ON                                                                                                  \
 ${MY_PROJECT_SOURCE}
 
-#-D CMAKE_CXX_FLAGS="-c -emit-llvm -O3 --amdgpu-target=gfx906 -mllvm --amdgpu-spill-vgpr-to-agpr=0 -save-temps=$CWD"       \
-#-D CMAKE_CXX_FLAGS="-gline-tables-only -S -emit-llvm -O3 --amdgpu-target=gfx906 -mllvm --amdgpu-spill-vgpr-to-agpr=0 -save-temps=$CWD"       \
-#-D CMAKE_CXX_FLAGS="-O3 --amdgpu-target=gfx906 -mllvm --amdgpu-spill-vgpr-to-agpr=0 -save-temps=$CWD"       \
+#-D CMAKE_CXX_FLAGS="-O3 --amdgpu-target=gfx906 -mllvm --amdgpu-spill-vgpr-to-agpr=0"                                               \
+#-D CMAKE_CXX_FLAGS="-O3 --amdgpu-target=gfx906 -mllvm --amdgpu-spill-vgpr-to-agpr=0 -save-temps=$CWD"                              \
 #-D CMAKE_CXX_FLAGS="-O3 --amdgpu-target=gfx906 -mllvm --amdgpu-enable-global-sgpr-addr -mllvm --amdgpu-spill-vgpr-to-agpr=0"       \
 #-D CMAKE_CXX_FLAGS="-O3 --amdgpu-target=gfx906 -mllvm --amdgpu-enable-global-sgpr-addr -mllvm --amdgpu-spill-vgpr-to-agpr=0 -save-temps=$CWD"       \
 #-D CMAKE_CXX_FLAGS="-O3 --amdgpu-target=gfx906 -mllvm --amdgpu-enable-global-sgpr-addr -mllvm --amdgpu-spill-vgpr-to-agpr=0 -v -gline-tables-only -save-temps=$CWD"       \
