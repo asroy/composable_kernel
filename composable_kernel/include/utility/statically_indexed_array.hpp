@@ -7,380 +7,310 @@
 
 namespace ck {
 
-template <typename TData, index_t NSize>
+template <typename T, index_t NSize>
 struct StaticallyIndexedArray
 {
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 0> : Tuple<>
+template <typename T>
+struct StaticallyIndexedArray<T, 0> : public Tuple<>
 {
-    using data_type = TData;
+    using data_type = T;
     using base      = Tuple<>;
 
     __host__ __device__ explicit constexpr StaticallyIndexedArray() : base() {}
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 1> : Tuple<TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 1> : public Tuple<T>
 {
-    using data_type = TData;
-    using base      = Tuple<TData>;
+    using data_type = T;
+    using base      = Tuple<T>;
 
     template <typename... Ys>
-    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
     {
     }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 2> : Tuple<TData, TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 2> : public Tuple<T, T>
 {
-    using data_type = TData;
-    using base      = Tuple<TData, TData>;
+    using data_type = T;
+    using base      = Tuple<T, T>;
 
     template <typename... Ys>
-    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
     {
     }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 3> : Tuple<TData, TData, TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 3> : public Tuple<T, T, T>
 {
-    using data_type = TData;
-    using base      = Tuple<TData, TData, TData>;
+    using data_type = T;
+    using base      = Tuple<T, T, T>;
 
     template <typename... Ys>
-    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
     {
     }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 4> : Tuple<TData, TData, TData, TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 4> : public Tuple<T, T, T, T>
 {
-    using data_type = TData;
-    using base      = Tuple<TData, TData, TData, TData>;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T>;
 
     template <typename... Ys>
-    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
     {
     }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 5> : Tuple<TData, TData, TData, TData, TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 5> : public Tuple<T, T, T, T, T>
 {
-    using data_type = TData;
-    using base      = Tuple<TData, TData, TData, TData, TData>;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T>;
 
     template <typename... Ys>
-    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
     {
     }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 6> : Tuple<TData, TData, TData, TData, TData, TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 6> : public Tuple<T, T, T, T, T, T>
 {
-    using data_type = TData;
-    using base      = Tuple<TData, TData, TData, TData, TData, TData>;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T>;
 
     template <typename... Ys>
-    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
     {
     }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 7> : Tuple<TData, TData, TData, TData, TData, TData, TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 7> : public Tuple<T, T, T, T, T, T, T>
 {
-    using data_type = TData;
-    using base      = Tuple<TData, TData, TData, TData, TData, TData, TData>;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T>;
 
     template <typename... Ys>
-    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
     {
     }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 8>
-    : Tuple<TData, TData, TData, TData, TData, TData, TData, TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 8> : public Tuple<T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
-    using base      = Tuple<TData, TData, TData, TData, TData, TData, TData, TData>;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T>;
 
     template <typename... Ys>
-    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
     {
     }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 9>
-    : Tuple<TData, TData, TData, TData, TData, TData, TData, TData, TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 9> : public Tuple<T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
-    using base      = Tuple<TData, TData, TData, TData, TData, TData, TData, TData, TData>;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T>;
 
     template <typename... Ys>
-    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
     {
     }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 10>
-    : Tuple<TData, TData, TData, TData, TData, TData, TData, TData, TData, TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 10> : public Tuple<T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
-    using base      = Tuple<TData, TData, TData, TData, TData, TData, TData, TData, TData, TData>;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T>;
 
     template <typename... Ys>
-    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys) : base(ys...)
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
     {
     }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 11>
-    : Tuple<TData, TData, TData, TData, TData, TData, TData, TData, TData, TData, TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 11> : public Tuple<T, T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T, T>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
+    {
+    }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 12>
-    : Tuple<TData, TData, TData, TData, TData, TData, TData, TData, TData, TData, TData, TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 12> : public Tuple<T, T, T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T, T, T>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
+    {
+    }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 13> : Tuple<TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 13> : public Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
+    {
+    }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 14> : Tuple<TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 14> : public Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
+    {
+    }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 15> : Tuple<TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 15> : public Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
+    {
+    }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 16> : Tuple<TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 16> : public Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
+    {
+    }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 17> : Tuple<TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 17>
+    : public Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
+    {
+    }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 18> : Tuple<TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 18>
+    : public Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
+    {
+    }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 19> : Tuple<TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 19>
+    : public Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
+    {
+    }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 20> : Tuple<TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 20>
+    : public Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
+    {
+    }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 21> : Tuple<TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 21>
+    : public Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
+    {
+    }
 };
 
-template <typename TData>
-struct StaticallyIndexedArray<TData, 22> : Tuple<TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData,
-                                                 TData>
+template <typename T>
+struct StaticallyIndexedArray<T, 22>
+    : public Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>
 {
-    using data_type = TData;
+    using data_type = T;
+    using base      = Tuple<T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T>;
+
+    template <typename... Ys>
+    __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
+        : base(static_cast<T&&>(ys)...)
+    {
+    }
 };
 
 template <typename X, typename... Xs>

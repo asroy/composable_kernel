@@ -14,7 +14,7 @@ struct DynamicPassThrough
     const UpperIndex up_lengths_;
 
     __host__ __device__ explicit constexpr DynamicPassThrough(const index_t& low_length)
-        : up_lengths_{low_length}
+        : up_lengths_{make_multi_index(low_length)}
     {
     }
 
@@ -74,7 +74,7 @@ struct DynamicLeftPad
 
     __host__ __device__ explicit constexpr DynamicLeftPad(const index_t& low_length,
                                                           const index_t& left_pad)
-        : up_lengths_{low_length + left_pad}, left_pad_{left_pad}
+        : up_lengths_{make_multi_index(low_length + left_pad)}, left_pad_{left_pad}
     {
     }
 
@@ -137,7 +137,9 @@ struct DynamicRightPad
 
     __host__ __device__ explicit constexpr DynamicRightPad(const index_t& low_length,
                                                            const index_t& right_pad)
-        : up_lengths_{low_length + right_pad}, low_length_{low_length}, right_pad_{right_pad}
+        : up_lengths_{make_multi_index(low_length + right_pad)},
+          low_length_{low_length},
+          right_pad_{right_pad}
     {
     }
 

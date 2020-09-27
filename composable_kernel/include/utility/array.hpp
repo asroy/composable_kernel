@@ -45,11 +45,19 @@ struct Array<TData, 0>
     __host__ __device__ static constexpr index_t Size() { return 0; }
 };
 
+#if 1
 template <typename X, typename... Xs>
 __host__ __device__ constexpr auto make_array(const X& x, const Xs&... xs)
 {
     return Array<X, sizeof...(Xs) + 1>{{x, static_cast<X>(xs)...}};
 }
+#else
+template <typename X, typename... Xs>
+__host__ __device__ constexpr auto make_array(X&& x, Xs&&... xs)
+{
+    return Array<remove_cv_t<remove_reference_t<X>>, sizeof...(Xs) + 1>(x, xs...);
+}
+#endif
 
 // make empty array
 template <typename X>
