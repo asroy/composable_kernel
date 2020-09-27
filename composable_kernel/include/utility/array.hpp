@@ -51,6 +51,13 @@ __host__ __device__ constexpr auto make_array(const X& x, const Xs&... xs)
     return Array<X, sizeof...(Xs) + 1>{{x, static_cast<X>(xs)...}};
 }
 
+// make empty array
+template <typename X>
+__host__ __device__ constexpr auto make_array()
+{
+    return Array<X, 0>{};
+}
+
 template <typename TData, index_t NSize>
 __host__ __device__ constexpr auto push_back(Array<TData, NSize>& a, const TData& x)
 {

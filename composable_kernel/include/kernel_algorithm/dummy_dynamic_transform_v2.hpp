@@ -12,10 +12,10 @@ __host__ __device__ constexpr auto
 map_convolution_into_gemm_v2(const WeiDesc& wei_k_c_y_x_global_desc,
                              const InDesc& in_n_c_hi_wi_global_desc,
                              const OutDesc& out_n_k_ho_wo_global_desc,
-                             const Array<index_t, 2> conv_strides,
-                             const Array<index_t, 2> conv_dilations,
-                             const Array<index_t, 2> in_left_pads,
-                             const Array<index_t, 2> in_right_pads)
+                             const MultiIndex<2> conv_strides,
+                             const MultiIndex<2> conv_dilations,
+                             const MultiIndex<2> in_left_pads,
+                             const MultiIndex<2> in_right_pads)
 {
     constexpr auto i0 = Number<0>{};
     constexpr auto i1 = Number<1>{};
@@ -96,10 +96,10 @@ struct DummyDynamicTransform_v2_1
                           const WeiDesc wei_k_c_y_x_global_desc,
                           const InDesc in_n_c_hi_wi_global_desc,
                           const OutDesc out_n_k_ho_wo_global_desc,
-                          const Array<index_t, 2> conv_strides,
-                          const Array<index_t, 2> conv_dilations,
-                          const Array<index_t, 2> in_left_pads,
-                          const Array<index_t, 2> in_right_pads) const
+                          const MultiIndex<2> conv_strides,
+                          const MultiIndex<2> conv_dilations,
+                          const MultiIndex<2> in_left_pads,
+                          const MultiIndex<2> in_right_pads) const
     {
         const auto transformed_tensor_descs =
             map_convolution_into_gemm_v2(move(wei_k_c_y_x_global_desc),
@@ -124,7 +124,7 @@ struct DummyDynamicTransform_v2_1
             make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, idx);
 
         const auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
-            in_gemmk_gemmn_global_desc, MultiIndex<2>{{1, 0}});
+            in_gemmk_gemmn_global_desc, make_multi_index(1, 0));
 
 #pragma unroll
         for(index_t i = 0; i < 10; ++i)
@@ -143,10 +143,10 @@ struct DummyDynamicTransform_v2_1
                           const WeiDesc wei_k_c_y_x_global_desc,
                           const InDesc in_n_c_hi_wi_global_desc,
                           const OutDesc out_n_k_ho_wo_global_desc,
-                          const Array<index_t, 2> conv_strides,
-                          const Array<index_t, 2> conv_dilations,
-                          const Array<index_t, 2> in_left_pads,
-                          const Array<index_t, 2> in_right_pads) const
+                          const MultiIndex<2> conv_strides,
+                          const MultiIndex<2> conv_dilations,
+                          const MultiIndex<2> in_left_pads,
+                          const MultiIndex<2> in_right_pads) const
     {
         const index_t N = in_n_c_hi_wi_global_desc.GetLength(0);
         const index_t C = in_n_c_hi_wi_global_desc.GetLength(1);
@@ -262,10 +262,10 @@ struct DummyDynamicTransform_v2_1
                         const WeiDesc wei_k_c_y_x_global_desc,
                         const InDesc in_n_c_hi_wi_global_desc,
                         const OutDesc out_n_k_ho_wo_global_desc,
-                        const Array<index_t, 2> conv_strides,
-                        const Array<index_t, 2> conv_dilations,
-                        const Array<index_t, 2> in_left_pads,
-                        const Array<index_t, 2> in_right_pads) const
+                        const MultiIndex<2> conv_strides,
+                        const MultiIndex<2> conv_dilations,
+                        const MultiIndex<2> in_left_pads,
+                        const MultiIndex<2> in_right_pads) const
     {
         Run_1(p_wei_global,
               p_in_global,

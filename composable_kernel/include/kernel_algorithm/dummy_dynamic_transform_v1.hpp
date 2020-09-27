@@ -555,11 +555,7 @@ struct DummyDynamicTransform_v1
 
         MultiIndex<2> idx;
 
-        // initialize idx
-        for(index_t i = 0; i < 2; ++i)
-        {
-            idx(i) = p_wei_global[get_thread_local_1d_id() + i];
-        }
+        static_for<0, 2, 1>{}([&](auto i) { idx(i) = p_wei_global[get_thread_local_1d_id() + i]; });
 
         const index_t niter = p_wei_global[10];
 

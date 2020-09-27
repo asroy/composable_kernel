@@ -279,7 +279,8 @@ struct DynamicMerge
         : low_lengths_{low_lengths},
           low_lengths_scan_{reverse_exclusive_scan_on_array(
               low_lengths, math::multiplies<index_t>{}, index_t{1})},
-          up_lengths_{{reduce_on_array(low_lengths, math::multiplies<index_t>(), index_t{1})}}
+          up_lengths_{make_multi_index(
+              reduce_on_array(low_lengths, math::multiplies<index_t>(), index_t{1}))}
     {
         static_assert(LowerIndex::Size() == NDimLow, "wrong!");
     }

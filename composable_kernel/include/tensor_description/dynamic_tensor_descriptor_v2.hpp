@@ -178,10 +178,10 @@ struct DynamicTensorDescriptor_v2
                                                                       index_t element_space_size)
     {
         // zero initialization
-        HiddenIndex hidden_lengths{{0}};
+        HiddenIndex hidden_lengths = make_zero_multi_index<ndim_hidden_>();
 
         // this is the orignal tensor element space size
-        hidden_lengths(0) = element_space_size;
+        hidden_lengths(Number<0>{}) = element_space_size;
 
         // lengths for all other hidden dimensions
         static_for<0, ntransform_, 1>{}([&transforms, &hidden_lengths](auto itran) {

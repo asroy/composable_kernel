@@ -5,7 +5,7 @@
 
 namespace ck {
 
-#if 1 // debug
+#if 1
 template <index_t N>
 using MultiIndex = Array<index_t, N>;
 
