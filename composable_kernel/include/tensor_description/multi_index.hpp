@@ -10,7 +10,7 @@ template <index_t N>
 using MultiIndex = Array<index_t, N>;
 
 template <typename... Xs>
-__host__ __device__ constexpr auto make_multi_index(Xs... xs)
+__host__ __device__ constexpr auto make_multi_index(const Xs&... xs)
 {
     return make_array<index_t>(xs...);
 }

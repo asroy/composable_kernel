@@ -55,7 +55,7 @@ __host__ __device__ constexpr auto make_array(const X& x, const Xs&... xs)
 template <typename X, typename... Xs>
 __host__ __device__ constexpr auto make_array(X&& x, Xs&&... xs)
 {
-    return Array<remove_cv_t<remove_reference_t<X>>, sizeof...(Xs) + 1>(x, xs...);
+    return Array<remove_cv_t<remove_reference_t<X>>, sizeof...(Xs) + 1>{{x, xs...}};
 }
 #endif
 
