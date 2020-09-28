@@ -9,19 +9,11 @@ namespace ck {
 template <index_t N>
 using MultiIndex = Array<index_t, N>;
 
-#if 1 // debug
 template <typename... Xs>
 __host__ __device__ constexpr auto make_multi_index(Xs... xs)
 {
     return make_array<index_t>(xs...);
 }
-#else
-template <typename... Xs>
-__host__ __device__ constexpr auto make_multi_index(const Xs&... xs)
-{
-    return make_array(xs...);
-}
-#endif
 #else
 template <index_t N>
 using MultiIndex = StaticallyIndexedArray<index_t, N>;

@@ -20,7 +20,7 @@ struct TupleElement
     __host__ __device__ explicit constexpr TupleElement() : mData() {}
 
     template <typename T>
-    __host__ __device__ explicit constexpr TupleElement(T&& v) : mData(static_cast<T&&>(v))
+    __host__ __device__ explicit constexpr TupleElement(T&& v) : mData(std::forward<T>(v))
     {
     }
 
@@ -57,7 +57,7 @@ struct TupleImpl<Sequence<Is...>, Xs...> : TupleElement<TupleElementKey<Is>, Xs>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr TupleImpl(Ys&&... ys)
-        : TupleElement<TupleElementKey<Is>, Xs>(static_cast<Ys&&>(ys))...
+        : TupleElement<TupleElementKey<Is>, Xs>(std::forward<Ys>(ys))...
     {
     }
 
@@ -85,7 +85,7 @@ struct Tuple : detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(X
         detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(Xs), 1>::type, Xs...>;
 
     template <typename... Ys>
-    __host__ __device__ explicit constexpr Tuple(Ys&&... ys) : base(static_cast<Ys&&>(ys)...)
+    __host__ __device__ explicit constexpr Tuple(Ys&&... ys) : base(std::forward<Ys>(ys)...)
     {
     }
 

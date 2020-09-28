@@ -12,7 +12,7 @@ struct Array
     using type      = Array;
     using data_type = TData;
 
-    TData mData[NSize] = {0};
+    TData mData[NSize];
 
     __host__ __device__ static constexpr index_t Size() { return NSize; }
 
