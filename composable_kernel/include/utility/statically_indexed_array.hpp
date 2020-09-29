@@ -29,7 +29,7 @@ struct StaticallyIndexedArray<T, 1> : public Tuple<T>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -42,7 +42,7 @@ struct StaticallyIndexedArray<T, 2> : public Tuple<T, T>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -55,7 +55,7 @@ struct StaticallyIndexedArray<T, 3> : public Tuple<T, T, T>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -68,7 +68,7 @@ struct StaticallyIndexedArray<T, 4> : public Tuple<T, T, T, T>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -81,7 +81,7 @@ struct StaticallyIndexedArray<T, 5> : public Tuple<T, T, T, T, T>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -94,7 +94,7 @@ struct StaticallyIndexedArray<T, 6> : public Tuple<T, T, T, T, T, T>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -107,7 +107,7 @@ struct StaticallyIndexedArray<T, 7> : public Tuple<T, T, T, T, T, T, T>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -120,7 +120,7 @@ struct StaticallyIndexedArray<T, 8> : public Tuple<T, T, T, T, T, T, T, T>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -133,7 +133,7 @@ struct StaticallyIndexedArray<T, 9> : public Tuple<T, T, T, T, T, T, T, T, T>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -146,7 +146,7 @@ struct StaticallyIndexedArray<T, 10> : public Tuple<T, T, T, T, T, T, T, T, T, T
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -159,7 +159,7 @@ struct StaticallyIndexedArray<T, 11> : public Tuple<T, T, T, T, T, T, T, T, T, T
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -172,7 +172,7 @@ struct StaticallyIndexedArray<T, 12> : public Tuple<T, T, T, T, T, T, T, T, T, T
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -185,7 +185,7 @@ struct StaticallyIndexedArray<T, 13> : public Tuple<T, T, T, T, T, T, T, T, T, T
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -198,7 +198,7 @@ struct StaticallyIndexedArray<T, 14> : public Tuple<T, T, T, T, T, T, T, T, T, T
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -211,7 +211,7 @@ struct StaticallyIndexedArray<T, 15> : public Tuple<T, T, T, T, T, T, T, T, T, T
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -224,7 +224,7 @@ struct StaticallyIndexedArray<T, 16> : public Tuple<T, T, T, T, T, T, T, T, T, T
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -238,7 +238,7 @@ struct StaticallyIndexedArray<T, 17>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -252,7 +252,7 @@ struct StaticallyIndexedArray<T, 18>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -266,7 +266,7 @@ struct StaticallyIndexedArray<T, 19>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -280,7 +280,7 @@ struct StaticallyIndexedArray<T, 20>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -294,7 +294,7 @@ struct StaticallyIndexedArray<T, 21>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };
@@ -308,7 +308,7 @@ struct StaticallyIndexedArray<T, 22>
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr StaticallyIndexedArray(Ys&&... ys)
-        : base(static_cast<T&&>(ys)...)
+        : base(std::forward<Ys>(ys)...)
     {
     }
 };

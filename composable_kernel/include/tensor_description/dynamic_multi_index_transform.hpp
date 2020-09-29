@@ -211,8 +211,8 @@ struct DynamicEmbed
     }
 
     __host__ __device__ explicit constexpr DynamicEmbed()
-        : up_lengths_{make_zero_array<index_t, NDimUp>()},
-          coefficients_{make_zero_array<index_t, NDimUp>()}
+        : up_lengths_{make_zero_multi_index<NDimUp>()},
+          coefficients_{make_zero_multi_index<NDimUp>()}
     {
     }
 
@@ -288,8 +288,8 @@ struct DynamicMerge
     }
 
     __host__ __device__ explicit constexpr DynamicMerge()
-        : low_lengths_{make_zero_array<index_t, NDimLow>()},
-          low_lengths_scan_{make_zero_array<index_t, NDimLow>()},
+        : low_lengths_{make_zero_multi_index<NDimLow>()},
+          low_lengths_scan_{make_zero_multi_index<NDimLow>()},
           up_lengths_{0}
     {
     }
@@ -429,8 +429,8 @@ struct DynamicUnMerge
     }
 
     __host__ __device__ explicit constexpr DynamicUnMerge()
-        : up_lengths_{make_zero_array<index_t, NDimUp>()},
-          up_lengths_scan_{make_zero_array<index_t, NDimUp>()}
+        : up_lengths_{make_zero_multi_index<NDimUp>()},
+          up_lengths_scan_{make_zero_multi_index<NDimUp>()}
     {
     }
 
