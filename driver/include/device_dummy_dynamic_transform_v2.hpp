@@ -58,10 +58,13 @@ void device_dummy_dynamic_transform_v2(InDesc,
         const auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
             in_gemmk_gemmn_global_desc, make_multi_index(1, 0));
 
+        print_array("do_tansforms: ", in_gemmk_gemmn_coord_step.do_transforms_);
+
         for(index_t iter = 0; iter < 10; ++iter)
         {
             printf("iter %d\n", iter);
             print_array("idx: ", in_gemmk_gemmn_coord.GetIndex());
+            print_array("hidden idx: ", in_gemmk_gemmn_coord.GetHiddenIndex());
             printf("offset: %d\n", in_gemmk_gemmn_coord.GetOffset());
             printf("\n");
 

@@ -31,9 +31,17 @@ struct DynamicNativeTensorDescriptor
 
     __host__ __device__ constexpr auto GetStrides() const { return strides_; }
 
-    __host__ __device__ constexpr index_t GetLength(index_t idim) const { return lengths_[idim]; }
+    template <index_t IDim>
+    __host__ __device__ constexpr index_t GetLength(Number<IDim>) const
+    {
+        return lengths_[Number<IDim>{}];
+    }
 
-    __host__ __device__ constexpr index_t GetStride(index_t idim) const { return strides_[idim]; }
+    template <index_t IDim>
+    __host__ __device__ constexpr index_t GetStride(Number<IDim>) const
+    {
+        return strides_[Number<IDim>{}];
+    }
 
     __host__ __device__ constexpr index_t GetElementSize() const
     {
@@ -44,11 +52,7 @@ struct DynamicNativeTensorDescriptor
     {
         index_t space = 1;
 
-#pragma unroll
-        for(index_t i = 0; i < NDim; ++i)
-        {
-            space += (GetLength(i) - 1) * GetStride(i);
-        }
+        static_for<0, NDim, 1>{}([&](auto i) { space += (GetLength(i) - 1) * GetStride(i); });
 
         return space;
     }
@@ -58,11 +62,7 @@ struct DynamicNativeTensorDescriptor
     {
         index_t offset = 0;
 
-#pragma unroll
-        for(index_t i = 0; i < NDim; ++i)
-        {
-            offset += idx[i] * GetStride(i);
-        }
+        static_for<0, NDim, 1>{}([&](auto i) { offset += idx[i] * GetStride(i); });
 
         return offset;
     }
@@ -78,11 +78,8 @@ struct DynamicNativeTensorDescriptor
     {
         bool flag = true;
 
-#pragma unroll
-        for(index_t i = 0; i < NDim; ++i)
-        {
-            flag = flag && idx[i] >= 0 && idx[i] < GetLength(i);
-        }
+        static_for<0, NDim, 1>{}(
+            [&](auto i) { flag = flag && idx[i] >= 0 && idx[i] < GetLength(i); });
 
         return flag;
     }
@@ -139,7 +136,7 @@ struct DynamicTransformedTensorDescriptor
         template <typename... Xs>
         __host__ __device__ constexpr auto operator()(Xs... xs) const
         {
-            return merge_arrays(xs...);
+            return array_cat(xs...);
         }
     };
 
@@ -306,11 +303,8 @@ struct DynamicTransformedTensorDescriptor
     {
         bool flag = true;
 
-#pragma unroll
-        for(index_t i = 0; i < NDimUp; ++i)
-        {
-            flag = flag && idx_up[i] >= 0 && idx_up[i] < GetLength(i);
-        }
+        static_for<0, NDimUp, 1>{}(
+            [&](auto i) { flag = flag && idx_up[i] >= 0 && idx_up[i] < GetLength(i); });
 
         return flag;
     }

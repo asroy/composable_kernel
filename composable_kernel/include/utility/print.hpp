@@ -2,6 +2,7 @@
 #define CK_PRINT_HPP
 
 #include "array.hpp"
+#include "statically_indexed_array.hpp"
 #include "array_helper.hpp"
 #include "sequence.hpp"
 
@@ -19,7 +20,7 @@ __host__ __device__ void print_array(const char* s, T a)
         static_for<0, nsize, 1>{}([&a](auto i) constexpr { printf("%u, ", a[i]); });
         printf("}\n");
     }
-    else if constexpr(is_same<data_type, int32_t>{})
+    else if constexpr(true)
     {
         printf("%s size %d, {", s, nsize);
         static_for<0, nsize, 1>{}([&a](auto i) constexpr { printf("%d, ", a[i]); });
@@ -39,7 +40,7 @@ __host__ __device__ void print_array_v2(const char* s, T a)
         static_for<0, nsize, 1>{}([&a](auto i) constexpr { printf("[%u] %u, ", i.value, a[i]); });
         printf("}\n");
     }
-    else if constexpr(is_same<data_type, int32_t>{})
+    else if constexpr(true)
     {
         printf("%s size %d, {", s, nsize);
         static_for<0, nsize, 1>{}([&a](auto i) constexpr { printf("[%d] %d, ", i.value, a[i]); });

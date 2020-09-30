@@ -1,16 +1,27 @@
 #ifndef CK_ARRAY_HELPER_HPP
 #define CK_ARRAY_HELPER_HPP
 
+#include "sequence.hpp"
+#include "sequence_helper.hpp"
+#include "tuple.hpp"
+#include "tuple_helper.hpp"
 #include "array.hpp"
+#include "array_helper.hpp"
 #include "statically_indexed_array.hpp"
 #include "array_element_picker.hpp"
 
 namespace ck {
 
-template <typename Arr, typename Picks>
-__host__ __device__ constexpr auto pick_array_element(Arr& a, Picks)
+template <typename TData, index_t NSize>
+__host__ __device__ constexpr auto push_back(const Array<TData, NSize>& a, const TData& x)
 {
-    return ArrayElementPicker<Arr, Picks>(a);
+    Array<TData, NSize + 1> r;
+
+    static_for<0, NSize, 1>{}([&r, &a ](auto i) constexpr { r(i) = a[i]; });
+
+    r(Number<NSize>{}) = x;
+
+    return r;
 }
 
 template <typename TData, index_t NSize, index_t... IRs>
@@ -59,20 +70,6 @@ __host__ __device__ constexpr auto reorder_array_given_old2new(const Array<TData
 
     static_for<0, NSize, 1>{}(
         lambda_reorder_array_given_old2new<TData, NSize, Sequence<IRs...>>(old_array, new_array));
-
-    return new_array;
-}
-
-template <typename TData, index_t NSize, typename ExtractSeq>
-__host__ __device__ constexpr auto extract_array(const Array<TData, NSize>& old_array, ExtractSeq)
-{
-    Array<TData, ExtractSeq::GetSize()> new_array;
-
-    constexpr index_t new_size = ExtractSeq::GetSize();
-
-    static_assert(new_size <= NSize, "wrong! too many extract");
-
-    static_for<0, new_size, 1>{}([&](auto I) { new_array(I) = old_array[ExtractSeq::At(I)]; });
 
     return new_array;
 }
@@ -201,31 +198,25 @@ reverse_exclusive_scan_on_array(const Array<TData, NSize>& x, Reduce f, TData in
 }
 
 template <typename X, typename... Ys>
-__host__ __device__ constexpr auto merge_arrays(const X& x, const Ys&... ys)
+__host__ __device__ constexpr auto container_cat(const X& x, const Ys&... ys)
 {
-    return merge_arrays(x, merge_arrays(ys...));
+    return container_cat(x, container_cat(ys...));
 }
 
 template <typename T, index_t NX, index_t NY>
-__host__ __device__ constexpr auto merge_arrays(const Array<T, NX>& x, const Array<T, NY>& y)
+__host__ __device__ constexpr auto container_cat(const Array<T, NX>& x, const Array<T, NY>& y)
 {
     Array<T, NX + NY> z;
 
-    for(index_t i = 0; i < NX; ++i)
-    {
-        z(i) = x[i];
-    }
+    static_for<0, NX, 1>{}([&](auto i) { z(i) = x[i]; });
 
-    for(index_t i = 0; i < NY; ++i)
-    {
-        z(i + NX) = y[i];
-    }
+    static_for<0, NY, 1>{}([&](auto i) { z(i + Number<NX>{}) = y[i]; });
 
     return z;
 }
 
-template <typename X>
-__host__ __device__ constexpr auto merge_arrays(const X& x)
+template <typename T, index_t N>
+__host__ __device__ constexpr auto container_cat(const Array<T, N>& x)
 {
     return x;
 }

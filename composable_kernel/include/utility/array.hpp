@@ -59,17 +59,5 @@ __host__ __device__ constexpr auto make_array()
     return Array<X, 0>{};
 }
 
-template <typename TData, index_t NSize>
-__host__ __device__ constexpr auto push_back(Array<TData, NSize>& a, const TData& x)
-{
-    Array<TData, NSize + 1> r;
-
-    static_for<0, NSize, 1>{}([&r, &a ](auto i) constexpr { r(i) = a[i]; });
-
-    r(Number<NSize>{}) = x;
-
-    return r;
-}
-
 } // namespace ck
 #endif

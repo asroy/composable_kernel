@@ -340,7 +340,7 @@ struct DynamicTensorCoordinateStep_v2
 #endif
 };
 
-// TODO: Fix this! This is insane, to use an ugly struct instead of lambda because lambda
+// TODO: How to fix this? It uses an struct instead of lambda because lambda
 // doesn't have constructor, and to put it outside the scope where it is used
 // (transform_dynamic_tensor_descriptor_v2) because template cannot be defined inside a function
 // template
@@ -538,22 +538,25 @@ __host__ __device__ void move_dynamic_tensor_coordinate_v2(const TensorDesc& ten
     idx_hidden_pick_visible += coord_step.GetIndexDiff();
 
     // update rest of hidden index
-    static_for<ntransform - 1, -1, -1>{}([&tensor_desc, &idx_hidden, &idx_diff_hidden](auto itran) {
-        const auto& tran        = tensor_desc.GetTransforms().At(itran);
-        constexpr auto dims_low = TensorDesc::GetLowerDimensionIdss().At(itran);
-        constexpr auto dims_up  = TensorDesc::GetUpperDimensionIdss().At(itran);
+    static_for<ntransform - 1, -1, -1>{}([&](auto itran) {
+        if(coord_step.do_transforms_[itran])
+        {
+            const auto& tran        = tensor_desc.GetTransforms().At(itran);
+            constexpr auto dims_low = TensorDesc::GetLowerDimensionIdss().At(itran);
+            constexpr auto dims_up  = TensorDesc::GetUpperDimensionIdss().At(itran);
 
-        // this const is for ArrayElementPicker, Array itself may not be const
-        const auto idx_up = pick_array_element(idx_hidden, dims_up);
-        auto idx_low      = pick_array_element(idx_hidden, dims_low);
+            // this const is for ArrayElementPicker, Array itself may not be const
+            const auto idx_up = pick_array_element(idx_hidden, dims_up);
+            auto idx_low      = pick_array_element(idx_hidden, dims_low);
 
-        const auto idx_diff_up = pick_array_element(idx_diff_hidden, dims_up);
-        auto idx_diff_low      = pick_array_element(idx_diff_hidden, dims_low);
+            const auto idx_diff_up = pick_array_element(idx_diff_hidden, dims_up);
+            auto idx_diff_low      = pick_array_element(idx_diff_hidden, dims_low);
 
-        tran.CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low, idx_up);
+            tran.CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low, idx_up);
 
-        // update idx_low
-        idx_low += idx_diff_low;
+            // update idx_low
+            idx_low += idx_diff_low;
+        }
     });
 }
 

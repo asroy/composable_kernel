@@ -10,9 +10,9 @@ template <typename Lengths, typename Strides>
 __host__ __device__ constexpr auto make_dynamic_native_tensor_descriptor(const Lengths& lengths,
                                                                          const Strides& strides)
 {
-    static_assert(Lengths::GetSize() == Strides::GetSize(), "wrong! Size not the same");
+    static_assert(Lengths::Size() == Strides::Size(), "wrong! Size not the same");
 
-    return DynamicNativeTensorDescriptor<Lengths::GetSize()>(lengths, strides);
+    return DynamicNativeTensorDescriptor<Lengths::Size()>(lengths, strides);
 }
 
 template <typename LowTensorDescriptor,

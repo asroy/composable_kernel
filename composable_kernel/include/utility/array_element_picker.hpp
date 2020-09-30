@@ -97,5 +97,11 @@ __host__ __device__ constexpr auto operator-=(ArrayElementPicker<Arr, Picks>& y,
     return y;
 }
 
+template <typename Arr, typename Picks>
+__host__ __device__ constexpr auto pick_array_element(Arr& a, Picks)
+{
+    return ArrayElementPicker<Arr, Picks>(a);
+}
+
 } // namespace ck
 #endif
