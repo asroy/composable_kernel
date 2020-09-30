@@ -13,6 +13,22 @@ struct DynamicPassThrough
 
     const UpperIndex up_lengths_;
 
+#if 0
+    __host__ __device__ explicit constexpr DynamicPassThrough(const DynamicPassThrough&) = default;
+
+    __host__ __device__ explicit constexpr DynamicPassThrough(DynamicPassThrough&&) = default;
+#else
+    __host__ __device__ explicit constexpr DynamicPassThrough(const DynamicPassThrough& other)
+        : up_lengths_{other.up_lengths_}
+    {
+    }
+
+    __host__ __device__ explicit constexpr DynamicPassThrough(DynamicPassThrough&& other)
+        : up_lengths_{other.up_lengths_}
+    {
+    }
+#endif
+
     __host__ __device__ explicit constexpr DynamicPassThrough(const index_t& low_length)
         : up_lengths_{make_multi_index(low_length)}
     {
@@ -71,6 +87,22 @@ struct DynamicLeftPad
 
     const UpperIndex up_lengths_;
     const index_t left_pad_;
+
+#if 0
+    __host__ __device__ explicit constexpr DynamicLeftPad(const DynamicLeftPad&) = default;
+
+    __host__ __device__ explicit constexpr DynamicLeftPad(DynamicLeftPad&&) = default;
+#else
+    __host__ __device__ explicit constexpr DynamicLeftPad(const DynamicLeftPad& other)
+        : up_lengths_{other.up_lengths_}, left_pad_{other.left_pad_}
+    {
+    }
+
+    __host__ __device__ explicit constexpr DynamicLeftPad(DynamicLeftPad&& other)
+        : up_lengths_{other.up_lengths_}, left_pad_{other.left_pad_}
+    {
+    }
+#endif
 
     __host__ __device__ explicit constexpr DynamicLeftPad(const index_t& low_length,
                                                           const index_t& left_pad)
@@ -134,6 +166,26 @@ struct DynamicRightPad
     const UpperIndex up_lengths_;
     const index_t low_length_;
     const index_t right_pad_;
+
+#if 0
+    __host__ __device__ explicit constexpr DynamicRightPad(const DynamicRightPad&) = default;
+
+    __host__ __device__ explicit constexpr DynamicRightPad(DynamicRightPad&&) = default;
+#else
+    __host__ __device__ explicit constexpr DynamicRightPad(const DynamicRightPad& other)
+        : up_lengths_{other.up_lengths_},
+          low_length_{other.low_length_},
+          right_pad_{other.right_pad_}
+    {
+    }
+
+    __host__ __device__ explicit constexpr DynamicRightPad(DynamicRightPad&& other)
+        : up_lengths_{other.up_lengths_},
+          low_length_{other.low_length_},
+          right_pad_{other.right_pad_}
+    {
+    }
+#endif
 
     __host__ __device__ explicit constexpr DynamicRightPad(const index_t& low_length,
                                                            const index_t& right_pad)
@@ -203,11 +255,33 @@ struct DynamicEmbed
     const UpperIndex up_lengths_;
     const UpperIndex coefficients_;
 
+#if 0
+    __host__ __device__ explicit constexpr DynamicEmbed(const DynamicEmbed&) = default;
+
+    __host__ __device__ explicit constexpr DynamicEmbed(DynamicEmbed&&) = default;
+#else
+    __host__ __device__ explicit constexpr DynamicEmbed(const DynamicEmbed& other)
+        : up_lengths_{other.up_lengths_}, coefficients_{other.coefficients_}
+    {
+    }
+
+    __host__ __device__ explicit constexpr DynamicEmbed(DynamicEmbed&& other)
+        : up_lengths_{other.up_lengths_}, coefficients_{other.coefficients_}
+    {
+    }
+#endif
     __host__ __device__ explicit constexpr DynamicEmbed(const UpperIndex& up_lengths,
                                                         const UpperIndex& coefficients)
         : up_lengths_{up_lengths}, coefficients_{coefficients}
     {
         static_assert(UpperIndex::Size() == NDimUp, "wrong! # of dimensions not consistent");
+    }
+
+    template <typename UpperLengths, typename Coefficients>
+    __host__ __device__ explicit constexpr DynamicEmbed(const UpperLengths& up_lengths,
+                                                        const Coefficients& coefficients)
+        : up_lengths_{up_lengths}, coefficients_{coefficients}
+    {
     }
 
     __host__ __device__ explicit constexpr DynamicEmbed()
@@ -276,6 +350,26 @@ struct DynamicMerge
     const LowerIndex low_lengths_;
     const LowerIndex low_lengths_scan_;
     const UpperIndex up_lengths_;
+
+#if 0
+    __host__ __device__ explicit constexpr DynamicMerge(const DynamicMerge&) = default;
+
+    __host__ __device__ explicit constexpr DynamicMerge(DynamicMerge&&) = default;
+#else
+    __host__ __device__ explicit constexpr DynamicMerge(const DynamicMerge& other)
+        : low_lengths_{other.low_lengths_},
+          low_lengths_scan_{other.low_lengths_scan_},
+          up_lengths_{other.up_lengths_}
+    {
+    }
+
+    __host__ __device__ explicit constexpr DynamicMerge(DynamicMerge&& other)
+        : low_lengths_{other.low_lengths_},
+          low_lengths_scan_{other.low_lengths_scan_},
+          up_lengths_{other.up_lengths_}
+    {
+    }
+#endif
 
     __host__ __device__ explicit constexpr DynamicMerge(const LowerIndex& low_lengths)
         : low_lengths_{low_lengths},

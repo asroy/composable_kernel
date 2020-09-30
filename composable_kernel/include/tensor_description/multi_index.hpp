@@ -5,7 +5,7 @@
 
 namespace ck {
 
-#if 1 // dyanmically indexed array
+#if CK_USE_DYNAMICALLY_INDEXED_MULTI_INDEX
 template <index_t N>
 using MultiIndex = Array<index_t, N>;
 
@@ -22,7 +22,8 @@ __host__ __device__ constexpr auto make_multi_index(Xs&&... xs)
     return make_array<const index_t>(std::forward<const Xs>(xs)...);
 }
 #endif
-#else // statically index array
+
+#else
 template <index_t N>
 using MultiIndex = StaticallyIndexedArray<index_t, N>;
 
