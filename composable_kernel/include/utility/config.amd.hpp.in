@@ -9,7 +9,7 @@
 #define CK_UNSIGNED_INDEX_TYPE 0
 
 // multi index
-#define CK_USE_DYNAMICALLY_INDEXED_MULTI_INDEX 1
+#define CK_USE_DYNAMICALLY_INDEXED_MULTI_INDEX 0
 
 // device backend
 #define CK_DEVICE_BACKEND_AMD 1

@@ -93,7 +93,7 @@ void device_dummy_dynamic_transform_v2(InDesc,
 
         for(index_t j = 0; j < nrepeat; ++j)
         {
-#if 1
+#if 0
             launch_kernel(run_gridwise_operation<DummyDynamicTransform_v2_1<BlockSize>,
                                                  index_t* const,
                                                  float* const,
