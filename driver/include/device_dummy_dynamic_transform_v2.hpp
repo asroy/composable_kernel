@@ -28,11 +28,11 @@ void device_dummy_dynamic_transform_v2(InDesc,
 
     using TDevice = typename conditional<is_same<half_float::half, T>::value, half_t, T>::type;
 
-    const auto in_nchw_desc = make_dynamic_native_tensor_descriptor_v2(
+    const auto in_nchw_desc = make_dynamic_native_tensor_descriptor_v2<4>(
         to_multi_index(InDesc::GetLengths()), to_multi_index(InDesc::GetStrides()));
-    const auto wei_kcyx_desc = make_dynamic_native_tensor_descriptor_v2(
+    const auto wei_kcyx_desc = make_dynamic_native_tensor_descriptor_v2<4>(
         to_multi_index(WeiDesc::GetLengths()), to_multi_index(WeiDesc::GetStrides()));
-    const auto out_nkhw_desc = make_dynamic_native_tensor_descriptor_v2(
+    const auto out_nkhw_desc = make_dynamic_native_tensor_descriptor_v2<4>(
         to_multi_index(OutDesc::GetLengths()), to_multi_index(OutDesc::GetStrides()));
 
     const auto conv_strides   = to_multi_index(ConvStrides{});
@@ -124,11 +124,7 @@ void device_dummy_dynamic_transform_v2(InDesc,
                                                  index_t* const,
                                                  float* const,
                                                  float* const,
-                                                 const decltype(in_gemmk_gemmn_global_desc),
-                                                 const MultiIndex<2>,
-                                                 const MultiIndex<2>,
-                                                 const MultiIndex<2>,
-                                                 const MultiIndex<2>>,
+                                                 const decltype(in_gemmk_gemmn_global_desc)>,
                           dim3(GridSize),
                           dim3(BlockSize),
                           0,
@@ -136,11 +132,7 @@ void device_dummy_dynamic_transform_v2(InDesc,
                           static_cast<index_t*>(wei_kcyx_device_buf.GetDeviceBuffer()),
                           static_cast<float*>(in_nchw_device_buf.GetDeviceBuffer()),
                           static_cast<float*>(out_nkhw_device_buf.GetDeviceBuffer()),
-                          in_gemmk_gemmn_global_desc,
-                          conv_strides,
-                          conv_dilations,
-                          in_left_pads,
-                          in_right_pads);
+                          in_gemmk_gemmn_global_desc);
 #endif
         }
     }

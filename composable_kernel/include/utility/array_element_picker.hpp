@@ -11,8 +11,10 @@ namespace ck {
 template <typename Arr, typename Picks>
 struct ArrayElementPicker
 {
-    using type      = ArrayElementPicker;
+    using type = ArrayElementPicker;
+#if 0
     using data_type = typename Arr::data_type;
+#endif
 
     __host__ __device__ constexpr ArrayElementPicker() = delete;
 
@@ -26,20 +28,20 @@ struct ArrayElementPicker
     __host__ __device__ static constexpr auto Size() { return Picks::Size(); }
 
     template <index_t I>
-    __host__ __device__ constexpr const data_type& At(Number<I>) const
+    __host__ __device__ constexpr const auto& At(Number<I> i) const
     {
         static_assert(I < Size(), "wrong!");
 
-        constexpr auto IP = Picks{}[I];
+        constexpr auto IP = Picks{}[i];
         return mArray[IP];
     }
 
     template <index_t I>
-    __host__ __device__ constexpr data_type& At(Number<I>)
+    __host__ __device__ constexpr auto& At(Number<I> i)
     {
         static_assert(I < Size(), "wrong!");
 
-        constexpr auto IP = Picks{}[I];
+        constexpr auto IP = Picks{}[i];
         return mArray(IP);
     }
 

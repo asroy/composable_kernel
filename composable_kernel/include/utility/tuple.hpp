@@ -124,9 +124,9 @@ struct Tuple : detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(X
 
     __host__ __device__ explicit constexpr Tuple() : base() {}
 
-    __host__ __device__ explicit constexpr Tuple(const Tuple&) = default;
+    __host__ __device__ constexpr Tuple(const Tuple&) = default;
 
-    __host__ __device__ explicit constexpr Tuple(Tuple&&) = default;
+    __host__ __device__ constexpr Tuple(Tuple&&) = default;
 
 #if 0
     template <typename... Ys,

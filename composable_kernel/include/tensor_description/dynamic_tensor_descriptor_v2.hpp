@@ -119,7 +119,10 @@ struct DynamicTensorDescriptor_v2
         return reduce_on_array(GetLengths(), math::multiplies<index_t>{}, index_t{1});
     }
 
-    __host__ __device__ constexpr index_t GetElementSpaceSize() const { return hidden_lengths_[0]; }
+    __host__ __device__ constexpr index_t GetElementSpaceSize() const
+    {
+        return hidden_lengths_[Number<0>{}];
+    }
 
     template <typename Idx>
     __host__ __device__ constexpr index_t CalculateOffset(const Idx& idx) const
@@ -152,7 +155,7 @@ struct DynamicTensorDescriptor_v2
             tran.CalculateLowerIndex(idx_low, idx_up);
         });
 
-        return idx_hidden[0];
+        return idx_hidden[Number<0>{}];
 #endif
     }
 
@@ -266,7 +269,7 @@ struct DynamicTensorCoordinate_v2
 
     __host__ __device__ constexpr const auto& GetIndex() const { return GetVisibleIndex(); }
 
-    __host__ __device__ constexpr index_t GetOffset() const { return idx_hidden_[0]; }
+    __host__ __device__ constexpr index_t GetOffset() const { return idx_hidden_[Number<0>{}]; }
 
     // private:
     __host__ __device__ constexpr const auto& GetHiddenIndex() const { return idx_hidden_; }
@@ -517,7 +520,7 @@ __host__ __device__ void move_dynamic_tensor_coordinate_v2(const TensorDesc& ten
     using HiddenIndex = MultiIndex<ndim_hidden>;
 
     // this is what needs to be calculated
-    auto idx_diff_hidden = HiddenIndex{{0}};
+    auto idx_diff_hidden = make_zero_multi_index<ndim_hidden>();
 
     // initialize visible index diff
     //   idx_diff_hidden_pick_visible contains reference to idx_diff_hidden

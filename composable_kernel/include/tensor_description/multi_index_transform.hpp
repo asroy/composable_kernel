@@ -208,7 +208,7 @@ struct Merge
     {
         LowerIndex idx_low;
 
-        index_t itmp = idx_up[0];
+        index_t itmp = idx_up[Number<0>{}];
 
         constexpr auto pseudo_low_strides =
             reverse_inclusive_scan_sequence(
@@ -218,7 +218,7 @@ struct Merge
         static_for<0, nDimLow - 1, 1>{}(
             lambda_CalculateLowerIndex<decltype(pseudo_low_strides)>(itmp, idx_low));
 
-        idx_low(nDimLow - 1) = itmp / pseudo_low_strides[nDimLow - 1];
+        idx_low(Number<nDimLow - 1>{}) = itmp / pseudo_low_strides[Number<nDimLow - 1>{}];
 
         return idx_low;
     }

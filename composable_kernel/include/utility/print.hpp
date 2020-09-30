@@ -10,7 +10,7 @@ namespace ck {
 template <typename T>
 __host__ __device__ void print_array(const char* s, T a)
 {
-    using data_type         = typename decltype(a)::data_type;
+    using data_type         = decltype(a.At(Number<0>{}));
     constexpr index_t nsize = a.Size();
 
     if constexpr(is_same<data_type, uint32_t>{})
@@ -30,7 +30,7 @@ __host__ __device__ void print_array(const char* s, T a)
 template <typename T>
 __host__ __device__ void print_array_v2(const char* s, T a)
 {
-    using data_type         = typename decltype(a)::data_type;
+    using data_type         = decltype(a.At(Number<0>{}));
     constexpr index_t nsize = a.Size();
 
     if constexpr(is_same<data_type, uint32_t>{})

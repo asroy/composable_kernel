@@ -123,7 +123,7 @@ struct DummyDynamicTransform_v2_1
         const auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
             in_gemmk_gemmn_global_desc, make_multi_index(1, 0));
 
-#pragma unroll
+#pragma unroll 1
         for(index_t i = 0; i < 10; ++i)
         {
             move_dynamic_tensor_coordinate_v2(
@@ -293,14 +293,14 @@ struct DummyDynamicTransform_v2_2
         // initialize idx
         static_for<0, 2, 1>{}([&](auto i) { idx(i) = p_wei_global[get_thread_local_1d_id() + i]; });
 
-#if 0
+#if 1
         const index_t niter = p_wei_global[10];
 
         auto in_gemmk_gemmn_coord =
             make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, idx);
 
         const auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
-            in_gemmk_gemmn_global_desc, MultiIndex<2>{{1, 0}});
+            in_gemmk_gemmn_global_desc, make_multi_index(1, 0));
 
         for(index_t iter = 0; iter < niter; ++iter)
         {

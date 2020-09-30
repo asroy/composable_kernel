@@ -119,8 +119,8 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
 
         const auto block_work_id = block_work_desc.CalculateClusterIndex(get_block_1d_id());
 
-        const index_t k_block_data_on_global = block_work_id[0] * KPerBlock;
-        const index_t b_block_data_on_global = block_work_id[1] * BPerBlock;
+        const index_t k_block_data_on_global = block_work_id[I0] * KPerBlock;
+        const index_t b_block_data_on_global = block_work_id[I1] * BPerBlock;
 
         // input tensor
         //     global tensor in global memory

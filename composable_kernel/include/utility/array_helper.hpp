@@ -133,7 +133,7 @@ __host__ __device__ constexpr auto operator*(TData v, Array<TData, NSize> a)
 template <typename TData, typename Arr, typename Reduce>
 __host__ __device__ constexpr TData reduce_on_array(const Arr& a, Reduce f, TData init)
 {
-    static_assert(is_same<typename Arr::data_type, TData>::value, "wrong! different data type");
+    // static_assert(is_same<typename Arr::data_type, TData>::value, "wrong! different data type");
     static_assert(Arr::Size() > 0, "wrong");
 
     TData result = init;
@@ -151,12 +151,22 @@ reverse_inclusive_scan_on_array(const Array<TData, NSize>& x, Reduce f, TData in
 
     TData r = init;
 
+#if 0
 #pragma unroll
     for(index_t i = NSize - 1; i >= 0; --i)
     {
         r    = f(r, x[i]);
         y(i) = r;
     }
+#else
+    static_for<NSize - 1, 0, -1>{}([&](auto i) {
+        r    = f(r, x[i]);
+        y(i) = r;
+    });
+
+    r              = f(r, x[Number<0>{}]);
+    y(Number<0>{}) = r;
+#endif
 
     return y;
 }
@@ -169,6 +179,7 @@ reverse_exclusive_scan_on_array(const Array<TData, NSize>& x, Reduce f, TData in
 
     TData r = init;
 
+#if 0
 #pragma unroll
     for(index_t i = NSize - 1; i > 0; --i)
     {
@@ -177,6 +188,14 @@ reverse_exclusive_scan_on_array(const Array<TData, NSize>& x, Reduce f, TData in
     }
 
     y(0) = r;
+#else
+    static_for<NSize - 1, 0, -1>{}([&](auto i) {
+        y(i) = r;
+        r    = f(r, x[i]);
+    });
+
+    y(Number<0>{}) = r;
+#endif
 
     return y;
 }
