@@ -24,6 +24,10 @@ struct TupleElement
     {
     }
 
+    __host__ __device__ explicit constexpr TupleElement(const TupleElement&) = default;
+
+    __host__ __device__ explicit constexpr TupleElement(TupleElement&&) = default;
+
     Data mData;
 };
 
@@ -39,11 +43,14 @@ __host__ __device__ constexpr Data& get_tuple_element(TupleElement<Key, Data>& x
     return x.mData;
 }
 
+#if 0
+// TODO: not sure the use of reference is correct
 template <typename Key, typename Data>
 __host__ __device__ constexpr Data&& get_tuple_element(TupleElement<Key, Data>&& x)
 {
     return static_cast<Data&&>(x.mData);
 }
+#endif
 
 template <typename Indices, typename... Xs>
 struct TupleImpl;
@@ -53,13 +60,20 @@ struct TupleImpl<Sequence<Is...>, Xs...> : TupleElement<TupleElementKey<Is>, Xs>
 {
     __host__ __device__ explicit constexpr TupleImpl() : TupleElement<TupleElementKey<Is>, Xs>()...
     {
+        static_assert(sizeof...(Is) == sizeof...(Xs), "wrong! inconsistent size");
     }
 
     template <typename... Ys>
     __host__ __device__ explicit constexpr TupleImpl(Ys&&... ys)
         : TupleElement<TupleElementKey<Is>, Xs>(std::forward<Ys>(ys))...
     {
+        static_assert(sizeof...(Is) == sizeof...(Xs) && sizeof...(Is) == sizeof...(Ys),
+                      "wrong! inconsistent size");
     }
+
+    __host__ __device__ explicit constexpr TupleImpl(const TupleImpl&) = default;
+
+    __host__ __device__ explicit constexpr TupleImpl(TupleImpl&&) = default;
 
     __host__ __device__ static constexpr index_t Size() { return sizeof...(Xs); }
 
@@ -88,6 +102,10 @@ struct Tuple : detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(X
     __host__ __device__ explicit constexpr Tuple(Ys&&... ys) : base(std::forward<Ys>(ys)...)
     {
     }
+
+    __host__ __device__ explicit constexpr Tuple(const Tuple&) = default;
+
+    __host__ __device__ explicit constexpr Tuple(Tuple&&) = default;
 
     __host__ __device__ static constexpr index_t Size() { return sizeof...(Xs); }
 

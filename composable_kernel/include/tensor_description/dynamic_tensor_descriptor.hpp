@@ -21,7 +21,7 @@ struct DynamicNativeTensorDescriptor
     }
 
     __host__ __device__ explicit constexpr DynamicNativeTensorDescriptor()
-        : lengths_{make_zero_array<index_t, NDim>()}, strides_{make_zero_array<index_t, NDim>()}
+        : lengths_{make_zero_multi_index<NDim>()}, strides_{make_zero_multi_index<NDim>()}
     {
     }
 

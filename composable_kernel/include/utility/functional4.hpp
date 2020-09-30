@@ -16,9 +16,9 @@ template <index_t... Is>
 struct unpack_impl<Sequence<Is...>>
 {
     template <typename F, typename X>
-    __host__ __device__ constexpr auto operator()(F f, const X& x) const
+    __host__ __device__ constexpr auto operator()(F&& f, X&& x) const
     {
-        return f(x.At(Number<Is>{})...);
+        return std::forward<F>(f)(std::forward<X>(x).At(Number<Is>{})...);
     }
 };
 
@@ -30,26 +30,32 @@ template <index_t... Is, index_t... Js>
 struct unpack2_impl<Sequence<Is...>, Sequence<Js...>>
 {
     template <typename F, typename X, typename Y>
-    __host__ __device__ constexpr auto operator()(F f, const X& x, const Y& y) const
+    __host__ __device__ constexpr auto operator()(F&& f, X&& x, Y&& y) const
     {
-        return f(x.At(Number<Is>{})..., y.At(Number<Js>{})...);
+        return std::forward<F>(f)(std::forward<X>(x).At(Number<Is>{})...,
+                                  std::forward<Y>(y).At(Number<Js>{})...);
     }
 };
 
 } // namespace detail
 
 template <typename F, typename X>
-__host__ __device__ constexpr auto unpack(F f, const X& x)
+__host__ __device__ constexpr auto unpack(F&& f, X&& x)
 {
-    return detail::unpack_impl<typename arithmetic_sequence_gen<0, X::Size(), 1>::type>{}(f, x);
+    using X_ = remove_reference_t<X>;
+    return detail::unpack_impl<typename arithmetic_sequence_gen<0, X_::Size(), 1>::type>{}(
+        std::forward<F>(f), std::forward<X>(x));
 }
 
 // TODO: properly implement unpack that takes any number of containers
 template <typename F, typename X, typename Y>
-__host__ __device__ constexpr auto unpack(F f, const X& x, const Y& y)
+__host__ __device__ constexpr auto unpack(F&& f, X&& x, Y&& y)
 {
-    return detail::unpack2_impl<typename arithmetic_sequence_gen<0, X::Size(), 1>::type,
-                                typename arithmetic_sequence_gen<0, Y::Size(), 1>::type>{}(f, x, y);
+    using X_ = remove_reference_t<X>;
+    using Y_ = remove_reference_t<Y>;
+    return detail::unpack2_impl<typename arithmetic_sequence_gen<0, X_::Size(), 1>::type,
+                                typename arithmetic_sequence_gen<0, Y_::Size(), 1>::type>{}(
+        std::forward<F>(f), std::forward<X>(x), std::forward<Y>(y));
 }
 
 } // namespace ck

@@ -13,9 +13,10 @@ __host__ __device__ constexpr auto generate_tuple(F&& f, Number<N>)
 }
 
 template <typename... Tuples>
-__host__ __device__ constexpr auto merge_tuples(Tuples... tuples)
+__host__ __device__ constexpr auto tuple_cat(Tuples&&... tuples)
 {
-    return unpack([&tuples...](auto... xs) { return make_tuple(xs...); }, tuples...);
+    return unpack([&](auto&&... xs) { return make_tuple(std::forward<decltype(xs)>(xs)...); },
+                  std::forward<Tuples>(tuples)...);
 }
 
 namespace detail {

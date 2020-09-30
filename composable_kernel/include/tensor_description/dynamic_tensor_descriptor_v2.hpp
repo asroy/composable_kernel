@@ -408,13 +408,13 @@ transform_dynamic_tensor_descriptor_v2(const OldTensorDescriptor& old_tensor_des
         unordered_new_visible_dim_hidden_ids.ReorderGivenOld2New(new_visible_dim_unordered2ordered);
 
     // put everything together
-    const auto all_transforms = merge_tuples(old_tensor_desc.GetTransforms(), new_transforms);
+    const auto all_transforms = tuple_cat(old_tensor_desc.GetTransforms(), new_transforms);
 
     constexpr auto all_low_dim_hidden_idss =
-        merge_tuples(OldTensorDescriptor::GetLowerDimensionIdss(), low_dim_hidden_idss);
+        tuple_cat(OldTensorDescriptor::GetLowerDimensionIdss(), low_dim_hidden_idss);
 
     constexpr auto all_up_dim_hidden_idss =
-        merge_tuples(OldTensorDescriptor::GetUpperDimensionIdss(), up_dim_hidden_idss);
+        tuple_cat(OldTensorDescriptor::GetUpperDimensionIdss(), up_dim_hidden_idss);
 
     return DynamicTensorDescriptor_v2<decltype(all_transforms),
                                       decltype(all_low_dim_hidden_idss),
