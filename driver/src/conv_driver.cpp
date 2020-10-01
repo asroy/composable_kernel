@@ -496,10 +496,10 @@ int main(int argc, char* argv[])
     ostream_tensor_descriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
     ostream_tensor_descriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
     ostream_tensor_descriptor(out_nkhw_desc, std::cout << "out_nkhw_desc: ");
-    print_array("LeftPads", LeftPads{});
-    print_array("RightPads", RightPads{});
-    print_array("ConvStrides", ConvStrides{});
-    print_array("ConvDilations", ConvDilations{});
+    print_array("LeftPads", to_multi_index(LeftPads{}));
+    print_array("RightPads", to_multi_index(RightPads{}));
+    print_array("ConvStrides", to_multi_index(ConvStrides{}));
+    print_array("ConvDilations", to_multi_index(ConvDilations{}));
 
 #if 1
     using in_data_t  = float;

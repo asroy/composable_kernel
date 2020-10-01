@@ -95,15 +95,11 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
 
 #if 1
                 // zero out buffer
-                for(index_t i = 0; i < long_vector_size; ++i)
-                {
-                    p_src_long_vector[i] = 0;
-                }
+                static_for<0, long_vector_size, 1>{}([&](auto i) { p_src_long_vector[i] = 0; });
 #endif
 
                 // load data from src to the long-vector buffer
-                for(index_t i = 0; i < long_vector_size / src_data_per_access; ++i)
-                {
+                static_for<0, long_vector_size / src_data_per_access, 1>{}([&](auto i) {
                     auto scalar_id               = make_zero_multi_index<nDim>();
                     scalar_id(vector_access_dim) = i * src_data_per_access;
 
@@ -130,19 +126,17 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                                      buffer_offset,
                                      true,
                                      long_vector_size);
-                }
+                });
 
                 // SrcData to DstData conversion
                 DstData p_dst_long_vector[long_vector_size];
 
-                for(index_t i = 0; i < long_vector_size; ++i)
-                {
+                static_for<0, long_vector_size, 1>{}([&](auto i) {
                     p_dst_long_vector[i] = type_convert<DstData>{}(p_src_long_vector[i]);
-                }
+                });
 
                 // store data from the long-vector buffer to dst
-                for(index_t i = 0; i < long_vector_size / dst_data_per_access; ++i)
-                {
+                static_for<0, long_vector_size / dst_data_per_access, 1>{}([&](auto i) {
                     auto scalar_id               = make_zero_multi_index<nDim>();
                     scalar_id(vector_access_dim) = i * dst_data_per_access;
 
@@ -169,7 +163,7 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                                                  dst_coord.GetOffset(),
                                                  dst_coord.IsOffsetValidAssumingUpperIndexIsValid(),
                                                  DstDesc::GetElementSpace());
-                }
+                });
             });
     }
 

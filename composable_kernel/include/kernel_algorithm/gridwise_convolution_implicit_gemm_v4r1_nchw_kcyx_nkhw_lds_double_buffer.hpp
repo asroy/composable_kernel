@@ -439,12 +439,12 @@ struct GridwiseConvolutionImplicitGemm_v4r1_nchw_kcyx_nkhw_lds_double_buffer
                 1,
                 AddressSpace::Vgpr,
                 AddressSpace::Global,
-                InMemoryDataOperation::Set>({0, 0, 0, 0, 0},
-                                            {k_thread_data_on_global / K1,
-                                             k_thread_data_on_global % K1,
-                                             0,
-                                             b_thread_data_on_global,
-                                             0})
+                InMemoryDataOperation::Set>(make_multi_index(0, 0, 0, 0, 0),
+                                            make_multi_index(k_thread_data_on_global / K1,
+                                                             k_thread_data_on_global % K1,
+                                                             0,
+                                                             b_thread_data_on_global,
+                                                             0))
                 .Run(p_out_thread, p_out_global);
         }
     }

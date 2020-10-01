@@ -350,7 +350,7 @@ struct UnMerge
 
     __host__ __device__ static constexpr auto CalculateLowerIndex(const UpperIndex& idx_up)
     {
-        LowerIndex idx_low{{0}};
+        LowerIndex idx_low = make_multi_index(0);
 
         constexpr auto pseudo_up_strides =
             reverse_inclusive_scan_sequence(
@@ -358,7 +358,7 @@ struct UnMerge
                 .PushBack(Number<1>{});
 
         static_for<0, nDimUp, 1>{}(
-            [&](auto idim) { idx_low(0) += idx_up[idim] * pseudo_up_strides[idim]; });
+            [&](auto idim) { idx_low(Number<0>{}) += idx_up[idim] * pseudo_up_strides[idim]; });
 
         return idx_low;
     }
@@ -459,25 +459,17 @@ struct Embed
 
             index_t itmp = icorner;
 
-#if 0
-            for(index_t idim = nDimUp - 1; idim >= 0; --idim)
-            {
-                idx_up(idim) = itmp % 2 == 0 ? 0 : UpperLengths::At(idim) - 1;
-                itmp /= 2;
-            }
-#else
             static_for<nDimUp, 0, -1>{}([&](auto idim) {
                 auto idim_m1    = idim - Number<1>{};
                 idx_up(idim_m1) = itmp % 2 == 0 ? 0 : UpperLengths::At(idim_m1) - 1;
                 itmp /= 2;
             });
-#endif
 
             // calculate lower index
             auto idx_low = CalculateLowerIndex(idx_up);
 
             // judge if lower index is valid
-            flag = flag && idx_low[0] >= 0 && idx_low[0] < LowerLength;
+            flag = flag && idx_low[Number<0>{}] >= 0 && idx_low[Number<0>{}] < LowerLength;
         }
 
         return flag;
