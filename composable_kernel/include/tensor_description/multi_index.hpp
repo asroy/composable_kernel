@@ -10,9 +10,9 @@ template <index_t N>
 using MultiIndex = Array<index_t, N>;
 
 template <typename... Xs>
-__host__ __device__ constexpr auto make_multi_index(const Xs&... xs)
+__host__ __device__ constexpr auto make_multi_index(Xs&&... xs)
 {
-    return make_array<const index_t>(std::forward<const Xs>(xs)...);
+    return make_array<index_t>(index_t{xs}...);
 }
 
 template <index_t NSize>
@@ -79,9 +79,9 @@ template <index_t N>
 using MultiIndex = StaticallyIndexedArray<index_t, N>;
 
 template <typename... Xs>
-__host__ __device__ constexpr auto make_multi_index(const Xs&... xs)
+__host__ __device__ constexpr auto make_multi_index(Xs&&... xs)
 {
-    return make_statically_indexed_array<const index_t>(std::forward<const Xs>(xs)...);
+    return make_statically_indexed_array<index_t>(index_t{xs}...);
 }
 
 template <index_t NSize>

@@ -232,7 +232,7 @@ struct Merge
                             const UpperIndex& /* idx_up_old */,
                             const LowerIndex& idx_low_old)
     {
-        if(idx_up_diff[0] == 0)
+        if(idx_up_diff[Number<0>{}] == 0)
         {
             return make_zero_multi_index<nDimLow>();
         }
@@ -257,7 +257,7 @@ struct Merge
 
             LowerIndex idx_low_new = idx_low_old + idx_low_diff_tmp;
 
-            if(idx_up_diff[0] > 0)
+            if(idx_up_diff[Number<0>{}] > 0)
             {
                 // do carry check on each low dimension in reversed order
                 // starting from the first digit that changed
@@ -285,7 +285,7 @@ struct Merge
                 // highest dimension, no out-of-bound check
                 if(carry)
                 {
-                    ++idx_low_new(0);
+                    ++idx_low_new(Number<0>{});
                 }
             }
             else
@@ -316,7 +316,7 @@ struct Merge
                 // highest dimension, no out-of-bound check
                 if(borrow)
                 {
-                    --idx_low_new(0);
+                    --idx_low_new(Number<0>{});
                 }
             }
 
@@ -411,12 +411,10 @@ struct Embed
 
     __host__ __device__ static constexpr auto CalculateLowerIndex(const UpperIndex& idx_up)
     {
-        LowerIndex idx_low{{Coefficients{}[nDimUp]}};
+        LowerIndex idx_low = make_multi_index(Coefficients{}[Number<nDimUp>{}]);
 
-        for(index_t i = 0; i < nDimUp; ++i)
-        {
-            idx_low(0) += idx_up[i] * Coefficients{}[i];
-        }
+        static_for<0, nDimUp, 1>{}(
+            [&](auto i) { idx_low(Number<0>{}) += idx_up[i] * Coefficients{}[i]; });
 
         return idx_low;
     }
@@ -426,12 +424,10 @@ struct Embed
                             const UpperIndex& /* idx_up_old */,
                             const LowerIndex& /* idx_low_old */)
     {
-        LowerIndex idx_low_diff{0};
+        LowerIndex idx_low_diff = make_multi_index(0);
 
-        for(index_t i = 0; i < nDimUp; ++i)
-        {
-            idx_low_diff(0) += idx_up_diff[i] * Coefficients{}[i];
-        }
+        static_for<0, nDimUp, 1>{}(
+            [&](auto i) { idx_low_diff(Number<0>{}) += idx_up_diff[i] * Coefficients{}[i]; });
 
         return idx_low_diff;
     }
@@ -463,11 +459,19 @@ struct Embed
 
             index_t itmp = icorner;
 
+#if 0
             for(index_t idim = nDimUp - 1; idim >= 0; --idim)
             {
                 idx_up(idim) = itmp % 2 == 0 ? 0 : UpperLengths::At(idim) - 1;
                 itmp /= 2;
             }
+#else
+            static_for<nDimUp, 0, -1>{}([&](auto idim) {
+                auto idim_m1    = idim - Number<1>{};
+                idx_up(idim_m1) = itmp % 2 == 0 ? 0 : UpperLengths::At(idim_m1) - 1;
+                itmp /= 2;
+            });
+#endif
 
             // calculate lower index
             auto idx_low = CalculateLowerIndex(idx_up);
@@ -504,7 +508,7 @@ struct Freeze
 
     __host__ __device__ static constexpr auto CalculateLowerIndex(const UpperIndex& /*idx_up*/)
     {
-        return to_array(LowerFreezePoint{});
+        return to_multi_index(LowerFreezePoint{});
     }
 
     __host__ __device__ static constexpr auto

@@ -510,10 +510,9 @@ struct TransformedTensorDescriptor
                 const auto idx_low_part =
                     to_multi_index(pick_array_element(idx_low, low_dims_part));
 
-                for(index_t i = 0; i < low_dims_part.Size(); ++i)
-                {
+                static_for<0, decltype(low_dims_part)::Size(), 1>{}([&](auto i) {
                     flag = flag && idx_low_part[i] >= 0 && idx_low_part[i] < low_lengths_part[i];
-                }
+                });
             }
         });
 
