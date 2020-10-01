@@ -445,7 +445,8 @@ make_dynamic_tensor_coordinate_v2(const TensorDesc& tensor_desc, const VisibleIn
     idx_hidden_pick_visible      = idx_visible;
 
     // calculate hidden index
-    static_for<ntransform - 1, -1, -1>{}([&tensor_desc, &idx_hidden](auto itran) {
+    static_for<ntransform, 0, -1>{}([&tensor_desc, &idx_hidden](auto itran_p1) {
+        auto itran              = itran_p1 - Number<1>{};
         const auto& tran        = tensor_desc.GetTransforms().At(itran);
         constexpr auto dims_low = TensorDesc::GetLowerDimensionIdss().At(itran);
         constexpr auto dims_up  = TensorDesc::GetUpperDimensionIdss().At(itran);

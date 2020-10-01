@@ -371,7 +371,7 @@ struct DynamicMerge
 
     __host__ __device__ constexpr DynamicMerge(const LowerIndex& low_lengths)
         : low_lengths_{low_lengths},
-          low_lengths_scan_{container_reverse_exclusive_scan<index_t, NDimLow>(
+          low_lengths_scan_{container_reverse_exclusive_scan(
               low_lengths, math::multiplies<index_t>{}, index_t{1})},
           up_lengths_{make_multi_index(
               container_reduce(low_lengths, math::multiplies<index_t>(), index_t{1}))}
@@ -536,7 +536,7 @@ struct DynamicUnMerge
     __host__ __device__ constexpr void CalculateLowerIndex(LowIdx& idx_low,
                                                            const UpIdx& idx_up) const
     {
-        idx_low(Number<0>{}) = idx_up[Number<NDimUp>{}];
+        idx_low(Number<0>{}) = idx_up[Number<NDimUp - 1>{}];
 
         static_for<0, NDimUp - 1, 1>{}(
             [&](auto i) { idx_low(Number<0>{}) += idx_up[i] * up_lengths_scan_[i]; });

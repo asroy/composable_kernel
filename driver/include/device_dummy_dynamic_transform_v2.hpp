@@ -40,36 +40,89 @@ void device_dummy_dynamic_transform_v2(InDesc,
     const auto in_left_pads   = to_multi_index(InLeftPads{});
     const auto in_right_pads  = to_multi_index(InRightPads{});
 
-    const auto tensor_descs = map_convolution_into_gemm_v2(wei_kcyx_desc,
-                                                           in_nchw_desc,
-                                                           out_nkhw_desc,
-                                                           conv_strides,
-                                                           conv_dilations,
-                                                           in_left_pads,
-                                                           in_right_pads);
+    const auto tensor_descs = map_convolution_into_gemm_fwd_v4r4(wei_kcyx_desc,
+                                                                 in_nchw_desc,
+                                                                 out_nkhw_desc,
+                                                                 conv_strides,
+                                                                 conv_dilations,
+                                                                 in_left_pads,
+                                                                 in_right_pads);
 
-    const auto in_gemmk_gemmn_global_desc = tensor_descs.At(Number<0>{});
+    const auto in_gemmk_gemmn_gemmkpack_global_desc = tensor_descs.At(Number<0>{});
 
     // test on cpu
     {
-        auto in_gemmk_gemmn_coord =
-            make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, make_multi_index(0, 0));
+        auto in_gemmk_gemmn_gemmkpack_coord = make_dynamic_tensor_coordinate_v2(
+            in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(0, 0, 0));
 
-        const auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
-            in_gemmk_gemmn_global_desc, make_multi_index(1, 0));
+        const auto in_gemmk_gemmn_gemmkpack_coord_step_0_0_1 =
+            make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_gemmkpack_global_desc,
+                                                   make_multi_index(0, 0, 1));
 
-        print_array("do_tansforms: ", in_gemmk_gemmn_coord_step.do_transforms_);
+        print_array_v2("do_tansforms 0 0 1: ",
+                       in_gemmk_gemmn_gemmkpack_coord_step_0_0_1.do_transforms_);
 
         for(index_t iter = 0; iter < 10; ++iter)
         {
             printf("iter %d\n", iter);
-            print_array("idx: ", in_gemmk_gemmn_coord.GetIndex());
-            print_array("hidden idx: ", in_gemmk_gemmn_coord.GetHiddenIndex());
-            printf("offset: %d\n", in_gemmk_gemmn_coord.GetOffset());
+            print_array_v2("idx: ", in_gemmk_gemmn_gemmkpack_coord.GetIndex());
+            print_array_v2("hidden idx: ", in_gemmk_gemmn_gemmkpack_coord.GetHiddenIndex());
+            printf("offset: %d\n", in_gemmk_gemmn_gemmkpack_coord.GetOffset());
             printf("\n");
 
-            move_dynamic_tensor_coordinate_v2(
-                in_gemmk_gemmn_global_desc, in_gemmk_gemmn_coord, in_gemmk_gemmn_coord_step);
+            move_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_gemmkpack_global_desc,
+                                              in_gemmk_gemmn_gemmkpack_coord,
+                                              in_gemmk_gemmn_gemmkpack_coord_step_0_0_1);
+        }
+    }
+
+    {
+        auto in_gemmk_gemmn_gemmkpack_coord = make_dynamic_tensor_coordinate_v2(
+            in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(0, 0, 0));
+
+        const auto in_gemmk_gemmn_gemmkpack_coord_step_0_1_0 =
+            make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_gemmkpack_global_desc,
+                                                   make_multi_index(0, 1, 0));
+
+        print_array_v2("do_tansforms 0 1 0: ",
+                       in_gemmk_gemmn_gemmkpack_coord_step_0_1_0.do_transforms_);
+
+        for(index_t iter = 0; iter < 10; ++iter)
+        {
+            printf("iter %d\n", iter);
+            print_array_v2("idx: ", in_gemmk_gemmn_gemmkpack_coord.GetIndex());
+            print_array_v2("hidden idx: ", in_gemmk_gemmn_gemmkpack_coord.GetHiddenIndex());
+            printf("offset: %d\n", in_gemmk_gemmn_gemmkpack_coord.GetOffset());
+            printf("\n");
+
+            move_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_gemmkpack_global_desc,
+                                              in_gemmk_gemmn_gemmkpack_coord,
+                                              in_gemmk_gemmn_gemmkpack_coord_step_0_1_0);
+        }
+    }
+
+    {
+        auto in_gemmk_gemmn_gemmkpack_coord = make_dynamic_tensor_coordinate_v2(
+            in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(0, 0, 0));
+
+        const auto in_gemmk_gemmn_gemmkpack_coord_step_1_0_0 =
+            make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_gemmkpack_global_desc,
+                                                   make_multi_index(1, 0, 0));
+
+        print_array_v2("do_tansforms 1 0 0: ",
+                       in_gemmk_gemmn_gemmkpack_coord_step_1_0_0.do_transforms_);
+
+        for(index_t iter = 0; iter < 10; ++iter)
+        {
+            printf("iter %d\n", iter);
+            print_array_v2("idx: ", in_gemmk_gemmn_gemmkpack_coord.GetIndex());
+            print_array_v2("hidden idx: ", in_gemmk_gemmn_gemmkpack_coord.GetHiddenIndex());
+            printf("offset: %d\n", in_gemmk_gemmn_gemmkpack_coord.GetOffset());
+            printf("\n");
+
+            move_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_gemmkpack_global_desc,
+                                              in_gemmk_gemmn_gemmkpack_coord,
+                                              in_gemmk_gemmn_gemmkpack_coord_step_1_0_0);
         }
     }
 
@@ -123,19 +176,20 @@ void device_dummy_dynamic_transform_v2(InDesc,
                           in_left_pads,
                           in_right_pads);
 #else
-            launch_kernel(run_gridwise_operation<DummyDynamicTransform_v2_2<BlockSize>,
-                                                 index_t* const,
-                                                 float* const,
-                                                 float* const,
-                                                 const decltype(in_gemmk_gemmn_global_desc)>,
-                          dim3(GridSize),
-                          dim3(BlockSize),
-                          0,
-                          0,
-                          static_cast<index_t*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-                          static_cast<float*>(in_nchw_device_buf.GetDeviceBuffer()),
-                          static_cast<float*>(out_nkhw_device_buf.GetDeviceBuffer()),
-                          in_gemmk_gemmn_global_desc);
+            launch_kernel(
+                run_gridwise_operation<DummyDynamicTransform_v2_fwd_v4r4<BlockSize>,
+                                       index_t* const,
+                                       float* const,
+                                       float* const,
+                                       const decltype(in_gemmk_gemmn_gemmkpack_global_desc)>,
+                dim3(GridSize),
+                dim3(BlockSize),
+                0,
+                0,
+                static_cast<index_t*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                static_cast<float*>(in_nchw_device_buf.GetDeviceBuffer()),
+                static_cast<float*>(out_nkhw_device_buf.GetDeviceBuffer()),
+                in_gemmk_gemmn_gemmkpack_global_desc);
 #endif
         }
     }

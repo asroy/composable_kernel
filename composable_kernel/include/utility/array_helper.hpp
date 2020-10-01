@@ -112,11 +112,17 @@ container_reverse_exclusive_scan(const Array<TData, NSize>& x, Reduce f, TData i
     return y;
 }
 
-template <typename TData, index_t NSize, typename Reduce>
-__host__ __device__ constexpr auto container_reverse_exclusive_scan(
-    const StaticallyIndexedArray<TData, NSize>& x, Reduce f, TData init)
+// Here should use StaticallyIndexedArray<TData, NSize>, instead of Tuple<Xs...>,
+// although the former is the alias of the latter. This is because compiler cannot
+// infer the NSize if using StaticallyIndexedArray<TData, NSize>
+// TODO: how to fix this?
+template <typename... Xs, typename Reduce, typename TData>
+__host__ __device__ constexpr auto
+container_reverse_exclusive_scan(const Tuple<Xs...>& x, Reduce f, TData init)
 {
-    StaticallyIndexedArray<TData, NSize> y;
+    constexpr index_t NSize = sizeof...(Xs);
+
+    Tuple<Xs...> y;
 
     TData r = init;
 
@@ -130,11 +136,13 @@ __host__ __device__ constexpr auto container_reverse_exclusive_scan(
     return y;
 }
 
-template <typename TData, index_t NSize, typename Reduce>
-__host__ __device__ constexpr auto container_reverse_inclusive_scan(
-    const StaticallyIndexedArray<TData, NSize>& x, Reduce f, TData init)
+template <typename... Xs, typename Reduce, typename TData>
+__host__ __device__ constexpr auto
+container_reverse_inclusive_scan(const Tuple<Xs...>& x, Reduce f, TData init)
 {
-    StaticallyIndexedArray<TData, NSize> y;
+    constexpr index_t NSize = sizeof...(Xs);
+
+    Tuple<Xs...> y;
 
     TData r = init;
 
