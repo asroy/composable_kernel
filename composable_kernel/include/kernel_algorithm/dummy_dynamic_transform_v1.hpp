@@ -97,10 +97,10 @@ struct DummyDynamicTransform_v1
                           const WeiDesc wei_k_c_y_x_global_desc,
                           const InDesc in_n_c_hi_wi_global_desc,
                           const OutDesc out_n_k_ho_wo_global_desc,
-                          const MultiIndex<2>& conv_strides,
-                          const MultiIndex<2>& conv_dilations,
-                          const MultiIndex<2>& in_left_pads,
-                          const MultiIndex<2>& in_right_pads) const
+                          const MultiIndex<2> conv_strides,
+                          const MultiIndex<2> conv_dilations,
+                          const MultiIndex<2> in_left_pads,
+                          const MultiIndex<2> in_right_pads) const
     {
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
@@ -542,10 +542,10 @@ struct DummyDynamicTransform_v1
                           const WeiDesc wei_k_c_y_x_global_desc,
                           const InDesc in_n_c_hi_wi_global_desc,
                           const OutDesc out_n_k_ho_wo_global_desc,
-                          const MultiIndex<2>& conv_strides,
-                          const MultiIndex<2>& conv_dilations,
-                          const MultiIndex<2>& in_left_pads,
-                          const MultiIndex<2>& in_right_pads) const
+                          const MultiIndex<2> conv_strides,
+                          const MultiIndex<2> conv_dilations,
+                          const MultiIndex<2> in_left_pads,
+                          const MultiIndex<2> in_right_pads) const
     {
         const auto transformed_tensor_descs =
             map_convolution_into_gemm_v1(wei_k_c_y_x_global_desc,
@@ -564,7 +564,8 @@ struct DummyDynamicTransform_v1
 
         const index_t niter = p_wei_global[10];
 
-        auto in_gemmk_gemmn_coord = make_dynamic_tensor_coordinate(in_gemmk_gemmn_global_desc, idx);
+        auto in_gemmk_gemmn_coord =
+            make_dynamic_tensor_coordinate<2>(in_gemmk_gemmn_global_desc, idx);
 
         for(index_t iter = 0; iter < niter; ++iter)
         {
@@ -587,7 +588,7 @@ struct DummyDynamicTransform_v1
                              1,
                              p_out_global,
                              in_gemmk_gemmn_coord.GetOffset(),
-#if 0
+#if 1
                              in_gemmk_gemmn_coord.IsOffsetValidAssumingUpperIndexIsValid(),
 #else
                              true,
@@ -603,10 +604,10 @@ struct DummyDynamicTransform_v1
                         const WeiDesc wei_k_c_y_x_global_desc,
                         const InDesc in_n_c_hi_wi_global_desc,
                         const OutDesc out_n_k_ho_wo_global_desc,
-                        const MultiIndex<2>& conv_strides,
-                        const MultiIndex<2>& conv_dilations,
-                        const MultiIndex<2>& in_left_pads,
-                        const MultiIndex<2>& in_right_pads) const
+                        const MultiIndex<2> conv_strides,
+                        const MultiIndex<2> conv_dilations,
+                        const MultiIndex<2> in_left_pads,
+                        const MultiIndex<2> in_right_pads) const
     {
         Run_2(p_wei_global,
               p_in_global,

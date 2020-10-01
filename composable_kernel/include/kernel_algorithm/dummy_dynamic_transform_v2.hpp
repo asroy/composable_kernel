@@ -117,19 +117,41 @@ struct DummyDynamicTransform_v2_1
         // initialize idx
         static_for<0, 2, 1>{}([&](auto i) { idx(i) = p_wei_global[get_thread_local_1d_id() + i]; });
 
+        const index_t niter = p_wei_global[10];
+
         auto in_gemmk_gemmn_coord =
             make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, idx);
 
         const auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
             in_gemmk_gemmn_global_desc, make_multi_index(1, 0));
 
-#pragma unroll 1
-        for(index_t i = 0; i < 10; ++i)
+        for(index_t iter = 0; iter < niter; ++iter)
         {
             move_dynamic_tensor_coordinate_v2(
                 in_gemmk_gemmn_global_desc, in_gemmk_gemmn_coord, in_gemmk_gemmn_coord_step);
 
-            p_out_global[in_gemmk_gemmn_coord.GetOffset()] = 1;
+            // write
+            float value = 1;
+
+            transfer_data<float,
+                          1,
+                          AddressSpace::Vgpr,
+                          AddressSpace::Global,
+                          InMemoryDataOperation::Set,
+                          1,
+                          1>(&value,
+                             0,
+                             true,
+                             1,
+                             p_out_global,
+                             in_gemmk_gemmn_coord.GetOffset(),
+#if 1
+                             coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                                 in_gemmk_gemmn_global_desc, in_gemmk_gemmn_coord),
+#else
+                             true,
+#endif
+                             in_gemmk_gemmn_global_desc.GetElementSpaceSize());
         }
     }
 
@@ -215,13 +237,13 @@ struct DummyDynamicTransform_v2_1
         // initialize idx
         static_for<0, 4, 1>{}([&](auto i) { idx(i) = p_wei_global[get_thread_local_1d_id() + i]; });
 
-#if 0
+#if 1
         const index_t niter = p_wei_global[10];
 
         auto in_coord = make_dynamic_tensor_coordinate_v2(in_n_c_hip_wip_global_desc, idx);
 
         const auto in_coord_step = make_dynamic_tensor_coordinate_step_v2(
-            in_n_c_hip_wip_global_desc, MultiIndex<4>{{1, 0, 0, 0}});
+            in_n_c_hip_wip_global_desc, make_multi_index(1, 0, 0, 0));
 
         for(index_t iter = 0; iter < niter; ++iter)
         {
@@ -266,7 +288,7 @@ struct DummyDynamicTransform_v2_1
                         const MultiIndex<2> in_left_pads,
                         const MultiIndex<2> in_right_pads) const
     {
-        Run_1(p_wei_global,
+        Run_2(p_wei_global,
               p_in_global,
               p_out_global,
               wei_k_c_y_x_global_desc,
@@ -293,7 +315,6 @@ struct DummyDynamicTransform_v2_2
         // initialize idx
         static_for<0, 2, 1>{}([&](auto i) { idx(i) = p_wei_global[get_thread_local_1d_id() + i]; });
 
-#if 1
         const index_t niter = p_wei_global[10];
 
         auto in_gemmk_gemmn_coord =
@@ -322,13 +343,14 @@ struct DummyDynamicTransform_v2_2
                              1,
                              p_out_global,
                              in_gemmk_gemmn_coord.GetOffset(),
+#if 0
                              coordinate_has_valid_offset_assuming_visible_index_is_valid(
                                  in_gemmk_gemmn_global_desc, in_gemmk_gemmn_coord),
+#else
+                             true,
+#endif
                              in_gemmk_gemmn_global_desc.GetElementSpaceSize());
         }
-#else
-        p_out_global[in_gemmk_gemmn_global_desc.CalculateOffset(idx)] = 1;
-#endif
     }
 };
 

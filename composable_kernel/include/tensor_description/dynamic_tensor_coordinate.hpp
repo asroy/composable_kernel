@@ -263,7 +263,7 @@ struct DynamicTensorCoordinate
 {
     static constexpr index_t NDim = TensorDesc::GetNumOfDimension();
 
-    using type = decltype(make_dynamic_tensor_coordinate(TensorDesc{}, MultiIndex<NDim>{}));
+    using type = decltype(make_dynamic_tensor_coordinate<NDim>(TensorDesc{}, MultiIndex<NDim>{}));
 };
 
 } // namespace ck

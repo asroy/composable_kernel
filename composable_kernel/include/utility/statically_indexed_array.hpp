@@ -36,42 +36,5 @@ __host__ __device__ constexpr auto make_statically_indexed_array()
     return StaticallyIndexedArray<X, 0>();
 }
 
-template <typename TData, index_t NSize, typename Reduce>
-__host__ __device__ constexpr auto
-reverse_exclusive_scan_on_array(const StaticallyIndexedArray<TData, NSize>& x, Reduce f, TData init)
-{
-    StaticallyIndexedArray<TData, NSize> y;
-
-    TData r = init;
-
-    static_for<NSize - 1, 0, -1>{}([&](auto i) {
-        y(i) = r;
-        r    = f(r, x[i]);
-    });
-
-    y(Number<0>{}) = r;
-
-    return y;
-}
-
-template <typename TData, index_t NSize, typename Reduce>
-__host__ __device__ constexpr auto
-reverse_inclusive_scan_on_array(const StaticallyIndexedArray<TData, NSize>& x, Reduce f, TData init)
-{
-    StaticallyIndexedArray<TData, NSize> y;
-
-    TData r = init;
-
-    static_for<NSize - 1, 0, -1>{}([&](auto i) {
-        r    = f(r, x[i]);
-        y(i) = r;
-    });
-
-    r              = f(r, x[Number<0>{}]);
-    y(Number<0>{}) = r;
-
-    return y;
-}
-
 } // namespace ck
 #endif

@@ -128,12 +128,8 @@ struct Tuple : detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(X
 
     __host__ __device__ constexpr Tuple(Tuple&&) = default;
 
-#if 0
     template <typename... Ys,
               typename std::enable_if<sizeof...(Ys) == sizeof...(Xs), bool>::type = false>
-#else
-    template <typename... Ys>
-#endif
     __host__ __device__ explicit constexpr Tuple(const Tuple<Ys...>& y)
         : base(static_cast<
                const detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(Ys), 1>::type,
@@ -141,12 +137,8 @@ struct Tuple : detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(X
     {
     }
 
-#if 0
     template <typename... Ys,
               typename std::enable_if<sizeof...(Ys) == sizeof...(Xs), bool>::type = false>
-#else
-    template <typename... Ys>
-#endif
     __host__ __device__ explicit constexpr Tuple(Tuple<Ys...>&& y)
         : base(static_cast<
                detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(Ys), 1>::type,
@@ -154,7 +146,9 @@ struct Tuple : detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(X
     {
     }
 
-    template <typename... Ys, typename std::enable_if<sizeof...(Ys) >= 1, bool>::type = false>
+    template <typename... Ys,
+              typename std::enable_if<sizeof...(Ys) == sizeof...(Xs) && sizeof...(Ys) >= 1,
+                                      bool>::type = false>
     __host__ __device__ explicit constexpr Tuple(Ys&&... ys) : base(std::forward<Ys>(ys)...)
     {
     }

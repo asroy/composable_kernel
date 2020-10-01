@@ -63,7 +63,7 @@ struct ford_impl
         for(index_t i = 0; i < RemainLengths::Front(); ++i)
         {
             ford_impl<decltype(RemainLengths::PopFront()), Orders>{}(
-                f, push_back(current_ordered_id, i));
+                f, container_push_back(current_ordered_id, i));
         }
     }
 };
@@ -77,7 +77,7 @@ struct ford_impl<Sequence<>, Orders>
     __host__ __device__ constexpr void operator()(F f, CurrentOrderedId current_ordered_id) const
     {
         // retrive unordered Id
-        f(reorder_array_given_old2new(current_ordered_id, Orders{}));
+        f(container_reorder_given_old2new(current_ordered_id, Orders{}));
     }
 };
 

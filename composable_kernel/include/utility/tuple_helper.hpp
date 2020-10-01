@@ -12,13 +12,6 @@ __host__ __device__ constexpr auto generate_tuple(F&& f, Number<N>)
                   typename arithmetic_sequence_gen<0, N, 1>::type{});
 }
 
-template <typename... Tuples>
-__host__ __device__ constexpr auto tuple_cat(Tuples&&... tuples)
-{
-    return unpack([&](auto&&... xs) { return make_tuple(std::forward<decltype(xs)>(xs)...); },
-                  std::forward<Tuples>(tuples)...);
-}
-
 namespace detail {
 
 template <typename F, typename X, index_t... Is>

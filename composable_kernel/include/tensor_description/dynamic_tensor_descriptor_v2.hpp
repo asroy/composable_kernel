@@ -116,7 +116,7 @@ struct DynamicTensorDescriptor_v2
     // maybe this result should be saved as a member variable
     __host__ __device__ constexpr index_t GetElementSize() const
     {
-        return reduce_on_array(GetLengths(), math::multiplies<index_t>{}, index_t{1});
+        return container_reduce(GetLengths(), math::multiplies<index_t>{}, index_t{1});
     }
 
     __host__ __device__ constexpr index_t GetElementSpaceSize() const
@@ -411,13 +411,13 @@ transform_dynamic_tensor_descriptor_v2(const OldTensorDescriptor& old_tensor_des
         unordered_new_visible_dim_hidden_ids.ReorderGivenOld2New(new_visible_dim_unordered2ordered);
 
     // put everything together
-    const auto all_transforms = tuple_cat(old_tensor_desc.GetTransforms(), new_transforms);
+    const auto all_transforms = container_cat(old_tensor_desc.GetTransforms(), new_transforms);
 
     constexpr auto all_low_dim_hidden_idss =
-        tuple_cat(OldTensorDescriptor::GetLowerDimensionIdss(), low_dim_hidden_idss);
+        container_cat(OldTensorDescriptor::GetLowerDimensionIdss(), low_dim_hidden_idss);
 
     constexpr auto all_up_dim_hidden_idss =
-        tuple_cat(OldTensorDescriptor::GetUpperDimensionIdss(), up_dim_hidden_idss);
+        container_cat(OldTensorDescriptor::GetUpperDimensionIdss(), up_dim_hidden_idss);
 
     return DynamicTensorDescriptor_v2<decltype(all_transforms),
                                       decltype(all_low_dim_hidden_idss),
@@ -494,7 +494,7 @@ make_dynamic_tensor_coordinate_step_v2(const TensorDesc&, const VisibleIndex& id
         //   2) all components of lower index diff will assume to be non-zero and need to be
         //   computed
         const bool idx_diff_up_has_non_zero =
-            reduce_on_array(non_zero_diff_pick_up, [](auto a, auto b) { return a or b; }, false);
+            container_reduce(non_zero_diff_pick_up, [](auto a, auto b) { return a or b; }, false);
 
         do_transforms(itran) = idx_diff_up_has_non_zero;
 

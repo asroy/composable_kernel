@@ -45,7 +45,7 @@ struct DynamicNativeTensorDescriptor
 
     __host__ __device__ constexpr index_t GetElementSize() const
     {
-        return reduce_on_array(GetLengths(), math::multiplies<index_t>{}, index_t{1});
+        return container_reduce(GetLengths(), math::multiplies<index_t>{}, index_t{1});
     }
 
     __host__ __device__ constexpr index_t GetElementSpace() const
@@ -136,7 +136,7 @@ struct DynamicTransformedTensorDescriptor
         template <typename... Xs>
         __host__ __device__ constexpr auto operator()(Xs... xs) const
         {
-            return array_cat(xs...);
+            return container_cat(xs...);
         }
     };
 
@@ -211,21 +211,22 @@ struct DynamicTransformedTensorDescriptor
         const auto unsorted_up_lengths = unpack(lambda_merge_arrays{}, tuple_of_up_lengths);
 
         const auto sorted_up_lengths =
-            reorder_array_given_new2old(unsorted_up_lengths, sorted2unsorted_map);
+            container_reorder_given_new2old(unsorted_up_lengths, sorted2unsorted_map);
 
         return sorted_up_lengths;
     }
 
     __host__ __device__ constexpr auto GetLengths() const { return GetUpperLengths(); }
 
-    __host__ __device__ constexpr index_t GetLength(index_t idim) const
+    template <index_t IDim>
+    __host__ __device__ constexpr index_t GetLength(Number<IDim>) const
     {
-        return GetLengths()[idim];
+        return GetLengths()[Number<IDim>{}];
     }
 
     __host__ __device__ constexpr index_t GetElementSize() const
     {
-        return reduce_on_array(GetLengths(), math::multiplies<index_t>{}, index_t{1});
+        return container_reduce(GetLengths(), math::multiplies<index_t>{}, index_t{1});
     }
 
     __host__ __device__ constexpr index_t GetElementSpace() const

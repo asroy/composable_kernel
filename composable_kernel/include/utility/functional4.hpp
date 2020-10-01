@@ -49,7 +49,7 @@ __host__ __device__ constexpr auto unpack(F&& f, X&& x)
 
 // TODO: properly implement unpack that takes any number of containers
 template <typename F, typename X, typename Y>
-__host__ __device__ constexpr auto unpack(F&& f, X&& x, Y&& y)
+__host__ __device__ constexpr auto unpack2(F&& f, X&& x, Y&& y)
 {
     using X_ = remove_reference_t<X>;
     using Y_ = remove_reference_t<Y>;

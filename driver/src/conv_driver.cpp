@@ -549,7 +549,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 0
+#if 1
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,

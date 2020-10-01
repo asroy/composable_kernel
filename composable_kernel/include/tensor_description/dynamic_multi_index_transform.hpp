@@ -371,10 +371,10 @@ struct DynamicMerge
 
     __host__ __device__ constexpr DynamicMerge(const LowerIndex& low_lengths)
         : low_lengths_{low_lengths},
-          low_lengths_scan_{reverse_exclusive_scan_on_array<index_t, NDimLow>(
+          low_lengths_scan_{container_reverse_exclusive_scan<index_t, NDimLow>(
               low_lengths, math::multiplies<index_t>{}, index_t{1})},
           up_lengths_{make_multi_index(
-              reduce_on_array(low_lengths, math::multiplies<index_t>(), index_t{1}))}
+              container_reduce(low_lengths, math::multiplies<index_t>(), index_t{1}))}
     {
         static_assert(LowerIndex::Size() == NDimLow, "wrong!");
     }
@@ -516,7 +516,7 @@ struct DynamicUnMerge
     __host__ __device__ constexpr DynamicUnMerge(const UpperIndex& up_lengths)
         : up_lengths_{up_lengths},
           up_lengths_scan_{
-              reverse_exclusive_scan_on_array(up_lengths, math::multiplies<index_t>(), index_t{1})}
+              container_reverse_exclusive_scan(up_lengths, math::multiplies<index_t>(), index_t{1})}
     {
     }
 

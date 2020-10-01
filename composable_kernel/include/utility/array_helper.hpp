@@ -3,17 +3,17 @@
 
 #include "sequence.hpp"
 #include "sequence_helper.hpp"
-#include "tuple.hpp"
-#include "tuple_helper.hpp"
 #include "array.hpp"
 #include "array_helper.hpp"
+#include "tuple.hpp"
+#include "tuple_helper.hpp"
 #include "statically_indexed_array.hpp"
 #include "array_element_picker.hpp"
 
 namespace ck {
 
 template <typename TData, index_t NSize>
-__host__ __device__ constexpr auto push_back(const Array<TData, NSize>& a, const TData& x)
+__host__ __device__ constexpr auto container_push_back(const Array<TData, NSize>& a, const TData& x)
 {
     Array<TData, NSize + 1> r;
 
@@ -25,137 +25,64 @@ __host__ __device__ constexpr auto push_back(const Array<TData, NSize>& a, const
 }
 
 template <typename TData, index_t NSize, index_t... IRs>
-__host__ __device__ constexpr auto reorder_array_given_new2old(const Array<TData, NSize>& old_array,
-                                                               Sequence<IRs...> /*new2old*/)
+__host__ __device__ constexpr auto
+container_reorder_given_new2old(const Array<TData, NSize>& old_array, Sequence<IRs...> /*new2old*/)
 {
-    static_assert(NSize == sizeof...(IRs), "NSize not consistent");
+    static_assert(NSize == sizeof...(IRs), "wrong! size not consistent");
 
     static_assert(is_valid_sequence_map<Sequence<IRs...>>{}, "wrong! invalid reorder map");
 
-    return Array<TData, NSize>{old_array[IRs]...};
+    return make_array(old_array[Number<IRs>{}]...);
 }
-
-template <typename TData, index_t NSize, typename MapOld2New>
-struct lambda_reorder_array_given_old2new
-{
-    const Array<TData, NSize>& old_array;
-    Array<TData, NSize>& new_array;
-
-    __host__ __device__ constexpr lambda_reorder_array_given_old2new(
-        const Array<TData, NSize>& old_array_, Array<TData, NSize>& new_array_)
-        : old_array(old_array_), new_array(new_array_)
-    {
-    }
-
-    template <index_t IOldDim>
-    __host__ __device__ constexpr void operator()(Number<IOldDim>) const
-    {
-        TData old_data = old_array[IOldDim];
-
-        constexpr index_t INewDim = MapOld2New::At(Number<IOldDim>{});
-
-        new_array(Number<INewDim>{}) = old_data;
-    }
-};
 
 template <typename TData, index_t NSize, index_t... IRs>
-__host__ __device__ constexpr auto reorder_array_given_old2new(const Array<TData, NSize>& old_array,
-                                                               Sequence<IRs...> /*old2new*/)
+__host__ __device__ constexpr auto
+container_reorder_given_old2new(const Array<TData, NSize>& old_array, Sequence<IRs...> old2new)
 {
-    Array<TData, NSize> new_array;
-
-    static_assert(NSize == sizeof...(IRs), "NSize not consistent");
-
-    static_assert(is_valid_sequence_map<Sequence<IRs...>>::value, "wrong! invalid reorder map");
-
-    static_for<0, NSize, 1>{}(
-        lambda_reorder_array_given_old2new<TData, NSize, Sequence<IRs...>>(old_array, new_array));
-
-    return new_array;
+    return container_reorder_given_new2old(
+        old_array, typename sequence_map_inverse<decltype(old2new)>::type{});
 }
 
-// emulate constepxr lambda for array
-template <typename F, typename X, typename Y, typename Z>
-struct lambda_array_math
+template <typename... Ts, index_t... IRs>
+__host__ __device__ constexpr auto container_reorder_given_new2old(const Tuple<Ts...>& old_tuple,
+                                                                   Sequence<IRs...> /*new2old*/)
 {
-    const F& f;
-    const X& x;
-    const Y& y;
-    Z& z;
+    static_assert(sizeof...(Ts) == sizeof...(IRs), "wrong! size not consistent");
 
-    __host__ __device__ constexpr lambda_array_math(const F& f_, const X& x_, const Y& y_, Z& z_)
-        : f(f_), x(x_), y(y_), z(z_)
-    {
-    }
+    static_assert(is_valid_sequence_map<Sequence<IRs...>>{}, "wrong! invalid reorder map");
 
-    template <index_t IDim_>
-    __host__ __device__ constexpr void operator()(Number<IDim_>) const
-    {
-        constexpr auto IDim = Number<IDim_>{};
-        z(IDim)             = f(x[IDim], y[IDim]);
-    }
-};
-
-// Array = Sequence - Array
-template <typename TData, index_t NSize, index_t... Is>
-__host__ __device__ constexpr auto operator-(Sequence<Is...> a, Array<TData, NSize> b)
-{
-    static_assert(sizeof...(Is) == NSize, "wrong! size not the same");
-
-    Array<TData, NSize> result;
-
-    auto f = math::minus<index_t>{};
-
-    static_for<0, NSize, 1>{}(
-        lambda_array_math<decltype(f), decltype(a), decltype(b), decltype(result)>(
-            f, a, b, result));
-
-    return result;
+    return make_tuple(old_tuple[Number<IRs>{}]...);
 }
 
-// Array = Array * TData
-template <typename TData, index_t NSize>
-__host__ __device__ constexpr auto operator*(TData v, Array<TData, NSize> a)
+template <typename... Ts, index_t... IRs>
+__host__ __device__ constexpr auto container_reorder_given_old2new(const Tuple<Ts...>& old_tuple,
+                                                                   Sequence<IRs...> old2new)
 {
-    Array<TData, NSize> result;
-
-    for(index_t i = 0; i < NSize; ++i)
-    {
-        result(i) = a[i] * v;
-    }
-
-    return result;
+    return container_reorder_given_new2old(
+        old_tuple, typename sequence_map_inverse<decltype(old2new)>::type{});
 }
 
-template <typename TData, typename Arr, typename Reduce>
-__host__ __device__ constexpr TData reduce_on_array(const Arr& a, Reduce f, TData init)
+template <typename TData, typename Container, typename Reduce>
+__host__ __device__ constexpr TData container_reduce(const Container& a, Reduce f, TData init)
 {
     // static_assert(is_same<typename Arr::data_type, TData>::value, "wrong! different data type");
-    static_assert(Arr::Size() > 0, "wrong");
+    static_assert(Container::Size() > 0, "wrong");
 
     TData result = init;
 
-    static_for<0, Arr::Size(), 1>{}([&](auto I) { result = f(result, a[I]); });
+    static_for<0, Container::Size(), 1>{}([&](auto I) { result = f(result, a[I]); });
 
     return result;
 }
 
 template <typename TData, index_t NSize, typename Reduce>
 __host__ __device__ constexpr auto
-reverse_inclusive_scan_on_array(const Array<TData, NSize>& x, Reduce f, TData init)
+container_reverse_inclusive_scan(const Array<TData, NSize>& x, Reduce f, TData init)
 {
     Array<TData, NSize> y;
 
     TData r = init;
 
-#if 0
-#pragma unroll
-    for(index_t i = NSize - 1; i >= 0; --i)
-    {
-        r    = f(r, x[i]);
-        y(i) = r;
-    }
-#else
     static_for<NSize - 1, 0, -1>{}([&](auto i) {
         r    = f(r, x[i]);
         y(i) = r;
@@ -163,36 +90,61 @@ reverse_inclusive_scan_on_array(const Array<TData, NSize>& x, Reduce f, TData in
 
     r              = f(r, x[Number<0>{}]);
     y(Number<0>{}) = r;
-#endif
 
     return y;
 }
 
 template <typename TData, index_t NSize, typename Reduce>
 __host__ __device__ constexpr auto
-reverse_exclusive_scan_on_array(const Array<TData, NSize>& x, Reduce f, TData init)
+container_reverse_exclusive_scan(const Array<TData, NSize>& x, Reduce f, TData init)
 {
     Array<TData, NSize> y;
 
     TData r = init;
 
-#if 0
-#pragma unroll
-    for(index_t i = NSize - 1; i > 0; --i)
-    {
-        y(i) = r;
-        r    = f(r, x[i]);
-    }
-
-    y(0) = r;
-#else
     static_for<NSize - 1, 0, -1>{}([&](auto i) {
         y(i) = r;
         r    = f(r, x[i]);
     });
 
     y(Number<0>{}) = r;
-#endif
+
+    return y;
+}
+
+template <typename TData, index_t NSize, typename Reduce>
+__host__ __device__ constexpr auto container_reverse_exclusive_scan(
+    const StaticallyIndexedArray<TData, NSize>& x, Reduce f, TData init)
+{
+    StaticallyIndexedArray<TData, NSize> y;
+
+    TData r = init;
+
+    static_for<NSize - 1, 0, -1>{}([&](auto i) {
+        y(i) = r;
+        r    = f(r, x[i]);
+    });
+
+    y(Number<0>{}) = r;
+
+    return y;
+}
+
+template <typename TData, index_t NSize, typename Reduce>
+__host__ __device__ constexpr auto container_reverse_inclusive_scan(
+    const StaticallyIndexedArray<TData, NSize>& x, Reduce f, TData init)
+{
+    StaticallyIndexedArray<TData, NSize> y;
+
+    TData r = init;
+
+    static_for<NSize - 1, 0, -1>{}([&](auto i) {
+        r    = f(r, x[i]);
+        y(i) = r;
+    });
+
+    r              = f(r, x[Number<0>{}]);
+    y(Number<0>{}) = r;
 
     return y;
 }
@@ -204,19 +156,21 @@ __host__ __device__ constexpr auto container_cat(const X& x, const Ys&... ys)
 }
 
 template <typename T, index_t NX, index_t NY>
-__host__ __device__ constexpr auto container_cat(const Array<T, NX>& x, const Array<T, NY>& y)
+__host__ __device__ constexpr auto container_cat(const Array<T, NX>& ax, const Array<T, NY>& ay)
 {
-    Array<T, NX + NY> z;
-
-    static_for<0, NX, 1>{}([&](auto i) { z(i) = x[i]; });
-
-    static_for<0, NY, 1>{}([&](auto i) { z(i + Number<NX>{}) = y[i]; });
-
-    return z;
+    return unpack2(
+        [&](auto&&... zs) { return make_array(std::forward<decltype(zs)>(zs)...); }, ax, ay);
 }
 
-template <typename T, index_t N>
-__host__ __device__ constexpr auto container_cat(const Array<T, N>& x)
+template <typename... X, typename... Y>
+__host__ __device__ constexpr auto container_cat(const Tuple<X...>& tx, const Tuple<Y...>& ty)
+{
+    return unpack2(
+        [&](auto&&... zs) { return make_tuple(std::forward<decltype(zs)>(zs)...); }, tx, ty);
+}
+
+template <typename Container>
+__host__ __device__ constexpr auto container_cat(const Container& x)
 {
     return x;
 }
