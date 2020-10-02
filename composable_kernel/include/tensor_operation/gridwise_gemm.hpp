@@ -116,8 +116,8 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
 
         const auto block_work_id = block_work_desc.CalculateClusterIndex(get_block_1d_id());
 
-        const index_t m_block_data_on_global = block_work_id[0] * MPerBlock;
-        const index_t n_block_data_on_global = block_work_id[1] * NPerBlock;
+        const index_t m_block_data_on_global = block_work_id[Number<0>{}] * MPerBlock;
+        const index_t n_block_data_on_global = block_work_id[Number<1>{}] * NPerBlock;
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -143,7 +143,7 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
                                                AddressSpace::Vgpr,
                                                AddressSpace::Lds,
                                                InMemoryDataOperation::Set>(
-                {0, m_block_data_on_global}, {0, 0});
+                make_multi_index(0, m_block_data_on_global), make_multi_index(0, 0));
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -169,7 +169,7 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
                                                AddressSpace::Vgpr,
                                                AddressSpace::Lds,
                                                InMemoryDataOperation::Set>(
-                {0, n_block_data_on_global}, {0, 0});
+                make_multi_index(0, n_block_data_on_global), make_multi_index(0, 0));
 
         // GEMM definition
         //   c_mtx += transpose(a_mtx) * b_mtx
@@ -355,11 +355,11 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
                                                   AddressSpace::Vgpr,
                                                   AddressSpace::Global,
                                                   CGlobalMemoryDataOperation>(
-                {0, 0, 0, 0},
-                {m_thread_data_on_global / M1,
-                 m_thread_data_on_global % M1,
-                 n_thread_data_on_global / N1,
-                 n_thread_data_on_global % N1})
+                make_multi_index(0, 0, 0, 0),
+                make_multi_index(m_thread_data_on_global / M1,
+                                 m_thread_data_on_global % M1,
+                                 n_thread_data_on_global / N1,
+                                 n_thread_data_on_global % N1))
                 .Run(p_c_thread, p_c_global);
         }
     }
@@ -447,21 +447,23 @@ struct GridwiseGemmTransposedANormalBNormalC_v2
                         Float* __restrict__ p_c_global,
                         Float* __restrict__ p_shared_block) const
     {
+        constexpr auto I0 = Number<0>{};
+        constexpr auto I1 = Number<1>{};
+        constexpr auto I2 = Number<2>{};
+        constexpr auto I3 = Number<3>{};
+
         constexpr auto True  = integral_constant<bool, true>{};
         constexpr auto False = integral_constant<bool, false>{};
-
-        constexpr auto I0 = Number<0>{};
-        constexpr auto I2 = Number<2>{};
 
         constexpr auto a_k0_k1_k2_m_global_desc = AGlobalDesc{};
         constexpr auto b_k0_k1_k2_n_global_desc = BGlobalDesc{};
         constexpr auto c_m_n_global_desc        = CGlobalDesc{};
 
-        constexpr auto K0 = a_k0_k1_k2_m_global_desc.GetLengths()[0];
-        constexpr auto K1 = a_k0_k1_k2_m_global_desc.GetLengths()[1];
-        constexpr auto K  = a_k0_k1_k2_m_global_desc.GetLengths()[2];
-        constexpr auto M  = c_m_n_global_desc.GetLengths()[0];
-        constexpr auto N  = c_m_n_global_desc.GetLengths()[1];
+        constexpr auto K0 = a_k0_k1_k2_m_global_desc.GetLengths()[I0];
+        constexpr auto K1 = a_k0_k1_k2_m_global_desc.GetLengths()[I1];
+        constexpr auto K  = a_k0_k1_k2_m_global_desc.GetLengths()[I2];
+        constexpr auto M  = c_m_n_global_desc.GetLengths()[I0];
+        constexpr auto N  = c_m_n_global_desc.GetLengths()[I1];
 
         // don't do anything if K == 0
         if(K == 0)
@@ -487,8 +489,8 @@ struct GridwiseGemmTransposedANormalBNormalC_v2
 
         const auto block_work_id = block_work_desc.CalculateClusterIndex(get_block_1d_id());
 
-        const index_t m_block_data_on_global = block_work_id[0] * MPerBlock;
-        const index_t n_block_data_on_global = block_work_id[1] * NPerBlock;
+        const index_t m_block_data_on_global = block_work_id[I0] * MPerBlock;
+        const index_t n_block_data_on_global = block_work_id[I1] * NPerBlock;
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -514,7 +516,7 @@ struct GridwiseGemmTransposedANormalBNormalC_v2
                                                AddressSpace::Vgpr,
                                                AddressSpace::Lds,
                                                InMemoryDataOperation::Set>(
-                {0, 0, 0, m_block_data_on_global}, {0, 0, 0, 0});
+                make_multi_index(0, 0, 0, m_block_data_on_global), make_multi_index(0, 0, 0, 0));
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -540,7 +542,7 @@ struct GridwiseGemmTransposedANormalBNormalC_v2
                                                AddressSpace::Vgpr,
                                                AddressSpace::Lds,
                                                InMemoryDataOperation::Set>(
-                {0, 0, 0, n_block_data_on_global}, {0, 0, 0, 0});
+                make_multi_index(0, 0, 0, n_block_data_on_global), make_multi_index(0, 0, 0, 0));
 
         // GEMM definition
         //   c_mtx += transpose(a_mtx) * b_mtx
@@ -750,11 +752,11 @@ struct GridwiseGemmTransposedANormalBNormalC_v2
                                                   AddressSpace::Vgpr,
                                                   AddressSpace::Global,
                                                   CGlobalMemoryDataOperation>(
-                {0, 0, 0, 0},
-                {m_thread_data_on_global / M1,
-                 m_thread_data_on_global % M1,
-                 n_thread_data_on_global / N1,
-                 n_thread_data_on_global % N1})
+                make_multi_index(0, 0, 0, 0),
+                make_multi_index(m_thread_data_on_global / M1,
+                                 m_thread_data_on_global % M1,
+                                 n_thread_data_on_global / N1,
+                                 n_thread_data_on_global % N1))
                 .Run(p_c_thread, p_c_global);
         }
     }

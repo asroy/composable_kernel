@@ -1,5 +1,5 @@
-#ifndef CK_ARRAY_ELEMENT_PICKER_HPP
-#define CK_ARRAY_ELEMENT_PICKER_HPP
+#ifndef CK_CONTAINER_ELEMENT_PICKER_HPP
+#define CK_CONTAINER_ELEMENT_PICKER_HPP
 
 #include "functional2.hpp"
 #include "sequence.hpp"
@@ -9,16 +9,16 @@ namespace ck {
 // Arr: Array or StaticallyIndexedArray
 // Picks: Sequence<...>
 template <typename Arr, typename Picks>
-struct ArrayElementPicker
+struct ContainerElementPicker
 {
-    using type = ArrayElementPicker;
+    using type = ContainerElementPicker;
 #if 0
     using data_type = typename Arr::data_type;
 #endif
 
-    __host__ __device__ constexpr ArrayElementPicker() = delete;
+    __host__ __device__ constexpr ContainerElementPicker() = delete;
 
-    __host__ __device__ explicit constexpr ArrayElementPicker(Arr& array) : mArray{array}
+    __host__ __device__ explicit constexpr ContainerElementPicker(Arr& array) : mArray{array}
     {
         constexpr index_t imax = reduce_on_sequence(Picks{}, math::maxer<index_t>{}, Number<0>{});
 
@@ -72,9 +72,9 @@ struct ArrayElementPicker
 };
 
 template <typename Arr, typename Picks, typename X>
-__host__ __device__ constexpr auto operator+=(ArrayElementPicker<Arr, Picks>& y, const X& x)
+__host__ __device__ constexpr auto operator+=(ContainerElementPicker<Arr, Picks>& y, const X& x)
 {
-    using Y                 = ArrayElementPicker<Arr, Picks>;
+    using Y                 = ContainerElementPicker<Arr, Picks>;
     constexpr index_t nsize = Y::Size();
 
     static_assert(nsize == X::Size(), "wrong! size not the same");
@@ -85,9 +85,9 @@ __host__ __device__ constexpr auto operator+=(ArrayElementPicker<Arr, Picks>& y,
 }
 
 template <typename Arr, typename Picks, typename X>
-__host__ __device__ constexpr auto operator-=(ArrayElementPicker<Arr, Picks>& y, const X& x)
+__host__ __device__ constexpr auto operator-=(ContainerElementPicker<Arr, Picks>& y, const X& x)
 {
-    using Y                 = ArrayElementPicker<Arr, Picks>;
+    using Y                 = ContainerElementPicker<Arr, Picks>;
     constexpr index_t nsize = Y::Size();
 
     static_assert(nsize == X::Size(), "wrong! size not the same");
@@ -98,9 +98,9 @@ __host__ __device__ constexpr auto operator-=(ArrayElementPicker<Arr, Picks>& y,
 }
 
 template <typename Arr, typename Picks>
-__host__ __device__ constexpr auto pick_array_element(Arr& a, Picks)
+__host__ __device__ constexpr auto pick_container_element(Arr& a, Picks)
 {
-    return ArrayElementPicker<Arr, Picks>(a);
+    return ContainerElementPicker<Arr, Picks>(a);
 }
 
 } // namespace ck

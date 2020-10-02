@@ -1,14 +1,13 @@
-#ifndef CK_ARRAY_HELPER_HPP
-#define CK_ARRAY_HELPER_HPP
+#ifndef CK_CONTAINER_HELPER_HPP
+#define CK_CONTAINER_HELPER_HPP
 
 #include "sequence.hpp"
 #include "sequence_helper.hpp"
 #include "array.hpp"
-#include "array_helper.hpp"
 #include "tuple.hpp"
 #include "tuple_helper.hpp"
 #include "statically_indexed_array.hpp"
-#include "array_element_picker.hpp"
+#include "container_element_picker.hpp"
 
 namespace ck {
 
@@ -20,6 +19,18 @@ __host__ __device__ constexpr auto container_push_back(const Array<TData, NSize>
     static_for<0, NSize, 1>{}([&r, &a ](auto i) constexpr { r(i) = a[i]; });
 
     r(Number<NSize>{}) = x;
+
+    return r;
+}
+
+template <typename... Ts, typename T>
+__host__ __device__ constexpr auto container_push_back(const Tuple<Ts...>& a, const T& x)
+{
+    Tuple<Ts..., T> r;
+
+    static_for<0, sizeof...(Ts), 1>{}([&r, &a ](auto i) constexpr { r(i) = a[i]; });
+
+    r(Number<sizeof...(Ts)>{}) = x;
 
     return r;
 }

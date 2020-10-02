@@ -140,7 +140,7 @@ struct DynamicTensorDescriptor_v2
         MultiIndex<ndim_hidden> idx_hidden;
 
         // initialize visible index
-        auto idx_hidden_pick_visible = pick_array_element(idx_hidden, visible_dim_ids);
+        auto idx_hidden_pick_visible = pick_container_element(idx_hidden, visible_dim_ids);
         idx_hidden_pick_visible      = idx;
 
         // calculate hidden index
@@ -149,8 +149,8 @@ struct DynamicTensorDescriptor_v2
             constexpr auto dims_low = GetLowerDimensionIdss().At(itran);
             constexpr auto dims_up  = GetUpperDimensionIdss().At(itran);
 
-            const auto idx_up = pick_array_element(idx_hidden, dims_up);
-            auto idx_low      = pick_array_element(idx_hidden, dims_low);
+            const auto idx_up = pick_container_element(idx_hidden, dims_up);
+            auto idx_low      = pick_container_element(idx_hidden, dims_low);
 
             tran.CalculateLowerIndex(idx_low, idx_up);
         });
@@ -193,7 +193,7 @@ struct DynamicTensorDescriptor_v2
             constexpr auto up_dim_ids = UpperDimensionIdss{}.At(itran);
 
             // lengths_hidden_pick_up contains a reference to lengths_hidden
-            auto hidden_lengths_pick_up = pick_array_element(hidden_lengths, up_dim_ids);
+            auto hidden_lengths_pick_up = pick_container_element(hidden_lengths, up_dim_ids);
 
             hidden_lengths_pick_up = tran.GetUpperLengths();
         });
@@ -207,7 +207,7 @@ struct DynamicTensorDescriptor_v2
     // variable lengths_) to save space on stack?
     const HiddenIndex hidden_lengths_;
     // visible_lenths_ contains a reference to hidden_lengths_
-    const ArrayElementPicker<const HiddenIndex, VisibleDimensionIds> visible_lengths_;
+    const ContainerElementPicker<const HiddenIndex, VisibleDimensionIds> visible_lengths_;
 
 #if 0
     // friend class
@@ -283,7 +283,7 @@ struct DynamicTensorCoordinate_v2
     // private member variables
     HiddenIndex idx_hidden_;
     // idx_visible_ contains a reference to idx_hidden_
-    ArrayElementPicker<HiddenIndex, VisibleDimensionIds> idx_visible_;
+    ContainerElementPicker<HiddenIndex, VisibleDimensionIds> idx_visible_;
 
 #if 0
     // friend functions for making and updating tensor coordinate
@@ -441,7 +441,7 @@ make_dynamic_tensor_coordinate_v2(const TensorDesc& tensor_desc, const VisibleIn
     MultiIndex<ndim_hidden> idx_hidden;
 
     // initialize visible index
-    auto idx_hidden_pick_visible = pick_array_element(idx_hidden, visible_dim_ids);
+    auto idx_hidden_pick_visible = pick_container_element(idx_hidden, visible_dim_ids);
     idx_hidden_pick_visible      = idx_visible;
 
     // calculate hidden index
@@ -451,8 +451,8 @@ make_dynamic_tensor_coordinate_v2(const TensorDesc& tensor_desc, const VisibleIn
         constexpr auto dims_low = TensorDesc::GetLowerDimensionIdss().At(itran);
         constexpr auto dims_up  = TensorDesc::GetUpperDimensionIdss().At(itran);
 
-        const auto idx_up = pick_array_element(idx_hidden, dims_up);
-        auto idx_low      = pick_array_element(idx_hidden, dims_low);
+        const auto idx_up = pick_container_element(idx_hidden, dims_up);
+        auto idx_low      = pick_container_element(idx_hidden, dims_low);
 
         tran.CalculateLowerIndex(idx_low, idx_up);
     });
@@ -477,7 +477,7 @@ make_dynamic_tensor_coordinate_step_v2(const TensorDesc&, const VisibleIndex& id
 
     Array<bool, ndim_hidden> non_zero_diff{false};
 
-    auto non_zero_diff_pick_visible = pick_array_element(non_zero_diff, visible_dim_ids);
+    auto non_zero_diff_pick_visible = pick_container_element(non_zero_diff, visible_dim_ids);
 
     static_for<0, ndim_visible, 1>{}([&non_zero_diff_pick_visible, &idx_diff_visible](auto i) {
         non_zero_diff_pick_visible(i) = (idx_diff_visible[i] != 0);
@@ -487,8 +487,8 @@ make_dynamic_tensor_coordinate_step_v2(const TensorDesc&, const VisibleIndex& id
         constexpr auto dims_low = TensorDesc::GetLowerDimensionIdss().At(itran);
         constexpr auto dims_up  = TensorDesc::GetUpperDimensionIdss().At(itran);
 
-        const auto non_zero_diff_pick_up = pick_array_element(non_zero_diff, dims_up);
-        auto non_zero_diff_pick_low      = pick_array_element(non_zero_diff, dims_low);
+        const auto non_zero_diff_pick_up = pick_container_element(non_zero_diff, dims_up);
+        auto non_zero_diff_pick_low      = pick_container_element(non_zero_diff, dims_low);
 
         // if any of upper index diff components is non-zero, then
         //   1) Need to do this transform
@@ -526,7 +526,7 @@ __host__ __device__ void move_dynamic_tensor_coordinate_v2(const TensorDesc& ten
     // initialize visible index diff
     //   idx_diff_hidden_pick_visible contains reference to idx_diff_hidden
     auto idx_diff_hidden_pick_visible =
-        pick_array_element(idx_diff_hidden, TensorDesc::GetVisibleDimensionIds());
+        pick_container_element(idx_diff_hidden, TensorDesc::GetVisibleDimensionIds());
 
     idx_diff_hidden_pick_visible = coord_step.GetVisibleIndexDiff();
 
@@ -535,7 +535,7 @@ __host__ __device__ void move_dynamic_tensor_coordinate_v2(const TensorDesc& ten
 
     // update visible index
     auto idx_hidden_pick_visible =
-        pick_array_element(idx_hidden, TensorDesc::GetVisibleDimensionIds());
+        pick_container_element(idx_hidden, TensorDesc::GetVisibleDimensionIds());
     idx_hidden_pick_visible += coord_step.GetIndexDiff();
 
     // update rest of hidden index
@@ -546,12 +546,12 @@ __host__ __device__ void move_dynamic_tensor_coordinate_v2(const TensorDesc& ten
             constexpr auto dims_low = TensorDesc::GetLowerDimensionIdss().At(itran);
             constexpr auto dims_up  = TensorDesc::GetUpperDimensionIdss().At(itran);
 
-            // this const is for ArrayElementPicker, Array itself may not be const
-            const auto idx_up = pick_array_element(idx_hidden, dims_up);
-            auto idx_low      = pick_array_element(idx_hidden, dims_low);
+            // this const is for ContainerElementPicker, Array itself may not be const
+            const auto idx_up = pick_container_element(idx_hidden, dims_up);
+            auto idx_low      = pick_container_element(idx_hidden, dims_low);
 
-            const auto idx_diff_up = pick_array_element(idx_diff_hidden, dims_up);
-            auto idx_diff_low      = pick_array_element(idx_diff_hidden, dims_low);
+            const auto idx_diff_up = pick_container_element(idx_diff_hidden, dims_up);
+            auto idx_diff_low      = pick_container_element(idx_diff_hidden, dims_low);
 
             tran.CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low, idx_up);
 
@@ -579,7 +579,7 @@ coordinate_has_valid_offset_assuming_visible_index_is_valid(const TensorDesc& te
         if constexpr(!decltype(tran)::IsValidUpperIndexAlwaysMappedToValidLowerIndex())
         {
             const auto idx_up =
-                pick_array_element(idx_hidden, TensorDesc::GetUpperDimensionIdss().At(itran));
+                pick_container_element(idx_hidden, TensorDesc::GetUpperDimensionIdss().At(itran));
 
             valid = valid && tran.IsValidUpperIndexMappedToValidLowerIndex(idx_up);
         }

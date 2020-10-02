@@ -1,10 +1,10 @@
 #ifndef CK_FUNCTIONAL3_HPP
 #define CK_FUNCTIONAL3_HPP
 
-#include "array.hpp"
 #include "functional.hpp"
 #include "functional2.hpp"
 #include "sequence.hpp"
+#include "multi_index.hpp"
 
 namespace ck {
 
@@ -133,7 +133,7 @@ struct ford
         for(index_t i = 0; i < ordered_lengths.Front(); ++i)
         {
             detail::ford_impl<decltype(ordered_lengths.PopFront()), Orders>{}(f,
-                                                                              Array<index_t, 1>{i});
+                                                                              make_multi_index(i));
         }
     }
 };

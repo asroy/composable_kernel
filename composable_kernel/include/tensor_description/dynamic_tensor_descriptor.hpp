@@ -242,8 +242,8 @@ struct DynamicTransformedTensorDescriptor
         static_for<0, NTransform, 1>{}([&](auto itran) constexpr {
             const auto tran = transforms_.At(itran);
 
-            const auto idx_up_part = pick_array_element(idx_up, UpDimensionIds{}.At(itran));
-            auto idx_low_part      = pick_array_element(idx_low, LowDimensionIds{}.At(itran));
+            const auto idx_up_part = pick_container_element(idx_up, UpDimensionIds{}.At(itran));
+            auto idx_low_part      = pick_container_element(idx_low, LowDimensionIds{}.At(itran));
 
             tran.CalculateLowerIndex(idx_low_part, idx_up_part);
         });
@@ -259,14 +259,16 @@ struct DynamicTransformedTensorDescriptor
             const auto tran = transforms_.At(itran);
 
             const auto idx_up_diff_part =
-                pick_array_element(idx_up_diff, UpDimensionIds{}.At(itran));
+                pick_container_element(idx_up_diff, UpDimensionIds{}.At(itran));
 
-            const auto idx_up_old_part = pick_array_element(idx_up_old, UpDimensionIds{}.At(itran));
+            const auto idx_up_old_part =
+                pick_container_element(idx_up_old, UpDimensionIds{}.At(itran));
 
             const auto idx_low_old_part =
-                pick_array_element(idx_low_old, LowDimensionIds{}.At(itran));
+                pick_container_element(idx_low_old, LowDimensionIds{}.At(itran));
 
-            auto idx_low_diff_part = pick_array_element(idx_low_diff, LowDimensionIds{}.At(itran));
+            auto idx_low_diff_part =
+                pick_container_element(idx_low_diff, LowDimensionIds{}.At(itran));
 
             tran.CalculateLowerIndexDiff(
                 idx_low_diff_part, idx_up_diff_part, idx_low_old_part, idx_up_old_part);
@@ -325,7 +327,7 @@ struct DynamicTransformedTensorDescriptor
             if constexpr(!is_valid_up_always_mapped_to_valid_low)
             {
                 const auto up_dims_part = UpDimensionIds{}.At(itran);
-                const auto idx_up_part  = pick_array_element(idx_up, up_dims_part);
+                const auto idx_up_part  = pick_container_element(idx_up, up_dims_part);
 
                 flag = flag && tran.IsValidUpperIndexMappedToValidLowerIndex(idx_up_part);
             }

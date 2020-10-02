@@ -1,7 +1,8 @@
 #ifndef CK_TUPLE_HELPER_HPP
 #define CK_TUPLE_HELPER_HPP
 
-#include "tuple_helper.hpp"
+#include "functional4.hpp"
+#include "tuple.hpp"
 
 namespace ck {
 

@@ -19,9 +19,11 @@ struct TupleElement
 {
     __host__ __device__ explicit constexpr TupleElement() : mData() {}
 
+#if 0
     __host__ __device__ explicit constexpr TupleElement(const TupleElement&) = default;
 
     __host__ __device__ explicit constexpr TupleElement(TupleElement&&) = default;
+#endif
 
     template <typename UData>
     __host__ __device__ explicit constexpr TupleElement(const TupleElement<Key, UData>& te)
@@ -73,9 +75,11 @@ struct TupleImpl<Sequence<Is...>, Xs...> : TupleElement<TupleElementKey<Is>, Xs>
         static_assert(sizeof...(Is) == sizeof...(Xs), "wrong! inconsistent size");
     }
 
+#if 0
     __host__ __device__ explicit constexpr TupleImpl(const TupleImpl&) = default;
 
     __host__ __device__ explicit constexpr TupleImpl(TupleImpl&&) = default;
+#endif
 
     template <index_t... Js, typename... Ys>
     __host__ __device__ explicit constexpr TupleImpl(const TupleImpl<Sequence<Js...>, Ys...>& y)
@@ -124,9 +128,11 @@ struct Tuple : detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(X
 
     __host__ __device__ explicit constexpr Tuple() : base() {}
 
+#if 0
     __host__ __device__ constexpr Tuple(const Tuple&) = default;
 
     __host__ __device__ constexpr Tuple(Tuple&&) = default;
+#endif
 
     template <typename... Ys,
               typename std::enable_if<sizeof...(Ys) == sizeof...(Xs), bool>::type = false>
