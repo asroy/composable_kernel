@@ -12,6 +12,7 @@
 #include "device_tensor.hpp"
 #include "host_col2im.hpp"
 #include "device_col2im_eb_nchw.hpp"
+#include "device_dynamic_col2im_eb_nchw.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -349,6 +350,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
+#if 0
     device_col2im_eb_nchw(col_eb_desc,
                           col_eb,
                           img_nchw_desc,
@@ -360,6 +362,19 @@ int main(int argc, char* argv[])
                           LeftPads{},
                           RightPads{},
                           nrepeat);
+#else
+    device_dynamic_col2im_eb_nchw(col_eb_desc,
+                                  col_eb,
+                                  img_nchw_desc,
+                                  img_nchw_device,
+                                  FilterSizes{},
+                                  OutputSizes{},
+                                  ConvStrides{},
+                                  ConvDilations{},
+                                  LeftPads{},
+                                  RightPads{},
+                                  nrepeat);
+#endif
 
     if(do_verification)
     {
