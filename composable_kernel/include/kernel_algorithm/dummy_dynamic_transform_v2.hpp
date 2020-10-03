@@ -2,20 +2,20 @@
 #define CK_DUMMY_DYNAMIC_TRANSFORM_V2_HPP
 
 #include "common_header.hpp"
-#include "dynamic_tensor_descriptor_v2.hpp"
-#include "dynamic_tensor_descriptor_helper_v2.hpp"
+#include "dynamic_tensor_descriptor.hpp"
+#include "dynamic_tensor_descriptor_helper.hpp"
 
 namespace ck {
 
 template <typename... Wei, typename... In, typename... Out>
-__host__ __device__ constexpr auto map_convolution_into_gemm_fwd_v4r4(
-    const DynamicTensorDescriptor_v2<Wei...>& wei_k_c_y_x_global_desc,
-    const DynamicTensorDescriptor_v2<In...>& in_n_c_hi_wi_global_desc,
-    const DynamicTensorDescriptor_v2<Out...>& out_n_k_ho_wo_global_desc,
-    const MultiIndex<2> conv_strides,
-    const MultiIndex<2> conv_dilations,
-    const MultiIndex<2> in_left_pads,
-    const MultiIndex<2> in_right_pads)
+__host__ __device__ constexpr auto
+map_convolution_into_gemm_fwd_v4r4(const DynamicTensorDescriptor<Wei...>& wei_k_c_y_x_global_desc,
+                                   const DynamicTensorDescriptor<In...>& in_n_c_hi_wi_global_desc,
+                                   const DynamicTensorDescriptor<Out...>& out_n_k_ho_wo_global_desc,
+                                   const MultiIndex<2> conv_strides,
+                                   const MultiIndex<2> conv_dilations,
+                                   const MultiIndex<2> in_left_pads,
+                                   const MultiIndex<2> in_right_pads)
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -47,8 +47,8 @@ __host__ __device__ constexpr auto map_convolution_into_gemm_fwd_v4r4(
     const index_t InRightPadW = in_right_pads[I1];
 
     // input tensor
-    const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor_v2(
-        transform_dynamic_tensor_descriptor_v2(
+    const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor(
+        transform_dynamic_tensor_descriptor(
             in_n_c_hi_wi_global_desc,
             make_tuple(DynamicPassThrough{N},
                        DynamicPassThrough{C},
@@ -66,7 +66,7 @@ __host__ __device__ constexpr auto map_convolution_into_gemm_fwd_v4r4(
     const index_t Hip = in_n_c_hip_wip_global_desc.GetLength(I2);
     const index_t Wip = in_n_c_hip_wip_global_desc.GetLength(I3);
 
-    const auto in_n_c_y_ho_x_wo_global_desc = transform_dynamic_tensor_descriptor_v2(
+    const auto in_n_c_y_ho_x_wo_global_desc = transform_dynamic_tensor_descriptor(
         in_n_c_hip_wip_global_desc,
         make_tuple(
             DynamicPassThrough{N},
@@ -76,7 +76,7 @@ __host__ __device__ constexpr auto map_convolution_into_gemm_fwd_v4r4(
         make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
         make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 
-    const auto in_gemmktotal_gemmn_global_desc = transform_dynamic_tensor_descriptor_v2(
+    const auto in_gemmktotal_gemmn_global_desc = transform_dynamic_tensor_descriptor(
         in_n_c_y_ho_x_wo_global_desc,
         make_tuple(DynamicMerge<3>{make_multi_index(C, Y, X)},
                    DynamicMerge<3>{make_multi_index(N, Ho, Wo)}),
@@ -89,7 +89,7 @@ __host__ __device__ constexpr auto map_convolution_into_gemm_fwd_v4r4(
     constexpr index_t GemmKPack = 8;
     const index_t gemmk         = gemmktotal / GemmKPack;
 
-    const auto in_gemmk_gemmn_gemmkpack_global_desc = transform_dynamic_tensor_descriptor_v2(
+    const auto in_gemmk_gemmn_gemmkpack_global_desc = transform_dynamic_tensor_descriptor(
         in_gemmktotal_gemmn_global_desc,
         make_tuple(DynamicUnMerge<2>{make_multi_index(gemmk, GemmKPack)},
                    DynamicPassThrough{gemmn}),
@@ -105,9 +105,9 @@ __host__ __device__ constexpr auto map_convolution_into_gemm_fwd_v4r4(
 #if 0
 template <typename... Wei, typename... In, typename... Out>
 __host__ __device__ constexpr auto map_convolution_into_gemm_bwd_v4r1(
-    const DynamicTensorDescriptor_v2<Wei...>& wei_k_c_y_x_global_desc,
-    const DynamicTensorDescriptor_v2<In...>& in_n_c_hi_wi_global_desc,
-    const DynamicTensorDescriptor_v2<Out...>& out_n_k_ho_wo_global_desc,
+    const DynamicTensorDescriptor<Wei...>& wei_k_c_y_x_global_desc,
+    const DynamicTensorDescriptor<In...>& in_n_c_hi_wi_global_desc,
+    const DynamicTensorDescriptor<Out...>& out_n_k_ho_wo_global_desc,
     const MultiIndex<2> conv_strides,
     const MultiIndex<2> conv_dilations,
     const MultiIndex<2> in_left_pads,
@@ -148,7 +148,7 @@ __host__ __device__ constexpr auto map_convolution_into_gemm_bwd_v4r1(
         constexpr bool out_skip_out_of_bound_check = true;
 #endif
 
-        constexpr auto out_n_k_ydot_htilda_xdot_wtilda_global_desc = transform_tensor_descriptor_v2(
+        constexpr auto out_n_k_ydot_htilda_xdot_wtilda_global_desc = transform_tensor_descriptor(
             out_n_k_ho_wo_global_desc,
             make_tuple(PassThrough{N},
                        PassThrough{K},
@@ -158,7 +158,7 @@ __host__ __device__ constexpr auto map_convolution_into_gemm_bwd_v4r1(
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 
         constexpr auto out_n_k_ydot_htildaslice_xdot_wtildaslice_global_desc =
-            transform_tensor_descriptor_v2(
+            transform_tensor_descriptor(
                 out_n_k_ydot_htilda_xdot_wtilda_global_desc,
                 make_tuple(PassThrough{N},
                            PassThrough{K},
@@ -230,15 +230,14 @@ struct DummyDynamicTransform_v2_1
 
         const index_t niter = p_wei_global[10];
 
-        auto in_gemmk_gemmn_coord =
-            make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_global_desc, idx);
+        auto in_gemmk_gemmn_coord = make_dynamic_tensor_coordinate(in_gemmk_gemmn_global_desc, idx);
 
-        const auto in_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step_v2(
-            in_gemmk_gemmn_global_desc, make_multi_index(1, 0));
+        const auto in_gemmk_gemmn_coord_step =
+            make_dynamic_tensor_coordinate_step(in_gemmk_gemmn_global_desc, make_multi_index(1, 0));
 
         for(index_t iter = 0; iter < niter; ++iter)
         {
-            move_dynamic_tensor_coordinate_v2(
+            move_dynamic_tensor_coordinate(
                 in_gemmk_gemmn_global_desc, in_gemmk_gemmn_coord, in_gemmk_gemmn_coord_step);
 
             // write
@@ -308,7 +307,7 @@ struct DummyDynamicTransform_v2_1
         const index_t InRightPadW = in_right_pads[i1];
 
 #if 0
-        const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor_v2(
+        const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor(
             move(in_n_c_hi_wi_global_desc),
             make_tuple(DynamicPassThrough{N},
                        DynamicPassThrough{C},
@@ -317,7 +316,7 @@ struct DummyDynamicTransform_v2_1
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 #elif 0
-        const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor_v2(
+        const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor(
             move(in_n_c_hi_wi_global_desc),
             make_tuple(DynamicPassThrough{N},
                        DynamicPassThrough{C},
@@ -326,8 +325,8 @@ struct DummyDynamicTransform_v2_1
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 #else
-        const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor_v2(
-            transform_dynamic_tensor_descriptor_v2(
+        const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor(
+            transform_dynamic_tensor_descriptor(
                 move(in_n_c_hi_wi_global_desc),
                 make_tuple(DynamicPassThrough{N},
                            DynamicPassThrough{C},
@@ -351,14 +350,14 @@ struct DummyDynamicTransform_v2_1
 #if 1
         const index_t niter = p_wei_global[10];
 
-        auto in_coord = make_dynamic_tensor_coordinate_v2(in_n_c_hip_wip_global_desc, idx);
+        auto in_coord = make_dynamic_tensor_coordinate(in_n_c_hip_wip_global_desc, idx);
 
-        const auto in_coord_step = make_dynamic_tensor_coordinate_step_v2(
+        const auto in_coord_step = make_dynamic_tensor_coordinate_step(
             in_n_c_hip_wip_global_desc, make_multi_index(1, 0, 0, 0));
 
         for(index_t iter = 0; iter < niter; ++iter)
         {
-            move_dynamic_tensor_coordinate_v2(in_n_c_hip_wip_global_desc, in_coord, in_coord_step);
+            move_dynamic_tensor_coordinate(in_n_c_hip_wip_global_desc, in_coord, in_coord_step);
 
             // write
             float value = 1;
@@ -381,7 +380,7 @@ struct DummyDynamicTransform_v2_1
         }
 #else
         // write
-        // auto in_coord = make_dynamic_tensor_coordinate_v2(in_n_c_hi_wi_global_desc, idx);
+        // auto in_coord = make_dynamic_tensor_coordinate(in_n_c_hi_wi_global_desc, idx);
 
         p_out_global[in_n_c_hip_wip_global_desc.CalculateOffset(idx)] = 1;
 #endif
@@ -429,26 +428,23 @@ struct DummyDynamicTransform_v2_fwd_v4r4
         const index_t niter = p_wei_global[10];
 
         auto in_gemmk_gemmn_gemmkpack_coord =
-            make_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_gemmkpack_global_desc, idx);
+            make_dynamic_tensor_coordinate(in_gemmk_gemmn_gemmkpack_global_desc, idx);
 
-        const auto in_gemmk_gemmn_gemmkpack_coord_step_0_0_1 =
-            make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_gemmkpack_global_desc,
-                                                   make_multi_index(0, 0, 1));
+        const auto in_gemmk_gemmn_gemmkpack_coord_step_0_0_1 = make_dynamic_tensor_coordinate_step(
+            in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(0, 0, 1));
 
-        const auto in_gemmk_gemmn_gemmkpack_coord_step_0_1_0 =
-            make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_gemmkpack_global_desc,
-                                                   make_multi_index(0, 1, 0));
+        const auto in_gemmk_gemmn_gemmkpack_coord_step_0_1_0 = make_dynamic_tensor_coordinate_step(
+            in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(0, 1, 0));
 
-        const auto in_gemmk_gemmn_gemmkpack_coord_step_1_0_0 =
-            make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_gemmkpack_global_desc,
-                                                   make_multi_index(1, 0, 0));
+        const auto in_gemmk_gemmn_gemmkpack_coord_step_1_0_0 = make_dynamic_tensor_coordinate_step(
+            in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(1, 0, 0));
 
         // move (0, 0, 1)
         for(index_t iter = 0; iter < niter; ++iter)
         {
-            move_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_gemmkpack_global_desc,
-                                              in_gemmk_gemmn_gemmkpack_coord,
-                                              in_gemmk_gemmn_gemmkpack_coord_step_0_0_1);
+            move_dynamic_tensor_coordinate(in_gemmk_gemmn_gemmkpack_global_desc,
+                                           in_gemmk_gemmn_gemmkpack_coord,
+                                           in_gemmk_gemmn_gemmkpack_coord_step_0_0_1);
 
             // write
             float value = 1;
@@ -478,9 +474,9 @@ struct DummyDynamicTransform_v2_fwd_v4r4
         // move (0, 1, 0)
         for(index_t iter = 0; iter < niter; ++iter)
         {
-            move_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_gemmkpack_global_desc,
-                                              in_gemmk_gemmn_gemmkpack_coord,
-                                              in_gemmk_gemmn_gemmkpack_coord_step_0_1_0);
+            move_dynamic_tensor_coordinate(in_gemmk_gemmn_gemmkpack_global_desc,
+                                           in_gemmk_gemmn_gemmkpack_coord,
+                                           in_gemmk_gemmn_gemmkpack_coord_step_0_1_0);
 
             // write
             float value = 1;
@@ -510,9 +506,9 @@ struct DummyDynamicTransform_v2_fwd_v4r4
         // move (1, 0, 0)
         for(index_t iter = 0; iter < niter; ++iter)
         {
-            move_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_gemmkpack_global_desc,
-                                              in_gemmk_gemmn_gemmkpack_coord,
-                                              in_gemmk_gemmn_gemmkpack_coord_step_1_0_0);
+            move_dynamic_tensor_coordinate(in_gemmk_gemmn_gemmkpack_global_desc,
+                                           in_gemmk_gemmn_gemmkpack_coord,
+                                           in_gemmk_gemmn_gemmkpack_coord_step_1_0_0);
 
             // write
             float value = 1;

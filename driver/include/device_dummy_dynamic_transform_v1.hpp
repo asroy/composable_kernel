@@ -28,11 +28,11 @@ void device_dummy_dynamic_transform_v1(InDesc,
 
     using TDevice = typename conditional<is_same<half_float::half, T>::value, half_t, T>::type;
 
-    const auto in_nchw_desc = make_dynamic_native_tensor_descriptor(
+    const auto in_nchw_desc = make_dynamic_native_tensor_descriptor_v1(
         to_multi_index(InDesc::GetLengths()), to_multi_index(InDesc::GetStrides()));
-    const auto wei_kcyx_desc = make_dynamic_native_tensor_descriptor(
+    const auto wei_kcyx_desc = make_dynamic_native_tensor_descriptor_v1(
         to_multi_index(WeiDesc::GetLengths()), to_multi_index(WeiDesc::GetStrides()));
-    const auto out_nkhw_desc = make_dynamic_native_tensor_descriptor(
+    const auto out_nkhw_desc = make_dynamic_native_tensor_descriptor_v1(
         to_multi_index(OutDesc::GetLengths()), to_multi_index(OutDesc::GetStrides()));
 
     const auto conv_strides   = to_multi_index(ConvStrides{});
@@ -52,7 +52,7 @@ void device_dummy_dynamic_transform_v1(InDesc,
         const auto in_gemmk_gemmn_global_desc = tensor_descs.At(Number<0>{});
 
         auto in_gemmk_gemmn_coord =
-            make_dynamic_tensor_coordinate<2>(in_gemmk_gemmn_global_desc, make_multi_index(0, 0));
+            make_dynamic_tensor_coordinate(in_gemmk_gemmn_global_desc, make_multi_index(0, 0));
 
         for(index_t iter = 0; iter < 10; ++iter)
         {
@@ -112,9 +112,9 @@ void device_dummy_dynamic_transform_v1(InDesc,
                                                  index_t* const,
                                                  float* const,
                                                  float* const,
-                                                 const DynamicNativeTensorDescriptor<4>,
-                                                 const DynamicNativeTensorDescriptor<4>,
-                                                 const DynamicNativeTensorDescriptor<4>,
+                                                 const DynamicNativeTensorDescriptor_v1<4>,
+                                                 const DynamicNativeTensorDescriptor_v1<4>,
+                                                 const DynamicNativeTensorDescriptor_v1<4>,
                                                  const MultiIndex<2>,
                                                  const MultiIndex<2>,
                                                  const MultiIndex<2>,

@@ -28,11 +28,11 @@ void device_dummy_dynamic_transform_v2(InDesc,
 
     using TDevice = typename conditional<is_same<half_float::half, T>::value, half_t, T>::type;
 
-    const auto in_nchw_desc = make_dynamic_native_tensor_descriptor_v2<4>(
+    const auto in_nchw_desc = make_dynamic_native_tensor_descriptor<4>(
         to_multi_index(InDesc::GetLengths()), to_multi_index(InDesc::GetStrides()));
-    const auto wei_kcyx_desc = make_dynamic_native_tensor_descriptor_v2<4>(
+    const auto wei_kcyx_desc = make_dynamic_native_tensor_descriptor<4>(
         to_multi_index(WeiDesc::GetLengths()), to_multi_index(WeiDesc::GetStrides()));
-    const auto out_nkhw_desc = make_dynamic_native_tensor_descriptor_v2<4>(
+    const auto out_nkhw_desc = make_dynamic_native_tensor_descriptor<4>(
         to_multi_index(OutDesc::GetLengths()), to_multi_index(OutDesc::GetStrides()));
 
     const auto conv_strides   = to_multi_index(ConvStrides{});
@@ -52,12 +52,11 @@ void device_dummy_dynamic_transform_v2(InDesc,
 
     // test on cpu
     {
-        auto in_gemmk_gemmn_gemmkpack_coord = make_dynamic_tensor_coordinate_v2(
+        auto in_gemmk_gemmn_gemmkpack_coord = make_dynamic_tensor_coordinate(
             in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(0, 0, 0));
 
-        const auto in_gemmk_gemmn_gemmkpack_coord_step_0_0_1 =
-            make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_gemmkpack_global_desc,
-                                                   make_multi_index(0, 0, 1));
+        const auto in_gemmk_gemmn_gemmkpack_coord_step_0_0_1 = make_dynamic_tensor_coordinate_step(
+            in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(0, 0, 1));
 
         print_array_v2("do_tansforms 0 0 1: ",
                        in_gemmk_gemmn_gemmkpack_coord_step_0_0_1.do_transforms_);
@@ -70,19 +69,18 @@ void device_dummy_dynamic_transform_v2(InDesc,
             printf("offset: %d\n", in_gemmk_gemmn_gemmkpack_coord.GetOffset());
             printf("\n");
 
-            move_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_gemmkpack_global_desc,
-                                              in_gemmk_gemmn_gemmkpack_coord,
-                                              in_gemmk_gemmn_gemmkpack_coord_step_0_0_1);
+            move_dynamic_tensor_coordinate(in_gemmk_gemmn_gemmkpack_global_desc,
+                                           in_gemmk_gemmn_gemmkpack_coord,
+                                           in_gemmk_gemmn_gemmkpack_coord_step_0_0_1);
         }
     }
 
     {
-        auto in_gemmk_gemmn_gemmkpack_coord = make_dynamic_tensor_coordinate_v2(
+        auto in_gemmk_gemmn_gemmkpack_coord = make_dynamic_tensor_coordinate(
             in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(0, 0, 0));
 
-        const auto in_gemmk_gemmn_gemmkpack_coord_step_0_1_0 =
-            make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_gemmkpack_global_desc,
-                                                   make_multi_index(0, 1, 0));
+        const auto in_gemmk_gemmn_gemmkpack_coord_step_0_1_0 = make_dynamic_tensor_coordinate_step(
+            in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(0, 1, 0));
 
         print_array_v2("do_tansforms 0 1 0: ",
                        in_gemmk_gemmn_gemmkpack_coord_step_0_1_0.do_transforms_);
@@ -95,19 +93,18 @@ void device_dummy_dynamic_transform_v2(InDesc,
             printf("offset: %d\n", in_gemmk_gemmn_gemmkpack_coord.GetOffset());
             printf("\n");
 
-            move_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_gemmkpack_global_desc,
-                                              in_gemmk_gemmn_gemmkpack_coord,
-                                              in_gemmk_gemmn_gemmkpack_coord_step_0_1_0);
+            move_dynamic_tensor_coordinate(in_gemmk_gemmn_gemmkpack_global_desc,
+                                           in_gemmk_gemmn_gemmkpack_coord,
+                                           in_gemmk_gemmn_gemmkpack_coord_step_0_1_0);
         }
     }
 
     {
-        auto in_gemmk_gemmn_gemmkpack_coord = make_dynamic_tensor_coordinate_v2(
+        auto in_gemmk_gemmn_gemmkpack_coord = make_dynamic_tensor_coordinate(
             in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(0, 0, 0));
 
-        const auto in_gemmk_gemmn_gemmkpack_coord_step_1_0_0 =
-            make_dynamic_tensor_coordinate_step_v2(in_gemmk_gemmn_gemmkpack_global_desc,
-                                                   make_multi_index(1, 0, 0));
+        const auto in_gemmk_gemmn_gemmkpack_coord_step_1_0_0 = make_dynamic_tensor_coordinate_step(
+            in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(1, 0, 0));
 
         print_array_v2("do_tansforms 1 0 0: ",
                        in_gemmk_gemmn_gemmkpack_coord_step_1_0_0.do_transforms_);
@@ -120,9 +117,9 @@ void device_dummy_dynamic_transform_v2(InDesc,
             printf("offset: %d\n", in_gemmk_gemmn_gemmkpack_coord.GetOffset());
             printf("\n");
 
-            move_dynamic_tensor_coordinate_v2(in_gemmk_gemmn_gemmkpack_global_desc,
-                                              in_gemmk_gemmn_gemmkpack_coord,
-                                              in_gemmk_gemmn_gemmkpack_coord_step_1_0_0);
+            move_dynamic_tensor_coordinate(in_gemmk_gemmn_gemmkpack_global_desc,
+                                           in_gemmk_gemmn_gemmkpack_coord,
+                                           in_gemmk_gemmn_gemmkpack_coord_step_1_0_0);
         }
     }
 

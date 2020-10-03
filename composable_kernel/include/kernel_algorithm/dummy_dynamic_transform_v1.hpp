@@ -2,9 +2,9 @@
 #define CK_DUMMY_DYNAMIC_TRANSFORM_V1_HPP
 
 #include "common_header.hpp"
-#include "dynamic_tensor_descriptor.hpp"
-#include "dynamic_tensor_descriptor_helper.hpp"
-#include "dynamic_tensor_coordinate.hpp"
+#include "dynamic_tensor_descriptor_v1.hpp"
+#include "dynamic_tensor_descriptor_helper_v1.hpp"
+#include "dynamic_tensor_coordinate_v1.hpp"
 
 namespace ck {
 
@@ -565,7 +565,7 @@ struct DummyDynamicTransform_v1
         const index_t niter = p_wei_global[10];
 
         auto in_gemmk_gemmn_coord =
-            make_dynamic_tensor_coordinate<2>(in_gemmk_gemmn_global_desc, idx);
+            make_dynamic_tensor_coordinate_v1(in_gemmk_gemmn_global_desc, idx);
 
         for(index_t iter = 0; iter < niter; ++iter)
         {

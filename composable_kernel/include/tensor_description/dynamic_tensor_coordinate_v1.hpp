@@ -1,8 +1,8 @@
-#ifndef CK_DYNAMIC_TENSOR_COORDINATE_HPP
-#define CK_DYNAMIC_TENSOR_COORDINATE_HPP
+#ifndef CK_DYNAMIC_TENSOR_COORDINATE_V1_HPP
+#define CK_DYNAMIC_TENSOR_COORDINATE_V1_HPP
 
 #include "common_header.hpp"
-#include "dynamic_tensor_descriptor.hpp"
+#include "dynamic_tensor_descriptor_v1.hpp"
 
 namespace ck {
 
@@ -19,20 +19,20 @@ namespace ck {
 //   1. Given step size in each dimension, update itself, or return a new tensor cooridnate, so user
 //      can freely move the "point of location" inside the tensor
 
-// wrapper class for DynamicNativeTensorCoordinate and DynamicTransformedTensorCoordinate
+// wrapper class for DynamicNativeTensorCoordinate_v1 and DynamicTransformedTensorCoordinate_v1
 template <typename TensorDesc>
-struct DynamicTensorCoordinate;
+struct DynamicTensorCoordinate_v1;
 
 // tensor coordinate for native tensor
 template <typename TensorDesc>
-struct DynamicNativeTensorCoordinate
+struct DynamicNativeTensorCoordinate_v1
 {
-    using type                    = DynamicNativeTensorCoordinate;
+    using type                    = DynamicNativeTensorCoordinate_v1;
     using tensor_desc_type        = TensorDesc;
     static constexpr index_t NDim = tensor_desc_type::GetNumOfDimension();
     using Index                   = MultiIndex<NDim>;
 
-    __host__ __device__ explicit constexpr DynamicNativeTensorCoordinate(
+    __host__ __device__ explicit constexpr DynamicNativeTensorCoordinate_v1(
         const tensor_desc_type& tensor_desc, const Index& idx)
         : tensor_desc_{tensor_desc}, idx_{idx}, offset_{tensor_desc.CalculateOffset(idx)}
     {
@@ -118,17 +118,17 @@ struct DynamicNativeTensorCoordinate
 
 // tensor coordinate for transformed tensor
 template <typename TensorDesc>
-struct DynamicTransformedTensorCoordinate
+struct DynamicTransformedTensorCoordinate_v1
 {
     static constexpr index_t NDimUp = TensorDesc::GetNumOfDimension();
     using UpperDesc                 = TensorDesc;
-    using UpperCoord                = DynamicTransformedTensorCoordinate;
+    using UpperCoord                = DynamicTransformedTensorCoordinate_v1;
     using UpperIndex                = MultiIndex<NDimUp>;
 
     using LowerDesc  = typename UpperDesc::LowerDesc;
-    using LowerCoord = typename DynamicTensorCoordinate<LowerDesc>::type;
+    using LowerCoord = typename DynamicTensorCoordinate_v1<LowerDesc>::type;
 
-    __host__ __device__ explicit constexpr DynamicTransformedTensorCoordinate(
+    __host__ __device__ explicit constexpr DynamicTransformedTensorCoordinate_v1(
         const UpperDesc& tensor_desc_up, const UpperIndex& idx_up)
         : tensor_desc_up_{tensor_desc_up},
           idx_up_{idx_up},
@@ -240,30 +240,32 @@ struct DynamicTransformedTensorCoordinate
 
 template <index_t NDim>
 __host__ __device__ constexpr auto
-make_dynamic_tensor_coordinate(const DynamicNativeTensorDescriptor<NDim>& tensor_desc,
-                               const MultiIndex<NDim>& idx)
+make_dynamic_tensor_coordinate_v1(const DynamicNativeTensorDescriptor_v1<NDim>& tensor_desc,
+                                  const MultiIndex<NDim>& idx)
 {
-    return DynamicNativeTensorCoordinate<DynamicNativeTensorDescriptor<NDim>>{tensor_desc, idx};
+    return DynamicNativeTensorCoordinate_v1<DynamicNativeTensorDescriptor_v1<NDim>>{tensor_desc,
+                                                                                    idx};
 }
 
 template <index_t NDim, typename... Ts>
 __host__ __device__ constexpr auto
-make_dynamic_tensor_coordinate(const DynamicTransformedTensorDescriptor<Ts...>& tensor_desc,
-                               const MultiIndex<NDim>& idx)
+make_dynamic_tensor_coordinate_v1(const DynamicTransformedTensorDescriptor_v1<Ts...>& tensor_desc,
+                                  const MultiIndex<NDim>& idx)
 {
-    static_assert(DynamicTransformedTensorDescriptor<Ts...>::GetNumOfDimension() == NDim,
+    static_assert(DynamicTransformedTensorDescriptor_v1<Ts...>::GetNumOfDimension() == NDim,
                   "wrong! inconsistent # of dimensions");
 
-    return DynamicTransformedTensorCoordinate<DynamicTransformedTensorDescriptor<Ts...>>{
+    return DynamicTransformedTensorCoordinate_v1<DynamicTransformedTensorDescriptor_v1<Ts...>>{
         tensor_desc, idx};
 }
 
 template <typename TensorDesc>
-struct DynamicTensorCoordinate
+struct DynamicTensorCoordinate_v1
 {
     static constexpr index_t NDim = TensorDesc::GetNumOfDimension();
 
-    using type = decltype(make_dynamic_tensor_coordinate<NDim>(TensorDesc{}, MultiIndex<NDim>{}));
+    using type =
+        decltype(make_dynamic_tensor_coordinate_v1<NDim>(TensorDesc{}, MultiIndex<NDim>{}));
 };
 
 } // namespace ck
