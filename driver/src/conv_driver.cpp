@@ -15,7 +15,7 @@
 #include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "device_dummy_static_transform.hpp"
 #include "device_dummy_dynamic_transform_v1.hpp"
-#include "device_dummy_dynamic_transform_v2.hpp"
+#include "device_dummy_dynamic_transform.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -549,7 +549,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 0
+#if 1
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
