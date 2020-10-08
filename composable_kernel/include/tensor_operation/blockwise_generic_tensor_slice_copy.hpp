@@ -5,6 +5,7 @@
 #include "tensor_descriptor.hpp"
 #include "tensor_descriptor_helper.hpp"
 #include "tensor_coordinate.hpp"
+#include "cluster_descriptor.hpp"
 #include "threadwise_generic_tensor_slice_copy.hpp"
 
 namespace ck {

@@ -549,7 +549,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 1
+#if 0
     device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
@@ -561,7 +561,7 @@ int main(int argc, char* argv[])
                                                          LeftPads{},
                                                          RightPads{},
                                                          nrepeat);
-#elif 1
+#elif 0
     device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
@@ -598,17 +598,17 @@ int main(int argc, char* argv[])
                                       RightPads{},
                                       nrepeat);
 #elif 1
-    device_dummy_dynamic_transform_v2(in_nchw_desc,
-                                      in_nchw,
-                                      wei_kcyx_desc,
-                                      wei_kcyx,
-                                      out_nkhw_desc,
-                                      out_nkhw_device,
-                                      ConvStrides{},
-                                      ConvDilations{},
-                                      LeftPads{},
-                                      RightPads{},
-                                      nrepeat);
+    device_dummy_dynamic_transform(in_nchw_desc,
+                                   in_nchw,
+                                   wei_kcyx_desc,
+                                   wei_kcyx,
+                                   out_nkhw_desc,
+                                   out_nkhw_device,
+                                   ConvStrides{},
+                                   ConvDilations{},
+                                   LeftPads{},
+                                   RightPads{},
+                                   nrepeat);
 #endif
 
     if(do_verification)

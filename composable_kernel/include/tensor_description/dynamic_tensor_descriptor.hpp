@@ -21,9 +21,8 @@ __host__ __device__ constexpr auto
 make_dynamic_tensor_coordinate_step(const TensorDesc&, const VisibleIndex& idx_diff_visible);
 
 template <typename TensorDesc, typename TensorCoord, typename TensorCoordStep>
-__host__ __device__ void move_dynamic_tensor_coordinate(const TensorDesc& tensor_desc,
-                                                        TensorCoord& coord,
-                                                        const TensorCoordStep& coord_step);
+__host__ __device__ constexpr void move_dynamic_tensor_coordinate(
+    const TensorDesc& tensor_desc, TensorCoord& coord, const TensorCoordStep& coord_step);
 
 template <typename TensorDesc, typename TensorCoord>
 __host__ __device__ constexpr bool
@@ -129,7 +128,7 @@ struct DynamicTensorDescriptor
     {
         static_assert(Idx::Size() == GetNumOfDimension(), "wrong! inconsistent # of dimension");
 
-#if 0 // debug
+#if 1 // debug
         return make_dynamic_tensor_coordinate(*this, idx).GetOffset();
 #else
         constexpr index_t ntransform   = GetNumOfTransform();
@@ -509,9 +508,9 @@ make_dynamic_tensor_coordinate_step(const TensorDesc&, const VisibleIndex& idx_d
 }
 
 template <typename TensorDesc, typename TensorCoord, typename TensorCoordStep>
-__host__ __device__ void move_dynamic_tensor_coordinate(const TensorDesc& tensor_desc,
-                                                        TensorCoord& coord,
-                                                        const TensorCoordStep& coord_step)
+__host__ __device__ constexpr void move_dynamic_tensor_coordinate(const TensorDesc& tensor_desc,
+                                                                  TensorCoord& coord,
+                                                                  const TensorCoordStep& coord_step)
 {
     constexpr index_t ndim_hidden  = TensorDesc::GetNumOfHiddenDimension();
     constexpr index_t ndim_visible = TensorDesc::GetNumOfVisibleDimension();
@@ -607,6 +606,14 @@ __host__ __device__ constexpr bool coordinate_has_valid_offset(const TensorDesc&
     return is_visible_index_valid &&
            coordinate_has_valid_offset_assuming_visible_index_is_valid(tensor_desc, coord);
 }
+
+template <typename TensorDesc>
+using DynamicTensorCoordinate_t = decltype(
+    make_dynamic_tensor_coordinate(TensorDesc{}, MultiIndex<TensorDesc::GetNumOfDimension()>{}));
+
+template <typename TensorDesc>
+using DynamicTensorCoordinateStep_t = decltype(make_dynamic_tensor_coordinate_step(
+    TensorDesc{}, MultiIndex<TensorDesc::GetNumOfDimension()>{}));
 
 } // namespace ck
 #endif
