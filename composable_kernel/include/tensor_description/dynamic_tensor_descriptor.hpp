@@ -43,7 +43,7 @@ template <typename Transforms,
           typename VisibleDimensionIds>
 struct DynamicTensorDescriptor
 {
-    // private:
+    // TODO make these private
     __host__ __device__ static constexpr index_t GetNumOfTransform() { return Transforms::Size(); }
 
     __host__ __device__ static constexpr index_t GetNumOfVisibleDimension()
@@ -79,7 +79,7 @@ struct DynamicTensorDescriptor
     using Coordinate     = DynamicTensorCoordinate<ndim_hidden_, VisibleDimensionIds>;
     using CoordinateStep = DynamicTensorCoordinateStep<ntransform_, ndim_visible_>;
 
-    // public:
+    public:
     __host__ __device__ explicit constexpr DynamicTensorDescriptor(const Transforms& transforms,
                                                                    index_t element_space_size)
         : transforms_{transforms},
@@ -128,37 +128,10 @@ struct DynamicTensorDescriptor
     {
         static_assert(Idx::Size() == GetNumOfDimension(), "wrong! inconsistent # of dimension");
 
-#if 1 // debug
         return make_dynamic_tensor_coordinate(*this, idx).GetOffset();
-#else
-        constexpr index_t ntransform   = GetNumOfTransform();
-        constexpr index_t ndim_hidden  = GetNumOfHiddenDimension();
-        constexpr index_t ndim_visible = GetNumOfVisibleDimension();
-        constexpr auto visible_dim_ids = GetVisibleDimensionIds();
-
-        MultiIndex<ndim_hidden> idx_hidden;
-
-        // initialize visible index
-        auto idx_hidden_pick_visible = pick_container_element(idx_hidden, visible_dim_ids);
-        idx_hidden_pick_visible      = idx;
-
-        // calculate hidden index
-        static_for<ntransform - 1, -1, -1>{}([this, &idx_hidden](auto itran) {
-            const auto& tran        = this->GetTransforms().At(itran);
-            constexpr auto dims_low = GetLowerDimensionIdss().At(itran);
-            constexpr auto dims_up  = GetUpperDimensionIdss().At(itran);
-
-            const auto idx_up = pick_container_element(idx_hidden, dims_up);
-            auto idx_low      = pick_container_element(idx_hidden, dims_low);
-
-            tran.CalculateLowerIndex(idx_low, idx_up);
-        });
-
-        return idx_hidden[Number<0>{}];
-#endif
     }
 
-    // private:
+    // TODO make these private
     __host__ __device__ constexpr const auto& GetTransforms() const { return transforms_; }
 
     __host__ __device__ static constexpr auto GetLowerDimensionIdss()
@@ -200,67 +173,25 @@ struct DynamicTensorDescriptor
         return hidden_lengths;
     }
 
-    // private member variables
+    // TODO make these private
     const Transforms transforms_;
     // TODO maybe hidden_lengths_ should use reference_wrapper (reference to transforms_'s member
-    // variable lengths_) to save space on stack?
+    //  variable lengths_) to save space on stack?
     const HiddenIndex hidden_lengths_;
     // visible_lenths_ contains a reference to hidden_lengths_
     const ContainerElementPicker<const HiddenIndex, VisibleDimensionIds> visible_lengths_;
-
-#if 0
-    // friend class
-    friend Coordinate;
-    friend CoordinateStep;
-
-    // friend function to transform tensor descriptor
-    template <typename OldTensorDescriptor,
-              typename NewTransforms,
-              typename NewLowerDimensionOldVisibleIdss,
-              typename NewUpperDimensionNewVisibleIdss>
-    __host__ __device__ friend constexpr auto
-    transform_dynamic_tensor_descriptor(const OldTensorDescriptor& /* old_tensor_desc */,
-                                           const NewTransforms& /* new_transforms */,
-                                           NewLowerDimensionOldVisibleIdss,
-                                           NewUpperDimensionNewVisibleIdss);
-
-    // friend functions for making and moving tensor coordinate
-    template <typename VisibleIndex>
-    __host__ __device__ friend constexpr Coordinate
-    make_dynamic_tensor_coordinate(const DynamicTensorDescriptor& /* tensor_desc */,
-                                      const VisibleIndex& /* idx_visible */);
-
-    template <typename VisibleIndex>
-    __host__ __device__ friend constexpr CoordinateStep
-    make_dynamic_tensor_coordinate_step(const DynamicTensorDescriptor& /* tensor_desc */,
-                                           const VisibleIndex& /* idx_diff_visible */);
-
-    __host__ __device__ friend void
-    move_dynamic_tensor_coordinate(const DynamicTensorDescriptor& /* tensor_desc */,
-                              Coordinate& /* coord */,
-                              const CoordinateStep& /* coord_step */);
-
-    // friend functions for valid offset check
-    __host__ __device__ friend constexpr bool
-    coordinate_has_valid_offset_assuming_visible_index_is_valid(
-        const DynamicTensorDescriptor& tensor_desc, const Coordinate& coord);
-
-    __host__ __device__ friend constexpr bool
-    coordinate_has_valid_offset(const DynamicTensorDescriptor& tensor_desc,
-                                const Coordinate& coord);
-#endif
 };
 
 template <index_t NDimHidden, typename VisibleDimensionIds>
 struct DynamicTensorCoordinate
 {
-    // private:
+    // TODO make these private
     static constexpr index_t ndim_visible_ = VisibleDimensionIds::Size();
 
     using HiddenIndex  = MultiIndex<NDimHidden>;
     using VisibleIndex = MultiIndex<ndim_visible_>;
 
-    // public:
+    public:
     __host__ __device__ explicit constexpr DynamicTensorCoordinate(const HiddenIndex& idx_hidden)
         : idx_hidden_{idx_hidden}, idx_visible_{idx_hidden_}
     {
@@ -270,7 +201,7 @@ struct DynamicTensorCoordinate
 
     __host__ __device__ constexpr index_t GetOffset() const { return idx_hidden_[Number<0>{}]; }
 
-    // private:
+    // TODO make these private
     __host__ __device__ constexpr const auto& GetHiddenIndex() const { return idx_hidden_; }
 
     __host__ __device__ auto& GetHiddenIndex() { return idx_hidden_; }
@@ -279,33 +210,19 @@ struct DynamicTensorCoordinate
 
     __host__ __device__ auto& GetVisibleIndex() { return idx_visible_; }
 
-    // private member variables
+    // TODO make these private
     HiddenIndex idx_hidden_;
     // idx_visible_ contains a reference to idx_hidden_
     ContainerElementPicker<HiddenIndex, VisibleDimensionIds> idx_visible_;
-
-#if 0
-    // friend functions for making and updating tensor coordinate
-    template <typename TensorDesc>
-    __host__ __device__ friend constexpr DynamicTensorCoordinate
-    make_dynamic_tensor_coordinate(const TensorDesc& /* tensor_desc */,
-                                      const VisibleIndex& /* idx_visible */);
-
-    template <typename TensorDesc, typename TensorCoordStep>
-    __host__ __device__ friend void move_dynamic_tensor_coordinate(
-        const TensorDesc& /* tensor_desc */,
-        DynamicTensorCoordinate& /* coord */,
-        const TensorCoordStep& /* coord_step */);
-#endif
 };
 
 template <index_t NTransform, index_t NDimVisible>
 struct DynamicTensorCoordinateStep
 {
-    // private:
+    // TODO make these private
     using VisibleIndex = MultiIndex<NDimVisible>;
 
-    // public:
+    public:
     __host__ __device__ explicit constexpr DynamicTensorCoordinateStep(
         const VisibleIndex& idx_diff_visible, const Array<bool, NTransform>& do_transforms)
         : idx_diff_visible_{idx_diff_visible}, do_transforms_{do_transforms}
@@ -314,29 +231,14 @@ struct DynamicTensorCoordinateStep
 
     __host__ __device__ constexpr const auto& GetIndexDiff() const { return GetVisibleIndexDiff(); }
 
-    // private:
+    // TODO make these private
     __host__ __device__ constexpr const auto& GetVisibleIndexDiff() const
     {
         return idx_diff_visible_;
     }
 
-    //  private:
     const VisibleIndex idx_diff_visible_;
     const Array<bool, NTransform> do_transforms_;
-
-#if 0
-    // friend functions for updating tensor coordinate
-    template <typename TensorDesc>
-    __host__ __device__ friend constexpr DynamicTensorCoordinateStep
-    make_dynamic_tensor_coordinate_step(const TensorDesc& /* tensor_desc */,
-                                           const VisibleIndex& /* idx_visible */);
-
-    template <typename TensorDesc, index_t NDimHidden, typename VisibleDimensionIds>
-    __host__ __device__ friend void move_dynamic_tensor_coordinate(
-        const TensorDesc& /* tensor_desc */,
-        DynamicTensorCoordinate<NDimHidden, VisibleDimensionIds>& /* coord */,
-        const DynamicTensorCoordinateStep& /* coord_step */);
-#endif
 };
 
 // TODO: How to fix this? It uses an struct instead of lambda because lambda
