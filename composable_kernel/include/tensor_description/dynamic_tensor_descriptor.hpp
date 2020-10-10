@@ -83,8 +83,7 @@ struct DynamicTensorDescriptor
     __host__ __device__ explicit constexpr DynamicTensorDescriptor(const Transforms& transforms,
                                                                    index_t element_space_size)
         : transforms_{transforms},
-          hidden_lengths_{InitializeHiddenLengths(transforms_, element_space_size)},
-          visible_lengths_{hidden_lengths_}
+          hidden_lengths_{InitializeHiddenLengths(transforms_, element_space_size)}
     {
         static_assert(Transforms::Size() == ntransform_ &&
                           LowerDimensionIdss::Size() == ntransform_ &&
@@ -107,10 +106,14 @@ struct DynamicTensorDescriptor
     template <index_t IDim>
     __host__ __device__ constexpr index_t GetLength(Number<IDim>) const
     {
-        return visible_lengths_[Number<IDim>{}];
+        return hidden_lengths_[VisibleDimensionIds::At(Number<IDim>{})];
     }
 
-    __host__ __device__ constexpr const auto& GetLengths() const { return visible_lengths_; }
+    __host__ __device__ constexpr auto GetLengths() const
+    {
+        return unpack([&](auto... is) constexpr { return make_multi_index(GetLength(is)...); },
+                      VisibleDimensionIds{});
+    }
 
     // maybe this result should be saved as a member variable
     __host__ __device__ constexpr index_t GetElementSize() const
@@ -178,8 +181,6 @@ struct DynamicTensorDescriptor
     // TODO maybe hidden_lengths_ should use reference_wrapper (reference to transforms_'s member
     //  variable lengths_) to save space on stack?
     const HiddenIndex hidden_lengths_;
-    // visible_lenths_ contains a reference to hidden_lengths_
-    const ContainerElementPicker<const HiddenIndex, VisibleDimensionIds> visible_lengths_;
 };
 
 template <index_t NDimHidden, typename VisibleDimensionIds>
@@ -303,10 +304,11 @@ transform_dynamic_tensor_descriptor(const OldTensorDescriptor& old_tensor_desc,
 
     // new visible dimension's hidden ids
     constexpr auto unordered_new_visible_dim_hidden_ids =
-        unpack([](auto... xs) { return merge_sequences(xs...); }, up_dim_hidden_idss);
+        unpack([](auto... xs) constexpr { return merge_sequences(xs...); }, up_dim_hidden_idss);
 
-    constexpr auto new_visible_dim_unordered2ordered = unpack(
-        [](auto... xs) { return merge_sequences(xs...); }, NewUpperDimensionNewVisibleIdss{});
+    constexpr auto new_visible_dim_unordered2ordered =
+        unpack([](auto... xs) constexpr { return merge_sequences(xs...); },
+               NewUpperDimensionNewVisibleIdss{});
 
     constexpr auto new_visible_dim_hidden_ids =
         unordered_new_visible_dim_hidden_ids.ReorderGivenOld2New(new_visible_dim_unordered2ordered);
@@ -395,8 +397,8 @@ make_dynamic_tensor_coordinate_step(const TensorDesc&, const VisibleIndex& idx_d
         //   1) Need to do this transform
         //   2) all components of lower index diff will assume to be non-zero and need to be
         //   computed
-        const bool idx_diff_up_has_non_zero =
-            container_reduce(non_zero_diff_pick_up, [](auto a, auto b) { return a or b; }, false);
+        const bool idx_diff_up_has_non_zero = container_reduce(
+            non_zero_diff_pick_up, [](auto a, auto b) constexpr { return a or b; }, false);
 
         do_transforms(itran) = idx_diff_up_has_non_zero;
 

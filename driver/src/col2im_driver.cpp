@@ -545,7 +545,7 @@ int main(int argc, char* argv[])
                           LeftPads{},
                           RightPads{},
                           nrepeat);
-#elif 0
+#elif 1
     device_dynamic_col2im_gemmkgemmn_nchw(col_eb_desc,
                                           col_eb,
                                           img_nchw_desc,
@@ -583,8 +583,7 @@ int main(int argc, char* argv[])
         DynamicTensorDescriptor<decltype(transforms),
                                 decltype(low_dim_hidden_idss),
                                 decltype(up_dim_hidden_idss),
-                                decltype(
-                                    visible_dim_hidden_ids)>{}; //{transforms, element_space_size};
+                                decltype(visible_dim_hidden_ids)>{transforms, element_space_size};
 #endif
 
     if(do_verification)

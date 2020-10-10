@@ -41,13 +41,13 @@ struct BlockwiseDynamicTensorSliceTransfer_v1
                                                                 const BlockDstDesc& block_dst_desc,
                                                                 const Index& dst_block_slice_origin)
     {
-        static_assert(nDim == BlockSrcDesc::GetNumOfDimension() &&
-                          nDim == BlockDstDesc::GetNumOfDimension() &&
-                          nDim == BlockSliceLengths::Size() && nDim == ThreadSliceLengths::Size() &&
-                          nDim == ThreadClusterLengths::Size() &&
-                          nDim == ThreadClusterArrangeOrder::Size() &&
-                          nDim == SrcDimAccessOrder::Size() && nDim == DstDimAccessOrder::Size(),
-                      "wrong! nDim not consistent");
+        static_assert(
+            nDim == remove_reference_t<remove_cv_t<BlockSrcDesc>>::GetNumOfDimension() &&
+                nDim == remove_reference_t<remove_cv_t<BlockDstDesc>>::GetNumOfDimension() &&
+                nDim == BlockSliceLengths::Size() && nDim == ThreadSliceLengths::Size() &&
+                nDim == ThreadClusterLengths::Size() && nDim == ThreadClusterArrangeOrder::Size() &&
+                nDim == SrcDimAccessOrder::Size() && nDim == DstDimAccessOrder::Size(),
+            "wrong! nDim not consistent");
 
         static_assert(
             is_same<BlockSliceLengths, decltype(ThreadSliceLengths{} * ThreadClusterLengths{})>{},
@@ -156,7 +156,8 @@ struct BlockwiseDynamicTensorSliceTransfer_v1
     ThreadwiseRead threadwise_read_;
     ThreadwiseWrite threadwise_write_;
 
-    static constexpr index_t thread_buffer_element_size_ = thread_buffer_desc_.GetElementSpace();
+    static constexpr index_t thread_buffer_element_size_ =
+        thread_buffer_desc_.GetElementSpaceSize();
 
     BlockSrcData p_thread_buffer_[thread_buffer_element_size_];
 };

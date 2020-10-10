@@ -126,16 +126,20 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1
     using SrcCoordStep = decltype(make_dynamic_tensor_coordinate_step(SrcDesc{}, Index{}));
     using DstCoordStep = decltype(make_dynamic_tensor_coordinate_step(DstDesc{}, Index{}));
 
-    __device__ constexpr ThreadwiseDynamicTensorSliceTransfer_v1() = default;
-
     __device__ constexpr ThreadwiseDynamicTensorSliceTransfer_v1(const SrcDesc& src_desc,
                                                                  const Index& src_slice_origin,
                                                                  const DstDesc& dst_desc,
                                                                  const Index& dst_slice_origin)
         : src_desc_(src_desc),
-          src_slice_origin_(src_slice_origin),
+          src_slice_origin_(make_dynamic_tensor_coordinate(src_desc, src_slice_origin)),
           dst_desc_(dst_desc),
-          dst_slice_origin_(dst_slice_origin)
+          dst_slice_origin_(make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin))
+    {
+    }
+
+    __device__ constexpr ThreadwiseDynamicTensorSliceTransfer_v1()
+        : ThreadwiseDynamicTensorSliceTransfer_v1(
+              SrcDesc{}, make_zero_multi_index<nDim>(), DstDesc{}, make_zero_multi_index<nDim>())
     {
     }
 

@@ -71,6 +71,47 @@ struct ContainerElementPicker
     Arr& mArray;
 };
 
+// Arr: Array or StaticallyIndexedArray
+// Picks: Sequence<...>
+template <typename Arr, typename Picks>
+struct ConstantContainerElementPicker
+{
+    using type = ConstantContainerElementPicker;
+#if 0
+    using data_type = typename Arr::data_type;
+#endif
+
+    __host__ __device__ constexpr ConstantContainerElementPicker() = delete;
+
+    __host__ __device__ explicit constexpr ConstantContainerElementPicker(const Arr& array)
+        : mArray{array}
+    {
+        constexpr index_t imax = reduce_on_sequence(Picks{}, math::maxer<index_t>{}, Number<0>{});
+
+        static_assert(imax < Arr::Size(), "wrong! exceeding # array element");
+    }
+
+    __host__ __device__ static constexpr auto Size() { return Picks::Size(); }
+
+    template <index_t I>
+    __host__ __device__ constexpr const auto& At(Number<I> i) const
+    {
+        static_assert(I < Size(), "wrong!");
+
+        constexpr auto IP = Picks{}[i];
+        return mArray[IP];
+    }
+
+    template <index_t I>
+    __host__ __device__ constexpr const auto& operator[](Number<I> i) const
+    {
+        return At(i);
+    }
+
+    private:
+    const Arr& mArray;
+};
+
 template <typename Arr, typename Picks, typename X>
 __host__ __device__ constexpr auto operator+=(ContainerElementPicker<Arr, Picks>& y, const X& x)
 {
@@ -101,6 +142,12 @@ template <typename Arr, typename Picks>
 __host__ __device__ constexpr auto pick_container_element(Arr& a, Picks)
 {
     return ContainerElementPicker<Arr, Picks>(a);
+}
+
+template <typename Arr, typename Picks>
+__host__ __device__ constexpr auto pick_container_element(const Arr& a, Picks)
+{
+    return ConstantContainerElementPicker<Arr, Picks>(a);
 }
 
 } // namespace ck

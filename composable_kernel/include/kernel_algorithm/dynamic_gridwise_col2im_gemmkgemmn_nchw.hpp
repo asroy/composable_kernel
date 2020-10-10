@@ -139,7 +139,9 @@ struct DynamicGridwiseCol2Im_gemmkgemmn_nchw
                                                    InMemoryDataOperation::AtomicAdd,
                                                    1,
                                                    1>(
+                col_gemmk_gemmn_global_desc,
                 make_multi_index(0, gemmn_block_data_on_global),
+                img_gemmk_gemmn_global_desc,
                 make_multi_index(0, gemmn_block_data_on_global));
 
         auto col_gemmk_gemmn_coord =
