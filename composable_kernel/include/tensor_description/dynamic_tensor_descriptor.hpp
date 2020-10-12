@@ -111,11 +111,9 @@ struct DynamicTensorDescriptor
 
     __host__ __device__ constexpr auto GetLengths() const
     {
-        return unpack([&](auto... is) constexpr { return make_multi_index(GetLength(is)...); },
-                      VisibleDimensionIds{});
+        return get_container_subset(hidden_lengths_, VisibleDimensionIds{});
     }
 
-    // maybe this result should be saved as a member variable
     __host__ __device__ constexpr index_t GetElementSize() const
     {
         return container_reduce(GetLengths(), math::multiplies<index_t>{}, index_t{1});
@@ -191,11 +189,11 @@ struct DynamicTensorCoordinate
 
     public:
     __host__ __device__ explicit constexpr DynamicTensorCoordinate(const HiddenIndex& idx_hidden)
-        : idx_hidden_{idx_hidden}, idx_visible_{idx_hidden_}
+        : idx_hidden_{idx_hidden}
     {
     }
 
-    __host__ __device__ constexpr const auto& GetIndex() const { return GetVisibleIndex(); }
+    __host__ __device__ constexpr auto GetIndex() const { return GetVisibleIndex(); }
 
     __host__ __device__ constexpr index_t GetOffset() const { return idx_hidden_[Number<0>{}]; }
 
@@ -204,14 +202,13 @@ struct DynamicTensorCoordinate
 
     __host__ __device__ auto& GetHiddenIndex() { return idx_hidden_; }
 
-    __host__ __device__ constexpr const auto& GetVisibleIndex() const { return idx_visible_; }
-
-    __host__ __device__ auto& GetVisibleIndex() { return idx_visible_; }
+    __host__ __device__ constexpr auto GetVisibleIndex() const
+    {
+        return get_container_subset(idx_hidden_, VisibleDimensionIds{});
+    }
 
     // TODO make these private
     HiddenIndex idx_hidden_;
-    // idx_visible_ contains a reference to idx_hidden_
-    ContainerElementPicker<HiddenIndex, VisibleDimensionIds> idx_visible_;
 };
 
 template <index_t NTransform, index_t NDimVisible>
@@ -516,12 +513,12 @@ __host__ __device__ constexpr bool coordinate_has_valid_offset(const TensorDesc&
 }
 
 template <typename TensorDesc>
-using DynamicTensorCoordinate_t = decltype(
-    make_dynamic_tensor_coordinate(TensorDesc{}, MultiIndex<TensorDesc::GetNumOfDimension()>{}));
+using DynamicTensorCoordinate_t = decltype(make_dynamic_tensor_coordinate(
+    TensorDesc{}, MultiIndex<remove_cv_t<remove_reference_t<TensorDesc>>::GetNumOfDimension()>{}));
 
 template <typename TensorDesc>
 using DynamicTensorCoordinateStep_t = decltype(make_dynamic_tensor_coordinate_step(
-    TensorDesc{}, MultiIndex<TensorDesc::GetNumOfDimension()>{}));
+    TensorDesc{}, MultiIndex<remove_cv_t<remove_reference_t<TensorDesc>>::GetNumOfDimension()>{}));
 
 } // namespace ck
 #endif

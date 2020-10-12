@@ -72,7 +72,7 @@ struct BlockwiseDynamicTensorSliceTransfer_v1
         }
     }
 
-    __device__ void RunLoad(const BlockSrcData* p_block_src)
+    __device__ void RunRead(const BlockSrcData* p_block_src)
     {
         if(BlockSize == thread_cluster_desc_.GetElementSize() or
            get_thread_local_1d_id() < thread_cluster_desc_.GetElementSize())
@@ -81,7 +81,7 @@ struct BlockwiseDynamicTensorSliceTransfer_v1
         }
     }
 
-    __device__ void RunStore(BlockDstData* p_block_dst)
+    __device__ void RunWrite(BlockDstData* p_block_dst)
     {
         if(BlockSize == thread_cluster_desc_.GetElementSize() or
            get_thread_local_1d_id() < thread_cluster_desc_.GetElementSize())
@@ -90,15 +90,15 @@ struct BlockwiseDynamicTensorSliceTransfer_v1
         }
     }
 
-    __device__ void Run(const BlockSrcData* p_block_src, BlockDstData* p_block_dst) const
+    __device__ void Run(const BlockSrcData* p_block_src, BlockDstData* p_block_dst)
     {
         if(BlockSize == thread_cluster_desc_.GetElementSize() or
            get_thread_local_1d_id() < thread_cluster_desc_.GetElementSize())
         {
-            RunLoad(p_block_src, p_thread_buffer_);
+            threadwise_read_.Run(p_block_src, p_thread_buffer_);
 
-            // if there is type conversion, it's done during store
-            RunStore(p_thread_buffer_, p_block_dst);
+            // if there is type conversion, it's done during write
+            threadwise_write_.Run(p_thread_buffer_, p_block_dst);
         }
     }
 

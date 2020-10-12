@@ -533,7 +533,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 0
+#if 1
     device_col2im_eb_nchw(col_eb_desc,
                           col_eb,
                           img_nchw_desc,
@@ -557,33 +557,6 @@ int main(int argc, char* argv[])
                                           LeftPads{},
                                           RightPads{},
                                           nrepeat);
-#endif
-
-#if 0
-    constexpr auto lengths = to_multi_index(Sequence<1,2>{});
-
-    constexpr auto thread_buffer_desc_ =
-        make_dynamic_native_tensor_descriptor_packed<2>(lengths);
-#elif 1
-    constexpr auto lengths = to_multi_index(Sequence<1, 2>{});
-
-    constexpr index_t NDim = 2;
-
-    constexpr auto transforms = make_tuple(DynamicUnMerge<NDim>{lengths});
-    constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
-    constexpr auto up_dim_hidden_idss =
-        make_tuple(typename arithmetic_sequence_gen<1, NDim + 1, 1>::type{});
-    constexpr auto visible_dim_hidden_ids =
-        typename arithmetic_sequence_gen<1, NDim + 1, 1>::type{};
-
-    constexpr index_t element_space_size =
-        container_reduce(lengths, math::multiplies<index_t>{}, index_t{1});
-
-    constexpr auto desc =
-        DynamicTensorDescriptor<decltype(transforms),
-                                decltype(low_dim_hidden_idss),
-                                decltype(up_dim_hidden_idss),
-                                decltype(visible_dim_hidden_ids)>{transforms, element_space_size};
 #endif
 
     if(do_verification)
