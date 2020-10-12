@@ -194,5 +194,39 @@ __host__ __device__ constexpr auto container_cat(const Container& x)
     return x;
 }
 
+template <typename T, index_t N, index_t... Is>
+__host__ __device__ constexpr auto get_container_subset(const Array<T, N>& arr, Sequence<Is...>)
+{
+    static_assert(N >= sizeof...(Is), "wrong! size");
+
+    return make_array(arr[Number<Is>{}]...);
+}
+
+template <typename... Ts, index_t... Is>
+__host__ __device__ constexpr auto get_container_subset(const Tuple<Ts...>& tup, Sequence<Is...>)
+{
+    static_assert(sizeof...(Ts) >= sizeof...(Is), "wrong! size");
+
+    return make_tuple(tup[Number<Is>{}]...);
+}
+
+template <typename T, index_t N, index_t... Is>
+__host__ __device__ constexpr void
+set_container_subset(Array<T, N>& y, Sequence<Is...> picks, const Array<T, sizeof...(Is)>& x)
+{
+    static_assert(N >= sizeof...(Is), "wrong! size");
+
+    static_for<0, sizeof...(Is), 1>{}([&](auto i) { y(picks[i]) = x[i]; });
+}
+
+template <typename... Ys, index_t... Is, typename... Xs>
+__host__ __device__ constexpr void
+set_container_subset(Tuple<Ys...>& y, Sequence<Is...> picks, const Tuple<Xs...>& x)
+{
+    static_assert(sizeof...(Ys) >= sizeof...(Is) && sizeof...(Is) == sizeof...(Xs), "wrong! size");
+
+    static_for<0, sizeof...(Is), 1>{}([&](auto i) { y(picks[i]) = x[i]; });
+}
+
 } // namespace ck
 #endif
