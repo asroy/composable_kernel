@@ -241,7 +241,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 0
+#if 1
     device_convolution_backward_data_implicit_gemm_v1r1_nchw_kcyx_nkhw
 #elif 0
     device_convolution_backward_data_implicit_gemm_v1r2_nchw_kcyx_nkhw
