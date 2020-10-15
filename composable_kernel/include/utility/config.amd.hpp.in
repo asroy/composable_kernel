@@ -29,8 +29,8 @@
 #endif
 
 // only gfx908 support native floating point atomic add
-#ifndef CK_USE_AMD_BUFFER_ATOMIC_ADD
-#define CK_USE_AMD_BUFFER_ATOMIC_ADD 0
+#ifndef CK_USE_AMD_BUFFER_ATOMIC_FADD
+#define CK_USE_AMD_BUFFER_ATOMIC_FADD 0
 #endif
 
 // AMD XDLOPS
@@ -52,8 +52,8 @@
 #endif
 
 // experimental implementation
-#ifndef CK_EXPERIMENTAL_AMD_BUFFER_ADDRESSING_USE_OFFSET_TRICK
-#define CK_EXPERIMENTAL_AMD_BUFFER_ADDRESSING_USE_OFFSET_TRICK 1
+#ifndef CK_EXPERIMENTAL_USE_BUFFER_ADDRESS_OOB_CHECK
+#define CK_EXPERIMENTAL_USE_BUFFER_ADDRESS_OOB_CHECK 1
 #endif
 
 #ifndef CK_EXPERIMENTAL_BLOCKWISE_GEMM_USE_PIPELINE
@@ -72,10 +72,6 @@
 // workaround for unnecessary VGPA <--> AGRP data movement when using mfma LLVM intrinsic
 #ifndef CK_WORKAROUND_SWDEV_229564
 #define CK_WORKAROUND_SWDEV_229564 1
-#endif
-// workaround for buffer load/store fp16/bfp16 intrinsic bug
-#ifndef CK_WORKAROUND_SWDEV_231101
-#define CK_WORKAROUND_SWDEV_231101 1
 #endif
 
 namespace ck {
