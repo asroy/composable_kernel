@@ -1,11 +1,11 @@
 #ifndef CK_COMMON_HEADER_HPP
 #define CK_COMMON_HEADER_HPP
 
+#include "config.hpp"
 #include "array.hpp"
 #include "container_helper.hpp"
 #include "statically_indexed_array.hpp"
 #include "container_element_picker.hpp"
-#include "config.hpp"
 #include "float_type.hpp"
 #include "functional.hpp"
 #include "functional2.hpp"
@@ -25,7 +25,6 @@
 
 #if CK_USE_AMD_INLINE_ASM
 #include "amd_inline_asm.hpp"
-#include "amd_llvm_intrinsic.hpp"
 #endif
 
 #if CK_USE_AMD_XDLOPS

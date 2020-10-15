@@ -141,7 +141,7 @@ struct AtomicAddData
         }
     }
 
-#if CK_USE_AMD_BUFFER_ADDRESSING && CK_USE_AMD_BUFFER_ATOMIC_ADD
+#if CK_USE_AMD_BUFFER_ADDRESSING && CK_USE_AMD_BUFFER_ATOMIC_FADD
     // buffer_atomic requires:
     //   1) p_src_thread must be in vgpr space, p_dst_thread must be global memory
     //   2) p_dst_thread to be a wavewise pointer.
