@@ -246,14 +246,14 @@ __device__ half_t amd_buffer_load<half_t, 1>(const half_t* p_src_wave,
     // current code cannot isolate Soffset and Voffset, so Soffset is hard-coded to 0, and
     // everything is passed to Voffset
     return __llvm_amdgcn_raw_buffer_load_f16(
-        src_wave_buffer_resource.data, src_addr_shift + src_thread_data_offset, 0, 0);
+        src_wave_buffer_resource.data, src_addr_shift + src_thread_addr_offset, 0, 0);
 #else
     half_t zero(0);
 
     // current code cannot isolate Soffset and Voffset, so Soffset is hard-coded to 0, and
     // everything is passed to Voffset
     return src_thread_data_valid ? __llvm_amdgcn_raw_buffer_load_f16(
-                                       src_wave_buffer_resource.data, src_thread_data_offset, 0, 0)
+                                       src_wave_buffer_resource.data, src_thread_addr_offset, 0, 0)
                                  : zero;
 #endif // CK_EXPERIMENTAL_USE_BUFFER_ADDRESS_OOB_CHECK
 }
@@ -356,7 +356,7 @@ __device__ half8_t amd_buffer_load<half_t, 8>(const half_t* p_src_wave,
     float4_t dst_out_tmp = __llvm_amdgcn_buffer_load_f32x4(
         src_wave_buffer_resource.data, 0, src_thread_addr_offset, false, false);
 
-    return src_thread_data_offset ? *reinterpret_cast<half8_t*>(&dst_out_tmp) : zeros;
+    return src_thread_data_valid ? *reinterpret_cast<half8_t*>(&dst_out_tmp) : zeros;
 #endif
 }
 
@@ -385,7 +385,7 @@ __device__ ushort amd_buffer_load<ushort, 1>(const ushort* p_src_wave,
     return __llvm_amdgcn_raw_buffer_load_bf16(
         src_wave_buffer_resource.data, src_addr_shift + src_thread_addr_offset, 0, 0);
 #else
-    ushort_t zero(0);
+    ushort zero(0);
 
     // current code cannot isolate Soffset and Voffset, so Soffset is hard-coded to 0, and
     // everything is passed to Voffset
@@ -493,7 +493,7 @@ __device__ ushort8_t amd_buffer_load<ushort, 8>(const ushort* p_src_wave,
     float4_t dst_out_tmp = __llvm_amdgcn_buffer_load_f32x4(
         src_wave_buffer_resource.data, 0, src_thread_addr_offset, false, false);
 
-    return src_thread_data_offset ? *reinterpret_cast<ushort8_t*>(&dst_out_tmp) : zeros;
+    return src_thread_data_valid ? *reinterpret_cast<ushort8_t*>(&dst_out_tmp) : zeros;
 #endif
 }
 
@@ -969,9 +969,9 @@ __device__ void amd_buffer_atomic_add<float, 2>(const float* p_src_thread,
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
 
+#if CK_EXPERIMENTAL_USE_BUFFER_ADDRESS_OOB_CHECK
     uint32_t dst_addr_shift = dst_thread_data_valid ? 0 : 0x7fffffff;
 
-#if CK_EXPERIMENTAL_USE_BUFFER_ADDRESS_OOB_CHECK
     for(index_t i = 0; i < 2; ++i)
     {
         __llvm_amdgcn_buffer_atomic_add_f32(p_src_thread[i],
