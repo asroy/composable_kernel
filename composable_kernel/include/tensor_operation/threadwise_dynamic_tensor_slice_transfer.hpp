@@ -58,14 +58,28 @@ __host__ __device__ constexpr void threadwise_dynamic_tensor_slice_transfer_v1(
     bool forward_dim1 = true;
 
     // hardcoded for 2d loop for now
-#pragma unroll 1
+#pragma unroll
     for(int j0 = 0; j0 < J0; ++j0)
     {
-#pragma unroll 1
+#pragma unroll
         for(int j1 = 0; j1 < J1; ++j1)
         {
             // do work
-            p_dst[dst_coord.GetOffset()] = p_src[src_coord.GetOffset()];
+            transfer_data<SrcData,
+                          1,
+                          SrcAddressSpace,
+                          DstAddressSpace,
+                          DstInMemOp,
+                          SrcScalarStrideInVector,
+                          DstScalarStrideInVector>(
+                p_src,
+                src_coord.GetOffset(),
+                coordinate_has_valid_offset_assuming_visible_index_is_valid(src_desc, src_coord),
+                src_desc.GetElementSpaceSize(),
+                p_dst,
+                dst_coord.GetOffset(),
+                coordinate_has_valid_offset_assuming_visible_index_is_valid(dst_desc, dst_coord),
+                dst_desc.GetElementSpaceSize());
 
             // move dim1 iterator
             if(j1 < J1 - 1)

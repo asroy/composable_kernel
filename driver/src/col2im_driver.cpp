@@ -19,21 +19,6 @@ int main(int argc, char* argv[])
     using namespace ck;
 
 #if 1
-    // 1x1, 8x8
-    constexpr index_t N  = 2;
-    constexpr index_t C  = 128;
-    constexpr index_t HI = 8;
-    constexpr index_t WI = 8;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
-
-    using ConvStrides   = Sequence<1, 1>;
-    using ConvDilations = Sequence<1, 1>;
-
-    using LeftPads  = Sequence<0, 0>;
-    using RightPads = Sequence<0, 0>;
-#elif 0
     // 3x3, 71x71
     constexpr index_t N  = 128;
     constexpr index_t C  = 192;
@@ -541,7 +526,7 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 1
+#if 0
         col_eb.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #else
         col_eb.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
@@ -587,7 +572,7 @@ int main(int argc, char* argv[])
 
         check_error(img_nchw_host, img_nchw_device);
 
-#if 1
+#if 0
         LogRange(std::cout << "col_eb : ", col_eb.mData, ",") << std::endl;
         LogRange(std::cout << "img_nchw_host : ", img_nchw_host.mData, ",") << std::endl;
         LogRange(std::cout << "img_nchw_device : ", img_nchw_device.mData, ",") << std::endl;

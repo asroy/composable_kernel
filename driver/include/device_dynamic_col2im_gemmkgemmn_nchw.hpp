@@ -66,11 +66,11 @@ void device_dynamic_col2im_gemmkgemmn_nchw(ColDesc,
 #if 1
     constexpr index_t BlockSize = 256;
 
-    constexpr index_t GemmKPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 8;
     constexpr index_t GemmNPerBlock = 128;
 
-    using BlockCopySubLengths_GemmK_GemmN     = Sequence<8, 8>;
-    using BlockCopyClusterLengths_GemmK_GemmN = Sequence<16, 16>;
+    using BlockCopySubLengths_GemmK_GemmN     = Sequence<1, 8>;
+    using BlockCopyClusterLengths_GemmK_GemmN = Sequence<8, 16>;
     using BlockCopyThreadClusterArrangeOrder  = Sequence<0, 1>; // [GemmK, GemmN]
     using BlockCopySrcAccessOrder             = Sequence<0, 1>; // [GemmK, GemmN]
     using BlockCopyDstAccessOrder             = Sequence<0, 1>; // [GemmK, GemmN]

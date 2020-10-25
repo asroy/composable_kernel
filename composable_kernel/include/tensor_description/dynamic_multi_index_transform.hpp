@@ -459,7 +459,7 @@ struct DynamicMerge
             // this should be saved in SGPR as well
             index_t idx_low_length_minus_idx_diff_low_const =
                 low_lengths_[i] - idx_diff_low_const[i];
-#if 0
+#if 1
             index_t idx_low_length_plus_idx_diff_low_const =
                 low_lengths_[i] + idx_diff_low_const[i];
 #endif
@@ -467,21 +467,20 @@ struct DynamicMerge
             index_t idx_low_tmp = idx_low_old[i] + carry;
 
             bool do_carry = idx_low_tmp >= idx_low_length_minus_idx_diff_low_const;
-#if 0
+#if 1
             bool do_borrow = idx_low_tmp < -idx_diff_low_const[i];
 #endif
 
             idx_diff_low(i) =
                 do_carry ? -idx_low_length_minus_idx_diff_low_const : idx_diff_low_const[i];
-#if 0
-            idx_diff_low(i) =
-                do_borrow ? idx_low_length_plus_idx_diff_low_const : idx_diff_low[i];
+#if 1
+            idx_diff_low(i) = do_borrow ? idx_low_length_plus_idx_diff_low_const : idx_diff_low[i];
 #endif
 
             idx_diff_low(i) += carry;
 
             carry = do_carry ? 1 : 0;
-#if 0
+#if 1
             carry = do_borrow ? -1 : carry;
 #endif
         });

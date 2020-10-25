@@ -119,6 +119,7 @@ struct DynamicGridwiseCol2Im_gemmkgemmn_nchw
 
         // blockwise atomic accumulation
         auto blockwise_copy =
+#if 0
             BlockwiseDynamicTensorSliceTransfer_v1<BlockSize,
                                                    float,
                                                    float,
@@ -129,8 +130,6 @@ struct DynamicGridwiseCol2Im_gemmkgemmn_nchw
                                                    BlockCopyClusterLengths_GemmK_GemmN,
                                                    BlockCopyThreadClusterArrangeOrder,
                                                    BlockCopySrcAccessOrder,
-                                                   BlockCopyDstAccessOrder,
-                                                   1,
                                                    1,
                                                    BlockCopyDataPerAccess_GemmN,
                                                    BlockCopyDataPerAccess_GemmN,
@@ -139,32 +138,39 @@ struct DynamicGridwiseCol2Im_gemmkgemmn_nchw
                                                    InMemoryDataOperation::AtomicAdd,
                                                    1,
                                                    1>(
+#else
+                 BlockwiseDynamicTensorSliceTransfer_v2<BlockSize,
+                                                        float,
+                                                        float,
+                                                        decltype(col_gemmk_gemmn_global_desc),
+                                                        decltype(img_gemmk_gemmn_global_desc),
+                                                        Sequence<GemmKPerBlock, GemmNPerBlock>,
+                                                        BlockCopySubLengths_GemmK_GemmN,
+                                                        BlockCopyClusterLengths_GemmK_GemmN,
+                                                        BlockCopyThreadClusterArrangeOrder,
+                                                        BlockCopySrcAccessOrder,
+                                                        BlockCopyDstAccessOrder,
+                                                        1,
+                                                        1,
+                                                        BlockCopyDataPerAccess_GemmN,
+                                                        BlockCopyDataPerAccess_GemmN,
+                                                        AddressSpace::Global,
+                                                        AddressSpace::Global,
+                                                        InMemoryDataOperation::AtomicAdd,
+                                                        1,
+                                                        1>(
+#endif
                 col_gemmk_gemmn_global_desc,
                 make_multi_index(0, gemmn_block_data_on_global),
                 img_gemmk_gemmn_global_desc,
                 make_multi_index(0, gemmn_block_data_on_global));
 
-        auto col_gemmk_gemmn_coord =
-            make_dynamic_tensor_coordinate(col_gemmk_gemmn_global_desc, make_multi_index(0, 0));
-
-        auto img_gemmk_gemmn_coord =
-            make_dynamic_tensor_coordinate(img_gemmk_gemmn_global_desc, make_multi_index(0, 0));
-
-        const auto col_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step(
-            col_gemmk_gemmn_global_desc, make_multi_index(GemmKPerBlock, 0));
-
-        const auto img_gemmk_gemmn_coord_step = make_dynamic_tensor_coordinate_step(
-            img_gemmk_gemmn_global_desc, make_multi_index(GemmKPerBlock, 0));
-
-        for(index_t gemmk = 0; gemmk < GemmK - GemmKPerBlock; gemmk += GemmKPerBlock)
+        for(index_t gemmk = 0; gemmk < GemmK; gemmk += GemmKPerBlock)
         {
             blockwise_copy.Run(p_col_global, p_img_global);
 
-            move_dynamic_tensor_coordinate(
-                col_gemmk_gemmn_global_desc, col_gemmk_gemmn_coord, col_gemmk_gemmn_coord_step);
-
-            move_dynamic_tensor_coordinate(
-                img_gemmk_gemmn_global_desc, img_gemmk_gemmn_coord, img_gemmk_gemmn_coord_step);
+            blockwise_copy.MoveSrcSliceWindow(make_multi_index(GemmKPerBlock, 0));
+            blockwise_copy.MoveDstSliceWindow(make_multi_index(GemmKPerBlock, 0));
         }
     }
 };

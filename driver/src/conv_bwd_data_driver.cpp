@@ -250,17 +250,17 @@ int main(int argc, char* argv[])
 #elif 1
     device_convolution_backward_data_implicit_gemm_v5r1_nhwc_kyxc_nhwk
 #endif
-    (in_nchw_desc,
-     in_nchw_device,
-     wei_kcyx_desc,
-     wei_kcyx,
-     out_nkhw_desc,
-     out_nkhw,
-     ConvStrides{},
-     ConvDilations{},
-     LeftPads{},
-     RightPads{},
-     nrepeat);
+        (in_nchw_desc,
+         in_nchw_device,
+         wei_kcyx_desc,
+         wei_kcyx,
+         out_nkhw_desc,
+         out_nkhw,
+         ConvStrides{},
+         ConvDilations{},
+         LeftPads{},
+         RightPads{},
+         nrepeat);
 
     if(do_verification)
     {

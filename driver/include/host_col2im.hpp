@@ -21,14 +21,14 @@ void host_col2im(const Tensor<T>& in_eb,
 
     int N  = in_nchw.mDesc.GetLengths()[0];
     int C  = in_nchw.mDesc.GetLengths()[1];
-    int HI = in_nchw.mDesc.GetLengths()[2];
-    int WI = in_nchw.mDesc.GetLengths()[3];
+    int Hi = in_nchw.mDesc.GetLengths()[2];
+    int Wi = in_nchw.mDesc.GetLengths()[3];
 
     int Y = FilterSizes{}[0];
     int X = FilterSizes{}[1];
 
-    int HO = OutputSizes{}[0];
-    int WO = OutputSizes{}[1];
+    int Ho = OutputSizes{}[0];
+    int Wo = OutputSizes{}[1];
 
     auto f = [&](auto n, auto c, auto hi, auto wi) {
         double v = 0;
@@ -37,22 +37,28 @@ void host_col2im(const Tensor<T>& in_eb,
         {
             int h_tmp = hi + LeftPads{}[0] - y * ConvDilations{}[0];
 
-            if(h_tmp >= 0 && h_tmp < HI && h_tmp % ConvStrides{}[0] == 0)
+            if(h_tmp % ConvStrides{}[0] == 0)
             {
                 int ho = h_tmp / ConvStrides{}[0];
 
-                for(int x = 0; x < X; ++x)
+                if(ho >= 0 && ho < Ho)
                 {
-                    int w_tmp = wi + LeftPads{}[1] - x * ConvDilations{}[1];
-
-                    if(w_tmp >= 0 && w_tmp < WI && w_tmp % ConvStrides{}[1] == 0)
+                    for(int x = 0; x < X; ++x)
                     {
-                        int wo = w_tmp / ConvStrides{}[1];
+                        int w_tmp = wi + LeftPads{}[1] - x * ConvDilations{}[1];
 
-                        int e = c * (Y * X) + y * X + x;
-                        int b = n * (HO * WO) + ho * WO + wo;
+                        if(w_tmp % ConvStrides{}[1] == 0)
+                        {
+                            int wo = w_tmp / ConvStrides{}[1];
 
-                        v += in_eb(e, b);
+                            if(wo >= 0 && wo < Wo && w_tmp % ConvStrides{}[1] == 0)
+                            {
+                                int e = c * (Y * X) + y * X + x;
+                                int b = n * (Ho * Wo) + ho * Wo + wo;
+
+                                v += in_eb(e, b);
+                            }
+                        }
                     }
                 }
             }
