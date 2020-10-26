@@ -119,7 +119,7 @@ struct DynamicGridwiseCol2Im_gemmkgemmn_nchw
 
         // blockwise atomic accumulation
         auto blockwise_copy =
-#if 0
+#if 1
             BlockwiseDynamicTensorSliceTransfer_v1<BlockSize,
                                                    float,
                                                    float,
@@ -139,26 +139,26 @@ struct DynamicGridwiseCol2Im_gemmkgemmn_nchw
                                                    1,
                                                    1>(
 #else
-                 BlockwiseDynamicTensorSliceTransfer_v2<BlockSize,
-                                                        float,
-                                                        float,
-                                                        decltype(col_gemmk_gemmn_global_desc),
-                                                        decltype(img_gemmk_gemmn_global_desc),
-                                                        Sequence<GemmKPerBlock, GemmNPerBlock>,
-                                                        BlockCopySubLengths_GemmK_GemmN,
-                                                        BlockCopyClusterLengths_GemmK_GemmN,
-                                                        BlockCopyThreadClusterArrangeOrder,
-                                                        BlockCopySrcAccessOrder,
-                                                        BlockCopyDstAccessOrder,
-                                                        1,
-                                                        1,
-                                                        BlockCopyDataPerAccess_GemmN,
-                                                        BlockCopyDataPerAccess_GemmN,
-                                                        AddressSpace::Global,
-                                                        AddressSpace::Global,
-                                                        InMemoryDataOperation::AtomicAdd,
-                                                        1,
-                                                        1>(
+            BlockwiseDynamicTensorSliceTransfer_v2<BlockSize,
+                                                   float,
+                                                   float,
+                                                   decltype(col_gemmk_gemmn_global_desc),
+                                                   decltype(img_gemmk_gemmn_global_desc),
+                                                   Sequence<GemmKPerBlock, GemmNPerBlock>,
+                                                   BlockCopySubLengths_GemmK_GemmN,
+                                                   BlockCopyClusterLengths_GemmK_GemmN,
+                                                   BlockCopyThreadClusterArrangeOrder,
+                                                   BlockCopySrcAccessOrder,
+                                                   BlockCopyDstAccessOrder,
+                                                   1,
+                                                   1,
+                                                   BlockCopyDataPerAccess_GemmN,
+                                                   BlockCopyDataPerAccess_GemmN,
+                                                   AddressSpace::Global,
+                                                   AddressSpace::Global,
+                                                   InMemoryDataOperation::AtomicAdd,
+                                                   1,
+                                                   1>(
 #endif
                 col_gemmk_gemmn_global_desc,
                 make_multi_index(0, gemmn_block_data_on_global),

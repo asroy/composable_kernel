@@ -402,7 +402,7 @@ struct DummyDynamicTransform_v1
                                       C,
                                       Y,
                                       X);
-#elif 0
+#elif 1
             index_t tmp               = idx_diff[15];
             const index_t const_tmp_0 = tmp / (Y * X);
             tmp -= const_tmp_0 * (Y * X);
@@ -422,7 +422,7 @@ struct DummyDynamicTransform_v1
                                       C,
                                       Y,
                                       X);
-#elif 1
+#elif 0
             index_t tmp               = idx_diff[15];
             const index_t const_tmp_0 = __llvm_amdgcn_readfirstlane_i32(tmp / (Y * X));
             tmp -= const_tmp_0 * (Y * X);

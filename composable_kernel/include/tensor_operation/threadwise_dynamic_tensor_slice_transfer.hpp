@@ -59,12 +59,13 @@ __host__ __device__ constexpr void threadwise_dynamic_tensor_slice_transfer_v1(
 
     // hardcoded for 2d loop for now
 #pragma unroll
-    for(int j0 = 0; j0 < J0; ++j0)
+    for(index_t j0 = 0; j0 < J0; ++j0)
     {
 #pragma unroll
-        for(int j1 = 0; j1 < J1; ++j1)
+        for(index_t j1 = 0; j1 < J1; ++j1)
         {
-            // do work
+        // do work
+#if 0
             transfer_data<SrcData,
                           1,
                           SrcAddressSpace,
@@ -80,6 +81,35 @@ __host__ __device__ constexpr void threadwise_dynamic_tensor_slice_transfer_v1(
                 dst_coord.GetOffset(),
                 coordinate_has_valid_offset_assuming_visible_index_is_valid(dst_desc, dst_coord),
                 dst_desc.GetElementSpaceSize());
+#else
+            SrcData tmp;
+
+            transfer_data<SrcData,
+                          1,
+                          SrcAddressSpace,
+                          AddressSpace::Vgpr,
+                          InMemoryDataOperation::Set,
+                          1,
+                          1>(
+                p_src,
+                src_coord.GetOffset(),
+                coordinate_has_valid_offset_assuming_visible_index_is_valid(src_desc, src_coord),
+                src_desc.GetElementSpaceSize(),
+                &tmp,
+                0,
+                true,
+                1);
+
+            transfer_data<DstData, 1, AddressSpace::Vgpr, DstAddressSpace, DstInMemOp, 1, 1>(
+                &tmp,
+                0,
+                true,
+                1,
+                p_dst,
+                dst_coord.GetOffset(),
+                coordinate_has_valid_offset_assuming_visible_index_is_valid(dst_desc, dst_coord),
+                dst_desc.GetElementSpaceSize());
+#endif
 
             // move dim1 iterator
             if(j1 < J1 - 1)
