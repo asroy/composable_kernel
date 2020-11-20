@@ -96,11 +96,14 @@ template <index_t BlockSize,
           index_t BlockCopyDataPerAccess_GemmN>
 struct DynamicGridwiseCol2Im_gemmkgemmn_nchw
 {
+    // this version has scratch memory issue, due to:
+    // 1. ThreadwiseDynamicTensorSliceTransfer_v1r1 keeps reference to tensor descriptor
+    // 2. threadwise_dynamic_tensor_slice_transfer_v1r1 constructs new tensor coordinate
     template <typename... Col, typename... Img>
-    __device__ void Run(const float* const __restrict__ p_col_global,
-                        float* const __restrict__ p_img_global,
-                        const DynamicTensorDescriptor<Col...>& col_gemmk_gemmn_global_desc,
-                        const DynamicTensorDescriptor<Img...>& img_gemmk_gemmn_global_desc) const
+    __device__ void Run_r1(const float* const __restrict__ p_col_global,
+                           float* const __restrict__ p_img_global,
+                           const DynamicTensorDescriptor<Col...>& col_gemmk_gemmn_global_desc,
+                           const DynamicTensorDescriptor<Img...>& img_gemmk_gemmn_global_desc) const
     {
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
@@ -117,53 +120,52 @@ struct DynamicGridwiseCol2Im_gemmkgemmn_nchw
 
         const index_t gemmn_block_data_on_global = block_work_id * GemmNPerBlock;
 
-        // blockwise atomic accumulation
         auto blockwise_copy =
 #if 1
-            BlockwiseDynamicTensorSliceTransfer_v1<BlockSize,
-                                                   float,
-                                                   float,
-                                                   decltype(col_gemmk_gemmn_global_desc),
-                                                   decltype(img_gemmk_gemmn_global_desc),
-                                                   Sequence<GemmKPerBlock, GemmNPerBlock>,
-                                                   BlockCopySubLengths_GemmK_GemmN,
-                                                   BlockCopyClusterLengths_GemmK_GemmN,
-                                                   BlockCopyThreadClusterArrangeOrder,
-                                                   BlockCopySrcAccessOrder,
-                                                   1,
-                                                   BlockCopyDataPerAccess_GemmN,
-                                                   BlockCopyDataPerAccess_GemmN,
-                                                   AddressSpace::Global,
-                                                   AddressSpace::Global,
-                                                   InMemoryDataOperation::AtomicAdd,
-                                                   1,
-                                                   1>(
-#else
-            BlockwiseDynamicTensorSliceTransfer_v2<BlockSize,
-                                                   float,
-                                                   float,
-                                                   decltype(col_gemmk_gemmn_global_desc),
-                                                   decltype(img_gemmk_gemmn_global_desc),
-                                                   Sequence<GemmKPerBlock, GemmNPerBlock>,
-                                                   BlockCopySubLengths_GemmK_GemmN,
-                                                   BlockCopyClusterLengths_GemmK_GemmN,
-                                                   BlockCopyThreadClusterArrangeOrder,
-                                                   BlockCopySrcAccessOrder,
-                                                   BlockCopyDstAccessOrder,
-                                                   1,
-                                                   1,
-                                                   BlockCopyDataPerAccess_GemmN,
-                                                   BlockCopyDataPerAccess_GemmN,
-                                                   AddressSpace::Global,
-                                                   AddressSpace::Global,
-                                                   InMemoryDataOperation::AtomicAdd,
-                                                   1,
-                                                   1>(
+            BlockwiseDynamicTensorSliceTransfer_v1r1<BlockSize,
+                                                     float,
+                                                     float,
+                                                     decltype(col_gemmk_gemmn_global_desc),
+                                                     decltype(img_gemmk_gemmn_global_desc),
+                                                     Sequence<GemmKPerBlock, GemmNPerBlock>,
+                                                     BlockCopySubLengths_GemmK_GemmN,
+                                                     BlockCopyClusterLengths_GemmK_GemmN,
+                                                     BlockCopyThreadClusterArrangeOrder,
+                                                     BlockCopySrcAccessOrder,
+                                                     1,
+                                                     BlockCopyDataPerAccess_GemmN,
+                                                     BlockCopyDataPerAccess_GemmN,
+                                                     AddressSpace::Global,
+                                                     AddressSpace::Global,
+                                                     InMemoryDataOperation::AtomicAdd,
+                                                     1,
+                                                     1>
+#elif 1
+            BlockwiseDynamicTensorSliceTransfer_v2r1<BlockSize,
+                                                     float,
+                                                     float,
+                                                     decltype(col_gemmk_gemmn_global_desc),
+                                                     decltype(img_gemmk_gemmn_global_desc),
+                                                     Sequence<GemmKPerBlock, GemmNPerBlock>,
+                                                     BlockCopySubLengths_GemmK_GemmN,
+                                                     BlockCopyClusterLengths_GemmK_GemmN,
+                                                     BlockCopyThreadClusterArrangeOrder,
+                                                     BlockCopySrcAccessOrder,
+                                                     BlockCopyDstAccessOrder,
+                                                     1,
+                                                     1,
+                                                     BlockCopyDataPerAccess_GemmN,
+                                                     BlockCopyDataPerAccess_GemmN,
+                                                     AddressSpace::Global,
+                                                     AddressSpace::Global,
+                                                     InMemoryDataOperation::AtomicAdd,
+                                                     1,
+                                                     1>
 #endif
-                col_gemmk_gemmn_global_desc,
-                make_multi_index(0, gemmn_block_data_on_global),
-                img_gemmk_gemmn_global_desc,
-                make_multi_index(0, gemmn_block_data_on_global));
+            (col_gemmk_gemmn_global_desc,
+             make_multi_index(0, gemmn_block_data_on_global),
+             img_gemmk_gemmn_global_desc,
+             make_multi_index(0, gemmn_block_data_on_global));
 
         for(index_t gemmk = 0; gemmk < GemmK; gemmk += GemmKPerBlock)
         {
@@ -172,6 +174,80 @@ struct DynamicGridwiseCol2Im_gemmkgemmn_nchw
             blockwise_copy.MoveSrcSliceWindow(make_multi_index(GemmKPerBlock, 0));
             blockwise_copy.MoveDstSliceWindow(make_multi_index(GemmKPerBlock, 0));
         }
+    }
+
+    // this version does not have scratch memory issue, due to:
+    // 1. ThreadwiseDynamicTensorSliceTransfer_v1r2 does not keep reference to tensor descriptor
+    // 2. threadwise_dynamic_tensor_slice_transfer_v1r2 does not construct new tensor coordinate
+    template <typename... Col, typename... Img>
+    __device__ void Run_r2(const float* const __restrict__ p_col_global,
+                           float* const __restrict__ p_img_global,
+                           const DynamicTensorDescriptor<Col...>& col_gemmk_gemmn_global_desc,
+                           const DynamicTensorDescriptor<Img...>& img_gemmk_gemmn_global_desc) const
+    {
+        constexpr auto I0 = Number<0>{};
+        constexpr auto I1 = Number<1>{};
+        constexpr auto I2 = Number<2>{};
+        constexpr auto I3 = Number<3>{};
+
+        const index_t GemmK = col_gemmk_gemmn_global_desc.GetLength(I0);
+        const index_t GemmN = col_gemmk_gemmn_global_desc.GetLength(I1);
+
+        // divide block work by GemmN
+        const index_t GemmNBlockWork = GemmN / GemmNPerBlock;
+
+        const index_t block_work_id = get_block_1d_id();
+
+        const index_t gemmn_block_data_on_global = block_work_id * GemmNPerBlock;
+
+        auto blockwise_copy =
+            BlockwiseDynamicTensorSliceTransfer_v2r2<BlockSize,
+                                                     float,
+                                                     float,
+                                                     decltype(col_gemmk_gemmn_global_desc),
+                                                     decltype(img_gemmk_gemmn_global_desc),
+                                                     Sequence<GemmKPerBlock, GemmNPerBlock>,
+                                                     BlockCopySubLengths_GemmK_GemmN,
+                                                     BlockCopyClusterLengths_GemmK_GemmN,
+                                                     BlockCopyThreadClusterArrangeOrder,
+                                                     BlockCopySrcAccessOrder,
+                                                     BlockCopyDstAccessOrder,
+                                                     1,
+                                                     1,
+                                                     BlockCopyDataPerAccess_GemmN,
+                                                     BlockCopyDataPerAccess_GemmN,
+                                                     AddressSpace::Global,
+                                                     AddressSpace::Global,
+                                                     InMemoryDataOperation::AtomicAdd,
+                                                     1,
+                                                     1>(
+                col_gemmk_gemmn_global_desc,
+                make_multi_index(0, gemmn_block_data_on_global),
+                img_gemmk_gemmn_global_desc,
+                make_multi_index(0, gemmn_block_data_on_global));
+
+        for(index_t gemmk = 0; gemmk < GemmK; gemmk += GemmKPerBlock)
+        {
+            blockwise_copy.Run(col_gemmk_gemmn_global_desc,
+                               p_col_global,
+                               img_gemmk_gemmn_global_desc,
+                               p_img_global);
+
+            blockwise_copy.MoveSrcSliceWindow(col_gemmk_gemmn_global_desc,
+                                              make_multi_index(GemmKPerBlock, 0));
+            blockwise_copy.MoveDstSliceWindow(img_gemmk_gemmn_global_desc,
+                                              make_multi_index(GemmKPerBlock, 0));
+        }
+    }
+
+    template <typename... Col, typename... Img>
+    __device__ void Run(const float* const __restrict__ p_col_global,
+                        float* const __restrict__ p_img_global,
+                        const DynamicTensorDescriptor<Col...>& col_gemmk_gemmn_global_desc,
+                        const DynamicTensorDescriptor<Img...>& img_gemmk_gemmn_global_desc) const
+    {
+        Run_r2(
+            p_col_global, p_img_global, col_gemmk_gemmn_global_desc, img_gemmk_gemmn_global_desc);
     }
 };
 
