@@ -11,8 +11,9 @@
 #include "conv_common.hpp"
 #include "host_conv.hpp"
 #include "device_tensor.hpp"
-#include "device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_forward_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
+#include "device_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
+#include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "device_dummy_static_transform.hpp"
 #include "device_dummy_dynamic_transform_v1.hpp"
 #include "device_dummy_dynamic_transform.hpp"
@@ -22,6 +23,21 @@ int main(int argc, char* argv[])
     using namespace ck;
 
 #if 0
+    // 1x1, 8x8
+    constexpr index_t N  = 2;
+    constexpr index_t C  = 24;
+    constexpr index_t HI = 8;
+    constexpr index_t WI = 8;
+    constexpr index_t K  = 128;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
+#elif 0
     // 3x3, 71x71
     constexpr index_t N  = 128;
     constexpr index_t C  = 192;
@@ -550,7 +566,7 @@ int main(int argc, char* argv[])
     }
 
 #if 0
-    device_convolution_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
+    device_convolution_forward_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                          in_nchw,
                                                          wei_kcyx_desc,
                                                          wei_kcyx,
@@ -562,17 +578,29 @@ int main(int argc, char* argv[])
                                                          RightPads{},
                                                          nrepeat);
 #elif 0
-    device_convolution_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
-                                                         in_nchw,
-                                                         wei_kcyx_desc,
-                                                         wei_kcyx,
-                                                         out_nkhw_desc,
-                                                         out_nkhw_device,
-                                                         ConvStrides{},
-                                                         ConvDilations{},
-                                                         LeftPads{},
-                                                         RightPads{},
-                                                         nrepeat);
+    device_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
+                                                                 in_nchw,
+                                                                 wei_kcyx_desc,
+                                                                 wei_kcyx,
+                                                                 out_nkhw_desc,
+                                                                 out_nkhw_device,
+                                                                 ConvStrides{},
+                                                                 ConvDilations{},
+                                                                 LeftPads{},
+                                                                 RightPads{},
+                                                                 nrepeat);
+#elif 1
+    device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
+                                                                         in_nchw,
+                                                                         wei_kcyx_desc,
+                                                                         wei_kcyx,
+                                                                         out_nkhw_desc,
+                                                                         out_nkhw_device,
+                                                                         ConvStrides{},
+                                                                         ConvDilations{},
+                                                                         LeftPads{},
+                                                                         RightPads{},
+                                                                         nrepeat);
 #elif 0
     device_dummy_static_transform(in_nchw_desc,
                                   in_nchw,

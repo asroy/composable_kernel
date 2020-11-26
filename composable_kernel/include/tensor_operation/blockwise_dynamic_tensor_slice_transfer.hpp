@@ -250,7 +250,7 @@ struct BlockwiseDynamicTensorSliceTransfer_v2r1
         make_cluster_descriptor(ThreadClusterLengths{}, ThreadClusterArrangeOrder{});
 
     static constexpr auto thread_buffer_desc_ =
-        make_dynamic_native_tensor_descriptor_packed<nDim>(to_multi_index(ThreadSliceLengths{}));
+        make_dynamic_naive_tensor_descriptor_packed<nDim>(to_multi_index(ThreadSliceLengths{}));
 
     using ThreadwiseRead = ThreadwiseDynamicTensorSliceTransfer_v1r1<BlockSrcDesc,
                                                                      decltype(thread_buffer_desc_),
@@ -425,7 +425,7 @@ struct BlockwiseDynamicTensorSliceTransfer_v2r2
         make_cluster_descriptor(ThreadClusterLengths{}, ThreadClusterArrangeOrder{});
 
     static constexpr auto thread_buffer_desc_ =
-        make_dynamic_native_tensor_descriptor_packed<nDim>(to_multi_index(ThreadSliceLengths{}));
+        make_dynamic_naive_tensor_descriptor_packed<nDim>(to_multi_index(ThreadSliceLengths{}));
 
     using ThreadwiseRead = ThreadwiseDynamicTensorSliceTransfer_v1r2<BlockSrcDesc,
                                                                      decltype(thread_buffer_desc_),

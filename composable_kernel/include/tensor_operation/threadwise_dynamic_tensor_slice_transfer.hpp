@@ -15,7 +15,7 @@ template <typename SrcData,
           typename DstDesc,
           typename SliceLengths,
           typename SrcDstDimAccessOrder,
-          index_t SrcDstVectorAccessDim,
+          index_t SrcDstVectorDim,
           index_t SrcScalarPerVector,
           index_t DstScalarPerVector,
           AddressSpace SrcAddressSpace,
@@ -128,7 +128,7 @@ template <typename SrcData,
           typename DstDesc,
           typename SliceLengths,
           typename SrcDstDimAccessOrder,
-          index_t SrcDstVectorAccessDim,
+          index_t SrcDstVectorDim,
           index_t SrcScalarPerVector,
           index_t DstScalarPerVector,
           AddressSpace SrcAddressSpace,
@@ -144,108 +144,285 @@ threadwise_dynamic_tensor_slice_transfer_v1r2(const SrcDesc& src_desc,
                                               DynamicTensorCoordinate_t<DstDesc>& dst_coord,
                                               DstData* p_dst)
 {
-    // TODO use constexpr for coordinate-step to make sure compiler behave correctly
-    const auto src_step_0_p1 =
-        make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 1));
-    const auto src_step_0_m1 =
-        make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, -1));
-    const auto src_step_p1_0 =
-        make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(1, 0));
-    const auto src_step_m1_0 =
-        make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(-1, 0));
+    static_assert(remove_reference_t<SrcDesc>::GetNumOfDimension() ==
+                      remove_reference_t<DstDesc>::GetNumOfDimension(),
+                  "inconsistent # of dimension");
 
-    const auto dst_step_0_p1 =
-        make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 1));
-    const auto dst_step_0_m1 =
-        make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, -1));
-    const auto dst_step_p1_0 =
-        make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(1, 0));
-    const auto dst_step_m1_0 =
-        make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(-1, 0));
-
-    constexpr index_t J0 = SliceLengths{}[0];
-    constexpr index_t J1 = SliceLengths{}[1];
-
-    bool forward_dim0 = true;
-    bool forward_dim1 = true;
-
-    // hardcoded for 2d loop for now
-#pragma unroll
-    for(index_t j0 = 0; j0 < J0; ++j0)
+    if constexpr(remove_reference_t<SrcDesc>::GetNumOfDimension() == 2)
     {
-#pragma unroll
-        for(index_t j1 = 0; j1 < J1; ++j1)
-        {
-            // do work
-            transfer_data<SrcData,
-                          1,
-                          SrcAddressSpace,
-                          DstAddressSpace,
-                          DstInMemOp,
-                          SrcScalarStrideInVector,
-                          DstScalarStrideInVector>(
-                p_src,
-                src_coord.GetOffset(),
-                coordinate_has_valid_offset_assuming_visible_index_is_valid(src_desc, src_coord),
-                src_desc.GetElementSpaceSize(),
-                p_dst,
-                dst_coord.GetOffset(),
-                coordinate_has_valid_offset_assuming_visible_index_is_valid(dst_desc, dst_coord),
-                dst_desc.GetElementSpaceSize());
+        // TODO use constexpr for coordinate-step to make sure compiler behave correctly
+        const auto src_step_0_p1 =
+            make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 1));
+        const auto src_step_0_m1 =
+            make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, -1));
 
-            // move dim1 iterator
-            if(j1 < J1 - 1)
+        const auto src_step_p1_0 =
+            make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(1, 0));
+        const auto src_step_m1_0 =
+            make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(-1, 0));
+
+        const auto dst_step_0_p1 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 1));
+        const auto dst_step_0_m1 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, -1));
+
+        const auto dst_step_p1_0 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(1, 0));
+        const auto dst_step_m1_0 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(-1, 0));
+
+        constexpr index_t Len0 = SliceLengths{}[0];
+        constexpr index_t Len1 = SliceLengths{}[1];
+
+        bool forward_dim0 = true;
+        bool forward_dim1 = true;
+
+#pragma unroll
+        for(index_t j0 = 0; j0 < Len0; ++j0)
+        {
+#pragma unroll
+            for(index_t j1 = 0; j1 < Len1; ++j1)
             {
-                if(forward_dim1)
+                // do work
+                transfer_data<SrcData,
+                              1,
+                              SrcAddressSpace,
+                              DstAddressSpace,
+                              DstInMemOp,
+                              SrcScalarStrideInVector,
+                              DstScalarStrideInVector>(
+                    p_src,
+                    src_coord.GetOffset(),
+                    coordinate_has_valid_offset_assuming_visible_index_is_valid(src_desc,
+                                                                                src_coord),
+                    src_desc.GetElementSpaceSize(),
+                    p_dst,
+                    dst_coord.GetOffset(),
+                    coordinate_has_valid_offset_assuming_visible_index_is_valid(dst_desc,
+                                                                                dst_coord),
+                    dst_desc.GetElementSpaceSize());
+
+                // move dim1 iterator
+                if(j1 < Len1 - 1)
                 {
-                    move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_0_p1);
-                    move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_0_p1);
+                    if(forward_dim1)
+                    {
+                        move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_0_p1);
+                        move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_0_p1);
+                    }
+                    else
+                    {
+                        move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_0_m1);
+                        move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_0_m1);
+                    }
+                }
+            }
+
+            // switch dim1 iteration direction
+            forward_dim1 = !forward_dim1;
+
+            // move dim0 iterator
+            if(j0 < Len0 - 1)
+            {
+                if(forward_dim0)
+                {
+                    move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_p1_0);
+                    move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_p1_0);
                 }
                 else
                 {
-                    move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_0_m1);
-                    move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_0_m1);
+                    move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_m1_0);
+                    move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_m1_0);
                 }
             }
         }
 
-        // switch dim1 iteration direction
-        forward_dim1 = !forward_dim1;
+        // move src and dst coordinate back to their origins
+        // move src and dst coordinate back to their origins
+        constexpr index_t loc0 = Len0 - 1;
+        constexpr index_t loc1 = Len0 % 2 == 0 ? 0 : Len1 - 1;
 
-        // move dim0 iterator
-        if(j0 < J0 - 1)
-        {
-            if(forward_dim0)
-            {
-                move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_p1_0);
-                move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_p1_0);
-            }
-            else
-            {
-                move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_m1_0);
-                move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_m1_0);
-            }
-        }
-    }
-
-    // move src and dst coordinate back to their origins
-    // hardcoded for 2d loop
-    if constexpr(J0 % 2 == 0)
-    {
         const auto src_step_back =
-            make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(-(J0 - 1), 0));
+            make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(-loc0, -loc1));
+
         const auto dst_step_back =
-            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(-(J0 - 1), 0));
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(-loc0, -loc1));
 
         move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_back);
         move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_back);
     }
-    else
+    else if constexpr(remove_reference_t<SrcDesc>::GetNumOfDimension() == 4)
     {
-        const auto src_step_back =
-            make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(-(J0 - 1), -(J1 - 1)));
-        const auto dst_step_back =
-            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(-(J0 - 1), -(J1 - 1)));
+        // TODO use constexpr for coordinate-step to make sure compiler behave correctly
+        const auto src_step_0_0_0_p1 =
+            make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 0, 0, 1));
+        const auto src_step_0_0_0_m1 =
+            make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 0, 0, -1));
+
+        const auto src_step_0_0_p1_0 =
+            make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 0, 1, 0));
+        const auto src_step_0_0_m1_0 =
+            make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 0, -1, 0));
+
+        const auto src_step_0_p1_0_0 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 1, 0, 0));
+        const auto src_step_0_m1_0_0 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, -1, 0, 0));
+
+        const auto src_step_p1_0_0_0 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(1, 0, 0, 0));
+        const auto src_step_m1_0_0_0 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(-1, 0, 0, 0));
+
+        const auto dst_step_0_0_0_p1 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 0, 0, 1));
+        const auto dst_step_0_0_0_m1 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 0, 0, -1));
+
+        const auto dst_step_0_0_p1_0 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 0, 1, 0));
+        const auto dst_step_0_0_m1_0 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 0, -1, 0));
+
+        const auto dst_step_0_p1_0_0 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 1, 0, 0));
+        const auto dst_step_0_m1_0_0 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, -1, 0, 0));
+
+        const auto dst_step_p1_0_0_0 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(1, 0, 0, 0));
+        const auto dst_step_m1_0_0_0 =
+            make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(-1, 0, 0, 0));
+
+        constexpr index_t Len0 = SliceLengths{}[0];
+        constexpr index_t Len1 = SliceLengths{}[1];
+        constexpr index_t Len2 = SliceLengths{}[2];
+        constexpr index_t Len3 = SliceLengths{}[3];
+
+        bool forward_dim0 = true;
+        bool forward_dim1 = true;
+        bool forward_dim2 = true;
+        bool forward_dim3 = true;
+
+#pragma unroll
+        for(index_t j0 = 0; j0 < Len0; ++j0)
+        {
+#pragma unroll
+            for(index_t j1 = 0; j1 < Len1; ++j1)
+            {
+#pragma unroll
+                for(index_t j2 = 0; j2 < Len2; ++j2)
+                {
+#pragma unroll
+                    for(index_t j3 = 0; j3 < Len3; ++j3)
+                    {
+                        // do work
+                        transfer_data<SrcData,
+                                      1,
+                                      SrcAddressSpace,
+                                      DstAddressSpace,
+                                      DstInMemOp,
+                                      SrcScalarStrideInVector,
+                                      DstScalarStrideInVector>(
+                            p_src,
+                            src_coord.GetOffset(),
+                            coordinate_has_valid_offset_assuming_visible_index_is_valid(src_desc,
+                                                                                        src_coord),
+                            src_desc.GetElementSpaceSize(),
+                            p_dst,
+                            dst_coord.GetOffset(),
+                            coordinate_has_valid_offset_assuming_visible_index_is_valid(dst_desc,
+                                                                                        dst_coord),
+                            dst_desc.GetElementSpaceSize());
+
+                        // move dim1 iterator
+                        if(j3 < Len3 - 1)
+                        {
+                            if(forward_dim3)
+                            {
+                                move_dynamic_tensor_coordinate(
+                                    src_desc, src_coord, src_step_0_0_0_p1);
+                                move_dynamic_tensor_coordinate(
+                                    dst_desc, dst_coord, dst_step_0_0_0_p1);
+                            }
+                            else
+                            {
+                                move_dynamic_tensor_coordinate(
+                                    src_desc, src_coord, src_step_0_0_0_m1);
+                                move_dynamic_tensor_coordinate(
+                                    dst_desc, dst_coord, dst_step_0_0_0_m1);
+                            }
+                        }
+                    }
+
+                    // switch dim3 iteration direction
+                    forward_dim3 = !forward_dim3;
+
+                    // move dim1 iterator
+                    if(j2 < Len2 - 1)
+                    {
+                        if(forward_dim2)
+                        {
+                            move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_0_0_p1_0);
+                            move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_0_0_p1_0);
+                        }
+                        else
+                        {
+                            move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_0_0_m1_0);
+                            move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_0_0_m1_0);
+                        }
+                    }
+                }
+
+                // switch dim2 iteration direction
+                forward_dim2 = !forward_dim2;
+
+                // move dim1 iterator
+                if(j1 < Len1 - 1)
+                {
+                    if(forward_dim1)
+                    {
+                        move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_0_p1_0_0);
+                        move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_0_p1_0_0);
+                    }
+                    else
+                    {
+                        move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_0_m1_0_0);
+                        move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_0_m1_0_0);
+                    }
+                }
+            }
+
+            // switch dim1 iteration direction
+            forward_dim1 = !forward_dim1;
+
+            // move dim0 iterator
+            if(j0 < Len0 - 1)
+            {
+                if(forward_dim0)
+                {
+                    move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_p1_0_0_0);
+                    move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_p1_0_0_0);
+                }
+                else
+                {
+                    move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_m1_0_0_0);
+                    move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_m1_0_0_0);
+                }
+            }
+        }
+
+        // move src and dst coordinate back to their origins
+        constexpr index_t loc0 = Len0 - 1;
+        constexpr index_t loc1 = Len0 % 2 == 0 ? 0 : Len1 - 1;
+        constexpr index_t loc2 = Len1 % 2 == 0 ? 0 : Len2 - 1;
+        constexpr index_t loc3 = Len2 % 2 == 0 ? 0 : Len3 - 1;
+
+        const auto src_step_back = make_dynamic_tensor_coordinate_step(
+            src_desc, make_multi_index(-loc0, -loc1, -loc2, -loc3));
+
+        const auto dst_step_back = make_dynamic_tensor_coordinate_step(
+            dst_desc, make_multi_index(-loc0, -loc1, -loc2, -loc3));
 
         move_dynamic_tensor_coordinate(src_desc, src_coord, src_step_back);
         move_dynamic_tensor_coordinate(dst_desc, dst_coord, dst_step_back);
@@ -259,7 +436,7 @@ template <typename SrcDesc,
           typename DstDesc,
           typename SliceLengths,
           typename SrcDstDimAccessOrder,
-          index_t SrcDstVectorAccessDim,
+          index_t SrcDstVectorDim,
           index_t SrcScalarPerVector,
           index_t DstScalarPerVector,
           AddressSpace SrcAddressSpace,
@@ -304,7 +481,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r1
                                                       DstDesc,
                                                       SliceLengths,
                                                       SrcDstDimAccessOrder,
-                                                      SrcDstVectorAccessDim,
+                                                      SrcDstVectorDim,
                                                       SrcScalarPerVector,
                                                       DstScalarPerVector,
                                                       SrcAddressSpace,
@@ -358,7 +535,7 @@ template <typename SrcDesc,
           typename DstDesc,
           typename SliceLengths,
           typename SrcDstDimAccessOrder,
-          index_t SrcDstVectorAccessDim,
+          index_t SrcDstVectorDim,
           index_t SrcScalarPerVector,
           index_t DstScalarPerVector,
           AddressSpace SrcAddressSpace,
@@ -402,7 +579,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r2
                                                       DstDesc,
                                                       SliceLengths,
                                                       SrcDstDimAccessOrder,
-                                                      SrcDstVectorAccessDim,
+                                                      SrcDstVectorDim,
                                                       SrcScalarPerVector,
                                                       DstScalarPerVector,
                                                       SrcAddressSpace,

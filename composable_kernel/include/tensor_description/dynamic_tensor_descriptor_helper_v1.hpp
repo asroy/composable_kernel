@@ -7,8 +7,8 @@
 namespace ck {
 
 template <typename Lengths, typename Strides>
-__host__ __device__ constexpr auto make_dynamic_native_tensor_descriptor_v1(const Lengths& lengths,
-                                                                            const Strides& strides)
+__host__ __device__ constexpr auto make_dynamic_naive_tensor_descriptor_v1(const Lengths& lengths,
+                                                                           const Strides& strides)
 {
     static_assert(Lengths::Size() == Strides::Size(), "wrong! Size not the same");
 

@@ -1,5 +1,5 @@
-#ifndef CK_DYNAMIC_GRIDWISE_COL2IM_GEMMKGEMMN_NCHW_HPP
-#define CK_DYNAMIC_GRIDWISE_COL2IM_GEMMKGEMMN_NCHW_HPP
+#ifndef CK_GRIDWISE_DYNAMIC_COL2IM_GEMMKGEMMN_NCHW_HPP
+#define CK_GRIDWISE_DYNAMIC_COL2IM_GEMMKGEMMN_NCHW_HPP
 
 #include "common_header.hpp"
 #include "dynamic_tensor_descriptor.hpp"
@@ -94,7 +94,7 @@ template <index_t BlockSize,
           typename BlockCopySrcAccessOrder,
           typename BlockCopyDstAccessOrder,
           index_t BlockCopyDataPerAccess_GemmN>
-struct DynamicGridwiseCol2Im_gemmkgemmn_nchw
+struct GridwiseDynamicCol2Im_gemmkgemmn_nchw
 {
     // this version has scratch memory issue, due to:
     // 1. ThreadwiseDynamicTensorSliceTransfer_v1r1 keeps reference to tensor descriptor

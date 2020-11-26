@@ -3,7 +3,7 @@
 #include "device.hpp"
 #include "host_tensor.hpp"
 #include "gridwise_operation_wrapper.hpp"
-#include "dynamic_gridwise_col2im_gemmkgemmn_nchw.hpp"
+#include "gridwise_dynamic_col2im_gemmkgemmn_nchw.hpp"
 
 template <typename T,
           typename ColDesc,
@@ -40,10 +40,10 @@ void device_dynamic_col2im_gemmkgemmn_nchw(ColDesc,
     col_gemmk_gemmn_device_buf.ToDevice(col_gemmk_gemmn.mData.data());
     img_n_c_hi_wi_device_buf.ToDevice(img_n_c_hi_wi.mData.data());
 
-    const auto col_gemmk_gemmn_desc = make_dynamic_native_tensor_descriptor<2>(
+    const auto col_gemmk_gemmn_desc = make_dynamic_naive_tensor_descriptor<2>(
         to_multi_index(ColDesc::GetLengths()), to_multi_index(ColDesc::GetStrides()));
 
-    const auto img_n_c_hi_wi_desc = make_dynamic_native_tensor_descriptor<4>(
+    const auto img_n_c_hi_wi_desc = make_dynamic_naive_tensor_descriptor<4>(
         to_multi_index(ImgDesc::GetLengths()), to_multi_index(ImgDesc::GetStrides()));
 
     const auto filter_sizes   = to_multi_index(FilterSizes{});
@@ -83,7 +83,7 @@ void device_dynamic_col2im_gemmkgemmn_nchw(ColDesc,
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
     constexpr auto gridwise_col2im =
-        DynamicGridwiseCol2Im_gemmkgemmn_nchw<BlockSize,
+        GridwiseDynamicCol2Im_gemmkgemmn_nchw<BlockSize,
                                               GemmKPerBlock,
                                               GemmNPerBlock,
                                               BlockCopySubLengths_GemmK_GemmN,

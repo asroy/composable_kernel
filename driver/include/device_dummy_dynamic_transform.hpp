@@ -28,11 +28,11 @@ void device_dummy_dynamic_transform(InDesc,
 
     using TDevice = typename conditional<is_same<half_float::half, T>::value, half_t, T>::type;
 
-    const auto in_nchw_desc = make_dynamic_native_tensor_descriptor<4>(
+    const auto in_nchw_desc = make_dynamic_naive_tensor_descriptor<4>(
         to_multi_index(InDesc::GetLengths()), to_multi_index(InDesc::GetStrides()));
-    const auto wei_kcyx_desc = make_dynamic_native_tensor_descriptor<4>(
+    const auto wei_kcyx_desc = make_dynamic_naive_tensor_descriptor<4>(
         to_multi_index(WeiDesc::GetLengths()), to_multi_index(WeiDesc::GetStrides()));
-    const auto out_nkhw_desc = make_dynamic_native_tensor_descriptor<4>(
+    const auto out_nkhw_desc = make_dynamic_naive_tensor_descriptor<4>(
         to_multi_index(OutDesc::GetLengths()), to_multi_index(OutDesc::GetStrides()));
 
     const auto conv_strides   = to_multi_index(ConvStrides{});
