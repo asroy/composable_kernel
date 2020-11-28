@@ -423,17 +423,6 @@ struct DynamicMerge
                           LowIdx::Size() == NDimLow && UpIdx::Size() == 1,
                       "wrong! inconsistent # of dimension");
 
-#if 0
-        // I only want to do this check, if idx_diff_up is know at compile-time
-        if(idx_diff_up[Number<0>{}] == 0)
-        {
-            static_for<0, NDimLow, 1>{}([&idx_diff_low](auto i){
-                idx_diff_low(i) = 0;
-            });
-
-            return;
-        }
-#endif
         // CalculateLowerIndex(idx_diff_low_const) has multiple integer divisions.
         // However,
         //   1) If idx_diff_up is known at compile-time, then idx_diff_low_const
@@ -449,7 +438,19 @@ struct DynamicMerge
         // computed at
         //   run-time each time this function is called, and can be very expensive.
         LowerIndex idx_diff_low_const;
+#if !CK_HACK_DYNAMIC_MERGE_CALCULATE_IDX_DIFF_LOW_CONST_USE_AMD_GCN_READ_FIRST_LANE
         CalculateLowerIndex(idx_diff_low_const, idx_diff_up);
+#else
+        index_t tmp = idx_diff_up[Number<0>{}];
+
+        static_for<0, NDimLow - 1, 1>{}([&](auto i) {
+            idx_diff_low_const(i) = tmp / low_lengths_scan_[i];
+            tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
+        });
+
+        // Hack: this force result into SGPR. Need to make sure the result is thread invariant
+        idx_diff_low_const(Number<NDimLow - 1>{}) = __builtin_amdgcn_readfirstlane(tmp);
+#endif
 
         // do carry check on each low dimension in reversed order
         // do not need to check the first dimension

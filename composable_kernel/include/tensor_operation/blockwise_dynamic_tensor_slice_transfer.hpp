@@ -121,9 +121,9 @@ struct BlockwiseDynamicTensorSliceTransfer_v1r1
     ThreadwiseTransfer threadwise_transfer_;
 };
 
-// this version is very likely to have scratch memory issue, due to:
+// this version tend to have scratch memory issue, due to:
 // 1. ThreadwiseDynamicTensorSliceTransfer_v1r1 keeps reference to tensor descriptor
-// 2. threadwise_dynamic_tensor_slice_transfer_v1r1 constructs new tensor coordinate
+// 2. ThreadwiseDynamicTensorSliceTransfer_v1r1::Run() constructs new tensor coordinate
 template <index_t BlockSize,
           typename BlockSrcData,
           typename BlockDstData,
@@ -289,7 +289,7 @@ struct BlockwiseDynamicTensorSliceTransfer_v2r1
 
 // this version does following things to avoid scratch memory issue
 // 1. ThreadwiseDynamicTensorSliceTransfer_v1r2 does not keep reference to tensor descriptor
-// 2. threadwise_dynamic_tensor_slice_transfer_v1r2 does not construct new tensor coordinate
+// 2. ThreadwiseDynamicTensorSliceTransfer_v1r2::Run() does not construct new tensor coordinate
 template <index_t BlockSize,
           typename BlockSrcData,
           typename BlockDstData,
@@ -465,7 +465,7 @@ struct BlockwiseDynamicTensorSliceTransfer_v2r2
 // this version does following things to avoid scratch memory issue
 // 1. BlockwiseDynamicTensorSliceTransfer_v2r3 doesn't allocate thread buffer (array) as member
 // 2. ThreadwiseDynamicTensorSliceTransfer_v1r2 does not keep reference to tensor descriptor
-// 3. threadwise_dynamic_tensor_slice_transfer_v1r2 does not construct new tensor coordinate
+// 3. ThreadwiseDynamicTensorSliceTransfer_v1r2::Run() does not construct new tensor coordinate
 template <index_t BlockSize,
           typename BlockSrcData,
           typename BlockDstData,
@@ -485,7 +485,9 @@ template <index_t BlockSize,
           AddressSpace DstAddressSpace,
           InMemoryDataOperation DstInMemOp,
           index_t SrcDataStride,
-          index_t DstDataStride>
+          index_t DstDataStride,
+          index_t ThreadTransferMoveBackSrcCoord = true,
+          index_t ThreadTransferMoveBackDstCoord = true>
 struct BlockwiseDynamicTensorSliceTransfer_v2r3
 {
     static constexpr index_t nDim =
@@ -607,20 +609,25 @@ struct BlockwiseDynamicTensorSliceTransfer_v2r3
                                                                      AddressSpace::Vgpr,
                                                                      InMemoryDataOperation::Set,
                                                                      SrcDataStride,
-                                                                     1>;
+                                                                     1,
+                                                                     ThreadTransferMoveBackSrcCoord,
+                                                                     true>;
 
-    using ThreadwiseWrite = ThreadwiseDynamicTensorSliceTransfer_v1r2<decltype(thread_buffer_desc_),
-                                                                      BlockDstDesc,
-                                                                      ThreadSliceLengths,
-                                                                      DstDimAccessOrder,
-                                                                      DstVectorWriteDim,
-                                                                      1,
-                                                                      DstDataPerWrite,
-                                                                      AddressSpace::Vgpr,
-                                                                      DstAddressSpace,
-                                                                      DstInMemOp,
-                                                                      1,
-                                                                      DstDataStride>;
+    using ThreadwiseWrite =
+        ThreadwiseDynamicTensorSliceTransfer_v1r2<decltype(thread_buffer_desc_),
+                                                  BlockDstDesc,
+                                                  ThreadSliceLengths,
+                                                  DstDimAccessOrder,
+                                                  DstVectorWriteDim,
+                                                  1,
+                                                  DstDataPerWrite,
+                                                  AddressSpace::Vgpr,
+                                                  DstAddressSpace,
+                                                  DstInMemOp,
+                                                  1,
+                                                  DstDataStride,
+                                                  true,
+                                                  ThreadTransferMoveBackDstCoord>;
 
     ThreadwiseRead threadwise_read_;
     ThreadwiseWrite threadwise_write_;

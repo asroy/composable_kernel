@@ -459,11 +459,24 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
         const index_t N = b_k_n_global_desc.GetLength(I1);
 
         // divide block work by [M, N]
+#if 0
         const index_t m_block_work_num = M / MPerBlock;
         const index_t n_block_work_num = N / NPerBlock;
+#else
+        // Hack: this force result into SGPR
+        const index_t m_block_work_num = __builtin_amdgcn_readfirstlane(M / MPerBlock);
+        const index_t n_block_work_num = __builtin_amdgcn_readfirstlane(N / NPerBlock);
+#endif
 
+#if 0
         const index_t m_block_work_id = get_block_1d_id() / n_block_work_num;
         const index_t n_block_work_id = get_block_1d_id() - m_block_work_id * n_block_work_num;
+#else
+        // Hack: this force result into SGPR
+        const index_t m_block_work_id =
+            __builtin_amdgcn_readfirstlane(get_block_1d_id() / n_block_work_num);
+        const index_t n_block_work_id = get_block_1d_id() - m_block_work_id * n_block_work_num;
+#endif
 
         const index_t m_block_data_on_global = m_block_work_id * MPerBlock;
         const index_t n_block_data_on_global = n_block_work_id * NPerBlock;
@@ -505,10 +518,13 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
                                                      AddressSpace::Lds,
                                                      InMemoryDataOperation::Set,
                                                      1,
-                                                     1>(a_k_m_global_desc,
-                                                        make_multi_index(0, m_block_data_on_global),
-                                                        a_k_m_block_desc,
-                                                        make_multi_index(0, 0));
+                                                     1,
+                                                     true,
+                                                     true>(
+                a_k_m_global_desc,
+                make_multi_index(0, m_block_data_on_global),
+                a_k_m_block_desc,
+                make_multi_index(0, 0));
 
         // B matrix blockwise copy
         auto b_block_copy =
@@ -531,10 +547,17 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
                                                      AddressSpace::Lds,
                                                      InMemoryDataOperation::Set,
                                                      1,
-                                                     1>(b_k_n_global_desc,
-                                                        make_multi_index(0, n_block_data_on_global),
-                                                        b_k_n_block_desc,
-                                                        make_multi_index(0, 0));
+                                                     1,
+#if 0
+                                                     true.
+#else
+                                                     false,
+#endif
+                                                     true>(
+                b_k_n_global_desc,
+                make_multi_index(0, n_block_data_on_global),
+                b_k_n_block_desc,
+                make_multi_index(0, 0));
 
         // GEMM definition
         //   c_mtx += transpose(a_mtx) * b_mtx
@@ -599,7 +622,14 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
         threadwise_matrix_set_zero(c_m0m1_n0n1_thread_mtx_desc, p_c_thread);
 
         constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0);
+
+#if 0
         constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0);
+#else
+        // HACK: fuse threadwise copy move-back coordinate with move src slice window
+        constexpr auto b_block_slice_copy_step =
+            b_block_copy.threadwise_read_.GetCoordinateStepBack() + make_multi_index(KPerBlock, 0);
+#endif
 
         // LDS double buffer: preload data into LDS
         {
