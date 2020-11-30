@@ -255,16 +255,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r2
             constexpr index_t Len0 = SliceLengths{}[0];
             constexpr index_t Len1 = SliceLengths{}[1];
 
-            bool forward_dim0 = true;
-            bool forward_dim1 = true;
-
 #pragma unroll
             for(index_t i0 = 0; i0 < Len0; ++i0)
             {
 #pragma unroll
                 for(index_t i1 = 0; i1 < Len1; ++i1)
                 {
-                    // do work
+#if 1 // debug
+      // do work
                     transfer_data<SrcData,
                                   1,
                                   SrcAddressSpace,
@@ -282,10 +280,69 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r2
                         coordinate_has_valid_offset_assuming_visible_index_is_valid(
                             dst_desc, dst_slice_origin_),
                         dst_desc.GetElementSpaceSize());
+#else
+                    if constexpr(SrcAddressSpace == AddressSpace::Global &&
+                                 DstAddressSpace == AddressSpace::Vgpr)
+                    {
+                        if(coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                               dst_desc, dst_slice_origin_))
+                        {
+                            const SrcData tmp = amd_buffer_load<SrcData, 1>(
+                                p_src,
+                                src_slice_origin_.GetOffset(),
+                                coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                                    src_desc, src_slice_origin_),
+                                src_desc.GetElementSpaceSize());
+
+                            const index_t dst_offset = dst_slice_origin_.GetOffset();
+
+                            p_dst[dst_offset] = tmp;
+                        }
+                    }
+                    else if constexpr(SrcAddressSpace == AddressSpace::Vgpr &&
+                                      DstAddressSpace == AddressSpace::Global)
+                    {
+                        const SrcData zeros = 0;
+
+                        const bool src_valid =
+                            coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                                src_desc, src_slice_origin_);
+
+                        const bool dst_valid =
+                            coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                                dst_desc, dst_slice_origin_);
+
+                        amd_buffer_store<SrcData, 1>(
+                            src_valid ? &(p_src[src_slice_origin_.GetOffset()]) : &zeros,
+                            p_dst,
+                            dst_slice_origin_.GetOffset(),
+                            dst_valid,
+                            dst_desc.GetElementSpaceSize());
+                    }
+                    else
+                    {
+                        if(coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                               dst_desc, dst_slice_origin_))
+                        {
+                            if(coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                                   src_desc, src_slice_origin_))
+                            {
+                                p_dst[dst_slice_origin_.GetOffset()] =
+                                    p_src[src_slice_origin_.GetOffset()];
+                            }
+                            else
+                            {
+                                p_dst[dst_slice_origin_.GetOffset()] = 0;
+                            }
+                        }
+                    }
+#endif
 
                     // move dim1 iterator
                     if(i1 < Len1 - 1)
                     {
+                        bool forward_dim1 = (i0 % 2 == 0);
+
                         if(forward_dim1)
                         {
                             move_dynamic_tensor_coordinate(
@@ -303,22 +360,11 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r2
                     }
                 }
 
-                // switch dim1 iteration direction
-                forward_dim1 = !forward_dim1;
-
                 // move dim0 iterator
                 if(i0 < Len0 - 1)
                 {
-                    if(forward_dim0)
-                    {
-                        move_dynamic_tensor_coordinate(src_desc, src_slice_origin_, src_step_p1_0);
-                        move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_, dst_step_p1_0);
-                    }
-                    else
-                    {
-                        move_dynamic_tensor_coordinate(src_desc, src_slice_origin_, src_step_m1_0);
-                        move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_, dst_step_m1_0);
-                    }
+                    move_dynamic_tensor_coordinate(src_desc, src_slice_origin_, src_step_p1_0);
+                    move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_, dst_step_p1_0);
                 }
             }
         }

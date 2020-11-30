@@ -185,25 +185,26 @@ __device__ void transfer_data(const T* p_src,
                   "wrong! InMemoryDataOperation not supported!");
 
     // keep it simple, don't use static_if here, otherwise compiler will do weird things
-    if(SrcDataStride == 1 && DstDataStride == 1)
+    if constexpr(SrcDataStride == 1 && DstDataStride == 1)
     {
-        // TODO: use static_if::ElseIf
-        static_if<DstInMemOp == InMemoryDataOperation::Set>{}([&](auto) {
+        if constexpr(DstInMemOp == InMemoryDataOperation::Set)
+        {
             SetData<T, DataPerAccess>{}.template Run<SrcAddressSpace, DstAddressSpace>(
                 p_src, src_offset, src_valid, src_range, p_dst, dst_offset, dst_valid, dst_range);
-        });
-
-        static_if<DstInMemOp == InMemoryDataOperation::AtomicAdd>{}([&](auto) {
+        }
+        else if constexpr(DstInMemOp == InMemoryDataOperation::AtomicAdd)
+        {
             AtomicAddData<T, DataPerAccess>{}.template Run<SrcAddressSpace, DstAddressSpace>(
                 p_src, src_offset, src_valid, src_range, p_dst, dst_offset, dst_valid, dst_range);
-        });
+        }
     }
     else
     {
+#pragma unroll
         for(index_t i = 0; i < DataPerAccess; ++i)
         {
-            // TODO: use static_if::ElseIf
-            static_if<DstInMemOp == InMemoryDataOperation::Set>{}([&](auto) {
+            if constexpr(DstInMemOp == InMemoryDataOperation::Set)
+            {
                 SetData<T, 1>{}.template Run<SrcAddressSpace, DstAddressSpace>(
                     p_src,
                     src_offset + i * SrcDataStride,
@@ -213,9 +214,9 @@ __device__ void transfer_data(const T* p_src,
                     dst_offset + i * DstDataStride,
                     dst_valid,
                     dst_range);
-            });
-
-            static_if<DstInMemOp == InMemoryDataOperation::AtomicAdd>{}([&](auto) {
+            }
+            else if constexpr(DstInMemOp == InMemoryDataOperation::AtomicAdd)
+            {
                 AtomicAddData<T, 1>{}.template Run<SrcAddressSpace, DstAddressSpace>(
                     p_src,
                     src_offset + i * SrcDataStride,
@@ -225,7 +226,7 @@ __device__ void transfer_data(const T* p_src,
                     dst_offset + i * DstDataStride,
                     dst_valid,
                     dst_range);
-            });
+            }
         }
     }
 }
