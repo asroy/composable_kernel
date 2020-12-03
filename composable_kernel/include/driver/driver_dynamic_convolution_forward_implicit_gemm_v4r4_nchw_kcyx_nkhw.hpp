@@ -173,39 +173,41 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw
                 make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
 
         // GEMM
-#if 1
-        using gridwise_gemm =
-            GridwiseDynamicGemm_km_kn_mn_v1<BlockSize,
-                                            Float,
-                                            AccFloat,
-                                            InMemoryDataOperation::Set,
-                                            GemmMPerBlock,
-                                            GemmNPerBlock,
-                                            GemmKPerBlock,
-                                            GemmMPerThread,
-                                            GemmNPerThread,
-                                            GemmKPerThread,
-                                            GemmMLevel0Cluster,
-                                            GemmNLevel0Cluster,
-                                            GemmMLevel1Cluster,
-                                            GemmNLevel1Cluster,
-                                            GemmABlockTransferThreadSliceLengths_GemmK_GemmM,
-                                            GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
-                                            Sequence<1, 0>,
-                                            Sequence<1, 0>,
-                                            0,
-                                            GemmABlockTransferSrcScalarPerVector_GemmK,
-                                            GemmABlockTransferDstScalarPerVector_GemmM,
-                                            GemmBBlockTransferThreadSliceLengths_GemmK_GemmN,
-                                            GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
-                                            Sequence<0, 1>,
-                                            Sequence<0, 1>,
-                                            1,
-                                            GemmBBlockTransferSrcScalarPerVector_GemmN,
-                                            GemmBBlockTransferDstScalarPerVector_GemmN,
-                                            Sequence<2, 3, 0, 1>,
-                                            3,
-                                            GemmCThreadTransferDstScalarPerVector_GemmN1>;
+        using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v1<
+            BlockSize,
+            Float,
+            AccFloat,
+            InMemoryDataOperation::Set,
+            GemmMPerBlock,
+            GemmNPerBlock,
+            GemmKPerBlock,
+            GemmMPerThread,
+            GemmNPerThread,
+            GemmKPerThread,
+            GemmMLevel0Cluster,
+            GemmNLevel0Cluster,
+            GemmMLevel1Cluster,
+            GemmNLevel1Cluster,
+            GemmABlockTransferThreadSliceLengths_GemmK_GemmM,
+            GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
+            Sequence<1, 0>,
+            Sequence<1, 0>,
+            0,
+            GemmABlockTransferSrcScalarPerVector_GemmK,
+            GemmABlockTransferDstScalarPerVector_GemmM,
+            true, // move back src coordinate after threadwise copy
+            GemmBBlockTransferThreadSliceLengths_GemmK_GemmN,
+            GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
+            Sequence<0, 1>,
+            Sequence<0, 1>,
+            1,
+            GemmBBlockTransferSrcScalarPerVector_GemmN,
+            GemmBBlockTransferDstScalarPerVector_GemmN,
+            false, // don't move back src coordinate after threadwise copy, which will be fused with
+                   // MoveSrcSliceWindow() to save addr computation
+            Sequence<2, 3, 0, 1>,
+            3,
+            GemmCThreadTransferDstScalarPerVector_GemmN1>;
 
         const index_t GridSize = (GemmM / GemmMPerBlock) * (GemmN / GemmNPerBlock);
 
@@ -261,63 +263,6 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw
                           p_out_global,
                           integral_constant<bool, false>{});
         }
-#else
-        using gridwise_gemm =
-            GridwiseDynamicGemm_km_kn_mn_v2<BlockSize,
-                                            Float,
-                                            AccFloat,
-                                            InMemoryDataOperation::Set,
-                                            GemmMPerBlock,
-                                            GemmNPerBlock,
-                                            GemmKPerBlock,
-                                            GemmMPerThread,
-                                            GemmNPerThread,
-                                            GemmKPerThread,
-                                            GemmMLevel0Cluster,
-                                            GemmNLevel0Cluster,
-                                            GemmMLevel1Cluster,
-                                            GemmNLevel1Cluster,
-                                            GemmABlockTransferThreadSliceLengths_GemmK_GemmM,
-                                            GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
-                                            Sequence<1, 0>,
-                                            Sequence<1, 0>,
-                                            0,
-                                            GemmABlockTransferSrcScalarPerVector_GemmK,
-                                            GemmABlockTransferDstScalarPerVector_GemmM,
-                                            GemmBBlockTransferThreadSliceLengths_GemmK_GemmN,
-                                            GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
-                                            Sequence<0, 1>,
-                                            Sequence<0, 1>,
-                                            1,
-                                            GemmBBlockTransferSrcScalarPerVector_GemmN,
-                                            GemmBBlockTransferDstScalarPerVector_GemmN,
-                                            Sequence<2, 3, 0, 1>,
-                                            3,
-                                            GemmCThreadTransferDstScalarPerVector_GemmN1>;
-
-        const index_t GridSize = (GemmM / GemmMPerBlock) * (GemmN / GemmNPerBlock);
-
-        const auto kernel =
-            run_gridwise_operation<gridwise_gemm,
-                                   decltype(wei_gemmk_gemmm_global_desc),
-                                   const Float*,
-                                   decltype(in_gemmk_gemmn_global_desc),
-                                   const Float*,
-                                   decltype(out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc),
-                                   Float*>;
-
-        launch_kernel(kernel,
-                      dim3(GridSize),
-                      dim3(BlockSize),
-                      0,
-                      0,
-                      wei_gemmk_gemmm_global_desc,
-                      p_wei_global,
-                      in_gemmk_gemmn_global_desc,
-                      p_in_global,
-                      out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc,
-                      p_out_global);
-#endif
     }
 };
 
