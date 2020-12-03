@@ -504,7 +504,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             });
         }
 
-        // move src and dst coordinate back to their origins
+        // move src coordinate back to its slice origin
         if constexpr(SrcResetCoordinateAfterRun)
         {
             const auto src_back_step =
@@ -581,6 +581,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             });
         }
 
+        // move dst coordinate back to its slice origin
         if constexpr(DstResetCoordinateAfterRun)
         {
             const auto dst_back_step =
@@ -607,11 +608,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
     __device__ void MoveSrcSliceWindow(const SrcDesc& src_desc,
                                        const Index& src_slice_origin_step_idx)
     {
-        // is it OK to construct a new step every time?
+        // if src coord was not reset by RunRead(), then need to adjust the step here
         const auto adjusted_step_idx = SrcResetCoordinateAfterRun
                                            ? src_slice_origin_step_idx
                                            : src_slice_origin_step_idx + GetCoordinateBackStep();
 
+        // is it OK to construct a new step every time?
         const auto adjusted_step = make_dynamic_tensor_coordinate_step(src_desc, adjusted_step_idx);
 
         move_dynamic_tensor_coordinate(src_desc, src_slice_origin_, adjusted_step);
@@ -621,11 +623,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
     __device__ void MoveDstSliceWindow(const DstDesc& dst_desc,
                                        const Index& dst_slice_origin_step_idx)
     {
-        // is it OK to construct a new step every time?
+        // if dst coord was not reset by RunWrite(), then need to adjust the step here
         const auto adjusted_step_idx = DstResetCoordinateAfterRun
                                            ? dst_slice_origin_step_idx
                                            : dst_slice_origin_step_idx + GetCoordinateBackStep();
 
+        // is it OK to construct a new step every time?
         const auto adjusted_step = make_dynamic_tensor_coordinate_step(dst_desc, adjusted_step_idx);
 
         move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_, adjusted_step);
