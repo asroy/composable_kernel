@@ -85,7 +85,7 @@ struct BlockwiseGenericTensorSliceCopy_v5
         if(BlockSize == mThreadClusterDesc.GetElementSize() or
            get_thread_local_1d_id() < mThreadClusterDesc.GetElementSize())
         {
-            mThreadwiseCopy.Load(p_block_src, p_thread_buffer);
+            mThreadwiseCopy.Load(p_block_src);
         }
     }
 
@@ -96,7 +96,7 @@ struct BlockwiseGenericTensorSliceCopy_v5
         if(BlockSize == mThreadClusterDesc.GetElementSize() or
            get_thread_local_1d_id() < mThreadClusterDesc.GetElementSize())
         {
-            mThreadwiseCopy.Store(p_thread_buffer, p_block_dst);
+            mThreadwiseCopy.Store(p_block_dst);
         }
     }
 
@@ -115,8 +115,6 @@ struct BlockwiseGenericTensorSliceCopy_v5
            get_thread_local_1d_id() < mThreadClusterDesc.GetElementSize())
         {
             RunLoadThreadBuffer(p_block_src, p_thread_buffer);
-
-            // if there is type conversion, it's done during store
             RunStoreThreadBuffer(p_thread_buffer, p_block_dst);
         }
     }
@@ -149,17 +147,17 @@ struct BlockwiseGenericTensorSliceCopy_v5
     using ThreadBufferDesc = decltype(make_native_tensor_descriptor_packed(ThreadSliceLengths{}));
 
     using ThreadwiseCopy = ThreadwiseGenericTensorSliceCopy_v5<BlockSrcDesc,
-                                                                 BlockDstDesc,
-                                                                 ThreadSliceLengths,
-                                                                 SrcDimAccessOrder,
-                                                                 SrcVectoReadDim,
-                                                                 SrcDataPerRead,
-                                                                 DstDataPerWrite,
-                                                                 SrcAddressSpace,
-                                                                 DstAddressSpace,
-                                                                 InMemoryDataOperation::Set,
-                                                                 SrcDataStride,
-                                                                 DstDataStride>;
+                                                               BlockDstDesc,
+                                                               ThreadSliceLengths,
+                                                               SrcDimAccessOrder,
+                                                               SrcVectoReadDim,
+                                                               SrcDataPerRead,
+                                                               DstDataPerWrite,
+                                                               SrcAddressSpace,
+                                                               DstAddressSpace,
+                                                               InMemoryDataOperation::Set,
+                                                               SrcDataStride,
+                                                               DstDataStride>;
 
     static constexpr auto mThreadClusterDesc =
         make_cluster_descriptor(ThreadClusterLengths{}, ThreadClusterArrangeOrder{});
