@@ -6,6 +6,7 @@
 #include "tensor_descriptor_helper.hpp"
 #include "ConstantMatrixDescriptor.hpp"
 #include "blockwise_generic_tensor_slice_copy.hpp"
+#include "blockwise_generic_tensor_slice_copy_v2.hpp"
 #include "threadwise_generic_tensor_slice_copy.hpp"
 #include "blockwise_gemm.hpp"
 
@@ -152,7 +153,7 @@ struct GridwiseGemmTransposedANormalBNormalC_v1
 
         // B matrix blockwise copy
         auto b_blockwise_copy =
-            BlockwiseGenericTensorSliceCopy_v4<BlockSize,
+            BlockwiseGenericTensorSliceCopy_v5<BlockSize,
                                                decltype(b_k_n_global_desc),
                                                decltype(b_k_n_block_desc),
                                                decltype(b_k_n_block_desc.GetLengths()),
