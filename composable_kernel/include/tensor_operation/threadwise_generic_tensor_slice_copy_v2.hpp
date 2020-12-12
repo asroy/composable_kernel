@@ -96,17 +96,23 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         template <typename SrcCoord>
         __device__ static float run(const float* p_src, const SrcCoord src_coord_begin)
         {
-            constexpr auto vector_access_dim = Number<SrcDstVectorReadWriteDim>{};
-
-            auto scalar_id = make_zero_array<index_t, nDim>();
-
             float r;
-
-            scalar_id(vector_access_dim) = 0;
-            auto src_coord               = src_coord_begin + scalar_id;
-            r                            = load_data<float, float>(p_src, src_coord.GetOffset());
-
+            r = load_data<float, float>(p_src, src_coord_begin.GetOffset());
             return r;
+        }
+    };
+
+    template <typename DstData, index_t DstDataPerAccess, index_t VectorSize>
+    struct vector_data_store;
+
+    template <>
+    struct vector_data_store<float, 1, 1>
+    {
+        template <typename DstCoord>
+        __device__ static void
+        run(float* p_dst, const float src_data, const DstCoord dst_coord_begin)
+        {
+            store_data<float, float>(src_data, p_dst, dst_coord_begin.GetOffset());
         }
     };
 
@@ -131,56 +137,20 @@ struct ThreadwiseGenericTensorSliceCopy_v5
                     Number<vector_access_dim>{},
                     Number<long_vector_size * long_vector_access_id[vector_access_dim]>{});
 
-                // buffer to hold a src long-vector
-                SrcData long_vector[long_vector_size];
-
-#if 1
-                // zero out buffer
-                static_for<0, long_vector_size, 1>{}([&](auto i) { long_vector[i] = 0; });
-#endif
-
                 // load data from src to the long-vector buffer
-                static_for<0, long_vector_size / src_data_per_access, 1>{}([&](auto i) {
-                    auto scalar_id               = make_zero_multi_index<nDim>();
-                    scalar_id(vector_access_dim) = i * src_data_per_access;
+                const auto src_coord = mSrcSliceOrigin + to_multi_index(long_vector_data_begin_id);
 
-                    const index_t buffer_offset = i * src_data_per_access;
-
-                    const auto src_coord =
-                        mSrcSliceOrigin + (to_multi_index(long_vector_data_begin_id) + scalar_id);
-
-                    // Check src data's valid mapping situation, only check the first data in this
-                    // src
-                    //   vector. It's user's responsiblity to make sure all data in the src vector
-                    //   has the valid/invalid mapping situation
-                    transfer_data<SrcData,
-                                  SrcDataPerRead,
-                                  SrcAddressSpace,
-                                  AddressSpace::Vgpr,
-                                  InMemoryDataOperation::Set,
-                                  SrcDataStride,
-                                  1>(p_src,
-                                     src_coord.GetOffset(),
-                                     src_coord.IsOffsetValidAssumingUpperIndexIsValid(),
-                                     SrcDesc::GetElementSpace(),
-                                     long_vector,
-                                     buffer_offset,
-                                     true,
-                                     long_vector_size);
-                });
+                auto src_buff = vector_data_load<SrcData, SrcDataPerRead, long_vector_size>::run(
+                    p_src, src_coord);
 
                 // store data from the long-vector buffer to dst
-                static_for<0, long_vector_size / dst_data_per_access, 1>{}([&](auto i) {
-                    auto scalar_id               = make_zero_multi_index<nDim>();
-                    scalar_id(vector_access_dim) = i * dst_data_per_access;
+                constexpr auto buff_off =
+                    ThreadBufferDesc::CalculateOffset(to_multi_index(long_vector_data_begin_id));
 
-                    const index_t buffer_offset = i * dst_data_per_access;
+                // static_assert(buff_off == 0 || buff_off == 1 || buff_off == 2 || buff_off == 3,
+                // "");
 
-                    constexpr auto buff_off = ThreadBufferDesc::CalculateOffset(
-                        to_multi_index(long_vector_data_begin_id));
-
-                    thread_buff.s1(Number<buff_off>{}) = long_vector[buffer_offset];
-                });
+                thread_buff.s1(Number<buff_off>{}) = src_buff;
             });
     }
 
@@ -201,62 +171,19 @@ struct ThreadwiseGenericTensorSliceCopy_v5
 
         static_ford<decltype(long_vector_access_lengths), SrcDstDimAccessOrder>{}(
             [&](auto long_vector_access_id) {
-                // data id w.r.t slicing-window
-                auto long_vector_data_begin_id = to_multi_index(long_vector_access_id);
-                long_vector_data_begin_id(vector_access_dim) =
-                    long_vector_size * long_vector_access_id[vector_access_dim];
+                constexpr auto long_vector_data_begin_id = long_vector_access_id.Modify(
+                    Number<vector_access_dim>{},
+                    Number<long_vector_size * long_vector_access_id[vector_access_dim]>{});
 
-                // buffer to hold a src long-vector
-                DstData long_vector[long_vector_size];
+                constexpr auto buff_off =
+                    ThreadBufferDesc::CalculateOffset(to_multi_index(long_vector_data_begin_id));
 
-#if 1
-                // zero out buffer
-                static_for<0, long_vector_size, 1>{}([&](auto i) { long_vector[i] = 0; });
-#endif
+                auto src_buff = thread_buff.s1[Number<buff_off>{}];
 
-                // load data from src to the long-vector buffer
-                static_for<0, long_vector_size / src_data_per_access, 1>{}([&](auto i) {
-                    auto scalar_id               = make_zero_multi_index<nDim>();
-                    scalar_id(vector_access_dim) = i * src_data_per_access;
+                const auto dst_coord = mDstSliceOrigin + to_multi_index(long_vector_data_begin_id);
 
-                    const index_t buffer_offset = i * src_data_per_access;
-
-                    auto buff_off =
-                        ThreadBufferDesc::CalculateOffset(long_vector_data_begin_id + scalar_id);
-
-                    // long_vector[buffer_offset] = thread_buff.s1[Number<buff_off>{}];
-                    long_vector[buffer_offset] = thread_buff.n[buff_off];
-                });
-
-                // store data from the long-vector buffer to dst
-                static_for<0, long_vector_size / dst_data_per_access, 1>{}([&](auto i) {
-                    auto scalar_id               = make_zero_multi_index<nDim>();
-                    scalar_id(vector_access_dim) = i * dst_data_per_access;
-
-                    const index_t buffer_offset = i * dst_data_per_access;
-
-                    const auto dst_coord =
-                        mDstSliceOrigin + (long_vector_data_begin_id + scalar_id);
-
-                    // Check dst data's valid mapping situation, only check the first data in this
-                    // dst
-                    //   vector. It's user's responsiblity to make sure all data in the dst vector
-                    //   has the valid/invalid mapping situation
-                    transfer_data<DstData,
-                                  DstDataPerWrite,
-                                  AddressSpace::Vgpr,
-                                  DstAddressSpace,
-                                  DstInMemOp,
-                                  1,
-                                  DstDataStride>(long_vector,
-                                                 buffer_offset,
-                                                 true,
-                                                 long_vector_size,
-                                                 p_dst,
-                                                 dst_coord.GetOffset(),
-                                                 dst_coord.IsOffsetValidAssumingUpperIndexIsValid(),
-                                                 DstDesc::GetElementSpace());
-                });
+                vector_data_store<DstData, DstDataPerWrite, long_vector_size>::run(
+                    p_dst, src_buff, dst_coord);
             });
     }
 
@@ -280,7 +207,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
             .Else([&](auto) { mDstSliceOrigin -= step_sizes; });
     }
 
-    float_vec8_t thread_buff;
+    float_vec4_t thread_buff;
 
     private:
     SrcCoord mSrcSliceOrigin;

@@ -32,8 +32,39 @@ union float_vec2_t
 union float_vec4_t
 {
     Tuple<float, float, float, float> s1;
+    struct{
+        float e0, e1, e2, e3;
+    } ss1;
     float4_t s4;
+    float n[4];
     __host__ __device__ constexpr float_vec4_t() {}
+
+    template<typename T, index_t i>
+    __host__ __device__ void set(const T val);
+
+    template<>
+    __host__ __device__ void set<float, 0>(const float val)
+    {
+       ss1.e0 = val; 
+    }
+
+    template<>
+    __host__ __device__ void set<float, 1>(const float val)
+    {
+       ss1.e1 = val; 
+    }
+
+    template<>
+    __host__ __device__ void set<float, 2>(const float val)
+    {
+       ss1.e2 = val; 
+    }
+
+    template<>
+    __host__ __device__ void set<float, 3>(const float val)
+    {
+       ss1.e3 = val; 
+    }
 };
 
 union float_vec8_t
