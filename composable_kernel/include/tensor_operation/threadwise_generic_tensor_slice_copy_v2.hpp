@@ -55,8 +55,6 @@ struct ThreadwiseGenericTensorSliceCopy_v5
                       "wrong! cannot evenly divide");
 
         static_assert(ThreadBufferSize == 4, "");
-
-        // TODO:: sanity-check if vectorized memory read/write is allowed on src and dst
     }
 
     __device__ constexpr ThreadwiseGenericTensorSliceCopy_v5()
@@ -146,9 +144,6 @@ struct ThreadwiseGenericTensorSliceCopy_v5
                 // store data from the long-vector buffer to dst
                 constexpr auto buff_off =
                     ThreadBufferDesc::CalculateOffset(to_multi_index(long_vector_data_begin_id));
-
-                // static_assert(buff_off == 0 || buff_off == 1 || buff_off == 2 || buff_off == 3,
-                // "");
 
                 thread_buff.s1(Number<buff_off>{}) = src_buff;
             });

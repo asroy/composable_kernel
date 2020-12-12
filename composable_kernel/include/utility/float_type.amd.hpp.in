@@ -24,76 +24,25 @@ typedef ushort ushort8_t __attribute__((ext_vector_type(8)));
 
 union float_vec2_t
 {
-    Tuple<float, float> s1;
+    StaticallyIndexedArray<float, 2> s1;
     float2_t s2;
-    __host__ __device__ constexpr float_vec2_t() {}
+    __host__ __device__ constexpr float_vec2_t() {s2 = {0, 0};}
 };
 
 union float_vec4_t
 {
-    Tuple<float, float, float, float> s1;
-    struct{
-        float e0, e1, e2, e3;
-    } ss1;
+    StaticallyIndexedArray<float, 4> s1;
     float4_t s4;
-    float n[4];
-    __host__ __device__ constexpr float_vec4_t() {}
-
-    template<typename T, index_t i>
-    __host__ __device__ void set(const T val);
-
-    template<>
-    __host__ __device__ void set<float, 0>(const float val)
-    {
-       ss1.e0 = val; 
-    }
-
-    template<>
-    __host__ __device__ void set<float, 1>(const float val)
-    {
-       ss1.e1 = val; 
-    }
-
-    template<>
-    __host__ __device__ void set<float, 2>(const float val)
-    {
-       ss1.e2 = val; 
-    }
-
-    template<>
-    __host__ __device__ void set<float, 3>(const float val)
-    {
-       ss1.e3 = val; 
-    }
+    __host__ __device__ constexpr float_vec4_t() {s4 = {0, 0, 0, 0};}
 };
 
 union float_vec8_t
 {
-    Tuple<float, float, float, float, float, float, float, float> s1;
-    Tuple<float_vec2_t, float_vec2_t, float_vec2_t, float_vec2_t> s2;
-    struct{
-        float_vec4_t e0;
-        float_vec4_t e1;
-    } ss4;
-    Tuple<float_vec4_t, float_vec4_t> s4;
+    StaticallyIndexedArray<float, 8> s1;
+    StaticallyIndexedArray<float_vec2_t, 4> s2;
+    StaticallyIndexedArray<float_vec4_t, 2> s4;
     float8_t s8;
-    float n[8];
     __host__ __device__ constexpr float_vec8_t() {}
-
-    template<typename T, index_t i>
-    __host__ __device__ void set(const T val);
-
-    template<>
-    __host__ __device__ void set<float_vec4_t, 0>(const float_vec4_t val)
-    {
-       ss4.e0 = val; 
-    }
-
-    template<>
-    __host__ __device__ void set<float_vec4_t, 1>(const float_vec4_t val)
-    {
-       ss4.e1 = val; 
-    }
 };
 
 

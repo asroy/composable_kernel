@@ -7,10 +7,10 @@ BC_FILE=$1
 /opt/rocm/llvm/bin/opt -S -sroa inline.ll > sora.ll
 /opt/rocm/llvm/bin/opt -S -O3 sora.ll > o3.ll
 
-/opt/rocm/llvm/bin/llc -mcpu=gfx906 original.ll
-/opt/rocm/llvm/bin/llc -mcpu=gfx906 inline.ll
-/opt/rocm/llvm/bin/llc -mcpu=gfx906 sora.ll
-/opt/rocm/llvm/bin/llc -mcpu=gfx906 o3.ll
+/opt/rocm/llvm/bin/llc -mcpu=gfx908 original.ll
+/opt/rocm/llvm/bin/llc -mcpu=gfx908 inline.ll
+/opt/rocm/llvm/bin/llc -mcpu=gfx908 sora.ll
+/opt/rocm/llvm/bin/llc -mcpu=gfx908 o3.ll
 
 #/opt/rocm/llvm/bin/opt -S -O3 -sroa inline.ll > o3.ll
 #/opt/rocm/llvm/bin/opt -S -O3 -sroa o3.ll > o3_2.ll
