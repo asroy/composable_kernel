@@ -75,6 +75,41 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         mDstSliceOrigin = dst_slice_origin;
     }
 
+    template <typename DstData, typename SrcData>
+    __device__ static DstData load_data(const SrcData* p_src, index_t src_offset)
+    {
+        return *reinterpret_cast<const DstData*>(&p_src[src_offset]);
+    }
+
+    template <typename DstData, typename SrcData>
+    __device__ static void store_data(const SrcData src_data, DstData* p_dst, index_t dst_offset)
+    {
+        *reinterpret_cast<SrcData*>(&p_dst[dst_offset]) = src_data;
+    }
+
+    template <typename SrcData, index_t SrcDataPerAccess, index_t VectorSize>
+    struct vector_data_load;
+
+    template <>
+    struct vector_data_load<float, 1, 1>
+    {
+        template <typename SrcCoord>
+        __device__ static float run(const float* p_src, const SrcCoord src_coord_begin)
+        {
+            constexpr auto vector_access_dim = Number<SrcDstVectorReadWriteDim>{};
+
+            auto scalar_id = make_zero_array<index_t, nDim>();
+
+            float r;
+
+            scalar_id(vector_access_dim) = 0;
+            auto src_coord               = src_coord_begin + scalar_id;
+            r                            = load_data<float, float>(p_src, src_coord.GetOffset());
+
+            return r;
+        }
+    };
+
     template <typename SrcData>
     __device__ void Load(const SrcData* p_src)
     {
@@ -90,12 +125,11 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         constexpr auto long_vector_access_lengths = SliceLengths::Modify(
             vector_access_dim, SliceLengths::Get(vector_access_dim) / long_vector_size);
 
-        ford<decltype(long_vector_access_lengths), SrcDstDimAccessOrder>{}(
+        static_ford<decltype(long_vector_access_lengths), SrcDstDimAccessOrder>{}(
             [&](auto long_vector_access_id) {
-                // data id w.r.t slicing-window
-                auto long_vector_data_begin_id = long_vector_access_id;
-                long_vector_data_begin_id(vector_access_dim) =
-                    long_vector_size * long_vector_access_id[vector_access_dim];
+                constexpr auto long_vector_data_begin_id = long_vector_access_id.Modify(
+                    Number<vector_access_dim>{},
+                    Number<long_vector_size * long_vector_access_id[vector_access_dim]>{});
 
                 // buffer to hold a src long-vector
                 SrcData long_vector[long_vector_size];
@@ -113,7 +147,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
                     const index_t buffer_offset = i * src_data_per_access;
 
                     const auto src_coord =
-                        mSrcSliceOrigin + (long_vector_data_begin_id + scalar_id);
+                        mSrcSliceOrigin + (to_multi_index(long_vector_data_begin_id) + scalar_id);
 
                     // Check src data's valid mapping situation, only check the first data in this
                     // src
@@ -142,12 +176,10 @@ struct ThreadwiseGenericTensorSliceCopy_v5
 
                     const index_t buffer_offset = i * dst_data_per_access;
 
-                    const auto dst_coord =
-                        mDstSliceOrigin + (long_vector_data_begin_id + scalar_id);
+                    constexpr auto buff_off = ThreadBufferDesc::CalculateOffset(
+                        to_multi_index(long_vector_data_begin_id));
 
-                    auto buff_off =
-                        ThreadBufferDesc::CalculateOffset(long_vector_data_begin_id + scalar_id);
-                    thread_buff[buff_off] = long_vector[buffer_offset];
+                    thread_buff.s1(Number<buff_off>{}) = long_vector[buffer_offset];
                 });
             });
     }
@@ -167,10 +199,10 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         constexpr auto long_vector_access_lengths = SliceLengths::Modify(
             vector_access_dim, SliceLengths::Get(vector_access_dim) / long_vector_size);
 
-        ford<decltype(long_vector_access_lengths), SrcDstDimAccessOrder>{}(
+        static_ford<decltype(long_vector_access_lengths), SrcDstDimAccessOrder>{}(
             [&](auto long_vector_access_id) {
                 // data id w.r.t slicing-window
-                auto long_vector_data_begin_id = long_vector_access_id;
+                auto long_vector_data_begin_id = to_multi_index(long_vector_access_id);
                 long_vector_data_begin_id(vector_access_dim) =
                     long_vector_size * long_vector_access_id[vector_access_dim];
 
@@ -192,7 +224,8 @@ struct ThreadwiseGenericTensorSliceCopy_v5
                     auto buff_off =
                         ThreadBufferDesc::CalculateOffset(long_vector_data_begin_id + scalar_id);
 
-                    long_vector[buffer_offset] = thread_buff[buff_off];
+                    // long_vector[buffer_offset] = thread_buff.s1[Number<buff_off>{}];
+                    long_vector[buffer_offset] = thread_buff.n[buff_off];
                 });
 
                 // store data from the long-vector buffer to dst
@@ -247,7 +280,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
             .Else([&](auto) { mDstSliceOrigin -= step_sizes; });
     }
 
-    float thread_buff[8];
+    float_vec8_t thread_buff;
 
     private:
     SrcCoord mSrcSliceOrigin;

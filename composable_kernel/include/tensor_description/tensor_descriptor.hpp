@@ -87,6 +87,12 @@ struct NativeTensorDescriptor
         return offset;
     }
 
+    template <typename Seq>
+    __host__ __device__ static constexpr index_t CalculateOffset(Seq)
+    {
+        return reduce_on_sequence(Seq{} * GetStrides(), math::plus<index_t>{}, Number<0>{});
+    }
+
     __host__ __device__ static constexpr index_t CalculateOffsetDiff(const Index& idx_diff)
     {
         index_t offset_diff = 0;
