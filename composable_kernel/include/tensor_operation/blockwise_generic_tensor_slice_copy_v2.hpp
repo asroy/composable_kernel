@@ -78,9 +78,8 @@ struct BlockwiseGenericTensorSliceCopy_v5
         return ThreadBufferDesc::GetElementSpace();
     }
 
-    template <typename BlockSrcData, typename ThreadBufferData>
-    __device__ void RunLoadThreadBuffer(const BlockSrcData* p_block_src,
-                                        ThreadBufferData* p_thread_buffer)
+    template <typename BlockSrcData>
+    __device__ void RunLoadThreadBuffer(const BlockSrcData* p_block_src)
     {
         if(BlockSize == mThreadClusterDesc.GetElementSize() or
            get_thread_local_1d_id() < mThreadClusterDesc.GetElementSize())
@@ -89,9 +88,8 @@ struct BlockwiseGenericTensorSliceCopy_v5
         }
     }
 
-    template <typename ThreadBufferData, typename BlockDstData>
-    __device__ void RunStoreThreadBuffer(const ThreadBufferData* p_thread_buffer,
-                                         BlockDstData* p_block_dst)
+    template <typename BlockDstData>
+    __device__ void RunStoreThreadBuffer(BlockDstData* p_block_dst)
     {
         if(BlockSize == mThreadClusterDesc.GetElementSize() or
            get_thread_local_1d_id() < mThreadClusterDesc.GetElementSize())
@@ -109,13 +107,11 @@ struct BlockwiseGenericTensorSliceCopy_v5
                       "to use ThreadBufferAddressSpace as their thread buffer, which is not vgpr. "
                       "Behavior may be different");
 
-        BlockSrcData p_thread_buffer[GetThreadBufferSize()];
-
         if(BlockSize == mThreadClusterDesc.GetElementSize() or
            get_thread_local_1d_id() < mThreadClusterDesc.GetElementSize())
         {
-            RunLoadThreadBuffer(p_block_src, p_thread_buffer);
-            RunStoreThreadBuffer(p_thread_buffer, p_block_dst);
+            RunLoadThreadBuffer(p_block_src);
+            RunStoreThreadBuffer(p_block_dst);
         }
     }
 

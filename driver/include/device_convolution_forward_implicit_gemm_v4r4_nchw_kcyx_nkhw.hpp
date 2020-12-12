@@ -177,7 +177,7 @@ void device_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     using GemmABlockCopyThreadSliceLengths_GemmK_GemmM   = Sequence<4, 1>;
     using GemmABlockCopyThreadClusterLengths_GemmK_GemmM = Sequence<2, 128>;
 
-    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 4;
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmK  = 1;
     constexpr index_t GemmABlockCopyDstDataPerWrite_GemmM = 1;
 
     using GemmBBlockCopyThreadSliceLengths_GemmK_GemmN   = Sequence<1, 4>;
