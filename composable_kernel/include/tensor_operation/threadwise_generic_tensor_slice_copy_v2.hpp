@@ -140,7 +140,18 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         __device__ static void
         run(float* p_dst, const float src_data, const DstCoord dst_coord_begin)
         {
-            store_data<float>(src_data, p_dst, dst_coord_begin.GetOffset());
+            store_data(src_data, p_dst, dst_coord_begin.GetOffset());
+        }
+    };
+
+    template <>
+    struct vector_data_store<float, 2>
+    {
+        template <typename DstCoord>
+        __device__ static void
+        run(float* p_dst, const float2_t src_data, const DstCoord dst_coord_begin)
+        {
+            store_data(src_data, p_dst, dst_coord_begin.GetOffset());
         }
     };
 
@@ -185,7 +196,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
 
         constexpr auto dst_data_per_access = Number<DstDataPerWrite>{};
 
-        static_assert(DstDataPerWrite == 1, "");
+        static_assert(DstDataPerWrite == 1 || DstDataPerWrite == 2, "");
 
         constexpr auto long_vector_size = dst_data_per_access;
 
