@@ -101,7 +101,31 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         __device__ static float run(const float* p_src, const SrcCoord src_coord_begin)
         {
             float r;
-            r = load_data<float, float>(p_src, src_coord_begin.GetOffset());
+            r = load_data<float>(p_src, src_coord_begin.GetOffset());
+            return r;
+        }
+    };
+
+    template <>
+    struct vector_data_load<float, 2>
+    {
+        template <typename SrcCoord>
+        __device__ static float2_t run(const float* p_src, const SrcCoord src_coord_begin)
+        {
+            float2_t r;
+            r = load_data<float2_t>(p_src, src_coord_begin.GetOffset());
+            return r;
+        }
+    };
+
+    template <>
+    struct vector_data_load<float, 4>
+    {
+        template <typename SrcCoord>
+        __device__ static float4_t run(const float* p_src, const SrcCoord src_coord_begin)
+        {
+            float4_t r;
+            r = load_data<float4_t>(p_src, src_coord_begin.GetOffset());
             return r;
         }
     };
@@ -116,7 +140,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         __device__ static void
         run(float* p_dst, const float src_data, const DstCoord dst_coord_begin)
         {
-            store_data<float, float>(src_data, p_dst, dst_coord_begin.GetOffset());
+            store_data<float>(src_data, p_dst, dst_coord_begin.GetOffset());
         }
     };
 
@@ -127,7 +151,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
 
         constexpr auto src_data_per_access = Number<SrcDataPerRead>{};
 
-        static_assert(SrcDataPerRead == 1, "");
+        static_assert(SrcDataPerRead == 1 || SrcDataPerRead == 2 || SrcDataPerRead == 4, "");
 
         constexpr auto long_vector_size = src_data_per_access;
 
@@ -147,7 +171,8 @@ struct ThreadwiseGenericTensorSliceCopy_v5
 
                 // store data from the long-vector buffer to dst
                 constexpr auto buff_off =
-                    ThreadBufferDesc::CalculateOffset(to_multi_index(long_vector_data_begin_id));
+                    ThreadBufferDesc::CalculateOffset(to_multi_index(long_vector_data_begin_id)) /
+                    long_vector_size;
 
                 thread_buff.template At<SrcDataPerRead>()(Number<buff_off>{}) = src_buff;
             });
@@ -174,7 +199,8 @@ struct ThreadwiseGenericTensorSliceCopy_v5
                     Number<long_vector_size * long_vector_access_id[vector_access_dim]>{});
 
                 constexpr auto buff_off =
-                    ThreadBufferDesc::CalculateOffset(to_multi_index(long_vector_data_begin_id));
+                    ThreadBufferDesc::CalculateOffset(to_multi_index(long_vector_data_begin_id)) /
+                    long_vector_size;
 
                 auto src_buff = thread_buff.template At<DstDataPerWrite>()[Number<buff_off>{}];
 

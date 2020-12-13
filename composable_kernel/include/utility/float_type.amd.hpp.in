@@ -25,15 +25,16 @@ typedef ushort ushort8_t __attribute__((ext_vector_type(8)));
 union float_vec2_t
 {
     StaticallyIndexedArray<float, 2> s1;
-    float2_t s2;
-    __host__ __device__ constexpr float_vec2_t() {s2 = {0, 0};}
+    StaticallyIndexedArray<float2_t, 1> s2;
+    __host__ __device__ constexpr float_vec2_t() {}
 };
 
 union float_vec4_t
 {
     StaticallyIndexedArray<float, 4> s1;
-    float4_t s4;
-    __host__ __device__ constexpr float_vec4_t() {s4 = {0, 0, 0, 0};}
+    StaticallyIndexedArray<float2_t, 2> s2;
+    StaticallyIndexedArray<float4_t, 1> s4;
+    __host__ __device__ constexpr float_vec4_t() {}
 
     template<index_t vs>
     __host__ __device__ auto& At();
@@ -42,6 +43,12 @@ union float_vec4_t
     __host__ __device__ auto& At<1>()
     {
         return s1;
+    }
+
+    template<>
+    __host__ __device__ auto& At<2>()
+    {
+        return s2;
     }
 
     template<>
@@ -54,9 +61,9 @@ union float_vec4_t
 union float_vec8_t
 {
     StaticallyIndexedArray<float, 8> s1;
-    StaticallyIndexedArray<float_vec2_t, 4> s2;
-    StaticallyIndexedArray<float_vec4_t, 2> s4;
-    float8_t s8;
+    StaticallyIndexedArray<float2_t, 4> s2;
+    StaticallyIndexedArray<float4_t, 2> s4;
+    StaticallyIndexedArray<float8_t, 1> s8;
     __host__ __device__ constexpr float_vec8_t() {}
 };
 
