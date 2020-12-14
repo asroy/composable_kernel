@@ -27,9 +27,6 @@
 #include "amd_inline_asm.hpp"
 #endif
 
-#if CK_USE_AMD_XDLOPS
 #include "amd_xdlops.hpp"
-#include "amd_xdlops_inline_asm.hpp"
-#endif
 
 #endif
