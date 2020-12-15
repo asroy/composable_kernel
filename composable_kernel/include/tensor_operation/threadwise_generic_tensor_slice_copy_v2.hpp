@@ -19,7 +19,6 @@ template <typename SrcDesc,
           typename SliceLengths,
           typename SrcDimAccessOrder,
           typename DstDimAccessOrder,
-          typename BufferVectorType,
           index_t SrcVectorReadDim,
           index_t DstVectorWriteDim,
           index_t SrcDataPerRead,
@@ -34,6 +33,10 @@ struct ThreadwiseGenericTensorSliceCopy_v5
     using ThreadBufferDesc = decltype(make_native_tensor_descriptor_packed(SliceLengths{}));
 
     static constexpr index_t ThreadBufferSize = ThreadBufferDesc::GetElementSpace();
+
+    using ThreadBufferType = decltype(GetRegBuffer<float, ThreadBufferSize>());
+
+    ThreadBufferType thread_buff;
 
     static constexpr index_t nDim = SliceLengths::Size();
     using Index                   = MultiIndex<nDim>;
@@ -252,8 +255,6 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         static_if<PositiveDirection>{}([&](auto) { mDstSliceOrigin += step_sizes; })
             .Else([&](auto) { mDstSliceOrigin -= step_sizes; });
     }
-
-    BufferVectorType thread_buff;
 
     private:
     SrcCoord mSrcSliceOrigin;
