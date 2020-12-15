@@ -19,6 +19,7 @@ template <typename SrcDesc,
           typename SliceLengths,
           typename SrcDimAccessOrder,
           typename DstDimAccessOrder,
+          typename BufferVectorType,
           index_t SrcVectorReadDim,
           index_t DstVectorWriteDim,
           index_t SrcDataPerRead,
@@ -60,7 +61,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
             SliceLengths{}[DstVectorWriteDim] % math::lcm(SrcDataPerRead, DstDataPerWrite) == 0,
             "wrong! cannot evenly divide");
 
-        static_assert(ThreadBufferSize == 4, "");
+        static_assert(ThreadBufferSize == 8 || ThreadBufferSize == 16, "");
     }
 
     __device__ constexpr ThreadwiseGenericTensorSliceCopy_v5()
@@ -252,7 +253,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
             .Else([&](auto) { mDstSliceOrigin -= step_sizes; });
     }
 
-    float_vec4_t thread_buff;
+    BufferVectorType thread_buff;
 
     private:
     SrcCoord mSrcSliceOrigin;

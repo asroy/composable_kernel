@@ -141,12 +141,14 @@ struct BlockwiseGenericTensorSliceCopy_v5
 
     private:
     using ThreadBufferDesc = decltype(make_native_tensor_descriptor_packed(ThreadSliceLengths{}));
+    using ThreadBufferType = decltype(GetRegBuffer<float, GetThreadBufferSize()>());
 
     using ThreadwiseCopy = ThreadwiseGenericTensorSliceCopy_v5<BlockSrcDesc,
                                                                BlockDstDesc,
                                                                ThreadSliceLengths,
                                                                SrcDimAccessOrder,
                                                                DstDimAccessOrder,
+                                                               ThreadBufferType,
                                                                SrcVectoReadDim,
                                                                DstVectorWriteDim,
                                                                SrcDataPerRead,
