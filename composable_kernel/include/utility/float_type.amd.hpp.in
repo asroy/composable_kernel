@@ -37,22 +37,22 @@ union float_vec4_t
     __host__ __device__ constexpr float_vec4_t() {}
 
     template <index_t vs>
-    __host__ __device__ auto& At();
+    __host__ __device__ auto& At(Number<vs>);
 
     template <>
-    __host__ __device__ auto& At<1>()
+    __host__ __device__ auto& At(Number<1>)
     {
         return s1;
     }
 
     template <>
-    __host__ __device__ auto& At<2>()
+    __host__ __device__ auto& At(Number<2>)
     {
         return s2;
     }
 
     template <>
-    __host__ __device__ auto& At<4>()
+    __host__ __device__ auto& At(Number<4>)
     {
         return s4;
     }
@@ -67,28 +67,28 @@ union float_vec8_t
     __host__ __device__ constexpr float_vec8_t() {}
 
     template <index_t vs>
-    __host__ __device__ auto& At();
+    __host__ __device__ auto& At(Number<vs>);
 
     template <>
-    __host__ __device__ auto& At<1>()
+    __host__ __device__ auto& At(Number<1>)
     {
         return s1;
     }
 
     template <>
-    __host__ __device__ auto& At<2>()
+    __host__ __device__ auto& At(Number<2>)
     {
         return s2;
     }
 
     template <>
-    __host__ __device__ auto& At<4>()
+    __host__ __device__ auto& At(Number<4>)
     {
         return s4;
     }
 
     template <>
-    __host__ __device__ auto& At<8>()
+    __host__ __device__ auto& At(Number<8>)
     {
         return s8;
     }
@@ -104,34 +104,34 @@ union float_vec16_t
     __host__ __device__ constexpr float_vec16_t() {}
 
     template <index_t vs>
-    __host__ __device__ auto& At();
+    __host__ __device__ auto& At(Number<vs>);
 
     template <>
-    __host__ __device__ auto& At<1>()
+    __host__ __device__ auto& At(Number<1>)
     {
         return s1;
     }
 
     template <>
-    __host__ __device__ auto& At<2>()
+    __host__ __device__ auto& At(Number<2>)
     {
         return s2;
     }
 
     template <>
-    __host__ __device__ auto& At<4>()
+    __host__ __device__ auto& At(Number<4>)
     {
         return s4;
     }
 
     template <>
-    __host__ __device__ auto& At<8>()
+    __host__ __device__ auto& At(Number<8>)
     {
         return s8;
     }
 
     template <>
-    __host__ __device__ auto& At<16>()
+    __host__ __device__ auto& At(Number<16>)
     {
         return s16;
     }
