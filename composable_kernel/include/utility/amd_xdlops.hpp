@@ -93,11 +93,12 @@ struct intrin_mfma_f32_32x32x1f32<64, 128, AStride, BStride>
 template <index_t AStride, index_t BStride>
 struct intrin_mfma_f32_32x32x1f32<64, 64, AStride, BStride>
 {
-    __device__ static c_vec32_2_t::VecType
-    run(const float* reg_a, const float* reg_b, c_vec32_2_t::VecType reg_c)
+    __device__ static float_vec64_t run(const float* reg_a, const float* reg_b, float_vec64_t reg_c)
     {
-        reg_c.s.x = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(reg_a[0], reg_b[0], reg_c.s.x, 1, 0, 0);
-        reg_c.s.y = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(reg_a[0], reg_b[0], reg_c.s.y, 1, 1, 0);
+        reg_c.At(Number<32>{})(Number<0>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
+            reg_a[0], reg_b[0], reg_c.At(Number<32>{})[Number<0>{}], 1, 0, 0);
+        reg_c.At(Number<32>{})(Number<1>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
+            reg_a[0], reg_b[0], reg_c.At(Number<32>{})[Number<1>{}], 1, 1, 0);
         return reg_c;
     }
 };
@@ -464,5 +465,5 @@ struct intrin_mfma_f32_4x4x2bf16<8, 64>
         return reg_c;
     }
 };
-}
+} // namespace ck
 #endif

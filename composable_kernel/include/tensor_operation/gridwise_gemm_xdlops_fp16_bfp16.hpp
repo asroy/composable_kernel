@@ -209,7 +209,8 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
         __shared__ ABFloat p_b_block[b_block_space];
 
         // get zero-initialized output register of vector type
-        auto c_thread_vec = blockwise_gemm.CreateOutputVecZero();
+        // auto c_thread_vec = blockwise_gemm.CreateOutputVecZero();
+        auto c_thread_vec = float_vec128_t{};
 
         // preload data into LDS
         {

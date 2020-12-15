@@ -10,6 +10,8 @@ typedef float float4_t __attribute__((ext_vector_type(4)));
 typedef float float8_t __attribute__((ext_vector_type(8)));
 typedef float float16_t __attribute__((ext_vector_type(16)));
 typedef float float32_t __attribute__((ext_vector_type(32)));
+typedef float float64_t __attribute__((ext_vector_type(64)));
+typedef float float128_t __attribute__((ext_vector_type(128)));
 
 // float16
 typedef _Float16 half_t;
@@ -136,6 +138,107 @@ union float_vec16_t
         return s16;
     }
 };
+
+union float_vec32_t
+{
+    StaticallyIndexedArray<float, 32> s1;
+    StaticallyIndexedArray<float2_t, 16> s2;
+    StaticallyIndexedArray<float4_t, 8> s4;
+    StaticallyIndexedArray<float_vec8_t, 4> s8;
+    StaticallyIndexedArray<float_vec16_t, 2> s16;
+    StaticallyIndexedArray<float32_t, 1> s32;
+    __host__ __device__ constexpr float_vec32_t() {}
+
+    template <index_t vs>
+    __host__ __device__ auto& At(Number<vs>);
+
+    template <>
+    __host__ __device__ auto& At(Number<1>)
+    {
+        return s1;
+    }
+
+    template <>
+    __host__ __device__ auto& At(Number<2>)
+    {
+        return s2;
+    }
+
+    template <>
+    __host__ __device__ auto& At(Number<4>)
+    {
+        return s4;
+    }
+
+    template <>
+    __host__ __device__ auto& At(Number<8>)
+    {
+        return s8;
+    }
+
+    template <>
+    __host__ __device__ auto& At(Number<16>)
+    {
+        return s16;
+    }
+};
+
+union float_vec64_t
+{
+    StaticallyIndexedArray<float, 64> s1;
+    StaticallyIndexedArray<float32_t, 2> s32;
+    StaticallyIndexedArray<float64_t, 1> s64;
+    float n[64];
+    __host__ __device__ constexpr float_vec64_t() {}
+
+    template <index_t vs>
+    __host__ __device__ auto& At(Number<vs>);
+
+    template <>
+    __host__ __device__ auto& At(Number<1>)
+    {
+        return s1;
+    }
+
+    template <>
+    __host__ __device__ auto& At(Number<32>)
+    {
+        return s32;
+    }
+};
+
+union float_vec128_t
+{
+    StaticallyIndexedArray<float, 64> s1;
+    StaticallyIndexedArray<float32_t, 4> s32;
+    StaticallyIndexedArray<float_vec64_t, 2> s64;
+    StaticallyIndexedArray<float128_t, 1> s128;
+    float n[128];
+    __host__ __device__ constexpr float_vec128_t() {}
+
+    template <index_t vs>
+    __host__ __device__ auto& At(Number<vs>);
+
+    template <>
+    __host__ __device__ auto& At(Number<1>)
+    {
+        return s1;
+    }
+
+    template <>
+    __host__ __device__ auto& At(Number<32>)
+    {
+        return s32;
+    }
+
+    template <>
+    __host__ __device__ auto& At(Number<64>)
+    {
+        return s64;
+    }
+};
+
+
 
 template <typename T, index_t BufferSize>
 constexpr auto GetRegBuffer();
