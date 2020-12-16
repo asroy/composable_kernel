@@ -210,7 +210,8 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
 
         // get zero-initialized output register of vector type
         // auto c_thread_vec = blockwise_gemm.CreateOutputVecZero();
-        auto c_thread_vec = float_vec128_t{};
+        constexpr index_t c_thread_size = MPerBlock * NPerBlock / BlockSize;
+        auto c_thread_vec               = GetRegBuffer<AccFloat, c_thread_size>();
 
         // preload data into LDS
         {
@@ -325,7 +326,7 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
                                      m_thread_data_on_global % (M2 * M1) / M2,
                                      m_thread_data_on_global % M2,
                                      n_thread_data_on_global))
-                    .Run(c_thread_vec.At(Number<16>{})[Number<blk_id>{}], p_c_global);
+                    .Store(c_thread_vec.At(Number<M0 * M2>{})[Number<blk_id>{}], p_c_global);
             });
         }
     }

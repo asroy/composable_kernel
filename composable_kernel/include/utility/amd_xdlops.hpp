@@ -95,10 +95,10 @@ struct intrin_mfma_f32_32x32x1f32<64, 64, AStride, BStride>
 {
     __device__ static float_vec64_t run(const float* reg_a, const float* reg_b, float_vec64_t reg_c)
     {
-        reg_c.At(Number<32>{})(Number<0>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
-            reg_a[0], reg_b[0], reg_c.At(Number<32>{})[Number<0>{}], 1, 0, 0);
-        reg_c.At(Number<32>{})(Number<1>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
-            reg_a[0], reg_b[0], reg_c.At(Number<32>{})[Number<1>{}], 1, 1, 0);
+        reg_c.v32(Number<0>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
+            reg_a[0], reg_b[0], reg_c.v32[Number<0>{}], 1, 0, 0);
+        reg_c.v32(Number<1>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
+            reg_a[0], reg_b[0], reg_c.v32[Number<1>{}], 1, 1, 0);
         return reg_c;
     }
 };

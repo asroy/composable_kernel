@@ -84,9 +84,9 @@ struct ThreadwiseGenericTensorSliceCopy_v5
     }
 
     template <typename DstData, typename SrcData>
-    __device__ static void load_data(DstData& dst, const SrcData* p_src, index_t src_offset)
+    __device__ static auto load_data(const SrcData* p_src, index_t src_offset)
     {
-        dst = *reinterpret_cast<const DstData*>(&p_src[src_offset]);
+        return *reinterpret_cast<const DstData*>(&p_src[src_offset]);
     }
 
     template <typename DstData, typename SrcData>
@@ -104,9 +104,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         template <typename SrcCoord>
         __device__ static auto run(const float* p_src, const SrcCoord src_coord_begin)
         {
-            float r;
-            load_data(r, p_src, src_coord_begin.GetOffset());
-            return r;
+            return load_data<float>(p_src, src_coord_begin.GetOffset());
         }
     };
 
@@ -116,9 +114,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         template <typename SrcCoord>
         __device__ static auto run(const float* p_src, const SrcCoord src_coord_begin)
         {
-            float2_t r;
-            load_data(r, p_src, src_coord_begin.GetOffset());
-            return r;
+            return load_data<float2_t>(p_src, src_coord_begin.GetOffset());
         }
     };
 
@@ -128,9 +124,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         template <typename SrcCoord>
         __device__ static auto run(const float* p_src, const SrcCoord src_coord_begin)
         {
-            float4_t r;
-            load_data(r, p_src, src_coord_begin.GetOffset());
-            return r;
+            return load_data<float4_t>(p_src, src_coord_begin.GetOffset());
         }
     };
 
@@ -237,7 +231,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
     }
 
     template <typename SrcData, typename DstData>
-    __device__ void Run(SrcData src, DstData* p_dst)
+    __device__ void Store(SrcData src, DstData* p_dst)
     {
         constexpr auto vector_access_dim = Number<DstVectorWriteDim>{};
 

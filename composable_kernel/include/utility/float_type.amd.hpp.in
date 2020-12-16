@@ -186,7 +186,8 @@ union float_vec32_t
 union float_vec64_t
 {
     StaticallyIndexedArray<float, 64> s1;
-    StaticallyIndexedArray<float32_t, 2> s32;
+    StaticallyIndexedArray<float_vec32_t, 2> s32;
+    StaticallyIndexedArray<float32_t, 2> v32;
     StaticallyIndexedArray<float64_t, 1> s64;
     __host__ __device__ constexpr float_vec64_t() {}
 
@@ -210,7 +211,7 @@ union float_vec128_t
 {
     StaticallyIndexedArray<float, 64> s1;
     StaticallyIndexedArray<float_vec16_t, 8> s16;
-    StaticallyIndexedArray<float32_t, 4> s32;
+    StaticallyIndexedArray<float_vec32_t, 4> s32;
     StaticallyIndexedArray<float_vec64_t, 2> s64;
     StaticallyIndexedArray<float128_t, 1> s128;
     __host__ __device__ constexpr float_vec128_t() {}
@@ -262,6 +263,18 @@ template <>
 constexpr auto GetRegBuffer<float, 16>()
 {
     return float_vec16_t{};
+}
+
+template <>
+constexpr auto GetRegBuffer<float, 64>()
+{
+    return float_vec64_t{};
+}
+
+template <>
+constexpr auto GetRegBuffer<float, 128>()
+{
+    return float_vec128_t{};
 }
 
 struct c_vec32_4_t

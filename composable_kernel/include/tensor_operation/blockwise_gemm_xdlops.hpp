@@ -55,34 +55,6 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_xdlops
 
     __device__ constexpr auto GetOutputLayout() const { return XdlopsGemm.GetOutputLayout(); }
 
-#if CK_WORKAROUND_SWDEV_241664
-    template <index_t MRepeats_ = MRepeats, index_t NRepeats_ = NRepeats>
-    __device__ constexpr auto CreateOutputVecZero() const;
-
-    template <>
-    __device__ constexpr auto CreateOutputVecZero<2, 1>() const
-    {
-        return c_vec32_2_2_t::CreateVecZero();
-    }
-
-    template <>
-    __device__ constexpr auto CreateOutputVecZero<1, 2>() const
-    {
-        return c_vec32_2_2_t::CreateVecZero();
-    }
-
-    template <>
-    __device__ constexpr auto CreateOutputVecZero<1, 1>() const
-    {
-        return XdlopsGemm.GetOutputLayout().CreateOutputVecZero();
-    }
-#else
-    __device__ constexpr auto CreateOutputVecZero() const
-    {
-        return XdlopsGemm.GetOutputLayout().CreateOutputVecZero();
-    }
-#endif
-
     __device__ constexpr auto GetNumBlks() const
     {
 #if CK_WORKAROUND_SWDEV_241664

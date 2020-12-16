@@ -15,13 +15,13 @@ enum struct mfma_instr
     mfma_f32_4x4x1xf32,
     mfma_f32_32x32x2xf32, // k reduction
     mfma_f32_16x16x4xf32, // k reduction
-    // fp16
+                          // fp16
     mfma_f32_32x32x4f16,
     mfma_f32_16x16x4f16,
     mfma_f32_4x4x4f16,
     mfma_f32_32x32x8f16,  // k reduction
     mfma_f32_16x16x16f16, // k reduction
-    // bfp16
+                          // bfp16
     mfma_f32_32x32x2bf16,
     mfma_f32_16x16x2bf16,
     mfma_f32_4x4x2bf16,
@@ -535,8 +535,7 @@ template <mfma_instr instr,
           index_t MPerXdlops_,
           index_t NPerXdlops_,
           index_t MRepeats_,
-          index_t NRepeats_,
-          class OutputVecType_>
+          index_t NRepeats_>
 struct xdlops_info
 {
     static constexpr auto mfma_type = mfma_info<instr>{};
@@ -552,8 +551,6 @@ struct xdlops_info
     {
         return (mfma_type.num_output_blks == 1) && (mfma_type.num_input_blks > 1);
     }
-
-    static constexpr auto OutputVecType = OutputVecType_{};
 };
 
 template <class data_type,
@@ -635,27 +632,59 @@ struct XdlopsGemm_t
                     }
                 }
             }
-
-        }).Else([&](auto) {
-            static_if<IsABroadcast>{}([&](auto) {
-
-                for(index_t m_i = 0; m_i < MRepeats; ++m_i)
-                {
-                    for(index_t n_i = 0; n_i < NRepeats; ++n_i)
+        })
+            .Else([&](auto) {
+                static_if<IsABroadcast>{}([&](auto) {
+                    for(index_t m_i = 0; m_i < MRepeats; ++m_i)
                     {
-                        // ABroadcast
+                        for(index_t n_i = 0; n_i < NRepeats; ++n_i)
+                        {
+                            // ABroadcast
+                            for(index_t k = 0; k < K; ++k)
+                            {
+                                for(index_t b = 0; b < MPerXdlops / mfma_type.m; ++b)
+                                {
+                                    for(index_t n = 0; n < mfma_type.num_input_blks; ++n)
+                                    {
+                                        index_t a_off = k * M + b * mfma_type.m + MPerXdlops * m_i;
+                                        index_t b_off = k * N + n * mfma_type.num_threads_blk +
+                                                        NPerXdlops * n_i;
+                                        index_t c_off =
+                                            n * mfma_type.num_regs_blk +
+                                            b * mfma_type.num_regs_xdlops +
+                                            (NRepeats * m_i + n_i) * GetRegSizePerXdlops();
+
+                                        for(index_t m = 0; m < mfma_type.num_regs_blk; ++m)
+                                        {
+                                            index_t aindex = m % mfma_type.group_size +
+                                                             blk_id * mfma_type.group_size +
+                                                             m / mfma_type.group_size *
+                                                                 (mfma_type.group_size *
+                                                                  mfma_type.num_input_blks);
+                                            index_t bindex = blk_td;
+                                            p_c_thread.n[m + c_off] +=
+                                                inner_product_with_conversion<float>{}(
+                                                    p_a_wave[aindex + a_off],
+                                                    p_b_wave[bindex + b_off]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                })
+                    .Else([&](auto) {
+                        // BBroadcast
                         for(index_t k = 0; k < K; ++k)
                         {
-                            for(index_t b = 0; b < MPerXdlops / mfma_type.m; ++b)
+                            for(index_t b = 0; b < NPerXdlops / mfma_type.n; ++b)
                             {
                                 for(index_t n = 0; n < mfma_type.num_input_blks; ++n)
                                 {
-                                    index_t a_off = k * M + b * mfma_type.m + MPerXdlops * m_i;
-                                    index_t b_off =
-                                        k * N + n * mfma_type.num_threads_blk + NPerXdlops * n_i;
-                                    index_t c_off = n * mfma_type.num_regs_blk +
-                                                    b * mfma_type.num_regs_xdlops +
-                                                    (NRepeats * m_i + n_i) * GetRegSizePerXdlops();
+                                    index_t a_off = k * M + n * mfma_type.m;
+                                    index_t b_off = k * N + b * mfma_type.n;
+                                    index_t c_off =
+                                        n * mfma_type.num_regs_blk + b * mfma_type.num_regs_xdlops;
 
                                     for(index_t m = 0; m < mfma_type.num_regs_blk; ++m)
                                     {
@@ -672,37 +701,8 @@ struct XdlopsGemm_t
                                 }
                             }
                         }
-                    }
-                }
-
-            }).Else([&](auto) {
-                // BBroadcast
-                for(index_t k = 0; k < K; ++k)
-                {
-                    for(index_t b = 0; b < NPerXdlops / mfma_type.n; ++b)
-                    {
-                        for(index_t n = 0; n < mfma_type.num_input_blks; ++n)
-                        {
-                            index_t a_off = k * M + n * mfma_type.m;
-                            index_t b_off = k * N + b * mfma_type.n;
-                            index_t c_off =
-                                n * mfma_type.num_regs_blk + b * mfma_type.num_regs_xdlops;
-
-                            for(index_t m = 0; m < mfma_type.num_regs_blk; ++m)
-                            {
-                                index_t aindex =
-                                    m % mfma_type.group_size + blk_id * mfma_type.group_size +
-                                    m / mfma_type.group_size *
-                                        (mfma_type.group_size * mfma_type.num_input_blks);
-                                index_t bindex = blk_td;
-                                p_c_thread.n[m + c_off] += inner_product_with_conversion<float>{}(
-                                    p_a_wave[aindex + a_off], p_b_wave[bindex + b_off]);
-                            }
-                        }
-                    }
-                }
+                    });
             });
-        });
 
         return p_c_thread;
     }
@@ -745,13 +745,12 @@ struct XdlopsGemm_t
         constexpr index_t BStride = K * KRepeats;
 
         static_if<!IsKReduction>{}([&](auto) {
-
             for(index_t m_i = 0; m_i < MRepeats; ++m_i)
-                for(index_t k_i      = 0; k_i < K; ++k_i)
+                for(index_t k_i = 0; k_i < K; ++k_i)
                     a[k_i + m_i * K] = p_a_wave[k_i * M + laneId + MPerXdlops * m_i];
 
             for(index_t n_i = 0; n_i < NRepeats; ++n_i)
-                for(index_t k_i      = 0; k_i < K; ++k_i)
+                for(index_t k_i = 0; k_i < K; ++k_i)
                     b[k_i + n_i * K] = p_b_wave[k_i * N + laneId + NPerXdlops * n_i];
 
 #if CK_WORKAROUND_SWDEV_229564
@@ -765,32 +764,31 @@ struct XdlopsGemm_t
                                                     BStride>(
                     &pa[k_i * mfma_type.k_base], &pb[k_i * mfma_type.k_base], p_c_thread);
             }
+        })
+            .Else([&](auto) {
+                const index_t blk_id = laneId / mfma_type.num_threads_blk;
+                const index_t blk_td = laneId % mfma_type.num_threads_blk;
 
-        }).Else([&](auto) {
-
-            const index_t blk_id = laneId / mfma_type.num_threads_blk;
-            const index_t blk_td = laneId % mfma_type.num_threads_blk;
-
-            // load into registers
-            for(index_t k_i = 0; k_i < K; k_i += mfma_type.num_input_blks)
-            {
-                a[k_i] = p_a_wave[(k_i + blk_id) * M + blk_td];
-                b[k_i] = p_b_wave[(k_i + blk_id) * N + blk_td];
-            }
+                // load into registers
+                for(index_t k_i = 0; k_i < K; k_i += mfma_type.num_input_blks)
+                {
+                    a[k_i] = p_a_wave[(k_i + blk_id) * M + blk_td];
+                    b[k_i] = p_b_wave[(k_i + blk_id) * N + blk_td];
+                }
 
 #if CK_WORKAROUND_SWDEV_229564
 #pragma unroll
 #endif
-            for(index_t k_i = 0; k_i < K; k_i += mfma_type.num_input_blks)
-            {
-                for(index_t i = 0; i < KRepeats; ++i)
-                    p_c_thread = mfma_type.template run<MPerXdlops, NPerXdlops, AStride, BStride>(
-                        &pa[(k_i * KRepeats + i) * mfma_type.k_base],
-                        &pb[(k_i * KRepeats + i) * mfma_type.k_base],
-                        p_c_thread);
-            }
-
-        });
+                for(index_t k_i = 0; k_i < K; k_i += mfma_type.num_input_blks)
+                {
+                    for(index_t i = 0; i < KRepeats; ++i)
+                        p_c_thread =
+                            mfma_type.template run<MPerXdlops, NPerXdlops, AStride, BStride>(
+                                &pa[(k_i * KRepeats + i) * mfma_type.k_base],
+                                &pb[(k_i * KRepeats + i) * mfma_type.k_base],
+                                p_c_thread);
+                }
+            });
 #endif
 
         return p_c_thread;
@@ -837,199 +835,199 @@ struct XdlopsGemm_t
     template <>
     static constexpr auto GetXdlopsInfo<float, 128, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 64, 2, 1, c_vec32_4_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 64, 2, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 64, 128>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 64, 1, 2, c_vec32_4_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 64, 1, 2>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 64, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 64, 1, 1, c_vec32_2_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 64, 32>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 32, 1, 1, c_vec32_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 32, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 32, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 32, 64, 1, 1, c_vec32_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 32, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 64, 16>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_16x16x1xf32, 64, 16, 1, 1, c_vec16_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_16x16x1xf32, 64, 16, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 16, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_16x16x1xf32, 16, 64, 1, 1, c_vec16_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_16x16x1xf32, 16, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 8, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_4x4x1xf32, 8, 64, 1, 1, c_vec4_2_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_4x4x1xf32, 8, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 4, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_4x4x1xf32, 4, 64, 1, 1, c_vec4_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_4x4x1xf32, 4, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 32, 32>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x2xf32, 32, 32, 1, 1, c_vec16_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x2xf32, 32, 32, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 16, 16>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_16x16x4xf32, 16, 16, 1, 1, c_vec4_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_16x16x4xf32, 16, 16, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 128, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 64, 2, 1, c_vec32_4_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 64, 2, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 64, 128>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 64, 1, 2, c_vec32_4_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 64, 1, 2>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 64, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 64, 1, 1, c_vec32_2_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 64, 32>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 32, 1, 1, c_vec32_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 32, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 32, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 32, 64, 1, 1, c_vec32_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 32, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 64, 16>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_16x16x4f16, 64, 16, 1, 1, c_vec16_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_16x16x4f16, 64, 16, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 16, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_16x16x4f16, 16, 64, 1, 1, c_vec16_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_16x16x4f16, 16, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 8, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_4x4x4f16, 8, 64, 1, 1, c_vec4_2_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_4x4x4f16, 8, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 4, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_4x4x4f16, 4, 64, 1, 1, c_vec4_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_4x4x4f16, 4, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 32, 32>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x8f16, 32, 32, 1, 1, c_vec16_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x8f16, 32, 32, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 16, 16>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_16x16x16f16, 16, 16, 1, 1, c_vec4_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_16x16x16f16, 16, 16, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<ushort, 128, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x2bf16, 64, 64, 2, 1, c_vec32_4_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x2bf16, 64, 64, 2, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<ushort, 64, 128>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x2bf16, 64, 64, 1, 2, c_vec32_4_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x2bf16, 64, 64, 1, 2>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<ushort, 64, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x2bf16, 64, 64, 1, 1, c_vec32_2_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x2bf16, 64, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<ushort, 64, 32>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x2bf16, 64, 32, 1, 1, c_vec32_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x2bf16, 64, 32, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<ushort, 32, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x2bf16, 32, 64, 1, 1, c_vec32_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x2bf16, 32, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<ushort, 64, 16>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_16x16x2bf16, 64, 16, 1, 1, c_vec16_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_16x16x2bf16, 64, 16, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<ushort, 16, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_16x16x2bf16, 16, 64, 1, 1, c_vec16_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_16x16x2bf16, 16, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<ushort, 8, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_4x4x2bf16, 8, 64, 1, 1, c_vec4_2_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_4x4x2bf16, 8, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<ushort, 4, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_4x4x2bf16, 4, 64, 1, 1, c_vec4_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_4x4x2bf16, 4, 64, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<ushort, 32, 32>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x4bf16, 32, 32, 1, 1, c_vec16_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x4bf16, 32, 32, 1, 1>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<ushort, 16, 16>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_16x16x8bf16, 16, 16, 1, 1, c_vec4_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_16x16x8bf16, 16, 16, 1, 1>{};
     }
 
     static constexpr index_t MRepeats   = GetXdlopsInfo().MRepeats;
@@ -1054,11 +1052,6 @@ struct XdlopsGemm_t
         __device__ static constexpr index_t GetNumBlks()
         {
             return GetNumBlksPerXdlops() * MRepeats * NRepeats;
-        }
-
-        __device__ static constexpr auto CreateOutputVecZero()
-        {
-            return GetXdlopsInfo().OutputVecType.CreateVecZero();
         }
     };
 
