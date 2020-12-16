@@ -326,7 +326,7 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
                                      m_thread_data_on_global % (M2 * M1) / M2,
                                      m_thread_data_on_global % M2,
                                      n_thread_data_on_global))
-                    .Store(c_thread_vec.At(Number<M0 * M2>{})[Number<blk_id>{}], p_c_global);
+                    .Store(c_thread_vec.GetVector(Number<M0 * M2>{})[Number<blk_id>{}], p_c_global);
             });
         }
     }

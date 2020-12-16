@@ -39,22 +39,22 @@ union float_vec4_t
     __host__ __device__ constexpr float_vec4_t() {}
 
     template <index_t vs>
-    __host__ __device__ auto& At(Number<vs>);
+    __host__ __device__ auto& GetVector(Number<vs>);
 
     template <>
-    __host__ __device__ auto& At(Number<1>)
+    __host__ __device__ auto& GetVector(Number<1>)
     {
         return s1;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<2>)
+    __host__ __device__ auto& GetVector(Number<2>)
     {
         return s2;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<4>)
+    __host__ __device__ auto& GetVector(Number<4>)
     {
         return s4;
     }
@@ -69,28 +69,28 @@ union float_vec8_t
     __host__ __device__ constexpr float_vec8_t() {}
 
     template <index_t vs>
-    __host__ __device__ auto& At(Number<vs>);
+    __host__ __device__ auto& GetVector(Number<vs>);
 
     template <>
-    __host__ __device__ auto& At(Number<1>)
+    __host__ __device__ auto& GetVector(Number<1>)
     {
         return s1;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<2>)
+    __host__ __device__ auto& GetVector(Number<2>)
     {
         return s2;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<4>)
+    __host__ __device__ auto& GetVector(Number<4>)
     {
         return s4;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<8>)
+    __host__ __device__ auto& GetVector(Number<8>)
     {
         return s8;
     }
@@ -106,34 +106,34 @@ union float_vec16_t
     __host__ __device__ constexpr float_vec16_t() {}
 
     template <index_t vs>
-    __host__ __device__ auto& At(Number<vs>);
+    __host__ __device__ auto& GetVector(Number<vs>);
 
     template <>
-    __host__ __device__ auto& At(Number<1>)
+    __host__ __device__ auto& GetVector(Number<1>)
     {
         return s1;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<2>)
+    __host__ __device__ auto& GetVector(Number<2>)
     {
         return s2;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<4>)
+    __host__ __device__ auto& GetVector(Number<4>)
     {
         return s4;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<8>)
+    __host__ __device__ auto& GetVector(Number<8>)
     {
         return s8;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<16>)
+    __host__ __device__ auto& GetVector(Number<16>)
     {
         return s16;
     }
@@ -150,34 +150,34 @@ union float_vec32_t
     __host__ __device__ constexpr float_vec32_t() {}
 
     template <index_t vs>
-    __host__ __device__ auto& At(Number<vs>);
+    __host__ __device__ auto& GetVector(Number<vs>);
 
     template <>
-    __host__ __device__ auto& At(Number<1>)
+    __host__ __device__ auto& GetVector(Number<1>)
     {
         return s1;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<2>)
+    __host__ __device__ auto& GetVector(Number<2>)
     {
         return s2;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<4>)
+    __host__ __device__ auto& GetVector(Number<4>)
     {
         return s4;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<8>)
+    __host__ __device__ auto& GetVector(Number<8>)
     {
         return s8;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<16>)
+    __host__ __device__ auto& GetVector(Number<16>)
     {
         return s16;
     }
@@ -192,16 +192,16 @@ union float_vec64_t
     __host__ __device__ constexpr float_vec64_t() {}
 
     template <index_t vs>
-    __host__ __device__ auto& At(Number<vs>);
+    __host__ __device__ auto& GetVector(Number<vs>);
 
     template <>
-    __host__ __device__ auto& At(Number<1>)
+    __host__ __device__ auto& GetVector(Number<1>)
     {
         return s1;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<32>)
+    __host__ __device__ auto& GetVector(Number<32>)
     {
         return s32;
     }
@@ -217,28 +217,28 @@ union float_vec128_t
     __host__ __device__ constexpr float_vec128_t() {}
 
     template <index_t vs>
-    __host__ __device__ auto& At(Number<vs>);
+    __host__ __device__ auto& GetVector(Number<vs>);
 
     template <>
-    __host__ __device__ auto& At(Number<1>)
+    __host__ __device__ auto& GetVector(Number<1>)
     {
         return s1;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<16>)
+    __host__ __device__ auto& GetVector(Number<16>)
     {
         return s16;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<32>)
+    __host__ __device__ auto& GetVector(Number<32>)
     {
         return s32;
     }
 
     template <>
-    __host__ __device__ auto& At(Number<64>)
+    __host__ __device__ auto& GetVector(Number<64>)
     {
         return s64;
     }

@@ -103,10 +103,10 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_xdlops
                                      const FloatB* __restrict__ p_b_block,
                                      FloatC p_c_thread)
         {
-            p_c_thread.At(Number<64>{})(Number<0>{}) = XdlopsGemm.template Run<M, N, K>(
-                p_a_block, p_b_block, p_c_thread.At(Number<64>{})[Number<0>{}]);
-            p_c_thread.At(Number<64>{})(Number<1>{}) = XdlopsGemm.template Run<M, N, K>(
-                p_a_block + MPerXdlops, p_b_block, p_c_thread.At(Number<64>{})[Number<1>{}]);
+            p_c_thread.GetVector(Number<64>{})(Number<0>{}) = XdlopsGemm.template Run<M, N, K>(
+                p_a_block, p_b_block, p_c_thread.GetVector(Number<64>{})[Number<0>{}]);
+            p_c_thread.GetVector(Number<64>{})(Number<1>{}) = XdlopsGemm.template Run<M, N, K>(
+                p_a_block + MPerXdlops, p_b_block, p_c_thread.GetVector(Number<64>{})[Number<1>{}]);
 
             return p_c_thread;
         }
