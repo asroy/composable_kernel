@@ -80,6 +80,8 @@ void gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
     constexpr index_t GridSize = math::integer_divide_ceil(GemmM, GemmMPerBlock) *
                                  math::integer_divide_ceil(GemmN, GemmNPerBlock);
 
+    static_assert(GridSize == 1568, "");
+
     // A matrix copy
     constexpr index_t GemmABlockCopyClusterLengths_GemmK     = 4;
     constexpr index_t GemmABlockCopyClusterLengths_GemmM     = 64;
@@ -139,13 +141,13 @@ void gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
     using GemmBBlockCopySrcAccessOrder = Sequence<0, 1, 3, 2>; // [GemmG, GemmK, GemmKPack, GemmN]
     using GemmBBlockCopyDstAccessOrder = Sequence<0, 1, 2, 3>; // [GemmG, GemmK, GemmN, GemmKPack]
 
-    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN      = 1;
-    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmKPack = 1;
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN      = 4;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmKPack = 4;
 
     // gridwise GEMM
     constexpr auto wkgrp_schd_order = NBlock1MBlock0;
 
-    using TDevice = typename conditional<is_same<half_float::half, T>::value, half_t, T>::type;
+    using TDevice = float;
 
     using gridwise_conv = GridwiseConvolutionForwardImplicitGemm_v4r4_xdlops_nchw_kcyx_nkhw<
         GridSize,

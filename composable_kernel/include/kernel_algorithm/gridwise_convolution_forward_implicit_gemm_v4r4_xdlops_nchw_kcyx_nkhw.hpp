@@ -158,7 +158,8 @@ struct GridwiseConvolutionForwardImplicitGemm_v4r4_xdlops_nchw_kcyx_nkhw
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}));
 
         // gridwise batch-GEMM
-        constexpr auto gridwise_gemm = GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2<
+        // constexpr auto gridwise_gemm = GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2<
+        constexpr auto gridwise_gemm = GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2_org<
             GridSize,
             BlockSize,
             ABFloat,
