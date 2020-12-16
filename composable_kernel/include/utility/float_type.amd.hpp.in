@@ -188,7 +188,6 @@ union float_vec64_t
     StaticallyIndexedArray<float, 64> s1;
     StaticallyIndexedArray<float32_t, 2> s32;
     StaticallyIndexedArray<float64_t, 1> s64;
-    float n[64];
     __host__ __device__ constexpr float_vec64_t() {}
 
     template <index_t vs>
@@ -210,10 +209,10 @@ union float_vec64_t
 union float_vec128_t
 {
     StaticallyIndexedArray<float, 64> s1;
+    StaticallyIndexedArray<float_vec16_t, 8> s16;
     StaticallyIndexedArray<float32_t, 4> s32;
     StaticallyIndexedArray<float_vec64_t, 2> s64;
     StaticallyIndexedArray<float128_t, 1> s128;
-    float n[128];
     __host__ __device__ constexpr float_vec128_t() {}
 
     template <index_t vs>
@@ -223,6 +222,12 @@ union float_vec128_t
     __host__ __device__ auto& At(Number<1>)
     {
         return s1;
+    }
+
+    template <>
+    __host__ __device__ auto& At(Number<16>)
+    {
+        return s16;
     }
 
     template <>
@@ -237,8 +242,6 @@ union float_vec128_t
         return s64;
     }
 };
-
-
 
 template <typename T, index_t BufferSize>
 constexpr auto GetRegBuffer();

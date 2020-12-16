@@ -236,6 +236,38 @@ struct ThreadwiseGenericTensorSliceCopy_v5
             });
     }
 
+    template <typename SrcData, typename DstData>
+    __device__ void Run(SrcData src, DstData* p_dst)
+    {
+        constexpr auto vector_access_dim = Number<DstVectorWriteDim>{};
+
+        constexpr auto dst_data_per_access = Number<DstDataPerWrite>{};
+
+        static_assert(DstDataPerWrite == 1 || DstDataPerWrite == 2 || DstDataPerWrite == 4, "");
+
+        constexpr auto long_vector_size = dst_data_per_access;
+
+        constexpr auto long_vector_access_lengths = SliceLengths::Modify(
+            vector_access_dim, SliceLengths::Get(vector_access_dim) / long_vector_size);
+
+        static_ford<decltype(long_vector_access_lengths), DstDimAccessOrder>{}(
+            [&](auto long_vector_access_id) {
+                constexpr auto long_vector_data_begin_id = long_vector_access_id.Modify(
+                    Number<vector_access_dim>{},
+                    Number<long_vector_size * long_vector_access_id[vector_access_dim]>{});
+
+                constexpr auto buff_off =
+                    ThreadBufferDesc::CalculateOffset(to_multi_index(long_vector_data_begin_id)) /
+                    long_vector_size;
+
+                auto src_buff = src.At(Number<DstDataPerWrite>{})[Number<buff_off>{}];
+
+                const auto dst_coord = mDstSliceOrigin + to_multi_index(long_vector_data_begin_id);
+
+                vector_data_store<DstData, DstDataPerWrite>::run(p_dst, src_buff, dst_coord);
+            });
+    }
+
     template <typename T, bool PositiveDirection>
     __device__ void MoveSrcSliceWindow(const T& step_sizes_,
                                        integral_constant<bool, PositiveDirection>)
