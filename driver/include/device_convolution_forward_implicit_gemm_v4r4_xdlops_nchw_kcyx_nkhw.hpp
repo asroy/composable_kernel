@@ -76,6 +76,7 @@ void gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
 
     constexpr index_t GemmM = K;
     constexpr index_t GemmN = N * Ho * Wo;
+    constexpr index_t GemmK = C * Y * X;
 
     constexpr index_t GridSize = math::integer_divide_ceil(GemmM, GemmMPerBlock) *
                                  math::integer_divide_ceil(GemmN, GemmNPerBlock);
