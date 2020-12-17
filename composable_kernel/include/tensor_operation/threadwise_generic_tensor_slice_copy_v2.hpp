@@ -95,7 +95,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         *reinterpret_cast<SrcData*>(&p_dst[dst_offset]) = src_data;
     }
 
-#if 1
+#if 0
     template <typename SrcData, index_t SrcDataPerAccess>
     struct vector_data_load;
 
@@ -129,17 +129,12 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         }
     };
 #else
-    template <typename SrcData, index_t SrcDataPerAccess>
-    struct vector_data_load
+    template <index_t SrcDataPerAccess, index_t SrcDataRange, typename SrcData, typename SrcCoord>
+    __device__ static auto vector_data_load(const SrcData* p_src, const SrcCoord src_coord_begin)
     {
-        template <typename SrcCoord>
-        __device__ static auto run(const float* p_src, const SrcCoord src_coord_begin)
-        {
-            auto src_offset = src_coord_begin.GetOffset();
-            return amd_buffer_load<SrcData, SrcDataPerAccess>(
-                p_src, src_offset, true, SrcDataPerAccess);
-        }
-    };
+        auto src_offset = src_coord_begin.GetOffset();
+        return amd_buffer_load<SrcData, SrcDataPerAccess>(p_src, src_offset, true, SrcDataRange);
+    }
 
 #endif
 
@@ -202,7 +197,8 @@ struct ThreadwiseGenericTensorSliceCopy_v5
                 // load data from src to the long-vector buffer
                 const auto src_coord = mSrcSliceOrigin + to_multi_index(long_vector_data_begin_id);
 
-                auto src_buff = vector_data_load<SrcData, SrcDataPerRead>::run(p_src, src_coord);
+                auto src_buff =
+                    vector_data_load<SrcDataPerRead, SrcDesc::GetElementSpace()>(p_src, src_coord);
 
                 // store data from the long-vector buffer to dst
                 constexpr auto buff_off =
