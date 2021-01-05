@@ -29,8 +29,8 @@ int main(int argc, char* argv[])
     constexpr index_t HI = 56;
     constexpr index_t WI = 56;
     constexpr index_t K  = 128;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
 
     using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;
@@ -99,19 +99,6 @@ int main(int argc, char* argv[])
 #endif
     }
 
-#if 0
-    device_convolution_forward_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
-                                                         in_nchw,
-                                                         wei_kcyx_desc,
-                                                         wei_kcyx,
-                                                         out_nkhw_desc,
-                                                         out_nkhw_device,
-                                                         ConvStrides{},
-                                                         ConvDilations{},
-                                                         LeftPads{},
-                                                         RightPads{},
-                                                         nrepeat);
-#elif 1
     gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(in_nchw_desc,
                                                                           in_nchw,
                                                                           wei_kcyx_desc,
@@ -123,56 +110,6 @@ int main(int argc, char* argv[])
                                                                           LeftPads{},
                                                                           RightPads{},
                                                                           nrepeat);
-#elif 1
-    device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
-                                                                         in_nchw,
-                                                                         wei_kcyx_desc,
-                                                                         wei_kcyx,
-                                                                         out_nkhw_desc,
-                                                                         out_nkhw_device,
-                                                                         ConvStrides{},
-                                                                         ConvDilations{},
-                                                                         LeftPads{},
-                                                                         RightPads{},
-                                                                         nrepeat);
-#elif 0
-    device_dummy_static_transform(in_nchw_desc,
-                                  in_nchw,
-                                  wei_kcyx_desc,
-                                  wei_kcyx,
-                                  out_nkhw_desc,
-                                  out_nkhw_device,
-                                  ConvStrides{},
-                                  ConvDilations{},
-                                  LeftPads{},
-                                  RightPads{},
-                                  nrepeat);
-#elif 0
-    device_dummy_dynamic_transform_v1(in_nchw_desc,
-                                      in_nchw,
-                                      wei_kcyx_desc,
-                                      wei_kcyx,
-                                      out_nkhw_desc,
-                                      out_nkhw_device,
-                                      ConvStrides{},
-                                      ConvDilations{},
-                                      LeftPads{},
-                                      RightPads{},
-                                      nrepeat);
-#elif 1
-    device_dummy_dynamic_transform(in_nchw_desc,
-                                   in_nchw,
-                                   wei_kcyx_desc,
-                                   wei_kcyx,
-                                   out_nkhw_desc,
-                                   out_nkhw_device,
-                                   ConvStrides{},
-                                   ConvDilations{},
-                                   LeftPads{},
-                                   RightPads{},
-                                   nrepeat);
-#endif
-
     if(do_verification)
     {
 #if 0

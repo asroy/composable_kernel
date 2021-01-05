@@ -95,48 +95,12 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         *reinterpret_cast<SrcData*>(&p_dst[dst_offset]) = src_data;
     }
 
-#if 0
-    template <typename SrcData, index_t SrcDataPerAccess>
-    struct vector_data_load;
-
-    template <>
-    struct vector_data_load<float, 1>
-    {
-        template <typename SrcCoord>
-        __device__ static auto run(const float* p_src, const SrcCoord src_coord_begin)
-        {
-            return load_data<float>(p_src, src_coord_begin.GetOffset());
-        }
-    };
-
-    template <>
-    struct vector_data_load<float, 2>
-    {
-        template <typename SrcCoord>
-        __device__ static auto run(const float* p_src, const SrcCoord src_coord_begin)
-        {
-            return load_data<float2_t>(p_src, src_coord_begin.GetOffset());
-        }
-    };
-
-    template <>
-    struct vector_data_load<float, 4>
-    {
-        template <typename SrcCoord>
-        __device__ static auto run(const float* p_src, const SrcCoord src_coord_begin)
-        {
-            return load_data<float4_t>(p_src, src_coord_begin.GetOffset());
-        }
-    };
-#else
     template <index_t SrcDataPerAccess, index_t SrcDataRange, typename SrcData, typename SrcCoord>
     __device__ static auto vector_data_load(const SrcData* p_src, const SrcCoord src_coord_begin)
     {
         auto src_offset = src_coord_begin.GetOffset();
         return amd_buffer_load<SrcData, SrcDataPerAccess>(p_src, src_offset, true, SrcDataRange);
     }
-
-#endif
 
     template <typename DstData, index_t DstDataPerAccess>
     struct vector_data_store;

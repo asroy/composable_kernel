@@ -81,8 +81,6 @@ void gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
     constexpr index_t GridSize = math::integer_divide_ceil(GemmM, GemmMPerBlock) *
                                  math::integer_divide_ceil(GemmN, GemmNPerBlock);
 
-    static_assert(GridSize == 1568, "");
-
     // A matrix copy
     constexpr index_t GemmABlockCopyClusterLengths_GemmK     = 4;
     constexpr index_t GemmABlockCopyClusterLengths_GemmM     = 64;
@@ -111,8 +109,8 @@ void gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
     using GemmABlockCopySrcAccessOrder = Sequence<0, 2, 1, 3>; // [GemmG, GemmM, GemmK, GemmKPack]
     using GemmABlockCopyDstAccessOrder = Sequence<0, 1, 2, 3>; // [GemmG, GemmK, GemmM, GemmKPack]
 
-    constexpr index_t GemmABlockCopySrcDataPerRead_GemmKPack  = 4;
-    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmKPack = 4;
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmKPack  = 1;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmKPack = 1;
 
     // B matrix Copy
     constexpr index_t GemmBBlockCopyClusterLengths_GemmK     = 4;
@@ -142,8 +140,8 @@ void gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
     using GemmBBlockCopySrcAccessOrder = Sequence<0, 1, 3, 2>; // [GemmG, GemmK, GemmKPack, GemmN]
     using GemmBBlockCopyDstAccessOrder = Sequence<0, 1, 2, 3>; // [GemmG, GemmK, GemmN, GemmKPack]
 
-    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN      = 4;
-    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmKPack = 4;
+    constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN      = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmKPack = 1;
 
     // gridwise GEMM
     constexpr auto wkgrp_schd_order = NBlock1MBlock0;
