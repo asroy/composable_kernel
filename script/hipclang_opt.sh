@@ -4,12 +4,12 @@ BC_FILE=$1
 
 /opt/rocm/llvm/bin/llvm-dis $BC_FILE -o original.ll
 /opt/rocm/llvm/bin/opt -S -inline -inline-threshold=104857 original.ll > inline.ll
-/opt/rocm/llvm/bin/opt -S -sroa inline.ll > sora.ll
-/opt/rocm/llvm/bin/opt -S -O3 sora.ll > o3.ll
+/opt/rocm/llvm/bin/opt -S -sroa inline.ll > sroa.ll
+/opt/rocm/llvm/bin/opt -S -O3 sroa.ll > o3.ll
 
 /opt/rocm/llvm/bin/llc -mcpu=gfx906 original.ll
 /opt/rocm/llvm/bin/llc -mcpu=gfx906 inline.ll
-/opt/rocm/llvm/bin/llc -mcpu=gfx906 sora.ll
+/opt/rocm/llvm/bin/llc -mcpu=gfx906 sroa.ll
 /opt/rocm/llvm/bin/llc -mcpu=gfx906 o3.ll
 
 #/opt/rocm/llvm/bin/opt -S -O3 -sroa inline.ll > o3.ll
