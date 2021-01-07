@@ -93,11 +93,6 @@ struct ThreadwiseGenericTensorSliceCopy_v4r2
                 // buffer to hold a src long-vector
                 SrcData p_src_long_vector[long_vector_size];
 
-#if 1
-                // zero out buffer
-                static_for<0, long_vector_size, 1>{}([&](auto i) { p_src_long_vector[i] = 0; });
-#endif
-
                 // load data from src to the long-vector buffer
                 static_for<0, long_vector_size / src_data_per_access, 1>{}([&](auto i) {
                     auto scalar_id               = make_zero_multi_index<nDim>();
