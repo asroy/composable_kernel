@@ -73,7 +73,11 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         return 2 * (a_block_space_size + b_block_space_size) * sizeof(Float);
     }
 
-    template <typename... ADesc, typename... BDesc, typename... CDesc, bool IsEvenNumberKBlockLoop>
+    template <typename... ADesc,
+              typename... BDesc,
+              typename... CDesc,
+              bool HasMainKBlockLoop,
+              bool HasDoubleTailKBlockLoop>
     __device__ void Run(const DynamicTensorDescriptor<ADesc...>& a_k_m_global_desc,
                         const Float* __restrict__ p_a_global,
                         const DynamicTensorDescriptor<BDesc...>& b_k_n_global_desc,
@@ -81,7 +85,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                         const DynamicTensorDescriptor<CDesc...>& c_m0_m1_n0_n1_global_desc,
                         Float* __restrict__ p_c_global,
                         Float* __restrict__ p_shared_block,
-                        integral_constant<bool, IsEvenNumberKBlockLoop>) const
+                        integral_constant<bool, HasMainKBlockLoop>,
+                        integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
@@ -264,88 +269,91 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         }
 #endif
 
-#if 1
-        Float* p_a_block_even = p_a_block_double;
-        Float* p_b_block_even = p_b_block_double;
-
-        Float* p_a_block_odd = p_a_block_double + a_block_space_size;
-        Float* p_b_block_odd = p_b_block_double + b_block_space_size;
-
-        // LDS double buffer: main body
-        for(index_t k_block_data_begin = 0; k_block_data_begin < K - 2 * KPerBlock;
-            k_block_data_begin += 2 * KPerBlock)
+        if constexpr(HasMainKBlockLoop)
         {
-            // even iteration
-            a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
-            b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc, b_block_slice_copy_step);
+            Float* p_a_block_even = p_a_block_double;
+            Float* p_b_block_even = p_b_block_double;
 
-            __syncthreads();
+            Float* p_a_block_odd = p_a_block_double + a_block_space_size;
+            Float* p_b_block_odd = p_b_block_double + b_block_space_size;
 
-            // LDS doubel buffer: load next data from device mem
-            a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
-            b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global);
+            index_t k_block_data_begin = 0;
 
-            // LDS double buffer: GEMM on current data
-            blockwise_gemm.Run(p_a_block_even, p_b_block_even, p_c_thread);
-
-            // LDS double buffer: store next data to LDS
-            a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_odd);
-            b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_odd);
-
-            // odd iteration
-            a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
-            b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc, b_block_slice_copy_step);
-
-            __syncthreads();
-
-            // LDS doubel buffer: load next data from device mem
-            a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
-            b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global);
-
-            // LDS double buffer: GEMM on current data
-            blockwise_gemm.Run(p_a_block_odd, p_b_block_odd, p_c_thread);
-
-            // LDS double buffer: store next data to LDS
-            a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_even);
-            b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_even);
-        }
-#endif
-
-#if 1
-        // LDS double buffer: tail
-        {
-            if constexpr(IsEvenNumberKBlockLoop) // if has 2 iteration left
+            // LDS double buffer: main body
+            // use Do-While loop instead of For loop to simplify control flow
+            do
             {
+                // even iteration
                 a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
                 b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc, b_block_slice_copy_step);
 
                 __syncthreads();
 
-                // LDS double buffer: load last data from device mem
+                // LDS doubel buffer: load next data from device mem
                 a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
                 b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global);
 
-                // LDS double buffer: GEMM on 2nd-last data
-                blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
+                // LDS double buffer: GEMM on current data
+                blockwise_gemm.Run(p_a_block_even, p_b_block_even, p_c_thread);
 
-                // LDS double buffer: store last data to LDS
-                a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_double + a_block_space_size);
-                b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_double + b_block_space_size);
+                // LDS double buffer: store next data to LDS
+                a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_odd);
+                b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_odd);
+
+                // odd iteration
+                a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
+                b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc, b_block_slice_copy_step);
 
                 __syncthreads();
 
-                // LDS double buffer: GEMM on last data
-                blockwise_gemm.Run(p_a_block_double + a_block_space_size,
+                // LDS doubel buffer: load next data from device mem
+                a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
+                b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global);
+
+                // LDS double buffer: GEMM on current data
+                blockwise_gemm.Run(p_a_block_odd, p_b_block_odd, p_c_thread);
+
+                // LDS double buffer: store next data to LDS
+                a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_even);
+                b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_even);
+
+                k_block_data_begin += 2 * KPerBlock;
+            } while(k_block_data_begin < K - 2 * KPerBlock);
+        }
+
+#if 1
+        // LDS double buffer: tail
+        if constexpr(HasDoubleTailKBlockLoop) // if has 2 iteration left
+        {
+            a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
+            b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc, b_block_slice_copy_step);
+
+            __syncthreads();
+
+            // LDS double buffer: load last data from device mem
+            a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
+            b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global);
+
+            // LDS double buffer: GEMM on 2nd-last data
+            blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
+
+            // LDS double buffer: store last data to LDS
+            a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_double + a_block_space_size);
+            b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_double + b_block_space_size);
+
+            __syncthreads();
+
+            // LDS double buffer: GEMM on last data
+            blockwise_gemm.Run(p_a_block_double + a_block_space_size,
                                p_b_block_double + b_block_space_size,
                                p_c_thread);
-            }
-            else // if has 1 iteration left
-            {
-                __syncthreads();
+        }
+        else // if has 1 iteration left
+        {
+            __syncthreads();
 
-                // LDS double buffer: GEMM on last data
-                blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
-            }
+            // LDS double buffer: GEMM on last data
+            blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
         }
 #endif
 
@@ -398,14 +406,19 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         }
     }
 
-    template <typename... ADesc, typename... BDesc, typename... CDesc, bool IsEvenNumberKBlockLoop>
+    template <typename... ADesc,
+              typename... BDesc,
+              typename... CDesc,
+              bool HasMainKBlockLoop,
+              bool HasDoubleTailKBlockLoop>
     __device__ void Run(const DynamicTensorDescriptor<ADesc...>& a_k_m_global_desc,
                         const Float* __restrict__ p_a_global,
                         const DynamicTensorDescriptor<BDesc...>& b_k_n_global_desc,
                         const Float* __restrict__ p_b_global,
                         const DynamicTensorDescriptor<CDesc...>& c_m0_m1_n0_n1_global_desc,
                         Float* __restrict__ p_c_global,
-                        integral_constant<bool, IsEvenNumberKBlockLoop>) const
+                        integral_constant<bool, HasMainKBlockLoop>,
+                        integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
         constexpr index_t shared_block_size = GetSharedMemoryNumberOfByte() / sizeof(Float);
 
@@ -418,7 +431,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
             c_m0_m1_n0_n1_global_desc,
             p_c_global,
             p_shared_block,
-            integral_constant<bool, IsEvenNumberKBlockLoop>{});
+            integral_constant<bool, HasMainKBlockLoop>{},
+            integral_constant<bool, HasDoubleTailKBlockLoop>{});
     }
 };
 } // namespace ck
