@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 1
+#if 0
     // 3x3, 35x35, stride 2
     constexpr index_t N  = 128;
     constexpr index_t C  = 192;

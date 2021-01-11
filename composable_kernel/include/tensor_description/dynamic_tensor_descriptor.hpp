@@ -9,29 +9,12 @@ namespace ck {
 template <index_t NDimHidden, typename VisibleDimensionIds>
 struct DynamicTensorCoordinate;
 
+#if 0 // hack
 template <index_t NTransform, index_t NDimVisible>
+#else
+template <index_t NTransform, index_t NDimVisible, typename HackCalculateLowerIndexDiff>
+#endif
 struct DynamicTensorCoordinateStep;
-
-template <typename TensorDesc, typename VisibleIndex>
-__host__ __device__ constexpr auto make_dynamic_tensor_coordinate(const TensorDesc& tensor_desc,
-                                                                  const VisibleIndex& idx_visible);
-
-template <typename TensorDesc, typename VisibleIndex>
-__host__ __device__ constexpr auto
-make_dynamic_tensor_coordinate_step(const TensorDesc&, const VisibleIndex& idx_diff_visible);
-
-template <typename TensorDesc, typename TensorCoord, typename TensorCoordStep>
-__host__ __device__ constexpr void move_dynamic_tensor_coordinate(
-    const TensorDesc& tensor_desc, TensorCoord& coord, const TensorCoordStep& coord_step);
-
-template <typename TensorDesc, typename TensorCoord>
-__host__ __device__ constexpr bool
-coordinate_has_valid_offset_assuming_visible_index_is_valid(const TensorDesc& tensor_desc,
-                                                            const TensorCoord& coord);
-
-template <typename TensorDesc, typename TensorCoord>
-__host__ __device__ constexpr bool coordinate_has_valid_offset(const TensorDesc& tensor_desc,
-                                                               const TensorCoord& coord);
 
 // Transforms: Tuple<transforms...>
 // LowerDimensionIdss : Tuple<Sequence<...>, ...>
@@ -74,10 +57,9 @@ struct DynamicTensorDescriptor
     constexpr static index_t ndim_visible_ = GetNumOfVisibleDimension();
     constexpr static index_t ndim_hidden_  = GetNumOfHiddenDimension();
 
-    using VisibleIndex   = MultiIndex<ndim_visible_>;
-    using HiddenIndex    = MultiIndex<ndim_hidden_>;
-    using Coordinate     = DynamicTensorCoordinate<ndim_hidden_, VisibleDimensionIds>;
-    using CoordinateStep = DynamicTensorCoordinateStep<ntransform_, ndim_visible_>;
+    using VisibleIndex = MultiIndex<ndim_visible_>;
+    using HiddenIndex  = MultiIndex<ndim_hidden_>;
+    using Coordinate   = DynamicTensorCoordinate<ndim_hidden_, VisibleDimensionIds>;
 
     public:
     __host__ __device__ explicit constexpr DynamicTensorDescriptor(const Transforms& transforms,
@@ -211,7 +193,11 @@ struct DynamicTensorCoordinate
     HiddenIndex idx_hidden_;
 };
 
+#if 0 // hack
 template <index_t NTransform, index_t NDimVisible>
+#else
+template <index_t NTransform, index_t NDimVisible, typename HackCalculateLowerIndexDiff>
+#endif
 struct DynamicTensorCoordinateStep
 {
     // TODO make these private
@@ -234,6 +220,11 @@ struct DynamicTensorCoordinateStep
 
     const VisibleIndex idx_diff_visible_;
     const MultiIndex<NTransform> do_transforms_;
+
+#if 1 // hack
+    // HACK: control CalculateLowerIndexDiff for DynamicMerge using ing hack
+    static constexpr HackCalculateLowerIndexDiff hack_calculate_lower_index_diff_;
+#endif
 };
 
 // TODO: How to fix this? It uses an struct instead of lambda because lambda
@@ -406,7 +397,72 @@ make_dynamic_tensor_coordinate_step(const TensorDesc&, const VisibleIndex& idx_d
         set_container_subset(is_non_zero_diff, dims_low, non_zero_diff_pick_low);
     });
 
+#if 0 // hack
     return DynamicTensorCoordinateStep<ntransform, ndim_visible>{idx_diff_visible, do_transforms};
+#else
+    return DynamicTensorCoordinateStep<ntransform,
+                                       ndim_visible,
+                                       typename uniform_sequence_gen<ntransform, 0>::type>{
+        idx_diff_visible, do_transforms};
+#endif
+}
+
+#if 0 // hack
+template <typename TensorDesc, typename VisibleIndex>
+#else
+// HACK: control CalculateLowerIndexDiff for DynamicMerge using ing hack
+template <typename TensorDesc, typename VisibleIndex, typename HackCalculateLowerIndexDiff>
+#endif
+__host__ __device__ constexpr auto make_dynamic_tensor_coordinate_step_hack(
+    const TensorDesc&, const VisibleIndex& idx_diff_visible, HackCalculateLowerIndexDiff)
+{
+    static_assert(TensorDesc::GetNumOfDimension() == VisibleIndex::Size(),
+                  "wrong! # of dimension inconsistent");
+
+    constexpr index_t ntransform   = TensorDesc::GetNumOfTransform();
+    constexpr index_t ndim_hidden  = TensorDesc::GetNumOfHiddenDimension();
+    constexpr index_t ndim_visible = TensorDesc::GetNumOfVisibleDimension();
+    constexpr auto visible_dim_ids = TensorDesc::GetVisibleDimensionIds();
+
+    static_assert(HackCalculateLowerIndexDiff::Size() == ntransform, "wrong!");
+
+    // use index_t for boolean type
+    auto do_transforms    = make_zero_multi_index<ntransform>();
+    auto is_non_zero_diff = make_zero_multi_index<ndim_hidden>();
+
+    // decide do_transform by checkout non-zero index diff components
+    MultiIndex<VisibleIndex::Size()> non_zero_diff_pick_visible;
+
+    static_for<0, ndim_visible, 1>{}(
+        [&](auto i) { non_zero_diff_pick_visible(i) = (idx_diff_visible[i] != 0); });
+
+    set_container_subset(is_non_zero_diff, visible_dim_ids, non_zero_diff_pick_visible);
+
+    static_for<ntransform - 1, -1, -1>{}([&](auto itran) {
+        constexpr auto dims_low = TensorDesc::GetLowerDimensionIdss().At(itran);
+        constexpr auto dims_up  = TensorDesc::GetUpperDimensionIdss().At(itran);
+
+        const auto non_zero_diff_pick_up = get_container_subset(is_non_zero_diff, dims_up);
+
+        MultiIndex<dims_low.Size()> non_zero_diff_pick_low;
+
+        // if any of upper index diff components is non-zero, then
+        //   1) Need to do this transform
+        //   2) all components of lower index diff will assume to be non-zero and need to be
+        //   computed
+        const bool idx_diff_up_has_non_zero = container_reduce(
+            non_zero_diff_pick_up, [](auto a, auto b) constexpr { return a or b; }, false);
+
+        do_transforms(itran) = idx_diff_up_has_non_zero;
+
+        static_for<0, dims_low.Size(), 1>{}(
+            [&](auto i) { non_zero_diff_pick_low(i) = idx_diff_up_has_non_zero; });
+
+        set_container_subset(is_non_zero_diff, dims_low, non_zero_diff_pick_low);
+    });
+
+    return DynamicTensorCoordinateStep<ntransform, ndim_visible, HackCalculateLowerIndexDiff>{
+        idx_diff_visible, do_transforms};
 }
 
 template <typename TensorDesc, typename TensorCoord, typename TensorCoordStep>
@@ -453,7 +509,17 @@ __host__ __device__ constexpr void move_dynamic_tensor_coordinate(const TensorDe
             MultiIndex<dims_low.Size()> idx_diff_low;
 
             // calculate idx_diff_low
+#if 0 // hack
             tran.CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low, idx_up);
+#else
+            // HACK: control CalculateLowerIndexDiff for DynamicMerge using ing hack
+            // TODO remove hack
+            constexpr index_t Hack =
+                decltype(coord_step.hack_calculate_lower_index_diff_)::At(itran);
+
+            tran.CalculateLowerIndexDiff_hack(
+                idx_diff_low, idx_diff_up, idx_low, idx_up, Number<Hack>{});
+#endif
 
             // update idx_low
             idx_low += idx_diff_low;

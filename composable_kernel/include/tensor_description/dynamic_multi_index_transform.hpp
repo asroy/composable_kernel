@@ -64,6 +64,20 @@ struct DynamicPassThrough
         idx_diff_low(Number<0>{}) = idx_diff_up[Number<0>{}];
     }
 
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ static void CalculateLowerIndexDiff_hack(LowIdxDiff& idx_diff_low,
+                                                                 const UpIdxDiff& idx_diff_up,
+                                                                 const LowIdx& idx_low_old,
+                                                                 const UpIdx& idx_up_old,
+                                                                 Number<Hack>)
+    {
+        CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low_old, idx_up_old);
+    }
+
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
 
     __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
@@ -139,6 +153,20 @@ struct DynamicLeftPad
                       "wrong! inconsistent # of dimension");
 
         idx_diff_low(Number<0>{}) = idx_diff_up[Number<0>{}];
+    }
+
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ static void CalculateLowerIndexDiff_hack(LowIdxDiff& idx_diff_low,
+                                                                 const UpIdxDiff& idx_diff_up,
+                                                                 const LowIdx& idx_low_old,
+                                                                 const UpIdx& idx_up_old,
+                                                                 Number<Hack>)
+    {
+        CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low_old, idx_up_old);
     }
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
@@ -226,6 +254,20 @@ struct DynamicRightPad
                       "wrong! inconsistent # of dimension");
 
         idx_diff_low(Number<0>{}) = idx_diff_up[Number<0>{}];
+    }
+
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ static void CalculateLowerIndexDiff_hack(LowIdxDiff& idx_diff_low,
+                                                                 const UpIdxDiff& idx_diff_up,
+                                                                 const LowIdx& idx_low_old,
+                                                                 const UpIdx& idx_up_old,
+                                                                 Number<Hack>)
+    {
+        CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low_old, idx_up_old);
     }
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
@@ -322,6 +364,20 @@ struct DynamicEmbed
 
         static_for<0, NDimUp, 1>{}(
             [&](auto i) { idx_diff_low(Number<0>{}) += idx_diff_up[i] * coefficients_[i]; });
+    }
+
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ constexpr void CalculateLowerIndexDiff_hack(LowIdxDiff& idx_diff_low,
+                                                                    const UpIdxDiff& idx_diff_up,
+                                                                    const LowIdx& idx_low_old,
+                                                                    const UpIdx& idx_up_old,
+                                                                    Number<Hack>) const
+    {
+        CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low_old, idx_up_old);
     }
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
@@ -489,6 +545,141 @@ struct DynamicMerge
         idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + carry;
     }
 
+    // idx_diff_low depends on idx_low_old, so idx_low need to be up-to-date
+    // If idx_diff_up is known at compile-time, many calculations can be optimized
+    // away by compiler
+    // This function assume idx_low_old is not out-of-bound
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ constexpr void CalculateLowerIndexDiff_hack(LowIdxDiff& idx_diff_low,
+                                                                    const UpIdxDiff& idx_diff_up,
+                                                                    const LowIdx& idx_low_old,
+                                                                    const UpIdx& /* idx_up_old */,
+                                                                    Number<Hack>) const
+    {
+        static_assert(LowIdxDiff::Size() == NDimLow && UpIdxDiff::Size() == 1 &&
+                          LowIdx::Size() == NDimLow && UpIdx::Size() == 1,
+                      "wrong! inconsistent # of dimension");
+
+        // CalculateLowerIndex(idx_diff_low_const) has multiple integer divisions.
+        // However,
+        //   1) If idx_diff_up is known at compile-time, then idx_diff_low_const
+        //   can be calculated at compile-time.
+        //   2) If idx_diff_up is not known at compile-time, but its value
+        //   doesn't change during the whole kernel execution, then
+        //   idx_diff_low_const also
+        //   doesn't change during the whole kernel execution. Compiler generated
+        //   ISA should
+        //   only caclculate idx_diff_low_const once and save it durinng the whole
+        //   kernel execution
+        // If neither 1) nor 2) is satisfied, then the calculation will also be
+        // computed at
+        //   run-time each time this function is called, and can be very expensive.
+        LowerIndex idx_diff_low_const;
+
+        index_t tmp = idx_diff_up[Number<0>{}];
+
+        static_for<0, NDimLow - 1, 1>{}([&](auto i) {
+            idx_diff_low_const(i) = tmp / low_lengths_scan_[i];
+            tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
+        });
+
+        LowerIndex idx_low_length_minus_idx_diff_low_const;
+        LowerIndex idx_low_length_plus_idx_diff_low_const;
+
+#if !CK_HACK_DYNAMIC_MERGE_CALCULATE_IDX_DIFF_LOW_CONST_USE_AMD_GCN_READ_FIRST_LANE
+        idx_diff_low_const(Number<NDimLow - 1>{}) = tmp;
+
+        static_for<0, NDimLow, 1>{}([&](auto i) {
+            idx_low_length_minus_idx_diff_low_const(i) = low_lengths_[i] - idx_diff_low_const[i];
+
+            idx_low_length_plus_idx_diff_low_const(i) = low_lengths_[i] + idx_diff_low_const[i];
+        });
+#else
+        // Hack: this force result into SGPR. Need to make sure the result is thread invariant
+        idx_diff_low_const(Number<NDimLow - 1>{}) = __builtin_amdgcn_readfirstlane(tmp);
+
+        static_for<0, NDimLow, 1>{}([&](auto i) {
+            idx_low_length_minus_idx_diff_low_const(i) =
+                __builtin_amdgcn_readfirstlane(low_lengths_[i] - idx_diff_low_const[i]);
+
+            idx_low_length_plus_idx_diff_low_const(i) =
+                __builtin_amdgcn_readfirstlane(low_lengths_[i] + idx_diff_low_const[i]);
+        });
+#endif
+
+        if constexpr(Hack == 1)
+        {
+            // do carry check on each low dimension in reversed order
+            // do not need to check the first dimension
+            index_t carry = 0;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                index_t idx_low_tmp = idx_low_old[i] + carry;
+
+                bool do_carry = idx_low_tmp >= idx_low_length_minus_idx_diff_low_const[i];
+
+                idx_diff_low(i) =
+                    do_carry ? -idx_low_length_minus_idx_diff_low_const[i] : idx_diff_low_const[i];
+
+                idx_diff_low(i) += carry;
+
+                carry = do_carry ? 1 : 0;
+            });
+
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + carry;
+        }
+        else if constexpr(Hack == 2)
+        {
+            // do carry check on each low dimension in reversed order
+            // do not need to check the first dimension
+            index_t carry = 0;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                index_t idx_low_tmp = idx_low_old[i] + carry;
+
+                bool do_borrow = idx_low_tmp < -idx_diff_low_const[i];
+
+                idx_diff_low(i) =
+                    do_borrow ? idx_low_length_plus_idx_diff_low_const[i] : idx_diff_low[i];
+
+                idx_diff_low(i) += carry;
+
+                carry = do_borrow ? -1 : carry;
+            });
+
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + carry;
+        }
+        else
+        {
+            // do carry check on each low dimension in reversed order
+            // do not need to check the first dimension
+            index_t carry = 0;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                index_t idx_low_tmp = idx_low_old[i] + carry;
+
+                bool do_carry  = idx_low_tmp >= idx_low_length_minus_idx_diff_low_const[i];
+                bool do_borrow = idx_low_tmp < -idx_diff_low_const[i];
+
+                idx_diff_low(i) =
+                    do_carry ? -idx_low_length_minus_idx_diff_low_const[i] : idx_diff_low_const[i];
+                idx_diff_low(i) =
+                    do_borrow ? idx_low_length_plus_idx_diff_low_const[i] : idx_diff_low[i];
+
+                idx_diff_low(i) += carry;
+
+                carry = do_carry ? 1 : 0;
+                carry = do_borrow ? -1 : carry;
+            });
+
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + carry;
+        }
+    }
+
     __host__ __device__ static constexpr bool IsLinearTransform() { return false; }
 
     __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
@@ -551,6 +742,20 @@ struct DynamicUnMerge
         CalculateLowerIndex(idx_diff_low, idx_diff_up);
     }
 
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ constexpr void CalculateLowerIndexDiff_hack(LowIdxDiff& idx_diff_low,
+                                                                    const UpIdxDiff& idx_diff_up,
+                                                                    const LowIdx& idx_low_old,
+                                                                    const UpIdx& idx_up_old,
+                                                                    Number<Hack>) const
+    {
+        CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low_old, idx_up_old);
+    }
+
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
 
     __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
@@ -600,6 +805,20 @@ struct DynamicFreeze
                                                             const UpIdx& /* idx_up_old */)
     {
         idx_diff_low(Number<0>{}) = index_t{Number<0>{}};
+    }
+
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ static void CalculateLowerIndexDiff_hack(LowIdxDiff& idx_diff_low,
+                                                                 const UpIdxDiff& idx_diff_up,
+                                                                 const LowIdx& idx_low_old,
+                                                                 const UpIdx& idx_up_old,
+                                                                 Number<Hack>)
+    {
+        CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low_old, idx_up_old);
     }
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
