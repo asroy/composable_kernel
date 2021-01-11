@@ -29,8 +29,8 @@ int main(int argc, char* argv[])
     constexpr index_t HI = 56;
     constexpr index_t WI = 56;
     constexpr index_t K  = 128;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
 
     using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;

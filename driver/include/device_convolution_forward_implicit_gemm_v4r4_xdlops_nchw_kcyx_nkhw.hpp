@@ -109,8 +109,8 @@ void gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
     using GemmABlockCopySrcAccessOrder = Sequence<0, 2, 1, 3>; // [GemmG, GemmM, GemmK, GemmKPack]
     using GemmABlockCopyDstAccessOrder = Sequence<0, 1, 2, 3>; // [GemmG, GemmK, GemmM, GemmKPack]
 
-    constexpr index_t GemmABlockCopySrcDataPerRead_GemmKPack  = 1;
-    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmKPack = 1;
+    constexpr index_t GemmABlockCopySrcDataPerRead_GemmKPack  = 4;
+    constexpr index_t GemmABlockCopyDstDataPerWrite_GemmKPack = 4;
 
     // B matrix Copy
     constexpr index_t GemmBBlockCopyClusterLengths_GemmK     = 4;

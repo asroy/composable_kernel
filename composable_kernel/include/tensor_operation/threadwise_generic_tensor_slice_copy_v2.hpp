@@ -95,8 +95,41 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         *reinterpret_cast<SrcData*>(&p_dst[dst_offset]) = src_data;
     }
 
+    template <typename SrcData, index_t SrcDataPerAccess>
+    struct vector_data_load;
+
+    template <>
+    struct vector_data_load<float, 1>
+    {
+        template <typename SrcCoord>
+        __device__ static auto run(const float* p_src, const SrcCoord src_coord_begin)
+        {
+            return load_data<float>(p_src, src_coord_begin.GetOffset());
+        }
+    };
+
+    template <>
+    struct vector_data_load<float, 2>
+    {
+        template <typename SrcCoord>
+        __device__ static auto run(const float* p_src, const SrcCoord src_coord_begin)
+        {
+            return load_data<float2_t>(p_src, src_coord_begin.GetOffset());
+        }
+    };
+
+    template <>
+    struct vector_data_load<float, 4>
+    {
+        template <typename SrcCoord>
+        __device__ static auto run(const float* p_src, const SrcCoord src_coord_begin)
+        {
+            return load_data<float4_t>(p_src, src_coord_begin.GetOffset());
+        }
+    };
+
     template <index_t SrcDataPerAccess, index_t SrcDataRange, typename SrcData, typename SrcCoord>
-    __device__ static auto vector_data_load(const SrcData* p_src, const SrcCoord src_coord_begin)
+    __device__ static auto buffer_vector_load(const SrcData* p_src, const SrcCoord src_coord_begin)
     {
         auto src_offset = src_coord_begin.GetOffset();
         return amd_buffer_load<SrcData, SrcDataPerAccess>(p_src, src_offset, true, SrcDataRange);
@@ -162,7 +195,8 @@ struct ThreadwiseGenericTensorSliceCopy_v5
                 const auto src_coord = mSrcSliceOrigin + to_multi_index(long_vector_data_begin_id);
 
                 auto src_buff =
-                    vector_data_load<SrcDataPerRead, SrcDesc::GetElementSpace()>(p_src, src_coord);
+                    vector_data_load<SrcData, src_data_per_access>::run(p_src, src_coord);
+                // buffer_vector_load<SrcDataPerRead, SrcDesc::GetElementSpace()>(p_src, src_coord);
 
                 // store data from the long-vector buffer to dst
                 constexpr auto buff_off =
