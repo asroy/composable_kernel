@@ -502,27 +502,18 @@ __host__ __device__ constexpr void move_dynamic_tensor_coordinate(const TensorDe
             constexpr auto dims_low = TensorDesc::GetLowerDimensionIdss().At(itran);
             constexpr auto dims_up  = TensorDesc::GetUpperDimensionIdss().At(itran);
 
-            const auto idx_up      = get_container_subset(idx_hidden, dims_up);
+            const auto idx_up_new  = get_container_subset(idx_hidden, dims_up);
             auto idx_low           = get_container_subset(idx_hidden, dims_low);
             const auto idx_diff_up = get_container_subset(idx_diff_hidden, dims_up);
 
             MultiIndex<dims_low.Size()> idx_diff_low;
 
-            // calculate idx_diff_low
-#if 0 // hack
-            tran.CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low, idx_up);
-#else
-            // HACK: control CalculateLowerIndexDiff for DynamicMerge using ing hack
+            // HACK: control UpdateLowerIndex for DynamicMerge using hack
             // TODO remove hack
             constexpr index_t Hack =
                 decltype(coord_step.hack_calculate_lower_index_diff_)::At(itran);
 
-            tran.CalculateLowerIndexDiff_hack(
-                idx_diff_low, idx_diff_up, idx_low, idx_up, Number<Hack>{});
-#endif
-
-            // update idx_low
-            idx_low += idx_diff_low;
+            tran.UpdateLowerIndex(idx_diff_low, idx_diff_up, idx_low, idx_up_new, Number<Hack>{});
 
             set_container_subset(idx_diff_hidden, dims_low, idx_diff_low);
             set_container_subset(idx_hidden, dims_low, idx_low);

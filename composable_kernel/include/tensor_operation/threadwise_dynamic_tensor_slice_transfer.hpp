@@ -922,7 +922,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 src_desc, make_multi_index(1, 0), Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>{});
             const auto src_step_m1_0 = make_dynamic_tensor_coordinate_step_hack(
                 src_desc, make_multi_index(-1, 0), Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0>{});
-#elif 0
+#elif 1
             // for non-padded input tensor
             const auto src_step_0_p1 = make_dynamic_tensor_coordinate_step_hack(
                 src_desc, make_multi_index(0, 1), Sequence<0, 0, 0, 0, 0, 0, 1>{});
@@ -1067,7 +1067,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         // for padded input tensor
         const auto adjusted_step = make_dynamic_tensor_coordinate_step_hack(
             src_desc, adjusted_step_idx, Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2>{});
-#elif 0
+#elif 1
         // for non-paded input tensor
         const auto adjusted_step = make_dynamic_tensor_coordinate_step_hack(
             src_desc, adjusted_step_idx, Sequence<0, 0, 0, 0, 0, 1, 2>{});

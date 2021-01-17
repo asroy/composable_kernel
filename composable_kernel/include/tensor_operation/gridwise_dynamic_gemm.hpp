@@ -384,13 +384,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                 Float,
                 decltype(c_m0_m1_n0_n1_thread_desc),
                 decltype(c_m0_m1_n0_n1_global_desc),
-#if 1 // debug
                 Sequence<MRepeat, MPerThread, NRepeat, NPerThread>,
                 CThreadTransferSrcDstAccessOrder,
-#else
-                Sequence<1, 1, 2, 4>,
-                Sequence<0, 1, 2, 3>,
-#endif
                 CThreadTransferSrcDstVectorDim,
                 1,
                 CThreadTransferDstScalarPerVector,
