@@ -152,10 +152,15 @@ __device__ float amd_buffer_load<float, 1>(const float* p_src_wave,
     return __llvm_amdgcn_buffer_load_f32(
         src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #else
+#if 1 // debug
     float tmp = __llvm_amdgcn_buffer_load_f32(
         src_wave_buffer_resource.data, 0, src_thread_addr_offset, false, false);
 
     return src_thread_data_valid ? tmp : float(0);
+#else
+    return __llvm_amdgcn_buffer_load_f32(
+        src_wave_buffer_resource.data, 0, src_thread_addr_offset, false, false);
+#endif
 #endif
 }
 

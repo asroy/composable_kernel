@@ -94,6 +94,103 @@ struct DynamicPassThrough
 };
 
 template <bool SkipIsValidCheck = false>
+struct DynamicPad
+{
+    using LowerIndex = MultiIndex<1>;
+    using UpperIndex = MultiIndex<1>;
+
+    const UpperIndex up_lengths_;
+    const index_t left_pad_;
+    const index_t right_pad_;
+
+#if 0
+    __host__ __device__   constexpr DynamicPad(const DynamicPad&) = default;
+
+    __host__ __device__   constexpr DynamicPad(DynamicPad&&) = default;
+#else
+    __host__ __device__ constexpr DynamicPad(const DynamicPad& other)
+        : up_lengths_{other.up_lengths_}, left_pad_{other.left_pad_}, right_pad_{other.right_pad_}
+    {
+    }
+
+    __host__ __device__ constexpr DynamicPad(DynamicPad&& other)
+        : up_lengths_{other.up_lengths_}, left_pad_{other.left_pad_}, right_pad_{other.right_pad_}
+    {
+    }
+#endif
+
+    __host__ __device__ constexpr DynamicPad(const index_t& low_length,
+                                             const index_t& left_pad,
+                                             const index_t& right_pad)
+        : up_lengths_{make_multi_index(low_length + left_pad + right_pad)},
+          left_pad_{left_pad},
+          right_pad_{right_pad}
+    {
+    }
+
+    __host__ __device__ constexpr DynamicPad() : up_lengths_{0}, left_pad_{0}, right_pad_{0} {}
+
+    __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
+
+    __host__ __device__ static constexpr index_t GetNumOfUpperDimension() { return 1; }
+
+    __host__ __device__ constexpr const auto& GetUpperLengths() const { return up_lengths_; }
+
+    template <typename LowIdx, typename UpIdx>
+    __host__ __device__ constexpr void CalculateLowerIndex(LowIdx& idx_low,
+                                                           const UpIdx& idx_up) const
+    {
+        static_assert(LowIdx::Size() == 1 && UpIdx::Size() == 1,
+                      "wrong! inconsistent # of dimension");
+
+        idx_low(Number<0>{}) = idx_up[Number<0>{}] - left_pad_;
+    }
+
+    template <typename LowIdxDiff, typename UpIdxDiff, typename LowIdx, typename UpIdx>
+    __host__ __device__ static constexpr void
+    CalculateLowerIndexDiff(LowIdxDiff& idx_diff_low,
+                            const UpIdxDiff& idx_diff_up,
+                            const LowIdx& /* idx_low_old */,
+                            const UpIdx& /* idx_up_old */)
+    {
+        static_assert(LowIdxDiff::Size() == 1 && UpIdxDiff::Size() == 1 && LowIdx::Size() == 1 &&
+                          UpIdx::Size() == 1,
+                      "wrong! inconsistent # of dimension");
+
+        idx_diff_low(Number<0>{}) = idx_diff_up[Number<0>{}];
+    }
+
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ static void CalculateLowerIndexDiff_hack(LowIdxDiff& idx_diff_low,
+                                                                 const UpIdxDiff& idx_diff_up,
+                                                                 const LowIdx& idx_low_old,
+                                                                 const UpIdx& idx_up_old,
+                                                                 Number<Hack>)
+    {
+        CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low_old, idx_up_old);
+    }
+
+    __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
+
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
+    {
+        return SkipIsValidCheck;
+    }
+
+    template <typename UpIdx>
+    __host__ __device__ constexpr bool
+    IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& idx_up) const
+    {
+        return SkipIsValidCheck || ((idx_up[Number<0>{}] >= left_pad_) &&
+                                    (idx_up[Number<0>{}] < up_lengths_[Number<0>{}] - right_pad_));
+    }
+};
+
+template <bool SkipIsValidCheck = false>
 struct DynamicLeftPad
 {
     using LowerIndex = MultiIndex<1>;
@@ -546,19 +643,21 @@ struct DynamicMerge
     }
 
     // idx_diff_low depends on idx_low_old, so idx_low need to be up-to-date
+    //
     // If idx_diff_up is known at compile-time, many calculations can be optimized
     // away by compiler
     // This function assume idx_low_old is not out-of-bound
+    // this version save computation but use more register
     template <typename LowIdxDiff,
               typename UpIdxDiff,
               typename LowIdx,
               typename UpIdx,
               index_t Hack>
-    __host__ __device__ constexpr void CalculateLowerIndexDiff_hack(LowIdxDiff& idx_diff_low,
-                                                                    const UpIdxDiff& idx_diff_up,
-                                                                    const LowIdx& idx_low_old,
-                                                                    const UpIdx& /* idx_up_old */,
-                                                                    Number<Hack>) const
+    __host__ __device__ constexpr void CalculateLowerIndexDiff_hack_1(LowIdxDiff& idx_diff_low,
+                                                                      const UpIdxDiff& idx_diff_up,
+                                                                      const LowIdx& idx_low_old,
+                                                                      const UpIdx& /* idx_up_old */,
+                                                                      Number<Hack>) const
     {
         static_assert(LowIdxDiff::Size() == NDimLow && UpIdxDiff::Size() == 1 &&
                           LowIdx::Size() == NDimLow && UpIdx::Size() == 1,
@@ -579,7 +678,10 @@ struct DynamicMerge
         // computed at
         //   run-time each time this function is called, and can be very expensive.
         LowerIndex idx_diff_low_const;
+        LowerIndex idx_low_length_minus_idx_diff_low_const;
+        LowerIndex idx_low_length_plus_idx_diff_low_const;
 
+#if !CK_HACK_DYNAMIC_MERGE_CALCULATE_IDX_DIFF_LOW_CONST_USE_AMD_GCN_READ_FIRST_LANE
         index_t tmp = idx_diff_up[Number<0>{}];
 
         static_for<0, NDimLow - 1, 1>{}([&](auto i) {
@@ -587,10 +689,6 @@ struct DynamicMerge
             tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
         });
 
-        LowerIndex idx_low_length_minus_idx_diff_low_const;
-        LowerIndex idx_low_length_plus_idx_diff_low_const;
-
-#if !CK_HACK_DYNAMIC_MERGE_CALCULATE_IDX_DIFF_LOW_CONST_USE_AMD_GCN_READ_FIRST_LANE
         idx_diff_low_const(Number<NDimLow - 1>{}) = tmp;
 
         static_for<0, NDimLow, 1>{}([&](auto i) {
@@ -600,6 +698,13 @@ struct DynamicMerge
         });
 #else
         // Hack: this force result into SGPR. Need to make sure the result is thread invariant
+        index_t tmp = idx_diff_up[Number<0>{}];
+
+        static_for<0, NDimLow - 1, 1>{}([&](auto i) {
+            idx_diff_low_const(i) = __builtin_amdgcn_readfirstlane(tmp / low_lengths_scan_[i]);
+            tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
+        });
+
         idx_diff_low_const(Number<NDimLow - 1>{}) = __builtin_amdgcn_readfirstlane(tmp);
 
         static_for<0, NDimLow, 1>{}([&](auto i) {
@@ -636,22 +741,22 @@ struct DynamicMerge
         {
             // do carry check on each low dimension in reversed order
             // do not need to check the first dimension
-            index_t carry = 0;
+            index_t borrow = 0;
 
             static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
-                index_t idx_low_tmp = idx_low_old[i] + carry;
+                index_t idx_low_tmp = idx_low_old[i] - borrow;
 
                 bool do_borrow = idx_low_tmp < -idx_diff_low_const[i];
 
                 idx_diff_low(i) =
-                    do_borrow ? idx_low_length_plus_idx_diff_low_const[i] : idx_diff_low[i];
+                    do_borrow ? idx_low_length_plus_idx_diff_low_const[i] : idx_diff_low_const[i];
 
-                idx_diff_low(i) += carry;
+                idx_diff_low(i) -= borrow;
 
-                carry = do_borrow ? -1 : carry;
+                borrow = do_borrow ? 1 : 0;
             });
 
-            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + carry;
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] - borrow;
         }
         else
         {
@@ -679,6 +784,310 @@ struct DynamicMerge
             idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + carry;
         }
     }
+    // idx_diff_low depends on idx_low_old, so idx_low need to be up-to-date
+    // If idx_diff_up is known at compile-time, many calculations can be optimized
+    // away by compiler
+    // This function assume idx_low_old is not out-of-bound
+    // this version use less register but more computation
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ constexpr void CalculateLowerIndexDiff_hack_2(LowIdxDiff& idx_diff_low,
+                                                                      const UpIdxDiff& idx_diff_up,
+                                                                      const LowIdx& idx_low_old,
+                                                                      const UpIdx& /* idx_up_old */,
+                                                                      Number<Hack>) const
+    {
+        static_assert(LowIdxDiff::Size() == NDimLow && UpIdxDiff::Size() == 1 &&
+                          LowIdx::Size() == NDimLow && UpIdx::Size() == 1,
+                      "wrong! inconsistent # of dimension");
+
+        // CalculateLowerIndex(idx_diff_low_const) has multiple integer divisions.
+        // However,
+        //   1) If idx_diff_up is known at compile-time, then idx_diff_low_const
+        //   can be calculated at compile-time.
+        //   2) If idx_diff_up is not known at compile-time, but its value
+        //   doesn't change during the whole kernel execution, then
+        //   idx_diff_low_const also
+        //   doesn't change during the whole kernel execution. Compiler generated
+        //   ISA should
+        //   only caclculate idx_diff_low_const once and save it durinng the whole
+        //   kernel execution
+        // If neither 1) nor 2) is satisfied, then the calculation will also be
+        // computed at
+        //   run-time each time this function is called, and can be very expensive.
+        LowerIndex idx_diff_low_const;
+        LowerIndex idx_low_length_minus_idx_diff_low_const;
+        LowerIndex idx_low_length_plus_idx_diff_low_const;
+
+#if !CK_HACK_DYNAMIC_MERGE_CALCULATE_IDX_DIFF_LOW_CONST_USE_AMD_GCN_READ_FIRST_LANE
+        index_t tmp = idx_diff_up[Number<0>{}];
+
+        static_for<0, NDimLow - 1, 1>{}([&](auto i) {
+            idx_diff_low_const(i) = tmp / low_lengths_scan_[i];
+            tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
+        });
+
+        idx_diff_low_const(Number<NDimLow - 1>{}) = tmp;
+#else
+        // Hack: this force result into SGPR. Need to make sure the result is thread invariant
+        index_t tmp = idx_diff_up[Number<0>{}];
+
+        static_for<0, NDimLow - 1, 1>{}([&](auto i) {
+            idx_diff_low_const(i) = __builtin_amdgcn_readfirstlane(tmp / low_lengths_scan_[i]);
+            tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
+        });
+
+        idx_diff_low_const(Number<NDimLow - 1>{}) = __builtin_amdgcn_readfirstlane(tmp);
+#endif
+
+        if constexpr(Hack == 1)
+        {
+            // do carry check on each low dimension in reversed order
+            // do not need to check the first dimension
+            bool do_carry = 0;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                idx_diff_low(i) = idx_diff_low_const[i] + do_carry;
+
+                index_t idx_low_tmp = idx_low_old[i] + idx_diff_low_const[i] + do_carry;
+
+                do_carry = idx_low_tmp >= low_lengths_[i];
+
+                idx_diff_low(i) = do_carry ? idx_diff_low(i) - low_lengths_[i] : idx_diff_low[i];
+            });
+
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + do_carry;
+        }
+        else if constexpr(Hack == 2)
+        {
+            // do carry check on each low dimension in reversed order
+            // do not need to check the first dimension
+            bool do_borrow = 0;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                idx_diff_low(i) = idx_diff_low_const[i] - do_borrow;
+
+                index_t idx_low_tmp = idx_low_old[i] + idx_diff_low_const[i] - do_borrow;
+
+                do_borrow = idx_low_tmp < 0;
+
+                idx_diff_low(i) = do_borrow ? idx_diff_low(i) + low_lengths_[i] : idx_diff_low[i];
+            });
+
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] - do_borrow;
+        }
+        else
+        {
+#if 0
+            // do carry check on each low dimension in reversed order
+            // do not need to check the first dimension
+            index_t carry = 0;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                idx_diff_low(i) = idx_diff_low_const[i] + carry;
+
+                bool do_carry  = idx_low_tmp >= idx_low_length_minus_idx_diff_low_const[i];
+                bool do_borrow = idx_low_tmp < -idx_diff_low_const[i];
+
+                idx_diff_low(i) =
+                    do_carry ? -idx_low_length_minus_idx_diff_low_const[i] : idx_diff_low_const[i];
+                idx_diff_low(i) =
+                    do_borrow ? idx_low_length_plus_idx_diff_low_const[i] : idx_diff_low[i];
+
+                idx_diff_low(i) += carry;
+
+                carry = do_carry ? 1 : 0;
+                carry = do_borrow ? -1 : carry;
+            });
+
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + carry;
+#endif
+        }
+    }
+
+    // idx_diff_low depends on idx_low_old, so idx_low need to be up-to-date
+    // If idx_diff_up is known at compile-time, many calculations can be optimized
+    // away by compiler
+    // This function assume idx_low_old is not out-of-bound
+    // this version use less register but more computation
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ constexpr void CalculateLowerIndexDiff_hack_3(LowIdxDiff& idx_diff_low,
+                                                                      const UpIdxDiff& idx_diff_up,
+                                                                      const LowIdx& idx_low_old,
+                                                                      const UpIdx& /* idx_up_old */,
+                                                                      Number<Hack>) const
+    {
+        static_assert(LowIdxDiff::Size() == NDimLow && UpIdxDiff::Size() == 1 &&
+                          LowIdx::Size() == NDimLow && UpIdx::Size() == 1,
+                      "wrong! inconsistent # of dimension");
+
+        // CalculateLowerIndex(idx_diff_low_const) has multiple integer divisions.
+        // However,
+        //   1) If idx_diff_up is known at compile-time, then idx_diff_low_const
+        //   can be calculated at compile-time.
+        //   2) If idx_diff_up is not known at compile-time, but its value
+        //   doesn't change during the whole kernel execution, then
+        //   idx_diff_low_const also
+        //   doesn't change during the whole kernel execution. Compiler generated
+        //   ISA should
+        //   only caclculate idx_diff_low_const once and save it durinng the whole
+        //   kernel execution
+        // If neither 1) nor 2) is satisfied, then the calculation will also be
+        // computed at
+        //   run-time each time this function is called, and can be very expensive.
+        LowerIndex idx_diff_low_const;
+        LowerIndex idx_low_length_minus_idx_diff_low_const;
+        LowerIndex idx_low_length_plus_idx_diff_low_const;
+
+#if !CK_HACK_DYNAMIC_MERGE_CALCULATE_IDX_DIFF_LOW_CONST_USE_AMD_GCN_READ_FIRST_LANE
+        index_t tmp = idx_diff_up[Number<0>{}];
+
+        static_for<0, NDimLow - 1, 1>{}([&](auto i) {
+            idx_diff_low_const(i) = tmp / low_lengths_scan_[i];
+            tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
+        });
+
+        idx_diff_low_const(Number<NDimLow - 1>{}) = tmp;
+#else
+        // Hack: this force result into SGPR. Need to make sure the result is thread invariant
+        index_t tmp = idx_diff_up[Number<0>{}];
+
+        static_for<0, NDimLow - 1, 1>{}([&](auto i) {
+            idx_diff_low_const(i) = __builtin_amdgcn_readfirstlane(tmp / low_lengths_scan_[i]);
+            tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
+        });
+
+        idx_diff_low_const(Number<NDimLow - 1>{}) = __builtin_amdgcn_readfirstlane(tmp);
+#endif
+
+        if constexpr(Hack == 1)
+        {
+#if 1
+            // do carry check on each low dimension in reversed order
+            // do not need to check the first dimension
+            bool do_carry = 0;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                idx_diff_low(i) = idx_diff_low_const[i] + do_carry;
+
+                index_t idx_low_tmp = idx_low_old[i] + idx_diff_low_const[i] + do_carry;
+
+                do_carry = idx_low_tmp >= low_lengths_[i];
+
+                idx_diff_low(i) = do_carry ? idx_diff_low(i) - low_lengths_[i] : idx_diff_low[i];
+            });
+
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + do_carry;
+#else
+            LowerIndex idx_low_new = idx_low_old;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                auto i_m1 = i - Number<1>{};
+
+                int64_t exec_mask;
+                int64_t do_carry;
+
+                idx_low_new(i) = idx_diff_low_const[i] + idx_low_old[i];
+
+                asm volatile(
+                    "\n \
+                     s_mov_b64 %0, exec \n \
+                     v_cmpx_le_u32_e64 %1, %4, %2 \n \
+                     v_subrev_u32 %2, %4, %2\n \
+                     v_add_u32 %3, %3, 1\n \
+                     s_mov_b64 exec, %0\n \
+                    "
+                    : "=s"(exec_mask), "=s"(do_carry), "=v"(idx_low_new(i)), "=v"(idx_low_new(i_m1))
+                    : "s"(low_lengths_[i]), "2"(idx_low_new[i]), "3"(idx_low_new[i_m1]));
+
+                idx_diff_low(i) = idx_low_new[i] - idx_low_old[i];
+            });
+
+            constexpr auto I0 = Number<0>{};
+            idx_low_new(I0) += idx_diff_low_const[I0];
+            idx_diff_low(I0) = idx_low_new[I0] - idx_low_old[I0];
+#endif
+        }
+        else if constexpr(Hack == 2)
+        {
+            // do carry check on each low dimension in reversed order
+            // do not need to check the first dimension
+            bool do_borrow = 0;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                idx_diff_low(i) = idx_diff_low_const[i] - do_borrow;
+
+                index_t idx_low_tmp = idx_low_old[i] + idx_diff_low_const[i] - do_borrow;
+
+                do_borrow = idx_low_tmp < 0;
+
+                idx_diff_low(i) = do_borrow ? idx_diff_low(i) + low_lengths_[i] : idx_diff_low[i];
+            });
+
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] - do_borrow;
+        }
+        else
+        {
+#if 0
+            // do carry check on each low dimension in reversed order
+            // do not need to check the first dimension
+            index_t carry = 0;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                idx_diff_low(i) = idx_diff_low_const[i] + carry;
+
+                bool do_carry  = idx_low_tmp >= idx_low_length_minus_idx_diff_low_const[i];
+                bool do_borrow = idx_low_tmp < -idx_diff_low_const[i];
+
+                idx_diff_low(i) =
+                    do_carry ? -idx_low_length_minus_idx_diff_low_const[i] : idx_diff_low_const[i];
+                idx_diff_low(i) =
+                    do_borrow ? idx_low_length_plus_idx_diff_low_const[i] : idx_diff_low[i];
+
+                idx_diff_low(i) += carry;
+
+                carry = do_carry ? 1 : 0;
+                carry = do_borrow ? -1 : carry;
+            });
+
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + carry;
+#endif
+        }
+    }
+
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ constexpr void CalculateLowerIndexDiff_hack(LowIdxDiff& idx_diff_low,
+                                                                    const UpIdxDiff& idx_diff_up,
+                                                                    const LowIdx& idx_low_old,
+                                                                    const UpIdx& idx_up_old,
+                                                                    Number<Hack>) const
+
+    {
+#if 0
+        // this version save computation but use more register
+        CalculateLowerIndexDiff_hack_1(
+            idx_diff_low, idx_diff_up, idx_low_old, idx_up_old, Number<Hack>{});
+#elif 1
+        // this version use less register but more computation
+        CalculateLowerIndexDiff_hack_2(
+            idx_diff_low, idx_diff_up, idx_low_old, idx_up_old, Number<Hack>{});
+#elif 1
+        // this version use less register but more computation
+        CalculateLowerIndexDiff_hack_3(
+            idx_diff_low, idx_diff_up, idx_low_old, idx_up_old, Number<Hack>{});
+#endif
+    }
 
     __host__ __device__ static constexpr bool IsLinearTransform() { return false; }
 
@@ -695,7 +1104,7 @@ struct DynamicMerge
     }
 };
 
-template <index_t NDimUp>
+template <index_t NDimUp, bool Use24BitIntegerCalculation = false>
 struct DynamicUnMerge
 {
     using LowerIndex = MultiIndex<1>;
@@ -727,10 +1136,24 @@ struct DynamicUnMerge
     __host__ __device__ constexpr void CalculateLowerIndex(LowIdx& idx_low,
                                                            const UpIdx& idx_up) const
     {
-        idx_low(Number<0>{}) = idx_up[Number<NDimUp - 1>{}];
 
-        static_for<0, NDimUp - 1, 1>{}(
-            [&](auto i) { idx_low(Number<0>{}) += idx_up[i] * up_lengths_scan_[i]; });
+        if constexpr(!Use24BitIntegerCalculation)
+        {
+            idx_low(Number<0>{}) = idx_up[Number<NDimUp - 1>{}];
+
+            static_for<0, NDimUp - 1, 1>{}(
+                [&](auto i) { idx_low(Number<0>{}) += idx_up[i] * up_lengths_scan_[i]; });
+        }
+        else
+        {
+            idx_low(Number<0>{}) = idx_up[Number<NDimUp - 1>{}];
+
+            static_for<0, NDimUp - 1, 1>{}([&](auto i) {
+                idx_low(Number<0>{}) =
+                    (0x00ffffff & idx_low[Number<0>{}]) +
+                    (0x00ffffff & idx_up[i]) * (0x00ffffff & up_lengths_scan_[i]);
+            });
+        }
     }
 
     template <typename LowIdxDiff, typename UpIdxDiff, typename LowIdx, typename UpIdx>
@@ -835,6 +1258,119 @@ struct DynamicFreeze
         return true;
     }
 };
+
+#if 0
+template <index_t NDimUp, typename StaticPartialUpLengths>
+struct HackSemiDynamicUnMerge
+{
+    using LowerIndex = MultiIndex<1>;
+    using UpperIndex = MultiIndex<NDimUp>;
+
+    const UpperIndex up_lengths_;
+    const UpperIndex up_lengths_scan_;
+
+    static constexpr index_t NDimUpStatic  = StaticPartialUpLengths::Size();
+    static constexpr index_t NDimUpDynamic = NDimUp - NDimUpStatic;
+
+    const MultiIndex<NDimUpDynamic> dynamic_partial_up_lengths_;
+    const MultiIndex<NDimUpDynamic> dynamic_partial_up_lengths_scan_;
+
+    static constexpr auto static_partial_up_lengths_      = StaticPartialUpLengths{};
+    static constexpr auto static_partial_up_lengths_scan_ = reverse_exclusive_scan_sequence(
+        static_partial_up_lengths_, math::multiplies<index_t>(), Number<1>{});
+
+    __host__ __device__ constexpr HackSemiDynamicUnMerge(
+        const MultiIndex<NDimUpDynamic>& dynamic_partial_up_lengths)
+        : dynamic_partial_up_lengths_{dynamic_partial_up_lengths},
+          dynamic_partial_up_lengths_scan_{
+              container_reverse_exclusive_scan(dynamic_partial_up_lengths,
+                                               math::multiplies<index_t>(),
+                                               static_partial_up_lengths_scan_[Number<0>{}])}
+    {
+        static_assert(NDimUpDynamic + NDimUpStatic == NDimUp,
+                      "wrong! inconsisitent # of dimensions");
+    }
+
+    __host__ __device__ constexpr HackSemiDynamicUnMerge()
+        : up_lengths_{make_zero_multi_index<NDimUpDynamic>()},
+          up_lengths_scan_{make_zero_multi_index<NDimUpStatic>()}
+    {
+        static_assert(NDimUpDynamic + NDimUpStatic == NDimUp,
+                      "wrong! inconsisitent # of dimensions");
+    }
+
+    __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
+
+    __host__ __device__ static constexpr index_t GetNumOfUpperDimension() { return NDimUp; }
+
+    __host__ __device__ constexpr const auto GetUpperLengths() const
+    {
+        UpperIndex up_lengths;
+
+        static_for<0, NDimUpDynamic, 1>{}(
+            [&](auto i) { up_lengths(i) = dynamic_partial_up_lengths_[i]; });
+
+        static_for<0, NDimUpStatic, 1>{}([&](auto i) {
+            up_lengths(i + Number<NDimUpDynamic>{}) = static_partial_up_lengths_[i];
+        });
+
+        return up_lengths;
+    }
+
+    template <typename LowIdx, typename UpIdx>
+    __host__ __device__ constexpr void CalculateLowerIndex(LowIdx& idx_low,
+                                                           const UpIdx& idx_up) const
+    {
+        idx_low(Number<0>{}) = idx_up[Number<NDimUp - 1>{}];
+
+        static_for<0, NDimUpDynamic, 1>{}([&](auto i) {
+            idx_low(Number<0>{}) += idx_up[i] * dynamic_partial_up_lengths_scan_[i];
+        });
+
+        static_for<NDimUpDynamic, NDimUp - 1, 1>{}([&](auto i) {
+            idx_low(Number<0>{}) +=
+                idx_up[i] * static_partial_up_lengths_scan_[i + Number<NDimUpDynamic>{}];
+        });
+    }
+
+    template <typename LowIdxDiff, typename UpIdxDiff, typename LowIdx, typename UpIdx>
+    __host__ __device__ constexpr void CalculateLowerIndexDiff(LowIdxDiff& idx_diff_low,
+                                                               const UpIdxDiff& idx_diff_up,
+                                                               const LowIdx& /* idx_low_old */,
+                                                               const UpIdx& /* idx_up_old */) const
+    {
+        CalculateLowerIndex(idx_diff_low, idx_diff_up);
+    }
+
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ constexpr void CalculateLowerIndexDiff_hack(LowIdxDiff& idx_diff_low,
+                                                                    const UpIdxDiff& idx_diff_up,
+                                                                    const LowIdx& idx_low_old,
+                                                                    const UpIdx& idx_up_old,
+                                                                    Number<Hack>) const
+    {
+        CalculateLowerIndexDiff(idx_diff_low, idx_diff_up, idx_low_old, idx_up_old);
+    }
+
+    __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
+
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
+    {
+        return true;
+    }
+
+    template <typename UpIdx>
+    __host__ __device__ static constexpr bool
+    IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& /* idx_up */)
+    {
+        return true;
+    }
+};
+#endif
 
 } // namespace ck
 #endif

@@ -166,28 +166,28 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
 
         // B matrix blockwise copy
         auto b_blockwise_copy =
-            BlockwiseDynamicTensorSliceTransfer_v4_hack<BlockSize,
-                                                        InMemoryDataOperation::Set,
-                                                        Sequence<KPerBlock, NPerBlock>,
-                                                        BBlockTransferThreadSliceLengths_K_N,
-                                                        BBlockTransferThreadClusterLengths_K_N,
-                                                        BBlockTransferThreadClusterArrangeOrder,
-                                                        Float,
-                                                        Float,
-                                                        decltype(b_k_n_global_desc),
-                                                        decltype(b_k_n_block_desc),
-                                                        BBlockTransferSrcAccessOrder,
-                                                        Sequence<0, 1>,
-                                                        BBlockTransferSrcVectorDim,
-                                                        1,
-                                                        BBlockTransferSrcScalarPerVector,
-                                                        BBlockTransferDstScalarPerVector_N,
-                                                        AddressSpace::Global,
-                                                        AddressSpace::Lds,
-                                                        1,
-                                                        1,
-                                                        BThreadTransferSrcResetCoordinateAfterRun,
-                                                        true>(
+            BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
+                                                   InMemoryDataOperation::Set,
+                                                   Sequence<KPerBlock, NPerBlock>,
+                                                   BBlockTransferThreadSliceLengths_K_N,
+                                                   BBlockTransferThreadClusterLengths_K_N,
+                                                   BBlockTransferThreadClusterArrangeOrder,
+                                                   Float,
+                                                   Float,
+                                                   decltype(b_k_n_global_desc),
+                                                   decltype(b_k_n_block_desc),
+                                                   BBlockTransferSrcAccessOrder,
+                                                   Sequence<0, 1>,
+                                                   BBlockTransferSrcVectorDim,
+                                                   1,
+                                                   BBlockTransferSrcScalarPerVector,
+                                                   BBlockTransferDstScalarPerVector_N,
+                                                   AddressSpace::Global,
+                                                   AddressSpace::Lds,
+                                                   1,
+                                                   1,
+                                                   BThreadTransferSrcResetCoordinateAfterRun,
+                                                   true>(
                 b_k_n_global_desc,
                 make_multi_index(0, n_block_data_on_global),
                 b_k_n_block_desc,
@@ -258,16 +258,14 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0);
         constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0);
 
-#if 1
         // LDS double buffer: preload data into LDS
         {
             a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
-            b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global);
+            b_blockwise_copy.RunRead_hack(b_k_n_global_desc, p_b_global);
 
             a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_double);
             b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_double);
         }
-#endif
 
         if constexpr(HasMainKBlockLoop)
         {
@@ -285,13 +283,14 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
             {
                 // even iteration
                 a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
-                b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc, b_block_slice_copy_step);
+                b_blockwise_copy.MoveSrcSliceWindow_hack(b_k_n_global_desc,
+                                                         b_block_slice_copy_step);
 
                 __syncthreads();
 
                 // LDS doubel buffer: load next data from device mem
                 a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
-                b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global);
+                b_blockwise_copy.RunRead_hack(b_k_n_global_desc, p_b_global);
 
                 // LDS double buffer: GEMM on current data
                 blockwise_gemm.Run(p_a_block_even, p_b_block_even, p_c_thread);
@@ -302,13 +301,14 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
 
                 // odd iteration
                 a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
-                b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc, b_block_slice_copy_step);
+                b_blockwise_copy.MoveSrcSliceWindow_hack(b_k_n_global_desc,
+                                                         b_block_slice_copy_step);
 
                 __syncthreads();
 
                 // LDS doubel buffer: load next data from device mem
                 a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
-                b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global);
+                b_blockwise_copy.RunRead_hack(b_k_n_global_desc, p_b_global);
 
                 // LDS double buffer: GEMM on current data
                 blockwise_gemm.Run(p_a_block_odd, p_b_block_odd, p_c_thread);
@@ -326,13 +326,13 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         if constexpr(HasDoubleTailKBlockLoop) // if has 2 iteration left
         {
             a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
-            b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc, b_block_slice_copy_step);
+            b_blockwise_copy.MoveSrcSliceWindow_hack(b_k_n_global_desc, b_block_slice_copy_step);
 
             __syncthreads();
 
             // LDS double buffer: load last data from device mem
             a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
-            b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global);
+            b_blockwise_copy.RunRead_hack(b_k_n_global_desc, p_b_global);
 
             // LDS double buffer: GEMM on 2nd-last data
             blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
@@ -384,8 +384,13 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                 Float,
                 decltype(c_m0_m1_n0_n1_thread_desc),
                 decltype(c_m0_m1_n0_n1_global_desc),
+#if 1 // debug
                 Sequence<MRepeat, MPerThread, NRepeat, NPerThread>,
                 CThreadTransferSrcDstAccessOrder,
+#else
+                Sequence<1, 1, 2, 4>,
+                Sequence<0, 1, 2, 3>,
+#endif
                 CThreadTransferSrcDstVectorDim,
                 1,
                 CThreadTransferDstScalarPerVector,
@@ -402,7 +407,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                                        m_thread_data_on_global % M1,
                                        n_thread_data_on_global / N1,
                                        n_thread_data_on_global % N1))
-                .Run(c_m0_m1_n0_n1_thread_desc, p_c_thread, c_m0_m1_n0_n1_global_desc, p_c_global);
+                .Run_hack(
+                    c_m0_m1_n0_n1_thread_desc, p_c_thread, c_m0_m1_n0_n1_global_desc, p_c_global);
         }
     }
 

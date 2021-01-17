@@ -34,7 +34,7 @@ template <index_t BlockSize,
           index_t GemmBBlockTransferSrcScalarPerVector_GemmN,
           index_t GemmBBlockTransferDstScalarPerVector_GemmN,
           index_t GemmCThreadTransferDstScalarPerVector_GemmN1>
-struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw
+struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
 {
     template <typename... Wei, typename... In, typename... Out>
     __host__ void Run(const DynamicTensorDescriptor<Wei...>& wei_k_c_y_x_global_desc,
@@ -96,18 +96,11 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw
 
         // input tensor
         const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor(
-            transform_dynamic_tensor_descriptor(
-                in_n_c_hi_wi_global_desc,
-                make_tuple(DynamicPassThrough{N},
-                           DynamicPassThrough{C},
-                           DynamicLeftPad{Hi, InLeftPadH},
-                           DynamicLeftPad{Wi, InLeftPadW}),
-                make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
-                make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{})),
+            in_n_c_hi_wi_global_desc,
             make_tuple(DynamicPassThrough{N},
                        DynamicPassThrough{C},
-                       DynamicRightPad{Hi + InLeftPadH, InRightPadH},
-                       DynamicRightPad{Wi + InLeftPadW, InRightPadW}),
+                       DynamicPad{Hi, InLeftPadH, InRightPadH},
+                       DynamicPad{Wi, InLeftPadW, InRightPadW}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 
@@ -164,6 +157,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw
         const index_t GemmM0 = GemmM / GemmM1;
         const index_t GemmN0 = GemmN / GemmN1;
 
+#if 1 // debug
         const auto out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc =
             transform_dynamic_tensor_descriptor(
                 out_gemmm_gemmn_global_desc,
@@ -171,6 +165,16 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw
                            DynamicUnMerge<2>{make_multi_index(GemmN0, GemmN1)}),
                 make_tuple(Sequence<0>{}, Sequence<1>{}),
                 make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
+#else
+        const auto out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc =
+            transform_dynamic_tensor_descriptor(
+                out_gemmm_gemmn_global_desc,
+                make_tuple(
+                    HackSemiDynamicUnMerge<3, Sequence<GemmM1>>{make_multi_index(1, GemmM0)},
+                    HackSemiDynamicUnMerge<3, Sequence<GemmN1>>{make_multi_index(1, GemmN0)}),
+                make_tuple(Sequence<0>{}, Sequence<1>{}),
+                make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
+#endif
 
         // GEMM
         using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v1<

@@ -751,6 +751,13 @@ __host__ __device__ constexpr auto reverse_inclusive_scan_sequence(Seq, Reduce, 
 }
 
 template <typename Seq, typename Reduce, index_t Init>
+__host__ __device__ constexpr auto reverse_exclusive_scan_sequence(Seq, Reduce, Number<Init>)
+{
+    return reverse_inclusive_scan_sequence(Seq::PopFront(), Reduce{}, Number<Init>{})
+        .PushBack(Number<Init>{});
+}
+
+template <typename Seq, typename Reduce, index_t Init>
 __host__ __device__ constexpr auto inclusive_scan_sequence(Seq, Reduce, Number<Init>)
 {
     return reverse_inclusive_scan_sequence(Seq{}.Reverse(), Reduce{}, Number<Init>{}).Reverse();
