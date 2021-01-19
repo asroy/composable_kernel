@@ -182,11 +182,28 @@ struct vector_type<float, 1>
 {
     using MemoryType = float;
 
+    float data_;
+
+    __host__ __device__ static constexpr index_t Size() { return 1; }
+
+    __host__ __device__ constexpr const auto& Vector() const { return data_; }
+
+    __host__ __device__ constexpr auto& Vector() { return data_; }
+
     template <index_t I>
-    __host__ __device__ static void SetScalar(MemoryType& v, float s, Number<I>)
+    __host__ __device__ constexpr const auto& operator[](Number<I>) const
     {
-        static_assert(I < 1, "wrong");
-        *(reinterpret_cast<float*>(&v) + I) = s;
+        static_assert(I == 0, "wrong!");
+
+        return data_;
+    }
+
+    template <index_t I>
+    __host__ __device__ constexpr auto& operator()(Number<I>)
+    {
+        static_assert(I == 0, "wrong!");
+
+        return data_;
     }
 };
 
@@ -222,13 +239,62 @@ struct vector_type<float, 4>
 {
     using MemoryType = float4_t;
 
-    __host__ __device__ static constexpr index_t GetSize() { return 4; }
+    union
+    {
+        float4_t v;
+        float s0, s1, s2, s3;
+    } data_;
+
+    __host__ __device__ static constexpr index_t Size() { return 4; }
+
+    __host__ __device__ constexpr const auto& Vector() const { return data_.v; }
+
+    __host__ __device__ constexpr auto& Vector() { return data_.v; }
 
     template <index_t I>
-    __host__ __device__ static void SetScalar(MemoryType& v, float s, Number<I>)
+    __host__ __device__ constexpr const auto& operator[](Number<I>) const
     {
-        static_assert(I < 4, "wrong");
-        *(reinterpret_cast<float*>(&v) + I) = s;
+        static_assert(I >= 0 && I < 4, "wrong!");
+
+        if constexpr(I == 0)
+        {
+            return data_.s0;
+        }
+        else if constexpr(I == 1)
+        {
+            return data_.s1;
+        }
+        else if constexpr(I == 2)
+        {
+            return data_.s2;
+        }
+        else
+        {
+            return data_.s3;
+        }
+    }
+
+    template <index_t I>
+    __host__ __device__ constexpr auto& operator()(Number<I>)
+    {
+        static_assert(I >= 0 && I < 4, "wrong!");
+
+        if constexpr(I == 0)
+        {
+            return data_.s0;
+        }
+        else if constexpr(I == 1)
+        {
+            return data_.s1;
+        }
+        else if constexpr(I == 2)
+        {
+            return data_.s2;
+        }
+        else
+        {
+            return data_.s3;
+        }
     }
 };
 

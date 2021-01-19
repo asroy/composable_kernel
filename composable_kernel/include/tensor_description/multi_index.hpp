@@ -152,6 +152,17 @@ __host__ __device__ constexpr auto operator*(const Tuple<Xs...>& x, const Y& y)
     return r;
 }
 
+// MultiIndex = index_t * MultiIndex
+template <typename... Xs>
+__host__ __device__ constexpr auto operator*(index_t a, const Tuple<Xs...>& x)
+{
+    constexpr index_t NSize = sizeof...(Xs);
+
+    Tuple<Xs...> r;
+    static_for<0, NSize, 1>{}([&](auto i) { r(i) = a * x[i]; });
+    return r;
+}
+
 #endif
 } // namespace ck
 #endif

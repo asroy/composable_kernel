@@ -929,7 +929,7 @@ void device_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmN = 2;
 
     constexpr index_t GemmCThreadCopyDstDataPerWrite_GemmN1 = 1;
-#elif 1
+#elif 0
     // cdata = 64, BlockSize = 64, 64x64x3
     constexpr index_t BlockSize = 64;
 
