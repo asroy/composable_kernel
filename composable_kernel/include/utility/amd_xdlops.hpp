@@ -132,10 +132,12 @@ intrin_mfma_f32_32x32x2f32(const float* reg_a, const float* reg_b, c_vec16_1_t::
     return reg_c;
 }
 
-__device__ c_vec4_1_t::VecType
-intrin_mfma_f32_16x16x4f32(const float* reg_a, const float* reg_b, c_vec4_1_t::VecType reg_c)
+__device__ float_vec4_t intrin_mfma_f32_16x16x4f32(const float* reg_a,
+                                                   const float* reg_b,
+                                                   float_vec4_t reg_c)
 {
-    reg_c.s.x = llvm_intrin_amdgcn_mfma_f32_16x16x4f32(reg_a[0], reg_b[0], reg_c.s.x, 0, 0, 0);
+    reg_c.s4(Number<0>{}) =
+        llvm_intrin_amdgcn_mfma_f32_16x16x4f32(reg_a[0], reg_b[0], reg_c.s4[Number<0>{}], 0, 0, 0);
     return reg_c;
 }
 

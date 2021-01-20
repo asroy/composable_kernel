@@ -129,6 +129,7 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_xdlops
             return p_c_thread;
         }
     };
+#endif
 
     template <>
     struct WithMNRepeats<1, 1>
@@ -138,10 +139,10 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_xdlops
                                      const FloatB* __restrict__ p_b_block,
                                      FloatC p_c_thread)
         {
-            return XdlopsGemm.template Run<M, N, K>(p_a_block, p_b_block, p_c_thread);
+            p_c_thread = XdlopsGemm.template Run<M, N, K>(p_a_block, p_b_block, p_c_thread);
+            return p_c_thread;
         }
     };
-#endif
 #endif
 
     template <class FloatA, class FloatB, class FloatC>

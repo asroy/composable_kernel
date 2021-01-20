@@ -36,6 +36,7 @@ union float_vec4_t
     StaticallyIndexedArray<float, 4> s1;
     StaticallyIndexedArray<float2_t, 2> s2;
     StaticallyIndexedArray<float4_t, 1> s4;
+    float n[4];
     __host__ __device__ constexpr float_vec4_t() {}
 
     template <index_t vs>

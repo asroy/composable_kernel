@@ -51,6 +51,8 @@ struct make_block_work_sequence<MBlockWork, NBlockWork, NBlock1MBlock0>
     __device__ constexpr auto get() { return Sequence<NBlockWork, MBlockWork>{}; }
 };
 
+#define ACCVGPR_ZERO(acc_reg_id) asm volatile("v_accvgpr_write_b32 a[" #acc_reg_id "], 0" : :);
+
 template <index_t GridSize,
           index_t BlockSize,
           class ABFloat,
@@ -211,6 +213,11 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2_org
         // get zero-initialized output register of vector type
         constexpr index_t c_thread_size = MPerBlock * NPerBlock / BlockSize;
         auto c_thread_vec               = GetRegBuffer<AccFloat, c_thread_size>();
+
+        ACCVGPR_ZERO(0)
+        ACCVGPR_ZERO(1)
+        ACCVGPR_ZERO(2)
+        ACCVGPR_ZERO(3)
 
         // preload data into LDS
         {
@@ -496,6 +503,11 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
         constexpr index_t c_thread_size = MPerBlock * NPerBlock / BlockSize;
         auto c_thread_vec               = GetRegBuffer<AccFloat, c_thread_size>();
 
+        ACCVGPR_ZERO(0)
+        ACCVGPR_ZERO(1)
+        ACCVGPR_ZERO(2)
+        ACCVGPR_ZERO(3)
+
         // preload data into LDS
         {
             a_blockwise_copy.Run(p_a_global, p_a_block);
@@ -615,7 +627,8 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
                                      m_thread_data_on_global % (M2 * M1) / M2,
                                      m_thread_data_on_global % M2,
                                      n_thread_data_on_global))
-                    .Store(c_thread_vec.GetVector(Number<M0 * M2>{})[Number<blk_id>{}], p_c_global);
+                    .Store(c_thread_vec, p_c_global);
+                //.Store(c_thread_vec.GetVector(Number<M0 * M2>{})[Number<blk_id>{}], p_c_global);
             });
         }
     }

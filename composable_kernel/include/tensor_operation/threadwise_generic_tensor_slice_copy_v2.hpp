@@ -56,15 +56,11 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         static_assert(is_valid_sequence_map<SrcDimAccessOrder>{}, "wrong! map is not valid");
         static_assert(is_valid_sequence_map<DstDimAccessOrder>{}, "wrong! map is not valid");
 
-        static_assert(
-            SliceLengths{}[SrcVectorReadDim] % math::lcm(SrcDataPerRead, DstDataPerWrite) == 0,
-            "wrong! cannot evenly divide");
+        static_assert(SliceLengths{}[SrcVectorReadDim] % SrcDataPerRead == 0,
+                      "wrong! cannot evenly divide");
 
-        static_assert(
-            SliceLengths{}[DstVectorWriteDim] % math::lcm(SrcDataPerRead, DstDataPerWrite) == 0,
-            "wrong! cannot evenly divide");
-
-        static_assert(ThreadBufferSize == 8 || ThreadBufferSize == 16, "");
+        static_assert(SliceLengths{}[DstVectorWriteDim] % DstDataPerWrite == 0,
+                      "wrong! cannot evenly divide");
     }
 
     __device__ constexpr ThreadwiseGenericTensorSliceCopy_v5()
@@ -194,9 +190,9 @@ struct ThreadwiseGenericTensorSliceCopy_v5
                 // load data from src to the long-vector buffer
                 const auto src_coord = mSrcSliceOrigin + to_multi_index(long_vector_data_begin_id);
 
-                auto src_buff =
-                    vector_data_load<SrcData, src_data_per_access>::run(p_src, src_coord);
-                // buffer_vector_load<SrcDataPerRead, SrcDesc::GetElementSpace()>(p_src, src_coord);
+                auto src_buff = buffer_vector_load<SrcDataPerRead, SrcDesc::GetElementSpace()>(
+                    p_src, src_coord);
+                // vector_data_load<SrcData, src_data_per_access>::run(p_src, src_coord);
 
                 // store data from the long-vector buffer to dst
                 constexpr auto buff_off =
