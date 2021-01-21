@@ -727,9 +727,6 @@ struct XdlopsGemm_t
 #else
         const index_t laneId = get_thread_local_1d_id() % mfma_type.wave_size;
 
-        FloatA a[K * MRepeats];
-        FloatB b[K * NRepeats];
-
         constexpr index_t data_size       = sizeof(FloatA) / sizeof(data_type);
         constexpr index_t a_reg_buff_size = K * MRepeats * data_size;
         constexpr index_t b_reg_buff_size = K * NRepeats * data_size;
@@ -748,13 +745,11 @@ struct XdlopsGemm_t
 
         constexpr index_t KRepeats = sizeof(FloatA) / (sizeof(data_type) * mfma_type.k_base);
 
-        auto pa = reinterpret_cast<const data_type*>(&a);
-        auto pb = reinterpret_cast<const data_type*>(&b);
-
         constexpr index_t AStride = K * KRepeats;
         constexpr index_t BStride = K * KRepeats;
 
         static_if<!IsKReduction>{}([&](auto) {
+#if 0
             for(index_t m_i = 0; m_i < MRepeats; ++m_i)
                 for(index_t k_i = 0; k_i < K; ++k_i)
                     a[k_i + m_i * K] = p_a_wave[k_i * M + laneId + MPerXdlops * m_i];
@@ -774,6 +769,7 @@ struct XdlopsGemm_t
                                                     BStride>(
                     &pa[k_i * mfma_type.k_base], &pb[k_i * mfma_type.k_base], p_c_thread);
             }
+#endif
         })
             .Else([&](auto) {
                 const index_t blk_id = laneId / mfma_type.num_threads_blk;

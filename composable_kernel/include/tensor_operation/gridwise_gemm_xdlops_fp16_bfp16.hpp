@@ -413,7 +413,7 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
         constexpr auto a_g_k_m_kpack_block_desc = make_native_tensor_descriptor_aligned(
             Sequence<1, KPerBlock, MPerBlock, KPack>{}, Number<max_align>{});
 
-        auto a_blockwise_copy = BlockwiseGenericTensorSliceCopy_v4<
+        auto a_blockwise_copy = BlockwiseGenericTensorSliceCopy_v5<
             BlockSize,
             decltype(a_g_k_m_kpack_global_desc),
             decltype(a_g_k_m_kpack_block_desc),
@@ -509,14 +509,14 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
         for(index_t k_block_data_begin = 0; k_block_data_begin < K - KPerBlock;
             k_block_data_begin += KPerBlock)
         {
-            ABFloat p_a_thread_buffer[a_blockwise_copy.GetThreadBufferSize()];
+            // ABFloat p_a_thread_buffer[a_blockwise_copy.GetThreadBufferSize()];
 
             // load next data from device mem
             a_blockwise_copy.MoveSrcSliceWindow(blockwise_a_copy_src_step, True);
             b_blockwise_copy.MoveSrcSliceWindow(blockwise_b_copy_src_step, True);
 
-            // a_blockwise_copy.RunLoadThreadBuffer(p_a_global);
-            a_blockwise_copy.RunLoadThreadBuffer(p_a_global, p_a_thread_buffer);
+            a_blockwise_copy.RunLoadThreadBuffer(p_a_global);
+            // a_blockwise_copy.RunLoadThreadBuffer(p_a_global, p_a_thread_buffer);
 
             b_blockwise_copy.RunLoadThreadBuffer(p_b_global);
 
@@ -535,8 +535,8 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
             block_sync_lds();
 
             // store next data to LDS
-            // a_blockwise_copy.RunStoreThreadBuffer(p_a_block);
-            a_blockwise_copy.RunStoreThreadBuffer(p_a_thread_buffer, p_a_block);
+            a_blockwise_copy.RunStoreThreadBuffer(p_a_block);
+            // a_blockwise_copy.RunStoreThreadBuffer(p_a_thread_buffer, p_a_block);
 
             b_blockwise_copy.RunStoreThreadBuffer(p_b_block);
         }
