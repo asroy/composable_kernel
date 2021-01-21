@@ -187,10 +187,15 @@ __device__ float2_t amd_buffer_load<float, 2>(const float* p_src_wave,
     return __llvm_amdgcn_buffer_load_f32x2(
         src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #else
+#if 0
     float2_t tmp = __llvm_amdgcn_buffer_load_f32x2(
         src_wave_buffer_resource.data, 0, src_thread_addr_offset, false, false);
 
     return src_thread_data_valid ? tmp : float2_t(0);
+#else
+    return __llvm_amdgcn_buffer_load_f32x2(
+        src_wave_buffer_resource.data, 0, src_thread_addr_offset, false, false);
+#endif
 #endif
 }
 
@@ -217,10 +222,15 @@ __device__ float4_t amd_buffer_load<float, 4>(const float* p_src_wave,
     return __llvm_amdgcn_buffer_load_f32x4(
         src_wave_buffer_resource.data, 0, src_addr_shift + src_thread_addr_offset, false, false);
 #else
+#if 0
     float4_t tmp = __llvm_amdgcn_buffer_load_f32x4(
         src_wave_buffer_resource.data, 0, src_thread_addr_offset, false, false);
 
     return src_thread_data_valid ? tmp : float4_t(0);
+#else
+    return __llvm_amdgcn_buffer_load_f32x4(
+        src_wave_buffer_resource.data, 0, src_thread_addr_offset, false, false);
+#endif
 #endif
 }
 

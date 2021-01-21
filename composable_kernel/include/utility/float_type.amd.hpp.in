@@ -184,6 +184,8 @@ struct vector_type<float, 1>
 
     float data_;
 
+    __host__ __device__ explicit constexpr vector_type() : data_{0} {}
+
     __host__ __device__ static constexpr index_t Size() { return 1; }
 
     __host__ __device__ constexpr const auto& Vector() const { return data_; }
@@ -212,25 +214,34 @@ struct vector_type<float, 2>
 {
     using MemoryType = float2_t;
 
-    union DataType
+    union
     {
-        MemoryType vector;
-        float scalar[2];
-    };
+        float2_t vector_;
+        StaticallyIndexedArray<float, 2> scalars_;
+    } data_;
+
+    __host__ __device__ explicit constexpr vector_type() : data_{MemoryType{0}} {}
+
+    __host__ __device__ static constexpr index_t Size() { return 2; }
+
+    __host__ __device__ constexpr const auto& Vector() const { return data_.vector_; }
+
+    __host__ __device__ constexpr auto& Vector() { return data_.vector_; }
 
     template <index_t I>
-    __host__ __device__ static void SetScalar(MemoryType& v, float s, Number<I>)
+    __host__ __device__ constexpr const auto& operator[](Number<I>) const
     {
-        static_assert(I < 2, "wrong");
-        *(reinterpret_cast<float*>(&v) + I) = s;
+        static_assert(I >= 0 && I < 2, "wrong!");
+
+        return data_.scalars_[Number<I>{}];
     }
 
-    __host__ __device__ static MemoryType Pack(float s0, float s1)
+    template <index_t I>
+    __host__ __device__ constexpr auto& operator()(Number<I>)
     {
-        DataType data;
-        data.scalar[0] = s0;
-        data.scalar[1] = s1;
-        return data.vector;
+        static_assert(I >= 0 && I < 2, "wrong!");
+
+        return data_.scalars_(Number<I>{});
     }
 };
 
@@ -241,37 +252,24 @@ struct vector_type<float, 4>
 
     union
     {
-        float4_t v;
-        float s0, s1, s2, s3;
+        float4_t vector_;
+        StaticallyIndexedArray<float, 4> scalars_;
     } data_;
+
+    __host__ __device__ explicit constexpr vector_type() : data_{MemoryType{0}} {}
 
     __host__ __device__ static constexpr index_t Size() { return 4; }
 
-    __host__ __device__ constexpr const auto& Vector() const { return data_.v; }
+    __host__ __device__ constexpr const auto& Vector() const { return data_.vector_; }
 
-    __host__ __device__ constexpr auto& Vector() { return data_.v; }
+    __host__ __device__ constexpr auto& Vector() { return data_.vector_; }
 
     template <index_t I>
     __host__ __device__ constexpr const auto& operator[](Number<I>) const
     {
         static_assert(I >= 0 && I < 4, "wrong!");
 
-        if constexpr(I == 0)
-        {
-            return data_.s0;
-        }
-        else if constexpr(I == 1)
-        {
-            return data_.s1;
-        }
-        else if constexpr(I == 2)
-        {
-            return data_.s2;
-        }
-        else
-        {
-            return data_.s3;
-        }
+        return data_.scalars_[Number<I>{}];
     }
 
     template <index_t I>
@@ -279,22 +277,7 @@ struct vector_type<float, 4>
     {
         static_assert(I >= 0 && I < 4, "wrong!");
 
-        if constexpr(I == 0)
-        {
-            return data_.s0;
-        }
-        else if constexpr(I == 1)
-        {
-            return data_.s1;
-        }
-        else if constexpr(I == 2)
-        {
-            return data_.s2;
-        }
-        else
-        {
-            return data_.s3;
-        }
+        return data_.scalars_(Number<I>{});
     }
 };
 
