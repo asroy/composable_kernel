@@ -15,405 +15,6 @@ template <typename SrcData,
           typename SrcDesc,
           typename DstDesc,
           typename SliceLengths,
-          typename SrcDstDimAccessOrder,
-          index_t SrcDstVectorDim,
-          index_t SrcScalarPerVector,
-          index_t DstScalarPerVector,
-          AddressSpace SrcAddressSpace,
-          AddressSpace DstAddressSpace,
-          InMemoryDataOperation DstInMemOp,
-          index_t SrcScalarStrideInVector,
-          index_t DstScalarStrideInVector,
-          bool SrcResetCoordinateAfterRun, // control whether to move back src coordinate after each
-                                           // Run(),  will be fused with MoveSrcSliceWindow to
-                                           // save addr computation
-          bool DstResetCoordinateAfterRun> // control whether to move back dst coordinate after each
-                                           // RunWrite(),  will be fused with MoveDstSliceWindow to
-                                           // save addr computation
-struct ThreadwiseDynamicTensorSliceTransfer_v1r2
-{
-    static constexpr index_t nDim = SliceLengths::Size();
-    using Index                   = MultiIndex<nDim>;
-
-    using SrcCoord = decltype(make_dynamic_tensor_coordinate(SrcDesc{}, Index{}));
-    using DstCoord = decltype(make_dynamic_tensor_coordinate(DstDesc{}, Index{}));
-
-    using SrcCoordStep = decltype(make_dynamic_tensor_coordinate_step(SrcDesc{}, Index{}));
-    using DstCoordStep = decltype(make_dynamic_tensor_coordinate_step(DstDesc{}, Index{}));
-
-    __device__ constexpr ThreadwiseDynamicTensorSliceTransfer_v1r2(const SrcDesc& src_desc,
-                                                                   const Index& src_slice_origin,
-                                                                   const DstDesc& dst_desc,
-                                                                   const Index& dst_slice_origin)
-        : src_slice_origin_(make_dynamic_tensor_coordinate(src_desc, src_slice_origin)),
-          dst_slice_origin_(make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin))
-    {
-    }
-
-    __device__ constexpr ThreadwiseDynamicTensorSliceTransfer_v1r2()
-        : ThreadwiseDynamicTensorSliceTransfer_v1r2(
-              SrcDesc{}, make_zero_multi_index<nDim>(), DstDesc{}, make_zero_multi_index<nDim>())
-    {
-    }
-
-    __device__ void SetSrcSliceOrigin(const SrcDesc& src_desc, const Index& src_slice_origin_idx)
-    {
-        src_slice_origin_ = make_dynamic_tensor_coordinate(src_desc, src_slice_origin_idx);
-    }
-
-    __device__ void SetDstSliceOrigin(const DstDesc& dst_desc, const Index& dst_slice_origin_idx)
-    {
-        dst_slice_origin_ = make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_idx);
-    }
-
-    __device__ void
-    Run_hack(const SrcDesc& src_desc, const SrcData* p_src, const DstDesc& dst_desc, DstData* p_dst)
-    {
-        if constexpr(remove_reference_t<SrcDesc>::GetNumOfDimension() == 2)
-        {
-            // TODO use constexpr for coordinate-step to make sure compiler behave correctly
-            const auto src_step_0_p1 =
-                make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 1));
-            const auto src_step_0_m1 =
-                make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, -1));
-
-            const auto src_step_p1_0 =
-                make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(1, 0));
-            const auto src_step_m1_0 =
-                make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(-1, 0));
-
-            const auto dst_step_0_p1 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 1));
-            const auto dst_step_0_m1 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, -1));
-
-            const auto dst_step_p1_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(1, 0));
-            const auto dst_step_m1_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(-1, 0));
-
-            constexpr index_t Len0 = SliceLengths{}[0];
-            constexpr index_t Len1 = SliceLengths{}[1];
-
-#pragma unroll
-            for(index_t iter0 = 0; iter0 < Len0; ++iter0)
-            {
-#pragma unroll
-                for(index_t iter1 = 0; iter1 < Len1; ++iter1)
-                {
-                    // do work
-                    transfer_data<SrcData,
-                                  1,
-                                  SrcAddressSpace,
-                                  DstAddressSpace,
-                                  DstInMemOp,
-                                  SrcScalarStrideInVector,
-                                  DstScalarStrideInVector>(
-                        p_src,
-                        src_slice_origin_.GetOffset(),
-                        coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                            src_desc, src_slice_origin_),
-                        src_desc.GetElementSpaceSize(),
-                        p_dst,
-                        dst_slice_origin_.GetOffset(),
-                        coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                            dst_desc, dst_slice_origin_),
-                        dst_desc.GetElementSpaceSize());
-
-                    // move dim1 iterator
-                    if(iter1 < Len1 - 1)
-                    {
-                        bool forward_dim1 = (iter0 % 2 == 0);
-
-                        if(forward_dim1)
-                        {
-                            move_dynamic_tensor_coordinate(
-                                src_desc, src_slice_origin_, src_step_0_p1);
-                            move_dynamic_tensor_coordinate(
-                                dst_desc, dst_slice_origin_, dst_step_0_p1);
-                        }
-                        else
-                        {
-                            move_dynamic_tensor_coordinate(
-                                src_desc, src_slice_origin_, src_step_0_m1);
-                            move_dynamic_tensor_coordinate(
-                                dst_desc, dst_slice_origin_, dst_step_0_m1);
-                        }
-                    }
-                }
-
-                // move dim0 iterator
-                if(iter0 < Len0 - 1)
-                {
-                    move_dynamic_tensor_coordinate(src_desc, src_slice_origin_, src_step_p1_0);
-                    move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_, dst_step_p1_0);
-                }
-            }
-        }
-        else if constexpr(remove_reference_t<SrcDesc>::GetNumOfDimension() == 4)
-        {
-        // TODO use constexpr for coordinate-step to make sure compiler behave correctly
-#if 0
-            const auto src_step_0_0_0_p1 =
-                make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 0, 0, 1));
-            const auto src_step_0_0_0_m1 =
-                make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 0, 0, -1));
-
-            const auto src_step_0_0_p1_0 =
-                make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 0, 1, 0));
-            const auto src_step_0_0_m1_0 =
-                make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 0, -1, 0));
-
-            const auto src_step_0_p1_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 1, 0, 0));
-            const auto src_step_0_m1_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, -1, 0, 0));
-
-            const auto src_step_p1_0_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(1, 0, 0, 0));
-            const auto src_step_m1_0_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(-1, 0, 0, 0));
-
-            const auto dst_step_0_0_0_p1 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 0, 0, 1));
-            const auto dst_step_0_0_0_m1 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 0, 0, -1));
-
-            const auto dst_step_0_0_p1_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 0, 1, 0));
-            const auto dst_step_0_0_m1_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 0, -1, 0));
-
-            const auto dst_step_0_p1_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 1, 0, 0));
-            const auto dst_step_0_m1_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, -1, 0, 0));
-
-            const auto dst_step_p1_0_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(1, 0, 0, 0));
-            const auto dst_step_m1_0_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(-1, 0, 0, 0));
-#else
-            // hack for output tensor
-            const auto src_step_0_0_0_p1 =
-                make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 0, 0, 1));
-            const auto src_step_0_0_0_m1 =
-                make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 0, 0, -1));
-
-            const auto src_step_0_0_p1_0 =
-                make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 0, 1, 0));
-            const auto src_step_0_0_m1_0 =
-                make_dynamic_tensor_coordinate_step(src_desc, make_multi_index(0, 0, -1, 0));
-
-            const auto src_step_0_p1_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 1, 0, 0));
-            const auto src_step_0_m1_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, -1, 0, 0));
-
-            const auto src_step_p1_0_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(1, 0, 0, 0));
-            const auto src_step_m1_0_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(-1, 0, 0, 0));
-
-            const auto dst_step_0_0_0_p1 = make_dynamic_tensor_coordinate_step_hack(
-                dst_desc, make_multi_index(0, 0, 0, 1), Sequence<0, 0, 1, 0, 0>{});
-            const auto dst_step_0_0_0_m1 = make_dynamic_tensor_coordinate_step_hack(
-                dst_desc, make_multi_index(0, 0, 0, -1), Sequence<0, 0, 2, 0, 0>{});
-
-            const auto dst_step_0_0_p1_0 = make_dynamic_tensor_coordinate_step_hack(
-                dst_desc, make_multi_index(0, 0, 1, 0), Sequence<0, 0, 1, 0, 0>{});
-            const auto dst_step_0_0_m1_0 = make_dynamic_tensor_coordinate_step_hack(
-                dst_desc, make_multi_index(0, 0, -1, 0), Sequence<0, 0, 2, 0, 0>{});
-
-            const auto dst_step_0_p1_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, 1, 0, 0));
-            const auto dst_step_0_m1_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(0, -1, 0, 0));
-
-            const auto dst_step_p1_0_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(1, 0, 0, 0));
-            const auto dst_step_m1_0_0_0 =
-                make_dynamic_tensor_coordinate_step(dst_desc, make_multi_index(-1, 0, 0, 0));
-#endif
-
-            constexpr index_t Len0 = SliceLengths{}[0];
-            constexpr index_t Len1 = SliceLengths{}[1];
-            constexpr index_t Len2 = SliceLengths{}[2];
-            constexpr index_t Len3 = SliceLengths{}[3];
-
-#pragma unroll
-            for(index_t iter0 = 0; iter0 < Len0; ++iter0)
-            {
-#pragma unroll
-                for(index_t iter1 = 0; iter1 < Len1; ++iter1)
-                {
-#pragma unroll
-                    for(index_t iter2 = 0; iter2 < Len2; ++iter2)
-                    {
-#pragma unroll
-                        for(index_t iter3 = 0; iter3 < Len3; ++iter3)
-                        {
-                            // do work
-                            transfer_data<SrcData,
-                                          1,
-                                          SrcAddressSpace,
-                                          DstAddressSpace,
-                                          DstInMemOp,
-                                          SrcScalarStrideInVector,
-                                          DstScalarStrideInVector>(
-                                p_src,
-                                src_slice_origin_.GetOffset(),
-                                coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                                    src_desc, src_slice_origin_),
-                                src_desc.GetElementSpaceSize(),
-                                p_dst,
-                                dst_slice_origin_.GetOffset(),
-                                coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                                    dst_desc, dst_slice_origin_),
-                                dst_desc.GetElementSpaceSize());
-
-                            // move dim1 iterator
-                            if(iter3 < Len3 - 1)
-                            {
-                                bool forward_dim3 = (iter2 % 2 == 0);
-
-                                if(forward_dim3)
-                                {
-                                    move_dynamic_tensor_coordinate(
-                                        src_desc, src_slice_origin_, src_step_0_0_0_p1);
-                                    move_dynamic_tensor_coordinate(
-                                        dst_desc, dst_slice_origin_, dst_step_0_0_0_p1);
-                                }
-                                else
-                                {
-                                    move_dynamic_tensor_coordinate(
-                                        src_desc, src_slice_origin_, src_step_0_0_0_m1);
-                                    move_dynamic_tensor_coordinate(
-                                        dst_desc, dst_slice_origin_, dst_step_0_0_0_m1);
-                                }
-                            }
-                        }
-
-                        // move dim1 iterator
-                        if(iter2 < Len2 - 1)
-                        {
-                            bool forward_dim2 = (iter1 % 2 == 0);
-
-                            if(forward_dim2)
-                            {
-                                move_dynamic_tensor_coordinate(
-                                    src_desc, src_slice_origin_, src_step_0_0_p1_0);
-                                move_dynamic_tensor_coordinate(
-                                    dst_desc, dst_slice_origin_, dst_step_0_0_p1_0);
-                            }
-                            else
-                            {
-                                move_dynamic_tensor_coordinate(
-                                    src_desc, src_slice_origin_, src_step_0_0_m1_0);
-                                move_dynamic_tensor_coordinate(
-                                    dst_desc, dst_slice_origin_, dst_step_0_0_m1_0);
-                            }
-                        }
-                    }
-
-                    // move dim1 iterator
-                    if(iter1 < Len1 - 1)
-                    {
-                        bool forward_dim1 = (iter0 % 2 == 0);
-
-                        if(forward_dim1)
-                        {
-                            move_dynamic_tensor_coordinate(
-                                src_desc, src_slice_origin_, src_step_0_p1_0_0);
-                            move_dynamic_tensor_coordinate(
-                                dst_desc, dst_slice_origin_, dst_step_0_p1_0_0);
-                        }
-                        else
-                        {
-                            move_dynamic_tensor_coordinate(
-                                src_desc, src_slice_origin_, src_step_0_m1_0_0);
-                            move_dynamic_tensor_coordinate(
-                                dst_desc, dst_slice_origin_, dst_step_0_m1_0_0);
-                        }
-                    }
-                }
-
-                // move dim0 iterator:
-                if(iter0 < Len0 - 1)
-                {
-                    // move forward in dim0
-                    move_dynamic_tensor_coordinate(src_desc, src_slice_origin_, src_step_p1_0_0_0);
-                    move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_, dst_step_p1_0_0_0);
-                }
-            }
-        }
-
-        // move src and dst coordinate back to their origins
-        if constexpr(SrcResetCoordinateAfterRun)
-        {
-            const auto src_back_step =
-                make_dynamic_tensor_coordinate_step(src_desc, GetCoordinateBackStep());
-
-            move_dynamic_tensor_coordinate(src_desc, src_slice_origin_, src_back_step);
-        }
-
-        if constexpr(DstResetCoordinateAfterRun)
-        {
-            const auto dst_back_step =
-                make_dynamic_tensor_coordinate_step(dst_desc, GetCoordinateBackStep());
-
-            move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_, dst_back_step);
-        }
-    }
-
-    __device__ static constexpr auto GetCoordinateBackStep()
-    {
-        MultiIndex<nDim> back_step;
-
-        back_step(Number<0>{}) = 1 - SliceLengths{}[0];
-
-        static_for<1, nDim, 1>{}([&](auto i) {
-            back_step(i) = (SliceLengths{}[i - Number<1>{}] % 2 == 0) ? 0 : (1 - SliceLengths{}[i]);
-        });
-
-        return back_step;
-    }
-
-    // src_slice_origin_step_idx need to be known at compile-time, for performance reason
-    __device__ void MoveSrcSliceWindow(const SrcDesc& src_desc,
-                                       const Index& src_slice_origin_step_idx)
-    {
-        // is it OK to construct a new step every time?
-        const auto src_slice_origin_step =
-            make_dynamic_tensor_coordinate_step(src_desc, src_slice_origin_step_idx);
-
-        move_dynamic_tensor_coordinate(src_desc, src_slice_origin_, src_slice_origin_step);
-    }
-
-    // dst_slice_origin_step_idx need to be known at compile-time, for performance reason
-    __device__ void MoveDstSliceWindow(const DstDesc& dst_desc,
-                                       const Index& dst_slice_origin_step_idx)
-    {
-        // is it OK to construct a new step every time?
-        const auto dst_slice_origin_step =
-            make_dynamic_tensor_coordinate_step(dst_desc, dst_slice_origin_step_idx);
-
-        move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_, dst_slice_origin_step);
-    }
-
-    private:
-    SrcCoord src_slice_origin_;
-    DstCoord dst_slice_origin_;
-};
-
-// this version is less likely to have scratch memory issue, due to:
-// 1. It does not keep reference to tensor descriptor
-// 2. It does not construct new tensor coordinate for this->Run()
-template <typename SrcData,
-          typename DstData,
-          typename SrcDesc,
-          typename DstDesc,
-          typename SliceLengths,
           typename DimAccessOrder,
           index_t DstVectorDim,
           index_t DstScalarPerVector,
@@ -1125,7 +726,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             src_desc,
             make_multi_index(-1, 0) * src_scalar_per_access,
             Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0>{});
-#elif 1
+#elif 0
         // for non-padded input tensor
         const auto src_step_0_p =
             make_dynamic_tensor_coordinate_step_hack(src_desc,
@@ -1146,6 +747,19 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             src_desc,
             make_multi_index(-1, 0) * src_scalar_per_access,
             Sequence<0, 0, 0, 0, 0, 2, 0>{});
+#elif 1
+        // for 1x1, input tensor
+        const auto src_step_0_p = make_dynamic_tensor_coordinate_step_hack(
+            src_desc, make_multi_index(0, 1) * src_scalar_per_access, Sequence<0, 0, 1>{});
+
+        const auto src_step_0_m = make_dynamic_tensor_coordinate_step_hack(
+            src_desc, make_multi_index(0, -1) * src_scalar_per_access, Sequence<0, 0, 2>{});
+
+        const auto src_step_p_0 = make_dynamic_tensor_coordinate_step(
+            src_desc, make_multi_index(1, 0) * src_scalar_per_access);
+
+        const auto src_step_m_0 = make_dynamic_tensor_coordinate_step(
+            src_desc, make_multi_index(-1, 0) * src_scalar_per_access);
 #endif
 
         constexpr auto I0 = Number<0>{};
@@ -1171,13 +785,13 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
                 vector_type<SrcData, SrcScalarPerVector> src_vector;
 
+#if 1
                 src_vector.Vector() = amd_buffer_load<SrcData, SrcScalarPerVector>(
                     p_src, src_slice_origin_.GetOffset(), true, src_desc.GetElementSpaceSize());
 
                 const bool is_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
                     src_desc, src_slice_origin_);
 
-#if 1
                 src_vector.Vector() = is_valid ? src_vector.Vector() : SrcVectorType{0};
 
                 static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
@@ -1186,12 +800,18 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
                     buffer_(Number<buffer_offset>{}) = src_vector[i];
                 });
-#elif 0
+#elif 1
+                const bool is_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                    src_desc, src_slice_origin_);
+
+                src_vector.Vector() = amd_buffer_load<SrcData, SrcScalarPerVector>(
+                    p_src, src_slice_origin_.GetOffset(), is_valid, src_desc.GetElementSpaceSize());
+
                 static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
                     constexpr index_t buffer_offset = buffer_desc_.CalculateOffset(
                         make_multi_index(i0, i1) + i * src_scalar_step_in_vector);
 
-                    buffer_(Number<buffer_offset>{}) = is_valid ? src_vector[i] : SrcData{0};
+                    buffer_(Number<buffer_offset>{}) = src_vector[i];
                 });
 #elif 0
                 static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
@@ -1357,10 +977,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         // for padded input tensor
         const auto adjusted_step = make_dynamic_tensor_coordinate_step_hack(
             src_desc, adjusted_step_idx, Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2>{});
-#elif 1
-        // for non-paded input tensor
+#elif 0
+        // for non-padded input tensor
         const auto adjusted_step = make_dynamic_tensor_coordinate_step_hack(
             src_desc, adjusted_step_idx, Sequence<0, 0, 0, 0, 0, 1, 2>{});
+#elif 1
+        // for 1x1, input tensor
+        const auto adjusted_step = make_dynamic_tensor_coordinate_step_hack(
+            src_desc, adjusted_step_idx, Sequence<0, 1, 2>{});
 #endif
 
         move_dynamic_tensor_coordinate(src_desc, src_slice_origin_, adjusted_step);

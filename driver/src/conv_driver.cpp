@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
     constexpr index_t C  = 96;
     constexpr index_t HI = 35;
     constexpr index_t WI = 35;
-    constexpr index_t K  = 96;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
     constexpr index_t C  = 128;
     constexpr index_t HI = 17;
     constexpr index_t WI = 17;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 384;
     constexpr index_t Y  = 7;
     constexpr index_t X  = 1;
 
@@ -175,10 +175,10 @@ int main(int argc, char* argv[])
 #elif 0
     // 3x3, 147x147
     constexpr index_t N  = 128;
-    constexpr index_t C  = 32;
+    constexpr index_t C  = 128;
     constexpr index_t HI = 147;
     constexpr index_t WI = 147;
-    constexpr index_t K  = 64;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -457,7 +457,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
+#elif 1
     // 1x1, 7x7
     constexpr index_t N  = 128;
     constexpr index_t C  = 512;

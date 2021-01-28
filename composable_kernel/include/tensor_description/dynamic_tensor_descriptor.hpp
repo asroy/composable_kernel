@@ -541,7 +541,12 @@ coordinate_has_valid_offset_assuming_visible_index_is_valid(const TensorDesc& te
             const auto idx_up =
                 get_container_subset(idx_hidden, TensorDesc::GetUpperDimensionIdss().At(itran));
 
+#if 0 // debug
+      // Comment: this implemenetation results in weird control flow in ISA
             valid = valid && tran.IsValidUpperIndexMappedToValidLowerIndex(idx_up);
+#else
+            valid &= tran.IsValidUpperIndexMappedToValidLowerIndex(idx_up);
+#endif
         }
     });
 

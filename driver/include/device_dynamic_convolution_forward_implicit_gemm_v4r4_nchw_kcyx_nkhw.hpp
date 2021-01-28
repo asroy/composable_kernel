@@ -104,7 +104,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<2, 1>;
     using GemmABlockTransferThreadClusterLengths_GemmK_GemmM = Sequence<2, 128>;
 
-    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 1;
+    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 2;
     constexpr index_t GemmABlockTransferDstScalarPerVector_GemmM = 1;
 
     using GemmBBlockTransferThreadSliceLengths_GemmK_GemmN   = Sequence<2, 1>;
@@ -145,7 +145,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmN = 1;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 1;
-#elif 1
+#elif 0
     // cdata = 64, BlockSize = 256, 128x128x8
     // b thread copy 2x2
     constexpr index_t BlockSize = 256;
@@ -176,6 +176,38 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmN = 1;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 1;
+#elif 1
+    // cdata = 64, BlockSize = 256, 128x128x16
+    // GemmBBlockCopySrcDataPerRead_GemmN = 4
+    // GemmCThreadCopyDstDataPerWrite_GemmN1 = 4
+    constexpr index_t BlockSize = 256;
+
+    constexpr index_t GemmMPerBlock = 128;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 16;
+
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
+
+    constexpr index_t GemmMLevel0Cluster = 4;
+    constexpr index_t GemmNLevel0Cluster = 4;
+    constexpr index_t GemmMLevel1Cluster = 4;
+    constexpr index_t GemmNLevel1Cluster = 4;
+
+    using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<4, 2>;
+    using GemmABlockTransferThreadClusterLengths_GemmK_GemmM = Sequence<4, 64>;
+
+    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 4;
+    constexpr index_t GemmABlockTransferDstScalarPerVector_GemmM = 1;
+
+    using GemmBBlockTransferThreadSliceLengths_GemmK_GemmN   = Sequence<2, 4>;
+    using GemmBBlockTransferThreadClusterLengths_GemmK_GemmN = Sequence<8, 32>;
+
+    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmN = 4;
+    constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmN = 4;
+
+    constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 4;
 #endif
 
     const index_t N  = out_n_k_ho_wo_desc.GetLength(I0);
@@ -203,8 +235,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     constexpr auto conv_driver =
 #if 1
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
-#else
+#elif 0
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
+#elif 1
+        DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1
 #endif
         <BlockSize,
          TDevice,

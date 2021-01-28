@@ -848,13 +848,18 @@ struct DynamicMerge
                 do_carry = idx_low_tmp >= low_lengths_[i];
 
 #if 0
-                // TODO: use exec-mask inline asm
+                // TODO: use exec-mask inline asm, which use 1 VALU
                 if(do_carry)
                 {
                     idx_diff_low(i) -= low_lengths_[i];
                 }
-#else
+#elif 1
+                // this use 2 VALU
                 idx_diff_low(i) = do_carry ? idx_diff_low[i] - low_lengths_[i] : idx_diff_low[i];
+#elif 1
+                // this use 2 VALU
+                index_t idx_diff_low_tmp = idx_diff_low[i] - low_lengths_[i];
+                idx_diff_low(i)          = do_carry ? idx_diff_low_tmp : idx_diff_low[i];
 #endif
 
                 idx_low(i) += idx_diff_low[i];
@@ -885,8 +890,11 @@ struct DynamicMerge
                 {
                     idx_diff_low(i) += low_lengths_[i];
                 }
-#else
+#elif 1
                 idx_diff_low(i) = do_borrow ? idx_diff_low[i] + low_lengths_[i] : idx_diff_low[i];
+#elif 1
+                index_t idx_diff_low_tmp = idx_diff_low[i] + low_lengths_[i];
+                idx_diff_low(i)          = do_borrow ? idx_diff_low_tmp : idx_diff_low[i];
 #endif
 
                 idx_low(i) += idx_diff_low[i];

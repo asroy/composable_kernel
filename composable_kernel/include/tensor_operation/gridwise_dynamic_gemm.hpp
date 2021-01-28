@@ -322,7 +322,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
             } while(k_block_data_begin < K - 2 * KPerBlock);
         }
 
-#if 1
         // LDS double buffer: tail
         if constexpr(HasDoubleTailKBlockLoop) // if has 2 iteration left
         {
@@ -356,7 +355,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
             // LDS double buffer: GEMM on last data
             blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
         }
-#endif
 
         // output: register to global memory
         {
@@ -385,33 +383,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
             const index_t n_thread_data_on_global =
                 n_block_data_on_global + c_thread_mtx_on_block.col;
 
-#if 0
-            ThreadwiseDynamicTensorSliceTransfer_v1r2<
-                AccFloat,
-                Float,
-                decltype(c_m0_m1_n0_n1_thread_desc),
-                decltype(c_m0_m1_n0_n1_global_desc),
-                Sequence<MRepeat, MPerThread, NRepeat, NPerThread>,
-                CThreadTransferSrcDstAccessOrder,
-                CThreadTransferSrcDstVectorDim,
-                1,
-                CThreadTransferDstScalarPerVector,
-                AddressSpace::Vgpr,
-                AddressSpace::Global,
-                CGlobalMemoryDataOperation,
-                1,
-                1,
-                true,
-                true>(c_m0_m1_n0_n1_thread_desc,
-                      make_multi_index(0, 0, 0, 0),
-                      c_m0_m1_n0_n1_global_desc,
-                      make_multi_index(m_thread_data_on_global / M1,
-                                       m_thread_data_on_global % M1,
-                                       n_thread_data_on_global / N1,
-                                       n_thread_data_on_global % N1))
-                .Run_hack(
-                    c_m0_m1_n0_n1_thread_desc, p_c_thread, c_m0_m1_n0_n1_global_desc, p_c_global);
-#else
             ThreadwiseDynamicTensorSliceTransfer_v1r3<
                 AccFloat,
                 Float,
@@ -432,7 +403,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                                        n_thread_data_on_global / N1,
                                        n_thread_data_on_global % N1))
                 .Run_hack(p_c_thread, c_m0_m1_n0_n1_global_desc, p_c_global);
-#endif
         }
     }
 
