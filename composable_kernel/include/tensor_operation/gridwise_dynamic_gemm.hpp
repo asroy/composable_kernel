@@ -4,6 +4,7 @@
 #include "common_header.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
+#include "tensor_descriptor_helper.hpp"
 #include "blockwise_dynamic_tensor_slice_transfer.hpp"
 #include "threadwise_dynamic_tensor_slice_transfer.hpp"
 #include "ConstantMatrixDescriptor.hpp"
@@ -364,9 +365,14 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
 
             // define input tensor descriptor for threadwise copy
             //     thread input tensor, src of threadwise copy
+#if 0 // debug
             constexpr auto c_m0_m1_n0_n1_thread_desc =
                 make_dynamic_naive_tensor_descriptor_packed<4>(
                     make_multi_index(MRepeat, MPerThread, NRepeat, NPerThread));
+#else
+            constexpr auto c_m0_m1_n0_n1_thread_desc = make_native_tensor_descriptor_packed(
+                Sequence<MRepeat, MPerThread, NRepeat, NPerThread>{});
+#endif
 
             // calculate origin of thread input tensor on global memory
             //     blockwise GEMM c matrix starting index
@@ -379,6 +385,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
             const index_t n_thread_data_on_global =
                 n_block_data_on_global + c_thread_mtx_on_block.col;
 
+#if 0
             ThreadwiseDynamicTensorSliceTransfer_v1r2<
                 AccFloat,
                 Float,
@@ -404,6 +411,28 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                                        n_thread_data_on_global % N1))
                 .Run_hack(
                     c_m0_m1_n0_n1_thread_desc, p_c_thread, c_m0_m1_n0_n1_global_desc, p_c_global);
+#else
+            ThreadwiseDynamicTensorSliceTransfer_v1r3<
+                AccFloat,
+                Float,
+                decltype(c_m0_m1_n0_n1_thread_desc),
+                decltype(c_m0_m1_n0_n1_global_desc),
+                Sequence<MRepeat, MPerThread, NRepeat, NPerThread>,
+                CThreadTransferSrcDstAccessOrder,
+                CThreadTransferSrcDstVectorDim,
+                CThreadTransferDstScalarPerVector,
+                AddressSpace::Vgpr,
+                AddressSpace::Global,
+                CGlobalMemoryDataOperation,
+                1,
+                true,
+                true>(c_m0_m1_n0_n1_global_desc,
+                      make_multi_index(m_thread_data_on_global / M1,
+                                       m_thread_data_on_global % M1,
+                                       n_thread_data_on_global / N1,
+                                       n_thread_data_on_global % N1))
+                .Run_hack(p_c_thread, c_m0_m1_n0_n1_global_desc, p_c_global);
+#endif
         }
     }
 

@@ -502,11 +502,11 @@ struct DynamicMerge
               typename LowIdx,
               typename UpIdx,
               index_t Hack>
-    __host__ __device__ void UpdateLowerIndex_1(LowIdxDiff& idx_diff_low,
-                                                const UpIdxDiff& idx_diff_up,
-                                                LowIdx& idx_low,
-                                                const UpIdx& /* idx_up_new */,
-                                                Number<Hack>) const
+    __host__ __device__ void UpdateLowerIndex_1a(LowIdxDiff& idx_diff_low,
+                                                 const UpIdxDiff& idx_diff_up,
+                                                 LowIdx& idx_low,
+                                                 const UpIdx& /* idx_up_new */,
+                                                 Number<Hack>) const
     {
         static_assert(LowIdxDiff::Size() == NDimLow && UpIdxDiff::Size() == 1 &&
                           LowIdx::Size() == NDimLow && UpIdx::Size() == 1,
@@ -645,6 +645,148 @@ struct DynamicMerge
               typename LowIdx,
               typename UpIdx,
               index_t Hack>
+    __host__ __device__ void UpdateLowerIndex_1b(LowIdxDiff& idx_diff_low,
+                                                 const UpIdxDiff& idx_diff_up,
+                                                 LowIdx& idx_low,
+                                                 const UpIdx& /* idx_up_new */,
+                                                 Number<Hack>) const
+    {
+        static_assert(LowIdxDiff::Size() == NDimLow && UpIdxDiff::Size() == 1 &&
+                          LowIdx::Size() == NDimLow && UpIdx::Size() == 1,
+                      "wrong! inconsistent # of dimension");
+
+        // CalculateLowerIndex(idx_diff_low_const) has multiple integer divisions.
+        // However,
+        //   1) If idx_diff_up is known at compile-time, then idx_diff_low_const
+        //   can be calculated at compile-time.
+        //   2) If idx_diff_up is not known at compile-time, but its value
+        //   doesn't change during the whole kernel execution, then
+        //   idx_diff_low_const also
+        //   doesn't change during the whole kernel execution. Compiler generated
+        //   ISA should
+        //   only caclculate idx_diff_low_const once and save it durinng the whole
+        //   kernel execution
+        // If neither 1) nor 2) is satisfied, then the calculation will also be
+        // computed at
+        //   run-time each time this function is called, and can be very expensive.
+        LowerIndex idx_diff_low_const;
+        LowerIndex idx_low_length_minus_idx_diff_low_const;
+        LowerIndex idx_low_length_plus_idx_diff_low_const;
+
+#if !CK_HACK_DYNAMIC_MERGE_CALCULATE_IDX_DIFF_LOW_CONST_USE_AMD_GCN_READ_FIRST_LANE
+        index_t tmp = idx_diff_up[Number<0>{}];
+
+        static_for<0, NDimLow - 1, 1>{}([&](auto i) {
+            idx_diff_low_const(i) = tmp / low_lengths_scan_[i];
+            tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
+        });
+
+        idx_diff_low_const(Number<NDimLow - 1>{}) = tmp;
+
+        static_for<0, NDimLow, 1>{}([&](auto i) {
+            idx_low_length_minus_idx_diff_low_const(i) = low_lengths_[i] - idx_diff_low_const[i];
+
+            idx_low_length_plus_idx_diff_low_const(i) = low_lengths_[i] + idx_diff_low_const[i];
+        });
+#else
+        // Hack: this force result into SGPR. Need to make sure the result is thread invariant
+        index_t tmp = idx_diff_up[Number<0>{}];
+
+        static_for<0, NDimLow - 1, 1>{}([&](auto i) {
+            idx_diff_low_const(i) = __builtin_amdgcn_readfirstlane(tmp / low_lengths_scan_[i]);
+            tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
+        });
+
+        idx_diff_low_const(Number<NDimLow - 1>{}) = __builtin_amdgcn_readfirstlane(tmp);
+
+        static_for<0, NDimLow, 1>{}([&](auto i) {
+            idx_low_length_minus_idx_diff_low_const(i) =
+                __builtin_amdgcn_readfirstlane(low_lengths_[i] - idx_diff_low_const[i]);
+
+            idx_low_length_plus_idx_diff_low_const(i) = low_lengths_[i] + idx_diff_low_const[i];
+        });
+#endif
+
+        if constexpr(Hack == 1)
+        {
+            // do carry check on each low dimension in reversed order
+            // do not need to check the first dimension
+            index_t carry = 0;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                index_t idx_low_tmp = idx_low[i] + carry;
+
+                bool do_carry = idx_low_tmp >= idx_low_length_minus_idx_diff_low_const[i];
+
+                idx_diff_low(i) =
+                    do_carry ? -idx_low_length_minus_idx_diff_low_const[i] : idx_diff_low_const[i];
+
+                idx_diff_low(i) += carry;
+
+                carry = do_carry ? 1 : 0;
+            });
+
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + carry;
+
+            idx_low += idx_diff_low;
+        }
+        else if constexpr(Hack == 2)
+        {
+            // do carry check on each low dimension in reversed order
+            // do not need to check the first dimension
+            index_t borrow = 0;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                index_t negative_idx_low_tmp = borrow - idx_low[i];
+
+                bool do_borrow = negative_idx_low_tmp > idx_diff_low_const[i];
+
+                idx_diff_low(i) =
+                    do_borrow ? idx_low_length_plus_idx_diff_low_const[i] : idx_diff_low_const[i];
+
+                idx_diff_low(i) -= borrow;
+
+                borrow = do_borrow ? 1 : 0;
+            });
+
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] - borrow;
+
+            idx_low += idx_diff_low;
+        }
+        else
+        {
+            // do carry check on each low dimension in reversed order
+            // do not need to check the first dimension
+            index_t carry = 0;
+
+            static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+                index_t idx_low_tmp = idx_low[i] + carry;
+
+                bool do_carry  = idx_low_tmp >= idx_low_length_minus_idx_diff_low_const[i];
+                bool do_borrow = idx_low_tmp < -idx_diff_low_const[i];
+
+                idx_diff_low(i) =
+                    do_carry ? -idx_low_length_minus_idx_diff_low_const[i] : idx_diff_low_const[i];
+                idx_diff_low(i) =
+                    do_borrow ? idx_low_length_plus_idx_diff_low_const[i] : idx_diff_low[i];
+
+                idx_diff_low(i) += carry;
+
+                carry = do_carry ? 1 : 0;
+                carry = do_borrow ? -1 : carry;
+            });
+
+            idx_diff_low(Number<0>{}) = idx_diff_low_const[Number<0>{}] + carry;
+
+            idx_low += idx_diff_low;
+        }
+    }
+
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
     __host__ __device__ void UpdateLowerIndex_2(LowIdxDiff& idx_diff_low,
                                                 const UpIdxDiff& idx_diff_up,
                                                 LowIdx& idx_low,
@@ -705,11 +847,15 @@ struct DynamicMerge
 
                 do_carry = idx_low_tmp >= low_lengths_[i];
 
+#if 0
                 // TODO: use exec-mask inline asm
                 if(do_carry)
                 {
                     idx_diff_low(i) -= low_lengths_[i];
                 }
+#else
+                idx_diff_low(i) = do_carry ? idx_diff_low[i] - low_lengths_[i] : idx_diff_low[i];
+#endif
 
                 idx_low(i) += idx_diff_low[i];
             });
@@ -733,11 +879,15 @@ struct DynamicMerge
 
                 do_borrow = idx_low_tmp < 0;
 
+#if 0
                 // TODO: use exec-mask inline asm
                 if(do_borrow)
                 {
                     idx_diff_low(i) += low_lengths_[i];
                 }
+#else
+                idx_diff_low(i) = do_borrow ? idx_diff_low[i] + low_lengths_[i] : idx_diff_low[i];
+#endif
 
                 idx_low(i) += idx_diff_low[i];
             });
@@ -765,8 +915,10 @@ struct DynamicMerge
                                               const UpIdx& idx_up_new,
                                               Number<Hack>) const
     {
-#if 1
-        UpdateLowerIndex_1(idx_diff_low, idx_diff_up, idx_low, idx_up_new, Number<Hack>{});
+#if 0
+        UpdateLowerIndex_1a(idx_diff_low, idx_diff_up, idx_low, idx_up_new, Number<Hack>{});
+#elif 0
+        UpdateLowerIndex_1b(idx_diff_low, idx_diff_up, idx_low, idx_up_new, Number<Hack>{});
 #else
         UpdateLowerIndex_2(idx_diff_low, idx_diff_up, idx_low, idx_up_new, Number<Hack>{});
 #endif

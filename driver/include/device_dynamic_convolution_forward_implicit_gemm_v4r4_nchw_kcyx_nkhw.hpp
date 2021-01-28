@@ -145,7 +145,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmN = 1;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 1;
-#elif 0
+#elif 1
     // cdata = 64, BlockSize = 256, 128x128x8
     // b thread copy 2x2
     constexpr index_t BlockSize = 256;
@@ -166,7 +166,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<4, 1>;
     using GemmABlockTransferThreadClusterLengths_GemmK_GemmM = Sequence<2, 128>;
 
-    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 1;
+    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 2;
     constexpr index_t GemmABlockTransferDstScalarPerVector_GemmM = 1;
 
     using GemmBBlockTransferThreadSliceLengths_GemmK_GemmN   = Sequence<2, 2>;
@@ -201,7 +201,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
     constexpr auto conv_driver =
-#if 0
+#if 1
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
 #else
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad

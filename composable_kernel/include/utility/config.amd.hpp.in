@@ -91,7 +91,7 @@
 #endif
 
 // workaround: put all workaround here
-// workaround for unnecessary VGPA <--> AGRP data movement when using mfma LLVM intrinsic
+// workaround for unnecessary VGPR <--> AGPR data movement when using mfma LLVM intrinsic
 #ifndef CK_WORKAROUND_SWDEV_229564
 #define CK_WORKAROUND_SWDEV_229564 1
 #endif
@@ -122,6 +122,8 @@ using index_t = uint32_t;
 #else
 using index_t = int32_t;
 #endif
+
+typedef int32_t int32x2_t __attribute__((ext_vector_type(2)));
 
 // int32x4_t use by buffer_load and buffer_store llvm intrinsic
 typedef int32_t int32x4_t __attribute__((ext_vector_type(4)));
