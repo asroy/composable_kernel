@@ -122,7 +122,10 @@ struct ThreadwiseGenericTensorSliceCopy_v5
     __device__ static auto buffer_vector_load(const SrcData* p_src, const SrcCoord src_coord_begin)
     {
         auto src_offset = src_coord_begin.GetOffset();
-        return amd_buffer_load<SrcData, SrcDataPerAccess>(p_src, src_offset, true, SrcDataRange);
+        auto r          = GetRegBuffer<SrcData, SrcDataPerAccess>();
+        r.GetVector(Number<SrcDataPerAccess>{})(Number<0>{}) =
+            amd_buffer_load<SrcData, SrcDataPerAccess>(p_src, src_offset, true, SrcDataRange);
+        return r;
     }
 
     template <typename DstData, index_t DstDataPerAccess>
@@ -187,12 +190,17 @@ struct ThreadwiseGenericTensorSliceCopy_v5
                 auto src_buff = buffer_vector_load<SrcDataPerRead, SrcDesc::GetElementSpace()>(
                     p_src, src_coord);
 
-                // store data from the long-vector buffer to dst
-                constexpr auto buff_off =
-                    ThreadBufferDesc::CalculateOffset(to_multi_index(long_vector_data_begin_id)) /
-                    long_vector_size;
+                static_for<0, SrcDataPerRead, 1>{}([&](auto i) {
+                    constexpr auto vector_id = long_vector_data_begin_id.Modify(
+                        Number<vector_access_dim>{}, long_vector_access_id[vector_access_dim] + i);
 
-                thread_buff.GetVector(Number<SrcDataPerRead>{})(Number<buff_off>{}) = src_buff;
+                    // store data from the long-vector buffer to dst
+                    constexpr auto buff_off =
+                        ThreadBufferDesc::CalculateOffset(to_multi_index(vector_id));
+
+                    thread_buff.GetVector(Number<1>{})(Number<buff_off>{}) =
+                        src_buff.GetVector(Number<1>{})(Number<i>{});
+                });
             });
     }
 
@@ -216,16 +224,23 @@ struct ThreadwiseGenericTensorSliceCopy_v5
                     Number<vector_access_dim>{},
                     Number<long_vector_size * long_vector_access_id[vector_access_dim]>{});
 
-                constexpr auto buff_off =
-                    ThreadBufferDesc::CalculateOffset(to_multi_index(long_vector_data_begin_id)) /
-                    long_vector_size;
+                auto src_buff = GetRegBuffer<DstData, DstDataPerWrite>();
 
-                auto src_buff =
-                    thread_buff.GetVector(Number<DstDataPerWrite>{})[Number<buff_off>{}];
+                static_for<0, DstDataPerWrite, 1>{}([&](auto i) {
+                    constexpr auto vector_id = long_vector_data_begin_id.Modify(
+                        Number<vector_access_dim>{}, long_vector_access_id[vector_access_dim] + i);
+
+                    constexpr auto buff_off =
+                        ThreadBufferDesc::CalculateOffset(to_multi_index(vector_id));
+
+                    src_buff.GetVector(Number<1>{})(Number<i>{}) =
+                        thread_buff.GetVector(Number<1>{})[Number<buff_off>{}];
+                });
 
                 const auto dst_coord = mDstSliceOrigin + to_multi_index(long_vector_data_begin_id);
 
-                vector_data_store<DstData, DstDataPerWrite>::run(p_dst, src_buff, dst_coord);
+                vector_data_store<DstData, DstDataPerWrite>::run(
+                    p_dst, src_buff.GetVector(Number<DstDataPerWrite>{})[Number<0>{}], dst_coord);
             });
     }
 

@@ -24,11 +24,41 @@ typedef ushort ushort2_t __attribute__((ext_vector_type(2)));
 typedef ushort ushort4_t __attribute__((ext_vector_type(4)));
 typedef ushort ushort8_t __attribute__((ext_vector_type(8)));
 
+union float_vec1_t
+{
+    StaticallyIndexedArray<float, 1> s1;
+    __host__ __device__ constexpr float_vec1_t() { s1(Number<0>{}) = 0; }
+
+    template <index_t vs>
+    __host__ __device__ auto& GetVector(Number<vs>);
+
+    template <>
+    __host__ __device__ auto& GetVector(Number<1>)
+    {
+        return s1;
+    }
+};
+
 union float_vec2_t
 {
     StaticallyIndexedArray<float, 2> s1;
     StaticallyIndexedArray<float2_t, 1> s2;
     __host__ __device__ constexpr float_vec2_t() { s2(Number<0>{}) = 0; }
+
+    template <index_t vs>
+    __host__ __device__ auto& GetVector(Number<vs>);
+
+    template <>
+    __host__ __device__ auto& GetVector(Number<1>)
+    {
+        return s1;
+    }
+
+    template <>
+    __host__ __device__ auto& GetVector(Number<2>)
+    {
+        return s2;
+    }
 };
 
 union float_vec4_t
@@ -247,6 +277,18 @@ union float_vec128_t
 
 template <typename T, index_t BufferSize>
 constexpr auto GetRegBuffer();
+
+template <>
+constexpr auto GetRegBuffer<float, 1>()
+{
+    return float_vec1_t{};
+}
+
+template <>
+constexpr auto GetRegBuffer<float, 2>()
+{
+    return float_vec2_t{};
+}
 
 template <>
 constexpr auto GetRegBuffer<float, 4>()
