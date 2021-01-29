@@ -115,7 +115,7 @@ void gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
     // B matrix Copy
     constexpr index_t GemmBBlockCopyClusterLengths_GemmK     = 4;
     constexpr index_t GemmBBlockCopyClusterLengths_GemmN     = 4;
-    constexpr index_t GemmBBlockCopyClusterLengths_GemmKPack = 4;
+    constexpr index_t GemmBBlockCopyClusterLengths_GemmKPack = 1;
 
     constexpr index_t GemmBBlockCopyThreadSliceLengths_GemmK =
         GemmKPerBlock / GemmBBlockCopyClusterLengths_GemmK;
@@ -141,7 +141,7 @@ void gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
     using GemmBBlockCopyDstAccessOrder = Sequence<0, 1, 2, 3>; // [GemmG, GemmK, GemmN, GemmKPack]
 
     constexpr index_t GemmBBlockCopySrcDataPerRead_GemmN      = 4;
-    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmKPack = 1;
+    constexpr index_t GemmBBlockCopyDstDataPerWrite_GemmKPack = 4;
 
     // gridwise GEMM
     constexpr auto wkgrp_schd_order = NBlock1MBlock0;
