@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 1
+#elif 0
     // 3x3, 71x71
     constexpr index_t N  = 128;
     constexpr index_t C  = 192;
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<1, 1>;
     using RightPads = Sequence<1, 1>;
-#elif 0
+#elif 1
     // 1x1, 8x8
     constexpr index_t N  = 128;
     constexpr index_t C  = 1536;
@@ -592,7 +592,7 @@ int main(int argc, char* argv[])
                                                                  LeftPads{},
                                                                  RightPads{},
                                                                  nrepeat);
-#elif 0
+#elif 1
     device_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
                                                                  in_nchw,
                                                                  wei_kcyx_desc,

@@ -232,13 +232,13 @@ struct DummyDynamicTransform_1
 
         auto in_gemmk_gemmn_coord = make_dynamic_tensor_coordinate(in_gemmk_gemmn_global_desc, idx);
 
-        const auto in_gemmk_gemmn_coord_step =
-            make_dynamic_tensor_coordinate_step(in_gemmk_gemmn_global_desc, make_multi_index(1, 0));
+        const auto in_gemmk_gemmn_coord_iterator = make_dynamic_tensor_coordinate_iterator(
+            in_gemmk_gemmn_global_desc, make_multi_index(1, 0));
 
         for(index_t iter = 0; iter < niter; ++iter)
         {
             move_dynamic_tensor_coordinate(
-                in_gemmk_gemmn_global_desc, in_gemmk_gemmn_coord, in_gemmk_gemmn_coord_step);
+                in_gemmk_gemmn_global_desc, in_gemmk_gemmn_coord, in_gemmk_gemmn_coord_iterator);
 
             // write
             float value = 1;
@@ -352,12 +352,12 @@ struct DummyDynamicTransform_1
 
         auto in_coord = make_dynamic_tensor_coordinate(in_n_c_hip_wip_global_desc, idx);
 
-        const auto in_coord_step = make_dynamic_tensor_coordinate_step(
+        const auto in_coord_iterator = make_dynamic_tensor_coordinate_iterator(
             in_n_c_hip_wip_global_desc, make_multi_index(1, 0, 0, 0));
 
         for(index_t iter = 0; iter < niter; ++iter)
         {
-            move_dynamic_tensor_coordinate(in_n_c_hip_wip_global_desc, in_coord, in_coord_step);
+            move_dynamic_tensor_coordinate(in_n_c_hip_wip_global_desc, in_coord, in_coord_iterator);
 
             // write
             float value = 1;
@@ -430,21 +430,24 @@ struct DummyDynamicTransform_fwd_v4r4
         auto in_gemmk_gemmn_gemmkpack_coord =
             make_dynamic_tensor_coordinate(in_gemmk_gemmn_gemmkpack_global_desc, idx);
 
-        const auto in_gemmk_gemmn_gemmkpack_coord_step_0_0_1 = make_dynamic_tensor_coordinate_step(
-            in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(0, 0, 1));
+        const auto in_gemmk_gemmn_gemmkpack_coord_iterator_0_0_1 =
+            make_dynamic_tensor_coordinate_iterator(in_gemmk_gemmn_gemmkpack_global_desc,
+                                                    make_multi_index(0, 0, 1));
 
-        const auto in_gemmk_gemmn_gemmkpack_coord_step_0_1_0 = make_dynamic_tensor_coordinate_step(
-            in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(0, 1, 0));
+        const auto in_gemmk_gemmn_gemmkpack_coord_iterator_0_1_0 =
+            make_dynamic_tensor_coordinate_iterator(in_gemmk_gemmn_gemmkpack_global_desc,
+                                                    make_multi_index(0, 1, 0));
 
-        const auto in_gemmk_gemmn_gemmkpack_coord_step_1_0_0 = make_dynamic_tensor_coordinate_step(
-            in_gemmk_gemmn_gemmkpack_global_desc, make_multi_index(1, 0, 0));
+        const auto in_gemmk_gemmn_gemmkpack_coord_iterator_1_0_0 =
+            make_dynamic_tensor_coordinate_iterator(in_gemmk_gemmn_gemmkpack_global_desc,
+                                                    make_multi_index(1, 0, 0));
 
         // move (0, 0, 1)
         for(index_t iter = 0; iter < niter; ++iter)
         {
             move_dynamic_tensor_coordinate(in_gemmk_gemmn_gemmkpack_global_desc,
                                            in_gemmk_gemmn_gemmkpack_coord,
-                                           in_gemmk_gemmn_gemmkpack_coord_step_0_0_1);
+                                           in_gemmk_gemmn_gemmkpack_coord_iterator_0_0_1);
 
             // write
             float value = 1;
@@ -476,7 +479,7 @@ struct DummyDynamicTransform_fwd_v4r4
         {
             move_dynamic_tensor_coordinate(in_gemmk_gemmn_gemmkpack_global_desc,
                                            in_gemmk_gemmn_gemmkpack_coord,
-                                           in_gemmk_gemmn_gemmkpack_coord_step_0_1_0);
+                                           in_gemmk_gemmn_gemmkpack_coord_iterator_0_1_0);
 
             // write
             float value = 1;
@@ -508,7 +511,7 @@ struct DummyDynamicTransform_fwd_v4r4
         {
             move_dynamic_tensor_coordinate(in_gemmk_gemmn_gemmkpack_global_desc,
                                            in_gemmk_gemmn_gemmkpack_coord,
-                                           in_gemmk_gemmn_gemmkpack_coord_step_1_0_0);
+                                           in_gemmk_gemmn_gemmkpack_coord_iterator_1_0_0);
 
             // write
             float value = 1;

@@ -87,21 +87,15 @@ struct BlockwiseDynamicTensorSliceTransfer_v4
         return thread_cluster_id * ThreadSliceLengths{};
     }
 
-    __device__ void RunRead(const SrcDesc& src_desc, const SrcData* p_src)
+    template <typename SrcIteratorHacks>
+    __device__ void RunRead(const SrcDesc& src_desc,
+                            const SrcData* p_src,
+                            const SrcIteratorHacks& src_iterator_hacks)
     {
         if(BlockSize == thread_cluster_desc_.GetElementSize() or
            get_thread_local_1d_id() < thread_cluster_desc_.GetElementSize())
         {
-            threadwise_transfer_.RunRead(src_desc, p_src);
-        }
-    }
-
-    __device__ void RunRead_hack(const SrcDesc& src_desc, const SrcData* p_src)
-    {
-        if(BlockSize == thread_cluster_desc_.GetElementSize() or
-           get_thread_local_1d_id() < thread_cluster_desc_.GetElementSize())
-        {
-            threadwise_transfer_.RunRead_hack(src_desc, p_src);
+            threadwise_transfer_.RunRead(src_desc, p_src, src_iterator_hacks);
         }
     }
 
@@ -123,12 +117,18 @@ struct BlockwiseDynamicTensorSliceTransfer_v4
         }
     }
 
-    __device__ void MoveSrcSliceWindow_hack(const SrcDesc& src_desc, const Index& step)
+    // SrcMoveSliceWindowIteratorHack to control index calculation move slice window
+    template <typename SrcMoveSliceWindowIteratorHack>
+    __device__ void
+    MoveSrcSliceWindow(const SrcDesc& src_desc,
+                       const Index& step,
+                       const SrcMoveSliceWindowIteratorHack& src_move_slice_window_iterator_hack)
     {
         if(BlockSize == thread_cluster_desc_.GetElementSize() or
            get_thread_local_1d_id() < thread_cluster_desc_.GetElementSize())
         {
-            threadwise_transfer_.MoveSrcSliceWindow_hack(src_desc, step);
+            threadwise_transfer_.MoveSrcSliceWindow(
+                src_desc, step, src_move_slice_window_iterator_hack);
         }
     }
 

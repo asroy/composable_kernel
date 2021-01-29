@@ -259,10 +259,47 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0);
         constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0);
 
+        // hack to control index calculation when iterating over a_k_m_global tensor
+        constexpr auto a_k_m_global_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
+                       make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
+
+        constexpr auto a_k_m_global_reset_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
+                       make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
+
+        // hack to control index calculation when iterating over b_k_n_global tensor
+#if 0
+        // for padded input
+        constexpr auto b_k_n_global_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>{},
+                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>{}),
+                       make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0>{},
+                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>{}));
+
+        constexpr auto b_k_n_global_move_slice_window_iterator_hack =
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2>{};
+#elif 0
+        // for non-padded input
+        constexpr auto b_k_n_global_iterator_hacks = make_tuple(
+            make_tuple(Sequence<0, 0, 0, 0, 0, 1, 0>{}, Sequence<0, 0, 0, 0, 0, 0, 1>{}),
+            make_tuple(Sequence<0, 0, 0, 0, 0, 2, 0>{}, Sequence<0, 0, 0, 0, 0, 0, 2>{}));
+
+        constexpr auto b_k_n_global_move_slice_window_iterator_hack =
+            Sequence<0, 0, 0, 0, 0, 1, 2>{};
+#elif 1
+        // for 1x1 case
+        constexpr auto b_k_n_global_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 1, 0>{}, Sequence<0, 0, 1>{}),
+                       make_tuple(Sequence<0, 2, 0>{}, Sequence<0, 0, 2>{}));
+
+        constexpr auto b_k_n_global_move_slice_window_iterator_hack = Sequence<0, 1, 2>{};
+#endif
+
         // LDS double buffer: preload data into LDS
         {
-            a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
-            b_blockwise_copy.RunRead_hack(b_k_n_global_desc, p_b_global);
+            a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global, a_k_m_global_iterator_hacks);
+            b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global, b_k_n_global_iterator_hacks);
 
             a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_double);
             b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_double);
@@ -284,14 +321,17 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
             {
                 // even iteration
                 a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
-                b_blockwise_copy.MoveSrcSliceWindow_hack(b_k_n_global_desc,
-                                                         b_block_slice_copy_step);
+                b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc,
+                                                    b_block_slice_copy_step,
+                                                    b_k_n_global_move_slice_window_iterator_hack);
 
                 __syncthreads();
 
                 // LDS doubel buffer: load next data from device mem
-                a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
-                b_blockwise_copy.RunRead_hack(b_k_n_global_desc, p_b_global);
+                a_blockwise_copy.RunRead(
+                    a_k_m_global_desc, p_a_global, a_k_m_global_iterator_hacks);
+                b_blockwise_copy.RunRead(
+                    b_k_n_global_desc, p_b_global, b_k_n_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
                 blockwise_gemm.Run(p_a_block_even, p_b_block_even, p_c_thread);
@@ -302,14 +342,17 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
 
                 // odd iteration
                 a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
-                b_blockwise_copy.MoveSrcSliceWindow_hack(b_k_n_global_desc,
-                                                         b_block_slice_copy_step);
+                b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc,
+                                                    b_block_slice_copy_step,
+                                                    b_k_n_global_move_slice_window_iterator_hack);
 
                 __syncthreads();
 
                 // LDS doubel buffer: load next data from device mem
-                a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
-                b_blockwise_copy.RunRead_hack(b_k_n_global_desc, p_b_global);
+                a_blockwise_copy.RunRead(
+                    a_k_m_global_desc, p_a_global, a_k_m_global_iterator_hacks);
+                b_blockwise_copy.RunRead(
+                    b_k_n_global_desc, p_b_global, b_k_n_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
                 blockwise_gemm.Run(p_a_block_odd, p_b_block_odd, p_c_thread);
@@ -326,13 +369,15 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         if constexpr(HasDoubleTailKBlockLoop) // if has 2 iteration left
         {
             a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
-            b_blockwise_copy.MoveSrcSliceWindow_hack(b_k_n_global_desc, b_block_slice_copy_step);
+            b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc,
+                                                b_block_slice_copy_step,
+                                                b_k_n_global_move_slice_window_iterator_hack);
 
             __syncthreads();
 
             // LDS double buffer: load last data from device mem
-            a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global);
-            b_blockwise_copy.RunRead_hack(b_k_n_global_desc, p_b_global);
+            a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global, a_k_m_global_iterator_hacks);
+            b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global, b_k_n_global_iterator_hacks);
 
             // LDS double buffer: GEMM on 2nd-last data
             blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
@@ -383,6 +428,18 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
             const index_t n_thread_data_on_global =
                 n_block_data_on_global + c_thread_mtx_on_block.col;
 
+            // hack to control index calculation when iterating over c_m0_m1_n0_n1_global tensor
+            // hack for NKHW format
+            constexpr auto c_m0_m1_n0_n1_global_tensor_iterator_hacks =
+                make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                                      Sequence<0, 0, 0, 0, 0>{},
+                                      Sequence<0, 0, 1, 0, 0>{},
+                                      Sequence<0, 0, 1, 0, 0>{}),
+                           make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                                      Sequence<0, 0, 0, 0, 0>{},
+                                      Sequence<0, 0, 2, 0, 0>{},
+                                      Sequence<0, 0, 2, 0, 0>{}));
+
             ThreadwiseDynamicTensorSliceTransfer_v1r3<
                 AccFloat,
                 Float,
@@ -402,7 +459,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                                        m_thread_data_on_global % M1,
                                        n_thread_data_on_global / N1,
                                        n_thread_data_on_global % N1))
-                .Run_hack(p_c_thread, c_m0_m1_n0_n1_global_desc, p_c_global);
+                .Run(p_c_thread,
+                     c_m0_m1_n0_n1_global_desc,
+                     p_c_global,
+                     c_m0_m1_n0_n1_global_tensor_iterator_hacks);
         }
     }
 
@@ -435,5 +495,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
             integral_constant<bool, HasDoubleTailKBlockLoop>{});
     }
 };
+
 } // namespace ck
 #endif
