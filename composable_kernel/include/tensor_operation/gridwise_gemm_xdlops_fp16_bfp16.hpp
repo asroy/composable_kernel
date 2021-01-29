@@ -496,10 +496,18 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
         constexpr index_t c_thread_size = MPerBlock * NPerBlock / BlockSize;
         auto c_thread_vec               = GetRegBuffer<AccFloat, c_thread_size>();
 
+        using ThreadBufferTypeA =
+            decltype(GetRegBuffer<ABFloat, a_blockwise_copy.GetThreadBufferSize()>());
+        using ThreadBufferTypeB =
+            decltype(GetRegBuffer<ABFloat, b_blockwise_copy.GetThreadBufferSize()>());
+
+        ThreadBufferTypeA thread_buff_a;
+        ThreadBufferTypeB thread_buff_b;
+
         // preload data into LDS
         {
-            a_blockwise_copy.Run(p_a_global, p_a_block);
-            b_blockwise_copy.Run(p_b_global, p_b_block);
+            a_blockwise_copy.Run(p_a_global, p_a_block, thread_buff_a);
+            b_blockwise_copy.Run(p_b_global, p_b_block, thread_buff_b);
         }
 
         constexpr auto blockwise_a_copy_src_step = Sequence<0, KPerBlock, 0, 0>{};
@@ -509,16 +517,12 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
         for(index_t k_block_data_begin = 0; k_block_data_begin < K - KPerBlock;
             k_block_data_begin += KPerBlock)
         {
-            // ABFloat p_a_thread_buffer[a_blockwise_copy.GetThreadBufferSize()];
-
             // load next data from device mem
             a_blockwise_copy.MoveSrcSliceWindow(blockwise_a_copy_src_step, True);
             b_blockwise_copy.MoveSrcSliceWindow(blockwise_b_copy_src_step, True);
 
-            a_blockwise_copy.RunLoadThreadBuffer(p_a_global);
-            // a_blockwise_copy.RunLoadThreadBuffer(p_a_global, p_a_thread_buffer);
-
-            b_blockwise_copy.RunLoadThreadBuffer(p_b_global);
+            a_blockwise_copy.RunLoadThreadBuffer(p_a_global, thread_buff_a);
+            b_blockwise_copy.RunLoadThreadBuffer(p_b_global, thread_buff_b);
 
             block_sync_lds();
 
@@ -535,10 +539,8 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
             block_sync_lds();
 
             // store next data to LDS
-            a_blockwise_copy.RunStoreThreadBuffer(p_a_block);
-            // a_blockwise_copy.RunStoreThreadBuffer(p_a_thread_buffer, p_a_block);
-
-            b_blockwise_copy.RunStoreThreadBuffer(p_b_block);
+            a_blockwise_copy.RunStoreThreadBuffer(thread_buff_a, p_a_block);
+            b_blockwise_copy.RunStoreThreadBuffer(thread_buff_b, p_b_block);
         }
 
         // tail

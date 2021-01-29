@@ -32,12 +32,6 @@ struct ThreadwiseGenericTensorSliceCopy_v5
 {
     using ThreadBufferDesc = decltype(make_native_tensor_descriptor_packed(SliceLengths{}));
 
-    static constexpr index_t ThreadBufferSize = ThreadBufferDesc::GetElementSpace();
-
-    using ThreadBufferType = decltype(GetRegBuffer<float, ThreadBufferSize>());
-
-    ThreadBufferType thread_buff;
-
     static constexpr index_t nDim = SliceLengths::Size();
     using Index                   = MultiIndex<nDim>;
 
@@ -167,8 +161,8 @@ struct ThreadwiseGenericTensorSliceCopy_v5
         }
     };
 
-    template <typename SrcData>
-    __device__ void Load(const SrcData* p_src)
+    template <typename SrcData, typename DstData>
+    __device__ void Load(const SrcData* p_src, DstData& thread_buff)
     {
         constexpr auto vector_access_dim = Number<SrcVectorReadDim>{};
 
@@ -192,7 +186,6 @@ struct ThreadwiseGenericTensorSliceCopy_v5
 
                 auto src_buff = buffer_vector_load<SrcDataPerRead, SrcDesc::GetElementSpace()>(
                     p_src, src_coord);
-                // vector_data_load<SrcData, src_data_per_access>::run(p_src, src_coord);
 
                 // store data from the long-vector buffer to dst
                 constexpr auto buff_off =
@@ -203,8 +196,8 @@ struct ThreadwiseGenericTensorSliceCopy_v5
             });
     }
 
-    template <typename DstData>
-    __device__ void Store(DstData* p_dst)
+    template <typename SrcData, typename DstData>
+    __device__ void Store(SrcData thread_buff, DstData* p_dst)
     {
         constexpr auto vector_access_dim = Number<DstVectorWriteDim>{};
 
@@ -229,38 +222,6 @@ struct ThreadwiseGenericTensorSliceCopy_v5
 
                 auto src_buff =
                     thread_buff.GetVector(Number<DstDataPerWrite>{})[Number<buff_off>{}];
-
-                const auto dst_coord = mDstSliceOrigin + to_multi_index(long_vector_data_begin_id);
-
-                vector_data_store<DstData, DstDataPerWrite>::run(p_dst, src_buff, dst_coord);
-            });
-    }
-
-    template <typename SrcData, typename DstData>
-    __device__ void Store(SrcData src, DstData* p_dst)
-    {
-        constexpr auto vector_access_dim = Number<DstVectorWriteDim>{};
-
-        constexpr auto dst_data_per_access = Number<DstDataPerWrite>{};
-
-        static_assert(DstDataPerWrite == 1 || DstDataPerWrite == 2 || DstDataPerWrite == 4, "");
-
-        constexpr auto long_vector_size = dst_data_per_access;
-
-        constexpr auto long_vector_access_lengths = SliceLengths::Modify(
-            vector_access_dim, SliceLengths::Get(vector_access_dim) / long_vector_size);
-
-        static_ford<decltype(long_vector_access_lengths), DstDimAccessOrder>{}(
-            [&](auto long_vector_access_id) {
-                constexpr auto long_vector_data_begin_id = long_vector_access_id.Modify(
-                    Number<vector_access_dim>{},
-                    Number<long_vector_size * long_vector_access_id[vector_access_dim]>{});
-
-                constexpr auto buff_off =
-                    ThreadBufferDesc::CalculateOffset(to_multi_index(long_vector_data_begin_id)) /
-                    long_vector_size;
-
-                auto src_buff = src.GetVector(Number<DstDataPerWrite>{})[Number<buff_off>{}];
 
                 const auto dst_coord = mDstSliceOrigin + to_multi_index(long_vector_data_begin_id);
 
