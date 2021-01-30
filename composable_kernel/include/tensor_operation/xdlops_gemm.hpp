@@ -56,13 +56,10 @@ struct mfma_info<mfma_instr::mfma_f32_32x32x1xf32>
               class FloatA,
               class FloatB,
               class FloatC>
-    __device__ FloatC run(const FloatA* a, const FloatB* b, FloatC reg_c) const
+    __device__ FloatC run(const FloatA a, const FloatB b, FloatC reg_c) const
     {
-        const auto p_a = reinterpret_cast<const float*>(a);
-        const auto p_b = reinterpret_cast<const float*>(b);
-
         return intrin_mfma_f32_32x32x1f32<MPerXdlops, NPerXdlops, AStride, BStride>::run(
-            p_a, p_b, reg_c);
+            a, b, reg_c);
     }
 };
 
@@ -90,12 +87,9 @@ struct mfma_info<mfma_instr::mfma_f32_32x32x2xf32>
               class FloatA,
               class FloatB,
               class FloatC>
-    __device__ FloatC run(const FloatA* a, const FloatB* b, FloatC reg_c) const
+    __device__ FloatC run(const FloatA a, const FloatB b, FloatC reg_c) const
     {
-        const auto p_a = reinterpret_cast<const float*>(a);
-        const auto p_b = reinterpret_cast<const float*>(b);
-
-        return intrin_mfma_f32_32x32x2f32(p_a, p_b, reg_c);
+        return intrin_mfma_f32_32x32x2f32(a, b, reg_c);
     }
 };
 
@@ -749,6 +743,23 @@ struct XdlopsGemm_t
         constexpr index_t BStride = K * KRepeats;
 
         static_if<!IsKReduction>{}([&](auto) {
+            static_for<0, K, 1>{}([&](auto k_i) {
+                index_t a_offset = k_i * M + laneId;
+
+                reg_a.GetVector(Number<data_size>{})(Number<k_i>{}) = lds_load(p_a_wave, a_offset);
+
+                index_t b_offset = k_i * N + laneId;
+
+                reg_b.GetVector(Number<data_size>{})(Number<k_i>{}) = lds_load(p_b_wave, b_offset);
+            });
+
+            static_for<0, K * KRepeats, 1>{}([&](auto k_i) {
+                p_c_thread = mfma_type.template run<MPerXdlops, NPerXdlops, AStride, BStride>(
+                    reg_a.GetVector(Number<mfma_type.k_base>{})[Number<k_i>{}],
+                    reg_b.GetVector(Number<mfma_type.k_base>{})[Number<k_i>{}],
+                    p_c_thread);
+            });
+
 #if 0
             for(index_t m_i = 0; m_i < MRepeats; ++m_i)
                 for(index_t k_i = 0; k_i < K; ++k_i)
@@ -775,15 +786,6 @@ struct XdlopsGemm_t
                 const index_t blk_id = laneId / mfma_type.num_threads_blk;
                 const index_t blk_td = laneId % mfma_type.num_threads_blk;
 
-#if 0
-                // load into registers
-                for(index_t k_i = 0; k_i < K; k_i += mfma_type.num_input_blks)
-                {
-                    a[k_i] = p_a_wave[(k_i + blk_id) * M + blk_td];
-                    b[k_i] = p_b_wave[(k_i + blk_id) * N + blk_td];
-                }
-#endif
-
                 static_for<0, K, mfma_type.num_input_blks>{}([&](auto k_i) {
                     index_t a_offset = (k_i + blk_id) * M + blk_td;
 
@@ -796,8 +798,6 @@ struct XdlopsGemm_t
                         lds_load(p_b_wave, b_offset);
                 });
 
-                // for(index_t k_i = 0; k_i < K; k_i += mfma_type.num_input_blks)
-                // for(index_t i = 0; i < KRepeats; ++i)
                 static_for<0, K, mfma_type.num_input_blks>{}([&](auto k_i) {
                     static_for<0, KRepeats, 1>{}([&](auto i) {
                         constexpr index_t offset = k_i * KRepeats + i;

@@ -219,6 +219,7 @@ union float_vec64_t
     StaticallyIndexedArray<float_vec32_t, 2> s32;
     StaticallyIndexedArray<float32_t, 2> v32;
     StaticallyIndexedArray<float64_t, 1> s64;
+    // float n[64];
     __host__ __device__ constexpr float_vec64_t() { s64(Number<0>{}) = 0; }
 
     template <index_t vs>
@@ -306,6 +307,12 @@ template <>
 constexpr auto GetRegBuffer<float, 16>()
 {
     return float_vec16_t{};
+}
+
+template <>
+constexpr auto GetRegBuffer<float, 32>()
+{
+    return float_vec32_t{};
 }
 
 template <>

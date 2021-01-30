@@ -93,12 +93,12 @@ struct intrin_mfma_f32_32x32x1f32<64, 128, AStride, BStride>
 template <index_t AStride, index_t BStride>
 struct intrin_mfma_f32_32x32x1f32<64, 64, AStride, BStride>
 {
-    __device__ static float_vec64_t run(const float* reg_a, const float* reg_b, float_vec64_t reg_c)
+    __device__ static float_vec64_t run(const float reg_a, const float reg_b, float_vec64_t reg_c)
     {
-        reg_c.v32(Number<0>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
-            reg_a[0], reg_b[0], reg_c.v32[Number<0>{}], 1, 0, 0);
-        reg_c.v32(Number<1>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
-            reg_a[0], reg_b[0], reg_c.v32[Number<1>{}], 1, 1, 0);
+        reg_c.v32(Number<0>{}) =
+            llvm_intrin_amdgcn_mfma_f32_32x32x1f32(reg_a, reg_b, reg_c.v32[Number<0>{}], 1, 0, 0);
+        reg_c.v32(Number<1>{}) =
+            llvm_intrin_amdgcn_mfma_f32_32x32x1f32(reg_a, reg_b, reg_c.v32[Number<1>{}], 1, 1, 0);
         return reg_c;
     }
 };
@@ -125,10 +125,12 @@ struct intrin_mfma_f32_32x32x1f32<32, 64, AStride, BStride>
     }
 };
 
-__device__ c_vec16_1_t::VecType
-intrin_mfma_f32_32x32x2f32(const float* reg_a, const float* reg_b, c_vec16_1_t::VecType reg_c)
+__device__ float_vec16_t intrin_mfma_f32_32x32x2f32(const float reg_a,
+                                                    const float reg_b,
+                                                    float_vec16_t reg_c)
 {
-    reg_c.s.x = llvm_intrin_amdgcn_mfma_f32_32x32x2f32(reg_a[0], reg_b[0], reg_c.s.x, 0, 0, 0);
+    reg_c.s16(Number<0>{}) =
+        llvm_intrin_amdgcn_mfma_f32_32x32x2f32(reg_a, reg_b, reg_c.s16[Number<0>{}], 0, 0, 0);
     return reg_c;
 }
 
