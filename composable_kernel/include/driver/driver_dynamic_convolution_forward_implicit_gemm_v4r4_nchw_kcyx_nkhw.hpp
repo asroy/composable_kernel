@@ -388,7 +388,12 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
         const index_t InRightPadH = in_right_pads[I0];
         const index_t InRightPadW = in_right_pads[I1];
 
-        // weight tensor
+        if(!(InLeftPadH == 0 && InLeftPadW == 0 && InRightPadH == 0 && InRightPadW == 0))
+        {
+            throw std::runtime_error("wrong! 1x1, stride 1, no padding");
+        }
+
+            // weight tensor
 #if 0
         // TODO implement graph optimization of tensor descriptor transformation
         const auto wei_gemmk_gemmm_global_desc = transform_dynamic_tensor_descriptor(

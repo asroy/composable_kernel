@@ -73,6 +73,30 @@ __host__ __device__ constexpr auto container_reorder_given_old2new(const Tuple<T
         old_tuple, typename sequence_map_inverse<decltype(old2new)>::type{});
 }
 
+template <index_t... Is, index_t... IRs>
+__host__ __device__ constexpr auto container_reorder_given_new2old(Sequence<Is...> /* old_seq */,
+                                                                   Sequence<IRs...> /*new2old*/)
+{
+    static_assert(sizeof...(Is) == sizeof...(IRs), "wrong! size not consistent");
+
+    static_assert(is_valid_sequence_map<Sequence<IRs...>>{}, "wrong! invalid reorder map");
+
+    return Sequence<Sequence<Is...>::At(Number<IRs>{})...>{};
+}
+
+template <index_t... Is, index_t... IRs>
+__host__ __device__ constexpr auto container_reorder_given_old2new(Sequence<Is...> old_seq,
+                                                                   Sequence<IRs...> /* old2new */)
+{
+    static_assert(sizeof...(Is) == sizeof...(IRs), "wrong! size not consistent");
+
+    static_assert(is_valid_sequence_map<Sequence<IRs...>>{}, "wrong! invalid reorder map");
+
+    constexpr auto new2old = typename sequence_map_inverse<Sequence<IRs...>>::type{};
+
+    return container_reorder_give_new2old(old_seq, new2old);
+}
+
 template <typename TData, typename Container, typename Reduce>
 __host__ __device__ constexpr TData container_reduce(const Container& a, Reduce f, TData init)
 {
