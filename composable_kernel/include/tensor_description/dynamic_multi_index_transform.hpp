@@ -923,7 +923,7 @@ struct DynamicMerge
                                               const UpIdx& idx_up_new,
                                               Number<Hack>) const
     {
-#if 0
+#if 1
         UpdateLowerIndex_1a(idx_diff_low, idx_diff_up, idx_low, idx_up_new, Number<Hack>{});
 #elif 0
         UpdateLowerIndex_1b(idx_diff_low, idx_diff_up, idx_low, idx_up_new, Number<Hack>{});

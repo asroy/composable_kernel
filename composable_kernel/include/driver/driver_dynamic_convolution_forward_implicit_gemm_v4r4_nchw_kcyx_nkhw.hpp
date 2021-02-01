@@ -184,7 +184,11 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
             GemmABlockTransferThreadSliceLengths_GemmK_GemmM,
             GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
             Sequence<1, 0>,
+#if 1 // debug
             Sequence<1, 0>,
+#else
+            Sequence<0, 1>,
+#endif
             0,
             GemmABlockTransferSrcScalarPerVector_GemmK,
             GemmABlockTransferDstScalarPerVector_GemmM,
