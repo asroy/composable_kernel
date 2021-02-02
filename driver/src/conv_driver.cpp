@@ -25,10 +25,10 @@ int main(int argc, char* argv[])
 
     // 1x1, 56x56
     constexpr index_t N  = 128;
-    constexpr index_t C  = 1024;
+    constexpr index_t C  = 128;
     constexpr index_t HI = 14;
     constexpr index_t WI = 14;
-    constexpr index_t K  = 1024;
+    constexpr index_t K  = 128;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
 

@@ -64,11 +64,11 @@ void gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
         make_native_tensor_descriptor_packed(Sequence<N, K, Ho, Wo>{});
 
     // read params: tunning parameters
-    constexpr index_t GemmMPerBlock = 128;
-    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmMPerBlock = 32;
+    constexpr index_t GemmNPerBlock = 32;
     constexpr index_t GemmKPerBlock = 4;
-    constexpr index_t GemmMPerWave  = 64;
-    constexpr index_t GemmNPerWave  = 64;
+    constexpr index_t GemmMPerWave  = 16;
+    constexpr index_t GemmNPerWave  = 16;
     constexpr index_t GemmKPack     = 4;
 
     // read params: dependent parameters
@@ -83,7 +83,7 @@ void gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
 
     // A matrix copy
     constexpr index_t GemmABlockCopyClusterLengths_GemmK     = 4;
-    constexpr index_t GemmABlockCopyClusterLengths_GemmM     = 64;
+    constexpr index_t GemmABlockCopyClusterLengths_GemmM     = 32;
     constexpr index_t GemmABlockCopyClusterLengths_GemmKPack = 1;
 
     constexpr index_t GemmABlockCopyThreadSliceLengths_GemmK =
@@ -114,7 +114,7 @@ void gridwise_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
 
     // B matrix Copy
     constexpr index_t GemmBBlockCopyClusterLengths_GemmK     = 2;
-    constexpr index_t GemmBBlockCopyClusterLengths_GemmN     = 32;
+    constexpr index_t GemmBBlockCopyClusterLengths_GemmN     = 8;
     constexpr index_t GemmBBlockCopyClusterLengths_GemmKPack = 4;
 
     constexpr index_t GemmBBlockCopyThreadSliceLengths_GemmK =

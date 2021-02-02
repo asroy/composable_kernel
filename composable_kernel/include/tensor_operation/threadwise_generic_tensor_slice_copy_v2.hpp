@@ -185,6 +185,7 @@ struct ThreadwiseGenericTensorSliceCopy_v5
                 const auto src_coord = mSrcSliceOrigin + to_multi_index(long_vector_data_begin_id);
 
                 auto src_buff = GetRegBuffer<SrcData, SrcDataPerRead>();
+
                 src_buff.GetVector(Number<SrcDataPerRead>{})(Number<0>{}) =
                     buffer_vector_load<SrcDataPerRead, SrcDesc::GetElementSpace()>(p_src,
                                                                                    src_coord);
@@ -240,6 +241,39 @@ struct ThreadwiseGenericTensorSliceCopy_v5
 
                 vector_data_store<DstData, DstDataPerWrite>::run(
                     p_dst, src_buff.GetVector(Number<DstDataPerWrite>{})[Number<0>{}], dst_coord);
+            });
+    }
+
+    template <typename SrcData, typename DstData>
+    __device__ void GlobalStore(SrcData thread_buff, DstData* p_dst)
+    {
+        constexpr auto vector_access_dim = Number<DstVectorWriteDim>{};
+
+        constexpr auto dst_data_per_access = Number<DstDataPerWrite>{};
+
+        static_assert(DstDataPerWrite == 1 || DstDataPerWrite == 2 || DstDataPerWrite == 4, "");
+
+        constexpr auto long_vector_size = dst_data_per_access;
+
+        constexpr auto long_vector_access_lengths = SliceLengths::Modify(
+            vector_access_dim, SliceLengths::Get(vector_access_dim) / long_vector_size);
+
+        static_ford<decltype(long_vector_access_lengths), DstDimAccessOrder>{}(
+            [&](auto long_vector_access_id) {
+                constexpr auto long_vector_data_begin_id = long_vector_access_id.Modify(
+                    Number<vector_access_dim>{},
+                    Number<long_vector_size * long_vector_access_id[vector_access_dim]>{});
+
+                constexpr auto buff_off =
+                    ThreadBufferDesc::CalculateOffset(to_multi_index(long_vector_data_begin_id)) /
+                    long_vector_size;
+
+                auto src_buff =
+                    thread_buff.GetVector(Number<DstDataPerWrite>{})[Number<buff_off>{}];
+
+                const auto dst_coord = mDstSliceOrigin + to_multi_index(long_vector_data_begin_id);
+
+                vector_data_store<DstData, DstDataPerWrite>::run(p_dst, src_buff, dst_coord);
             });
     }
 

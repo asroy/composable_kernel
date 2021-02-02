@@ -216,10 +216,10 @@ union float_vec32_t
 union float_vec64_t
 {
     StaticallyIndexedArray<float, 64> s1;
+    StaticallyIndexedArray<float_vec16_t, 4> s16;
     StaticallyIndexedArray<float_vec32_t, 2> s32;
     StaticallyIndexedArray<float32_t, 2> v32;
     StaticallyIndexedArray<float64_t, 1> s64;
-    // float n[64];
     __host__ __device__ constexpr float_vec64_t() { s64(Number<0>{}) = 0; }
 
     template <index_t vs>
@@ -229,6 +229,12 @@ union float_vec64_t
     __host__ __device__ auto& GetVector(Number<1>)
     {
         return s1;
+    }
+
+    template <>
+    __host__ __device__ auto& GetVector(Number<16>)
+    {
+        return s16;
     }
 
     template <>
@@ -245,7 +251,6 @@ union float_vec128_t
     StaticallyIndexedArray<float_vec32_t, 4> s32;
     StaticallyIndexedArray<float_vec64_t, 2> s64;
     StaticallyIndexedArray<float128_t, 1> s128;
-    // float n[128];
     __host__ __device__ constexpr float_vec128_t() { s128(Number<0>{}) = 0; }
 
     template <index_t vs>
@@ -327,6 +332,7 @@ constexpr auto GetRegBuffer<float, 128>()
     return float_vec128_t{};
 }
 
+#if 1
 struct c_vec32_4_t
 {
     union VecType
@@ -473,6 +479,7 @@ struct c_vec4_1_t
         return c;
     }
 };
+#endif
 
 template <class T, index_t N>
 struct vector_type
