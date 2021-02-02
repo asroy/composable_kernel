@@ -78,9 +78,8 @@ struct BlockwiseGenericTensorSliceCopy_v5
         return ThreadBufferDesc::GetElementSpace();
     }
 
-    template <typename BlockSrcData, typename ThreadBuffData>
-    __device__ void RunLoadThreadBuffer(const BlockSrcData* p_block_src,
-                                        ThreadBuffData& thread_buff)
+    template <typename BlockSrcData>
+    __device__ void RunLoadThreadBuffer(const BlockSrcData* p_block_src)
     {
         if(BlockSize == mThreadClusterDesc.GetElementSize() or
            get_thread_local_1d_id() < mThreadClusterDesc.GetElementSize())
@@ -89,8 +88,8 @@ struct BlockwiseGenericTensorSliceCopy_v5
         }
     }
 
-    template <typename ThreadBuffData, typename BlockDstData>
-    __device__ void RunStoreThreadBuffer(ThreadBuffData thread_buff, BlockDstData* p_block_dst)
+    template <typename BlockDstData>
+    __device__ void RunStoreThreadBuffer(BlockDstData* p_block_dst)
     {
         if(BlockSize == mThreadClusterDesc.GetElementSize() or
            get_thread_local_1d_id() < mThreadClusterDesc.GetElementSize())
@@ -99,9 +98,8 @@ struct BlockwiseGenericTensorSliceCopy_v5
         }
     }
 
-    template <typename BlockSrcData, typename BlockDstData, typename ThreadBuffData>
-    __device__ void
-    Run(const BlockSrcData* p_block_src, BlockDstData* p_block_dst, ThreadBuffData& thread_buff)
+    template <typename BlockSrcData, typename BlockDstData>
+    __device__ void Run(const BlockSrcData* p_block_src, BlockDstData* p_block_dst)
     {
         static_assert(ThreadBufferAddressSpace == AddressSpace::Vgpr,
                       "wrong! This function use vgpr as its thread "
@@ -112,8 +110,8 @@ struct BlockwiseGenericTensorSliceCopy_v5
         if(BlockSize == mThreadClusterDesc.GetElementSize() or
            get_thread_local_1d_id() < mThreadClusterDesc.GetElementSize())
         {
-            RunLoadThreadBuffer(p_block_src, thread_buff);
-            RunStoreThreadBuffer(thread_buff, p_block_dst);
+            RunLoadThreadBuffer(p_block_src);
+            RunStoreThreadBuffer(p_block_dst);
         }
     }
 
@@ -163,6 +161,9 @@ struct BlockwiseGenericTensorSliceCopy_v5
         make_cluster_descriptor(ThreadClusterLengths{}, ThreadClusterArrangeOrder{});
 
     ThreadwiseCopy mThreadwiseCopy;
+
+    using ThreadBufferType = decltype(GetRegBuffer<float, GetThreadBufferSize()>());
+    ThreadBufferType thread_buff;
 };
 
 } // namespace ck

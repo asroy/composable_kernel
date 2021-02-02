@@ -496,18 +496,10 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
         constexpr index_t c_thread_size = MPerBlock * NPerBlock / BlockSize;
         auto c_thread_vec               = GetRegBuffer<AccFloat, c_thread_size>();
 
-        using ThreadBufferTypeA =
-            decltype(GetRegBuffer<ABFloat, a_blockwise_copy.GetThreadBufferSize()>());
-        using ThreadBufferTypeB =
-            decltype(GetRegBuffer<ABFloat, b_blockwise_copy.GetThreadBufferSize()>());
-
-        ThreadBufferTypeA thread_buff_a;
-        ThreadBufferTypeB thread_buff_b;
-
         // preload data into LDS
         {
-            a_blockwise_copy.Run(p_a_global, p_a_block, thread_buff_a);
-            b_blockwise_copy.Run(p_b_global, p_b_block, thread_buff_b);
+            a_blockwise_copy.Run(p_a_global, p_a_block);
+            b_blockwise_copy.Run(p_b_global, p_b_block);
         }
 
         constexpr auto blockwise_a_copy_src_step = Sequence<0, KPerBlock, 0, 0>{};
@@ -521,8 +513,8 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
             a_blockwise_copy.MoveSrcSliceWindow(blockwise_a_copy_src_step, True);
             b_blockwise_copy.MoveSrcSliceWindow(blockwise_b_copy_src_step, True);
 
-            a_blockwise_copy.RunLoadThreadBuffer(p_a_global, thread_buff_a);
-            b_blockwise_copy.RunLoadThreadBuffer(p_b_global, thread_buff_b);
+            a_blockwise_copy.RunLoadThreadBuffer(p_a_global);
+            b_blockwise_copy.RunLoadThreadBuffer(p_b_global);
 
             block_sync_lds();
 
@@ -539,8 +531,8 @@ struct GridwiseBatchGemmXdlops_gkmkpack_gknkpack_gmn_v2
             block_sync_lds();
 
             // store next data to LDS
-            a_blockwise_copy.RunStoreThreadBuffer(thread_buff_a, p_a_block);
-            b_blockwise_copy.RunStoreThreadBuffer(thread_buff_b, p_b_block);
+            a_blockwise_copy.RunStoreThreadBuffer(p_a_block);
+            b_blockwise_copy.RunStoreThreadBuffer(p_b_block);
         }
 
         // tail
