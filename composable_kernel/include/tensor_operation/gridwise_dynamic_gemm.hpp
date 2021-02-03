@@ -269,7 +269,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                        make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
 
         // hack to control index calculation when iterating over b_k_n_global tensor
-#if 0
+#if 1
         // for padded input
         constexpr auto b_k_n_global_iterator_hacks =
             make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>{},
