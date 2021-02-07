@@ -9,6 +9,7 @@
 
 namespace ck {
 
+#if 1
 // GemmM = K
 // GemmN = N * Ho * Wo
 // GemmK = C * Y * X
@@ -903,6 +904,73 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1
         }
     }
 };
+#else
+template <index_t BlockSize,
+          typename Float,
+          typename AccFloat,
+          index_t GemmMPerBlock,
+          index_t GemmNPerBlock,
+          index_t GemmKPerBlock,
+          index_t GemmMPerThread,
+          index_t GemmNPerThread,
+          index_t GemmKPerThread,
+          index_t GemmMLevel0Cluster,
+          index_t GemmNLevel0Cluster,
+          index_t GemmMLevel1Cluster,
+          index_t GemmNLevel1Cluster,
+          typename GemmABlockTransferThreadSliceLengths_GemmK_GemmM,
+          typename GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
+          index_t GemmABlockTransferSrcScalarPerVector_GemmK,
+          index_t GemmABlockTransferDstScalarPerVector_GemmM,
+          typename GemmBBlockTransferThreadSliceLengths_GemmK_GemmN,
+          typename GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
+          index_t GemmBBlockTransferSrcScalarPerVector_GemmN,
+          index_t GemmBBlockTransferDstScalarPerVector_GemmN,
+          index_t GemmCThreadTransferDstScalarPerVector_GemmN1>
+struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
+{
+    template <typename... Wei, typename... In, typename... Out>
+    __host__ void Run(const DynamicTensorDescriptor<Wei...>& wei_k_c_y_x_global_desc,
+                      const DynamicTensorDescriptor<In...>& in_n_c_hi_wi_global_desc,
+                      const DynamicTensorDescriptor<Out...>& out_n_k_ho_wo_global_desc,
+                      const MultiIndex<2> conv_strides,
+                      const MultiIndex<2> conv_dilations,
+                      const MultiIndex<2> in_left_pads,
+                      const MultiIndex<2> in_right_pads,
+                      const Float* __restrict__ p_wei_global,
+                      const Float* __restrict__ p_in_global,
+                      Float* __restrict__ p_out_global) const
+    {
+        constexpr auto pass   = DynamicPassThrough();
+        constexpr auto pad    = DynamicLeftPad<false>();
+        constexpr auto freeze = DynamicFreeze();
+
+        constexpr auto desc = ck::DynamicTensorDescriptor<ck::Tuple<ck::DynamicUnMerge<4, false>>,
+                                                          ck::Tuple<ck::Sequence<0>>,
+                                                          ck::Tuple<ck::Sequence<1, 2, 3, 4>>,
+                                                          ck::Sequence<1, 2, 3, 4>>();
+
+        static_assert(std::is_trivial<Sequence<1>>::value, "wrong");
+        static_assert(std::is_trivial<detail::TupleElementKey<0>>::value, "wrong");
+        static_assert(
+            std::is_trivial<detail::TupleElement<detail::TupleElementKey<0>, index_t>>::value,
+            "wrong");
+        static_assert(std::is_trivial<detail::TupleImpl<Sequence<0>, index_t>>::value, "wrong");
+        static_assert(std::is_trivial<Tuple<index_t>>::value, "wrong");
+        static_assert(std::is_trivial<MultiIndex<2>>::value, "wrong");
+        static_assert(std::is_trivial<MultiIndex<1>>::value, "wrong");
+        static_assert(std::is_trivial<DynamicPassThrough>::value, "wrong");
+        static_assert(std::is_trivial<DynamicUnMerge<2>>::value, "wrong");
+        static_assert(std::is_trivial<DynamicFreeze>::value, "wrong");
+        static_assert(std::is_trivial<remove_cv_t<decltype(desc)>>::value, "wrong");
+        static_assert(std::is_trivial<remove_reference_t<remove_cv_t<decltype(conv_strides)>>>::value, "wrong");
+        static_assert(
+            std::is_trivial<
+                remove_reference_t<remove_cv_t<decltype(wei_k_c_y_x_global_desc)>>>::value,
+            "wrong");
+    }
+};
+#endif
 
 } // namespace ck
 #endif

@@ -11,24 +11,14 @@ struct DynamicPassThrough
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<1>;
 
-    const UpperIndex up_lengths_;
+    UpperIndex up_lengths_;
 
-    __host__ __device__ constexpr DynamicPassThrough(const DynamicPassThrough& other)
-        : up_lengths_{other.up_lengths_}
-    {
-    }
-
-    __host__ __device__ constexpr DynamicPassThrough(DynamicPassThrough&& other)
-        : up_lengths_{other.up_lengths_}
-    {
-    }
+    __host__ __device__ constexpr DynamicPassThrough() = default;
 
     __host__ __device__ constexpr DynamicPassThrough(const index_t& low_length)
         : up_lengths_{make_multi_index(low_length)}
     {
     }
-
-    __host__ __device__ constexpr DynamicPassThrough() : up_lengths_{0} {}
 
     __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
 
@@ -88,19 +78,11 @@ struct DynamicPad
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<1>;
 
-    const UpperIndex up_lengths_;
-    const index_t left_pad_;
-    const index_t right_pad_;
+    UpperIndex up_lengths_;
+    index_t left_pad_;
+    index_t right_pad_;
 
-    __host__ __device__ constexpr DynamicPad(const DynamicPad& other)
-        : up_lengths_{other.up_lengths_}, left_pad_{other.left_pad_}, right_pad_{other.right_pad_}
-    {
-    }
-
-    __host__ __device__ constexpr DynamicPad(DynamicPad&& other)
-        : up_lengths_{other.up_lengths_}, left_pad_{other.left_pad_}, right_pad_{other.right_pad_}
-    {
-    }
+    __host__ __device__ constexpr DynamicPad() = default;
 
     __host__ __device__ constexpr DynamicPad(const index_t& low_length,
                                              const index_t& left_pad,
@@ -110,8 +92,6 @@ struct DynamicPad
           right_pad_{right_pad}
     {
     }
-
-    __host__ __device__ constexpr DynamicPad() : up_lengths_{0}, left_pad_{0}, right_pad_{0} {}
 
     __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
 
@@ -173,25 +153,15 @@ struct DynamicLeftPad
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<1>;
 
-    const UpperIndex up_lengths_;
-    const index_t left_pad_;
+    UpperIndex up_lengths_;
+    index_t left_pad_;
 
-    __host__ __device__ constexpr DynamicLeftPad(const DynamicLeftPad& other)
-        : up_lengths_{other.up_lengths_}, left_pad_{other.left_pad_}
-    {
-    }
-
-    __host__ __device__ constexpr DynamicLeftPad(DynamicLeftPad&& other)
-        : up_lengths_{other.up_lengths_}, left_pad_{other.left_pad_}
-    {
-    }
+    __host__ __device__ constexpr DynamicLeftPad() = default;
 
     __host__ __device__ constexpr DynamicLeftPad(const index_t& low_length, const index_t& left_pad)
         : up_lengths_{make_multi_index(low_length + left_pad)}, left_pad_{left_pad}
     {
     }
-
-    __host__ __device__ constexpr DynamicLeftPad() : up_lengths_{0}, left_pad_{0} {}
 
     __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
 
@@ -252,33 +222,17 @@ struct DynamicRightPad
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<1>;
 
-    const UpperIndex up_lengths_;
-    const index_t low_length_;
-    const index_t right_pad_;
+    UpperIndex up_lengths_;
+    index_t low_length_;
+    index_t right_pad_;
 
-    __host__ __device__ constexpr DynamicRightPad(const DynamicRightPad& other)
-        : up_lengths_{other.up_lengths_},
-          low_length_{other.low_length_},
-          right_pad_{other.right_pad_}
-    {
-    }
-
-    __host__ __device__ constexpr DynamicRightPad(DynamicRightPad&& other)
-        : up_lengths_{other.up_lengths_},
-          low_length_{other.low_length_},
-          right_pad_{other.right_pad_}
-    {
-    }
+    __host__ __device__ constexpr DynamicRightPad() = default;
 
     __host__ __device__ constexpr DynamicRightPad(const index_t& low_length,
                                                   const index_t& right_pad)
         : up_lengths_{make_multi_index(low_length + right_pad)},
           low_length_{low_length},
           right_pad_{right_pad}
-    {
-    }
-
-    __host__ __device__ constexpr DynamicRightPad() : up_lengths_{0}, low_length_{0}, right_pad_{0}
     {
     }
 
@@ -342,37 +296,16 @@ struct DynamicEmbed
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<NDimUp>;
 
-    const UpperIndex up_lengths_;
-    const UpperIndex coefficients_;
+    UpperIndex up_lengths_;
+    UpperIndex coefficients_;
 
-    __host__ __device__ constexpr DynamicEmbed(const DynamicEmbed& other)
-        : up_lengths_{other.up_lengths_}, coefficients_{other.coefficients_}
-    {
-    }
-
-    __host__ __device__ constexpr DynamicEmbed(DynamicEmbed&& other)
-        : up_lengths_{other.up_lengths_}, coefficients_{other.coefficients_}
-    {
-    }
+    __host__ __device__ constexpr DynamicEmbed() = default;
 
     __host__ __device__ constexpr DynamicEmbed(const UpperIndex& up_lengths,
                                                const UpperIndex& coefficients)
         : up_lengths_{up_lengths}, coefficients_{coefficients}
     {
         static_assert(UpperIndex::Size() == NDimUp, "wrong! # of dimensions not consistent");
-    }
-
-    template <typename UpperLengths, typename Coefficients>
-    __host__ __device__ constexpr DynamicEmbed(const UpperLengths& up_lengths,
-                                               const Coefficients& coefficients)
-        : up_lengths_{up_lengths}, coefficients_{coefficients}
-    {
-    }
-
-    __host__ __device__ constexpr DynamicEmbed()
-        : up_lengths_{make_zero_multi_index<NDimUp>()},
-          coefficients_{make_zero_multi_index<NDimUp>()}
-    {
     }
 
     __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
@@ -439,23 +372,11 @@ struct DynamicMerge
     using LowerIndex = MultiIndex<NDimLow>;
     using UpperIndex = MultiIndex<1>;
 
-    const LowerIndex low_lengths_;
-    const LowerIndex low_lengths_scan_;
-    const UpperIndex up_lengths_;
+    LowerIndex low_lengths_;
+    LowerIndex low_lengths_scan_;
+    UpperIndex up_lengths_;
 
-    __host__ __device__ constexpr DynamicMerge(const DynamicMerge& other)
-        : low_lengths_{other.low_lengths_},
-          low_lengths_scan_{other.low_lengths_scan_},
-          up_lengths_{other.up_lengths_}
-    {
-    }
-
-    __host__ __device__ constexpr DynamicMerge(DynamicMerge&& other)
-        : low_lengths_{other.low_lengths_},
-          low_lengths_scan_{other.low_lengths_scan_},
-          up_lengths_{other.up_lengths_}
-    {
-    }
+    __host__ __device__ constexpr DynamicMerge() = default;
 
     __host__ __device__ constexpr DynamicMerge(const LowerIndex& low_lengths)
         : low_lengths_{low_lengths},
@@ -465,13 +386,6 @@ struct DynamicMerge
               container_reduce(low_lengths, math::multiplies<index_t>(), index_t{1}))}
     {
         static_assert(LowerIndex::Size() == NDimLow, "wrong!");
-    }
-
-    __host__ __device__ constexpr DynamicMerge()
-        : low_lengths_{make_zero_multi_index<NDimLow>()},
-          low_lengths_scan_{make_zero_multi_index<NDimLow>()},
-          up_lengths_{0}
-    {
     }
 
     __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return NDimLow; }
@@ -953,19 +867,15 @@ struct DynamicUnMerge
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<NDimUp>;
 
-    const UpperIndex up_lengths_;
-    const UpperIndex up_lengths_scan_;
+    UpperIndex up_lengths_;
+    UpperIndex up_lengths_scan_;
+
+    __host__ __device__ constexpr DynamicUnMerge() = default;
 
     __host__ __device__ constexpr DynamicUnMerge(const UpperIndex& up_lengths)
         : up_lengths_{up_lengths},
           up_lengths_scan_{
               container_reverse_exclusive_scan(up_lengths, math::multiplies<index_t>(), index_t{1})}
-    {
-    }
-
-    __host__ __device__ constexpr DynamicUnMerge()
-        : up_lengths_{make_zero_multi_index<NDimUp>()},
-          up_lengths_scan_{make_zero_multi_index<NDimUp>()}
     {
     }
 
@@ -1035,11 +945,11 @@ struct DynamicFreeze
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<0>;
 
-    const index_t low_idx_;
+    LowerIndex low_idx_;
+
+    __host__ __device__ constexpr DynamicFreeze() = default;
 
     __host__ __device__ constexpr DynamicFreeze(const index_t& low_idx) : low_idx_{low_idx} {}
-
-    __host__ __device__ constexpr DynamicFreeze() : low_idx_{0} {}
 
     __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
 
@@ -1054,7 +964,7 @@ struct DynamicFreeze
         static_assert(LowIdx::Size() == 1 && UpIdx::Size() == 1,
                       "wrong! inconsistent # of dimension");
 
-        idx_low(Number<0>{}) = low_idx_;
+        idx_low = low_idx_;
     }
 
     template <typename LowIdxDiff,

@@ -11,12 +11,12 @@
 #include "conv_common.hpp"
 #include "host_conv.hpp"
 #include "device_tensor.hpp"
-#include "device_convolution_forward_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
-#include "device_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
+//#include "device_convolution_forward_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
+//#include "device_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
-#include "device_dummy_static_transform.hpp"
-#include "device_dummy_dynamic_transform_v1.hpp"
-#include "device_dummy_dynamic_transform.hpp"
+//#include "device_dummy_static_transform.hpp"
+//#include "device_dummy_dynamic_transform_v1.hpp"
+//#include "device_dummy_dynamic_transform.hpp"
 
 int main(int argc, char* argv[])
 {

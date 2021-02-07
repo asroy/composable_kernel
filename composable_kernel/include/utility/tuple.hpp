@@ -17,13 +17,7 @@ struct TupleElementKey
 template <typename Key, typename Data>
 struct TupleElement
 {
-    __host__ __device__ explicit constexpr TupleElement() : mData() {}
-
-#if 0
-    __host__ __device__ explicit constexpr TupleElement(const TupleElement&) = default;
-
-    __host__ __device__ explicit constexpr TupleElement(TupleElement&&) = default;
-#endif
+    __host__ __device__ explicit constexpr TupleElement() = default;
 
     template <typename UData>
     __host__ __device__ explicit constexpr TupleElement(const TupleElement<Key, UData>& te)
@@ -70,30 +64,8 @@ struct TupleImpl;
 template <index_t... Is, typename... Xs>
 struct TupleImpl<Sequence<Is...>, Xs...> : TupleElement<TupleElementKey<Is>, Xs>...
 {
-    __host__ __device__ explicit constexpr TupleImpl() : TupleElement<TupleElementKey<Is>, Xs>()...
-    {
-        static_assert(sizeof...(Is) == sizeof...(Xs), "wrong! inconsistent size");
-    }
-
-#if 0
-    __host__ __device__ explicit constexpr TupleImpl(const TupleImpl&) = default;
-
-    __host__ __device__ explicit constexpr TupleImpl(TupleImpl&&) = default;
-#endif
-
-    template <index_t... Js, typename... Ys>
-    __host__ __device__ explicit constexpr TupleImpl(const TupleImpl<Sequence<Js...>, Ys...>& y)
-        : TupleElement<TupleElementKey<Is>, Xs>(
-              static_cast<const TupleElement<TupleElementKey<Js>, Ys>&>(y))...
-    {
-    }
-
-    template <index_t... Js, typename... Ys>
-    __host__ __device__ explicit constexpr TupleImpl(TupleImpl<Sequence<Js...>, Ys...>&& y)
-        : TupleElement<TupleElementKey<Is>, Xs>(
-              static_cast<TupleElement<TupleElementKey<Js>, Ys>&&>(y))...
-    {
-    }
+#if 1
+    __host__ __device__ explicit constexpr TupleImpl() = default;
 
     template <typename... Ys, typename std::enable_if<sizeof...(Ys) >= 1, bool>::type = false>
     __host__ __device__ explicit constexpr TupleImpl(Ys&&... ys)
@@ -102,6 +74,26 @@ struct TupleImpl<Sequence<Is...>, Xs...> : TupleElement<TupleElementKey<Is>, Xs>
         static_assert(sizeof...(Is) == sizeof...(Xs) && sizeof...(Is) == sizeof...(Ys),
                       "wrong! inconsistent size");
     }
+#else
+    __host__ __device__ explicit constexpr TupleImpl() = default;
+
+    template <typename Y,
+              typename std::enable_if<sizeof...(Is) == 1 && sizeof...(Xs) == 1 &&
+                                          !is_same<remove_cv_t<Y>, TupleImpl>::value,
+                                      bool>::type = false>
+    __host__ __device__ explicit constexpr TupleImpl(Y&& y)
+        : TupleElement<TupleElementKey<Is>, Xs>(std::forward<Y>(y))...
+    {
+    }
+
+    template <typename... Ys, typename std::enable_if<sizeof...(Ys) >= 2, bool>::type = false>
+    __host__ __device__ explicit constexpr TupleImpl(Ys&&... ys)
+        : TupleElement<TupleElementKey<Is>, Xs>(std::forward<Ys>(ys))...
+    {
+        static_assert(sizeof...(Is) == sizeof...(Xs) && sizeof...(Is) == sizeof...(Ys),
+                      "wrong! inconsistent size");
+    }
+#endif
 
     __host__ __device__ static constexpr index_t Size() { return sizeof...(Xs); }
 
@@ -126,34 +118,17 @@ struct Tuple : detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(X
     using base =
         detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(Xs), 1>::type, Xs...>;
 
-    __host__ __device__ explicit constexpr Tuple() : base() {}
+    __host__ __device__ constexpr Tuple() = default;
 
-#if 0
-    __host__ __device__ constexpr Tuple(const Tuple&) = default;
-
-    __host__ __device__ constexpr Tuple(Tuple&&) = default;
-#endif
-
-    template <typename... Ys,
-              typename std::enable_if<sizeof...(Ys) == sizeof...(Xs), bool>::type = false>
-    __host__ __device__ explicit constexpr Tuple(const Tuple<Ys...>& y)
-        : base(static_cast<
-               const detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(Ys), 1>::type,
-                                       Ys...>&>(y))
+    template <typename Y,
+              typename std::enable_if<sizeof...(Xs) == 1 && !is_same<remove_cv_t<Y>, Tuple>::value,
+                                      bool>::type = false>
+    __host__ __device__ explicit constexpr Tuple(Y&& y) : base(std::forward<Y>(y))
     {
     }
 
     template <typename... Ys,
-              typename std::enable_if<sizeof...(Ys) == sizeof...(Xs), bool>::type = false>
-    __host__ __device__ explicit constexpr Tuple(Tuple<Ys...>&& y)
-        : base(static_cast<
-               detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(Ys), 1>::type,
-                                 Ys...>&&>(y))
-    {
-    }
-
-    template <typename... Ys,
-              typename std::enable_if<sizeof...(Ys) == sizeof...(Xs) && sizeof...(Ys) >= 1,
+              typename std::enable_if<sizeof...(Ys) == sizeof...(Xs) && sizeof...(Ys) >= 2,
                                       bool>::type = false>
     __host__ __device__ explicit constexpr Tuple(Ys&&... ys) : base(std::forward<Ys>(ys)...)
     {

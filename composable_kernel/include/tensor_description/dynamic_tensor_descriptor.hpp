@@ -58,6 +58,15 @@ struct DynamicTensorDescriptor
     using Coordinate   = DynamicTensorCoordinate<ndim_hidden_, VisibleDimensionIds>;
 
     public:
+#if 1
+    __host__ __device__ explicit constexpr DynamicTensorDescriptor()
+        : DynamicTensorDescriptor(Transforms{}, index_t{0})
+    {
+    }
+#else
+    __host__ __device__ constexpr DynamicTensorDescriptor() = default;
+#endif
+
     __host__ __device__ explicit constexpr DynamicTensorDescriptor(const Transforms& transforms,
                                                                    index_t element_space_size)
         : transforms_{transforms},
@@ -69,11 +78,6 @@ struct DynamicTensorDescriptor
                       "wrong! inconsistent # of transformations");
 
         // TODO check dependency of dimensions is valid
-    }
-
-    __host__ __device__ explicit constexpr DynamicTensorDescriptor()
-        : DynamicTensorDescriptor(Transforms{}, index_t{0})
-    {
     }
 
     __host__ __device__ static constexpr index_t GetNumOfDimension()
@@ -150,10 +154,10 @@ struct DynamicTensorDescriptor
     }
 
     // TODO make these private
-    const Transforms transforms_;
+    Transforms transforms_;
     // TODO maybe hidden_lengths_ should use reference_wrapper (reference to transforms_'s member
     //  variable lengths_) to save space on stack?
-    const HiddenIndex hidden_lengths_;
+    HiddenIndex hidden_lengths_;
 };
 
 template <index_t NDimHidden, typename VisibleDimensionIds>
