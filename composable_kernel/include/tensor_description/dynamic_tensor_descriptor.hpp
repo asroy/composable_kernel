@@ -163,6 +163,8 @@ struct DynamicTensorCoordinate
     using VisibleIndex = MultiIndex<ndim_visible_>;
 
     public:
+    __host__ __device__ constexpr DynamicTensorCoordinate() = default;
+
     __host__ __device__ constexpr DynamicTensorCoordinate(const HiddenIndex& idx_hidden)
         : idx_hidden_{idx_hidden}
     {
@@ -193,6 +195,8 @@ struct DynamicTensorCoordinateIterator
     using VisibleIndex = MultiIndex<NDimVisible>;
 
     public:
+    __host__ __device__ constexpr DynamicTensorCoordinateIterator() = default;
+
     __host__ __device__ constexpr DynamicTensorCoordinateIterator(
         const VisibleIndex& idx_diff_visible, const MultiIndex<NTransform>& do_transforms)
         : idx_diff_visible_{idx_diff_visible}, do_transforms_{do_transforms}
@@ -207,8 +211,8 @@ struct DynamicTensorCoordinateIterator
         return idx_diff_visible_;
     }
 
-    const VisibleIndex idx_diff_visible_;
-    const MultiIndex<NTransform> do_transforms_;
+    VisibleIndex idx_diff_visible_;
+    MultiIndex<NTransform> do_transforms_;
 
     // HACK: control UpdateLowerIndex()
     static constexpr UpdateLowerIndexHack update_lower_index_hack_;

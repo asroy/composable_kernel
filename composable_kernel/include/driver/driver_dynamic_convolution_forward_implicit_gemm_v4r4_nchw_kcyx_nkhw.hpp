@@ -950,6 +950,11 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
                                                           ck::Tuple<ck::Sequence<1, 2, 3, 4>>,
                                                           ck::Sequence<1, 2, 3, 4>>();
 
+        constexpr auto coord = make_dynamic_tensor_coordinate(desc, make_multi_index(0, 0, 0, 0));
+
+        constexpr auto iter = make_dynamic_tensor_coordinate_iterator(
+            desc, make_multi_index(0, 0, 0, 0), Sequence<0>{});
+
         static_assert(std::is_trivial<Sequence<1>>::value, "wrong");
         static_assert(std::is_trivial<detail::TupleElementKey<0>>::value, "wrong");
         static_assert(
@@ -970,6 +975,10 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
             std::is_trivial<
                 remove_reference_t<remove_cv_t<decltype(wei_k_c_y_x_global_desc)>>>::value,
             "wrong");
+        static_assert(std::is_trivial<remove_reference_t<remove_cv_t<decltype(coord)>>>::value,
+                      "wrong");
+        static_assert(std::is_trivial<remove_reference_t<remove_cv_t<decltype(iter)>>>::value,
+                      "wrong");
     }
 };
 #endif
