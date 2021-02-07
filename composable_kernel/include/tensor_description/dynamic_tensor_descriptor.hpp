@@ -58,17 +58,10 @@ struct DynamicTensorDescriptor
     using Coordinate   = DynamicTensorCoordinate<ndim_hidden_, VisibleDimensionIds>;
 
     public:
-#if 1
-    __host__ __device__ explicit constexpr DynamicTensorDescriptor()
-        : DynamicTensorDescriptor(Transforms{}, index_t{0})
-    {
-    }
-#else
     __host__ __device__ constexpr DynamicTensorDescriptor() = default;
-#endif
 
-    __host__ __device__ explicit constexpr DynamicTensorDescriptor(const Transforms& transforms,
-                                                                   index_t element_space_size)
+    __host__ __device__ constexpr DynamicTensorDescriptor(const Transforms& transforms,
+                                                          index_t element_space_size)
         : transforms_{transforms},
           hidden_lengths_{InitializeHiddenLengths(transforms_, element_space_size)}
     {
@@ -170,7 +163,7 @@ struct DynamicTensorCoordinate
     using VisibleIndex = MultiIndex<ndim_visible_>;
 
     public:
-    __host__ __device__ explicit constexpr DynamicTensorCoordinate(const HiddenIndex& idx_hidden)
+    __host__ __device__ constexpr DynamicTensorCoordinate(const HiddenIndex& idx_hidden)
         : idx_hidden_{idx_hidden}
     {
     }
@@ -200,7 +193,7 @@ struct DynamicTensorCoordinateIterator
     using VisibleIndex = MultiIndex<NDimVisible>;
 
     public:
-    __host__ __device__ explicit constexpr DynamicTensorCoordinateIterator(
+    __host__ __device__ constexpr DynamicTensorCoordinateIterator(
         const VisibleIndex& idx_diff_visible, const MultiIndex<NTransform>& do_transforms)
         : idx_diff_visible_{idx_diff_visible}, do_transforms_{do_transforms}
     {
@@ -301,10 +294,10 @@ transform_dynamic_tensor_descriptor(const OldTensorDescriptor& old_tensor_desc,
     constexpr auto all_up_dim_hidden_idss =
         container_cat(OldTensorDescriptor::GetUpperDimensionIdss(), up_dim_hidden_idss);
 
-    return DynamicTensorDescriptor<decltype(all_transforms),
-                                   decltype(all_low_dim_hidden_idss),
-                                   decltype(all_up_dim_hidden_idss),
-                                   decltype(new_visible_dim_hidden_ids)>{
+    return DynamicTensorDescriptor<remove_cv_t<decltype(all_transforms)>,
+                                   remove_cv_t<decltype(all_low_dim_hidden_idss)>,
+                                   remove_cv_t<decltype(all_up_dim_hidden_idss)>,
+                                   remove_cv_t<decltype(new_visible_dim_hidden_ids)>>{
         all_transforms, old_tensor_desc.GetElementSpaceSize()};
 }
 

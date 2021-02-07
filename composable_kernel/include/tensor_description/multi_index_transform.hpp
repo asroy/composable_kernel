@@ -54,7 +54,7 @@ struct Pad
     using LowerIndex = MultiIndex<nDim>;
     using UpperIndex = MultiIndex<nDim>;
 
-    __host__ __device__ explicit constexpr Pad()
+    __host__ __device__ constexpr Pad()
     {
         static_assert(LowerLengths::GetSize() == nDim && LeftPads::GetSize() == nDim &&
                           RightPads::GetSize() == nDim,
@@ -115,7 +115,7 @@ struct Slice
     using LowerIndex = MultiIndex<nDim>;
     using UpperIndex = MultiIndex<nDim>;
 
-    __host__ __device__ explicit constexpr Slice()
+    __host__ __device__ constexpr Slice()
     {
         static_assert(LowerLengths::GetSize() == nDim && SliceBegins::GetSize() == nDim &&
                           SliceEnds::GetSize() == nDim,
@@ -189,8 +189,8 @@ struct Merge
         index_t& itmp;
         LowerIndex& idx_low;
 
-        __host__ __device__ explicit constexpr lambda_CalculateLowerIndex(index_t& itmp_,
-                                                                          LowerIndex& idx_low_)
+        __host__ __device__ constexpr lambda_CalculateLowerIndex(index_t& itmp_,
+                                                                 LowerIndex& idx_low_)
             : itmp(itmp_), idx_low(idx_low_)
         {
         }
@@ -397,7 +397,7 @@ struct Embed
     using LowerIndex = MultiIndex<nDimLow>;
     using UpperIndex = MultiIndex<nDimUp>;
 
-    __host__ __device__ explicit constexpr Embed()
+    __host__ __device__ constexpr Embed()
     {
         static_assert(UpperLengths::GetSize() == nDimUp && Coefficients::GetSize() == nDimUp + 1,
                       "wrong! # of dimensions not consistent");
@@ -487,7 +487,7 @@ struct Freeze
     using LowerIndex = MultiIndex<nDimLow>;
     using UpperIndex = MultiIndex<nDimUp>;
 
-    __host__ __device__ explicit constexpr Freeze()
+    __host__ __device__ constexpr Freeze()
     {
         // TODO: sanity check: LowerFreezePoint should be within range of LowerLengths
     }

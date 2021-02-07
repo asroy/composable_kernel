@@ -32,8 +32,9 @@ struct DynamicNativeTensorCoordinate_v1
     static constexpr index_t NDim = tensor_desc_type::GetNumOfDimension();
     using Index                   = MultiIndex<NDim>;
 
-    __host__ __device__ explicit constexpr DynamicNativeTensorCoordinate_v1(
-        const tensor_desc_type& tensor_desc, const Index& idx)
+    __host__
+        __device__ constexpr DynamicNativeTensorCoordinate_v1(const tensor_desc_type& tensor_desc,
+                                                              const Index& idx)
         : tensor_desc_{tensor_desc}, idx_{idx}, offset_{tensor_desc.CalculateOffset(idx)}
     {
     }
@@ -128,8 +129,9 @@ struct DynamicTransformedTensorCoordinate_v1
     using LowerDesc  = typename UpperDesc::LowerDesc;
     using LowerCoord = typename DynamicTensorCoordinate_v1<LowerDesc>::type;
 
-    __host__ __device__ explicit constexpr DynamicTransformedTensorCoordinate_v1(
-        const UpperDesc& tensor_desc_up, const UpperIndex& idx_up)
+    __host__
+        __device__ constexpr DynamicTransformedTensorCoordinate_v1(const UpperDesc& tensor_desc_up,
+                                                                   const UpperIndex& idx_up)
         : tensor_desc_up_{tensor_desc_up},
           idx_up_{idx_up},
           coord_low_{tensor_desc_up.GetLowerTensorDescriptor(),

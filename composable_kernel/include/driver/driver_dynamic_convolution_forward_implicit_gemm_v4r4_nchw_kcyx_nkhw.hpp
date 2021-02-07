@@ -963,7 +963,9 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
         static_assert(std::is_trivial<DynamicUnMerge<2>>::value, "wrong");
         static_assert(std::is_trivial<DynamicFreeze>::value, "wrong");
         static_assert(std::is_trivial<remove_cv_t<decltype(desc)>>::value, "wrong");
-        static_assert(std::is_trivial<remove_reference_t<remove_cv_t<decltype(conv_strides)>>>::value, "wrong");
+        static_assert(
+            std::is_trivial<remove_reference_t<remove_cv_t<decltype(conv_strides)>>>::value,
+            "wrong");
         static_assert(
             std::is_trivial<
                 remove_reference_t<remove_cv_t<decltype(wei_k_c_y_x_global_desc)>>>::value,

@@ -14,13 +14,13 @@ struct DynamicNativeTensorDescriptor_v1
     const Index lengths_;
     const Index strides_;
 
-    __host__ __device__ explicit constexpr DynamicNativeTensorDescriptor_v1(const Index& lengths,
-                                                                            const Index& strides)
+    __host__ __device__ constexpr DynamicNativeTensorDescriptor_v1(const Index& lengths,
+                                                                   const Index& strides)
         : lengths_{lengths}, strides_{strides}
     {
     }
 
-    __host__ __device__ explicit constexpr DynamicNativeTensorDescriptor_v1()
+    __host__ __device__ constexpr DynamicNativeTensorDescriptor_v1()
         : lengths_{make_zero_multi_index<NDim>()}, strides_{make_zero_multi_index<NDim>()}
     {
     }
@@ -140,8 +140,9 @@ struct DynamicTransformedTensorDescriptor_v1
         }
     };
 
-    __host__ __device__ explicit constexpr DynamicTransformedTensorDescriptor_v1(
-        const LowerDesc& low_tensor_desc, const Transforms& transforms)
+    __host__
+        __device__ constexpr DynamicTransformedTensorDescriptor_v1(const LowerDesc& low_tensor_desc,
+                                                                   const Transforms& transforms)
         : low_tensor_desc_{low_tensor_desc}, transforms_{transforms}
     {
         static_assert(NTransform == Transforms::Size() && NTransform == LowDimensionIds::Size() &&
@@ -181,7 +182,7 @@ struct DynamicTransformedTensorDescriptor_v1
         //   of lower-tensor-descriptor
     }
 
-    __host__ __device__ explicit constexpr DynamicTransformedTensorDescriptor_v1()
+    __host__ __device__ constexpr DynamicTransformedTensorDescriptor_v1()
         : low_tensor_desc_{}, transforms_{}
     {
     }

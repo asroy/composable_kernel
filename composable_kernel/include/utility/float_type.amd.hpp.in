@@ -184,7 +184,7 @@ struct vector_type<float, 1>
 
     float data_;
 
-    __host__ __device__ explicit constexpr vector_type() : data_{0} {}
+    __host__ __device__ constexpr vector_type() : data_{0} {}
 
     __host__ __device__ static constexpr index_t Size() { return 1; }
 
@@ -220,7 +220,7 @@ struct vector_type<float, 2>
         StaticallyIndexedArray<float, 2> scalars_;
     } data_;
 
-    __host__ __device__ explicit constexpr vector_type() : data_{MemoryType{0}} {}
+    __host__ __device__ constexpr vector_type() : data_{MemoryType{0}} {}
 
     __host__ __device__ static constexpr index_t Size() { return 2; }
 
@@ -256,7 +256,7 @@ struct vector_type<float, 4>
         StaticallyIndexedArray<float, 4> scalars_;
     } data_;
 
-    __host__ __device__ explicit constexpr vector_type() : data_{MemoryType{0}} {}
+    __host__ __device__ constexpr vector_type() : data_{MemoryType{0}} {}
 
     __host__ __device__ static constexpr index_t Size() { return 4; }
 

@@ -12,27 +12,19 @@ namespace detail {
 template <index_t>
 struct TupleElementKey
 {
+    __host__ __device__ constexpr TupleElementKey() = default;
 };
 
 template <typename Key, typename Data>
 struct TupleElement
 {
-    __host__ __device__ explicit constexpr TupleElement() = default;
+    __host__ __device__ constexpr TupleElement() = default;
 
-    template <typename UData>
-    __host__ __device__ explicit constexpr TupleElement(const TupleElement<Key, UData>& te)
-        : mData(static_cast<const UData&>(te.mData))
-    {
-    }
-
-    template <typename UData>
-    __host__ __device__ explicit constexpr TupleElement(TupleElement<Key, UData>&& te)
-        : mData(static_cast<UData&&>(te.mData))
-    {
-    }
-
-    template <typename T>
-    __host__ __device__ explicit constexpr TupleElement(T&& v) : mData(std::forward<T>(v))
+    template <
+        typename T,
+        typename std::enable_if<!is_same<remove_reference_t<remove_cv_t<T>>, TupleElement>::value,
+                                bool>::type = false>
+    __host__ __device__ constexpr TupleElement(T&& v) : mData(std::forward<T>(v))
     {
     }
 
@@ -64,36 +56,25 @@ struct TupleImpl;
 template <index_t... Is, typename... Xs>
 struct TupleImpl<Sequence<Is...>, Xs...> : TupleElement<TupleElementKey<Is>, Xs>...
 {
-#if 1
-    __host__ __device__ explicit constexpr TupleImpl() = default;
+    __host__ __device__ constexpr TupleImpl() = default;
 
-    template <typename... Ys, typename std::enable_if<sizeof...(Ys) >= 1, bool>::type = false>
-    __host__ __device__ explicit constexpr TupleImpl(Ys&&... ys)
-        : TupleElement<TupleElementKey<Is>, Xs>(std::forward<Ys>(ys))...
-    {
-        static_assert(sizeof...(Is) == sizeof...(Xs) && sizeof...(Is) == sizeof...(Ys),
-                      "wrong! inconsistent size");
-    }
-#else
-    __host__ __device__ explicit constexpr TupleImpl() = default;
-
-    template <typename Y,
-              typename std::enable_if<sizeof...(Is) == 1 && sizeof...(Xs) == 1 &&
-                                          !is_same<remove_cv_t<Y>, TupleImpl>::value,
-                                      bool>::type = false>
-    __host__ __device__ explicit constexpr TupleImpl(Y&& y)
+    template <
+        typename Y,
+        typename std::enable_if<sizeof...(Is) == 1 && sizeof...(Xs) == 1 &&
+                                    !is_same<remove_reference_t<remove_cv_t<Y>>, TupleImpl>::value,
+                                bool>::type = false>
+    __host__ __device__ constexpr TupleImpl(Y&& y)
         : TupleElement<TupleElementKey<Is>, Xs>(std::forward<Y>(y))...
     {
     }
 
     template <typename... Ys, typename std::enable_if<sizeof...(Ys) >= 2, bool>::type = false>
-    __host__ __device__ explicit constexpr TupleImpl(Ys&&... ys)
+    __host__ __device__ constexpr TupleImpl(Ys&&... ys)
         : TupleElement<TupleElementKey<Is>, Xs>(std::forward<Ys>(ys))...
     {
         static_assert(sizeof...(Is) == sizeof...(Xs) && sizeof...(Is) == sizeof...(Ys),
                       "wrong! inconsistent size");
     }
-#endif
 
     __host__ __device__ static constexpr index_t Size() { return sizeof...(Xs); }
 
@@ -121,16 +102,17 @@ struct Tuple : detail::TupleImpl<typename arithmetic_sequence_gen<0, sizeof...(X
     __host__ __device__ constexpr Tuple() = default;
 
     template <typename Y,
-              typename std::enable_if<sizeof...(Xs) == 1 && !is_same<remove_cv_t<Y>, Tuple>::value,
-                                      bool>::type = false>
-    __host__ __device__ explicit constexpr Tuple(Y&& y) : base(std::forward<Y>(y))
+              typename std::enable_if<
+                  sizeof...(Xs) == 1 && !is_same<remove_reference_t<remove_cv_t<Y>>, Tuple>::value,
+                  bool>::type = false>
+    __host__ __device__ constexpr Tuple(Y&& y) : base(std::forward<Y>(y))
     {
     }
 
     template <typename... Ys,
               typename std::enable_if<sizeof...(Ys) == sizeof...(Xs) && sizeof...(Ys) >= 2,
                                       bool>::type = false>
-    __host__ __device__ explicit constexpr Tuple(Ys&&... ys) : base(std::forward<Ys>(ys)...)
+    __host__ __device__ constexpr Tuple(Ys&&... ys) : base(std::forward<Ys>(ys)...)
     {
     }
 

@@ -18,7 +18,7 @@ struct ContainerElementPicker
 
     __host__ __device__ constexpr ContainerElementPicker() = delete;
 
-    __host__ __device__ explicit constexpr ContainerElementPicker(Arr& array) : mArray{array}
+    __host__ __device__ constexpr ContainerElementPicker(Arr& array) : mArray{array}
     {
         constexpr index_t imax = reduce_on_sequence(Picks{}, math::maxer<index_t>{}, Number<0>{});
 
@@ -83,8 +83,7 @@ struct ConstantContainerElementPicker
 
     __host__ __device__ constexpr ConstantContainerElementPicker() = delete;
 
-    __host__ __device__ explicit constexpr ConstantContainerElementPicker(const Arr& array)
-        : mArray{array}
+    __host__ __device__ constexpr ConstantContainerElementPicker(const Arr& array) : mArray{array}
     {
         constexpr index_t imax = reduce_on_sequence(Picks{}, math::maxer<index_t>{}, Number<0>{});
 

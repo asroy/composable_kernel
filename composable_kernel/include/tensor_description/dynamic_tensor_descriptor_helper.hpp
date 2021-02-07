@@ -28,11 +28,11 @@ make_dynamic_naive_tensor_descriptor(const MultiIndex<N>& lengths, const MultiIn
 
     static_for<0, N, 1>{}([&](auto i) { element_space_size += (lengths[i] - 1) * strides[i]; });
 
-    return DynamicTensorDescriptor<decltype(transforms),
-                                   decltype(low_dim_hidden_idss),
-                                   decltype(up_dim_hidden_idss),
-                                   decltype(visible_dim_hidden_ids)>{transforms,
-                                                                     element_space_size};
+    return DynamicTensorDescriptor<remove_cv_t<decltype(transforms)>,
+                                   remove_cv_t<decltype(low_dim_hidden_idss)>,
+                                   remove_cv_t<decltype(up_dim_hidden_idss)>,
+                                   remove_cv_t<decltype(visible_dim_hidden_ids)>>{
+        transforms, element_space_size};
 }
 
 template <index_t N>

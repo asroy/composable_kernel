@@ -327,11 +327,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
     static constexpr index_t nDim = SliceLengths::Size();
     using Index                   = MultiIndex<nDim>;
 
-    using SrcCoord = decltype(make_dynamic_tensor_coordinate(SrcDesc{}, Index{}));
-    using DstCoord = decltype(make_dynamic_tensor_coordinate(DstDesc{}, Index{}));
+    using SrcDesc_ = remove_reference_t<remove_cv_t<SrcDesc>>;
+    using DstDesc_ = remove_reference_t<remove_cv_t<DstDesc>>;
 
-    using SrcCoordIterator = decltype(make_dynamic_tensor_coordinate_iterator(SrcDesc{}, Index{}));
-    using DstCoordIterator = decltype(make_dynamic_tensor_coordinate_iterator(DstDesc{}, Index{}));
+    using SrcCoord = decltype(make_dynamic_tensor_coordinate(SrcDesc_{}, Index{}));
+    using DstCoord = decltype(make_dynamic_tensor_coordinate(DstDesc_{}, Index{}));
+
+    using SrcCoordIterator = decltype(make_dynamic_tensor_coordinate_iterator(SrcDesc_{}, Index{}));
+    using DstCoordIterator = decltype(make_dynamic_tensor_coordinate_iterator(DstDesc_{}, Index{}));
 
     __device__ constexpr ThreadwiseDynamicTensorSliceTransfer_v3(const SrcDesc& src_desc,
                                                                  const Index& src_slice_origin,
