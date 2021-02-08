@@ -949,7 +949,10 @@ struct DynamicFreeze
 
     __host__ __device__ constexpr DynamicFreeze() = default;
 
-    __host__ __device__ constexpr DynamicFreeze(const index_t& low_idx) : low_idx_{low_idx} {}
+    __host__ __device__ constexpr DynamicFreeze(const index_t& low_idx)
+        : low_idx_{make_multi_index(low_idx)}
+    {
+    }
 
     __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
 

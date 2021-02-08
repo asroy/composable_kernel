@@ -263,36 +263,16 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
          GemmBBlockTransferDstScalarPerVector_GemmN,
          GemmCThreadTransferDstScalarPerVector_GemmN1>{};
 
-    for(index_t i = 0; i < 5; ++i)
-    {
-        std::cout << "Start running " << nrepeat << " times..." << std::endl;
-
-        KernelTimer timer;
-        timer.Start();
-
-        for(index_t j = 0; j < nrepeat; ++j)
-        {
-            conv_driver.Run(wei_k_c_y_x_desc,
-                            in_n_c_hi_wi_desc,
-                            out_n_k_ho_wo_desc,
-                            conv_strides,
-                            conv_dilations,
-                            in_left_pads,
-                            in_right_pads,
-                            static_cast<TDevice*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-                            static_cast<TDevice*>(in_nchw_device_buf.GetDeviceBuffer()),
-                            static_cast<TDevice*>(out_nkhw_device_buf.GetDeviceBuffer()));
-        }
-
-        timer.End();
-
-        float ave_time = timer.GetElapsedTime() / nrepeat;
-
-        float perf = (float)calculate_convolution_flops(InDesc{}, WeiDesc{}, OutDesc{}) /
-                     (std::size_t(1000) * 1000 * 1000) / ave_time;
-
-        std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s" << std::endl;
-    }
+    conv_driver.Run(wei_k_c_y_x_desc,
+                    in_n_c_hi_wi_desc,
+                    out_n_k_ho_wo_desc,
+                    conv_strides,
+                    conv_dilations,
+                    in_left_pads,
+                    in_right_pads,
+                    static_cast<TDevice*>(wei_kcyx_device_buf.GetDeviceBuffer()),
+                    static_cast<TDevice*>(in_nchw_device_buf.GetDeviceBuffer()),
+                    static_cast<TDevice*>(out_nkhw_device_buf.GetDeviceBuffer()));
 
     out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
 }
