@@ -245,6 +245,19 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
         }
     }
 
+    __device__ void Run(const SrcData* p_src, const DstDesc& dst_desc, DstData* p_dst)
+    {
+        constexpr index_t ntransform_dst = DstDesc::GetNumOfTransform();
+
+        constexpr auto zeros = typename uniform_sequence_gen<ntransform_dst, 0>::type{};
+
+        constexpr auto dst_iterator_hacks =
+            make_tuple(generate_tuple([&](auto) { return zeros; }, Number<nDim>{}),
+                       generate_tuple([&](auto) { return zeros; }, Number<nDim>{}));
+
+        Run(p_src, dst_desc, p_dst, dst_iterator_hacks);
+    }
+
     __device__ static constexpr auto GetDstCoordinateResetStep()
     {
         constexpr auto dst_scalar_per_access = [&]() {
@@ -364,148 +377,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         dst_slice_origin_coord_ = make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_idx);
     }
 
-#if 0
-    template <typename SrcIteratorHacks>
-    __device__ void RunRead(const SrcDesc& src_desc,
-                            const SrcData* p_src,
-                            const SrcIteratorHacks& src_iterator_hacks)
-    {
-        constexpr auto I0 = Number<0>{};
-        constexpr auto I1 = Number<1>{};
-
-        // hardcoded for 2D
-        // TODO implemente N-D
-        static_assert(remove_reference_t<SrcDesc>::GetNumOfDimension() == 2,
-                      "wrong! hardcoded for 2D tensor");
-
-        constexpr auto src_scalar_per_access = [&]() {
-            Index src_scalar_per_access;
-
-            static_for<0, nDim, 1>{}([&](auto i) {
-                src_scalar_per_access(i) = (i == SrcVectorDim) ? SrcScalarPerVector : 1;
-            });
-
-            return src_scalar_per_access;
-        }();
-
-        constexpr auto src_scalar_step_in_vector = [&]() {
-            Index src_scalar_step_in_vector;
-
-            static_for<0, nDim, 1>{}(
-                [&](auto i) { src_scalar_step_in_vector(i) = (i == SrcVectorDim) ? 1 : 0; });
-
-            return src_scalar_step_in_vector;
-        }();
-
-        constexpr auto access_lengths = [&]() {
-            Index access_lengths;
-
-            static_for<0, nDim, 1>{}(
-                [&](auto i) { access_lengths(i) = SliceLengths{}[i] / src_scalar_per_access[i]; });
-
-            return access_lengths;
-        }();
-
-        const auto src_forward_iterators = make_tuple(
-            make_dynamic_tensor_coordinate_iterator(src_desc,
-                                                    make_multi_index(1, 0) * src_scalar_per_access,
-                                                    src_iterator_hacks[I0][I0]),
-            make_dynamic_tensor_coordinate_iterator(src_desc,
-                                                    make_multi_index(0, 1) * src_scalar_per_access,
-                                                    src_iterator_hacks[I0][I1]));
-
-        const auto src_backward_iterators = make_tuple(
-            make_dynamic_tensor_coordinate_iterator(src_desc,
-                                                    make_multi_index(-1, 0) * src_scalar_per_access,
-                                                    src_iterator_hacks[I1][I0]),
-            make_dynamic_tensor_coordinate_iterator(src_desc,
-                                                    make_multi_index(0, -1) * src_scalar_per_access,
-                                                    src_iterator_hacks[I1][I1]));
-
-        static_for<0, SliceLengths{}[I0], src_scalar_per_access[I0]>{}([&](auto iter0) {
-            static_for<0, SliceLengths{}[I1], src_scalar_per_access[I1]>{}([&](auto iter1) {
-                // step direction
-                constexpr bool forward_dim1 = (iter0.value % (2 * src_scalar_per_access[I0]) == 0);
-
-                constexpr index_t i0 = iter0.value;
-                constexpr index_t i1 =
-                    forward_dim1 ? iter1.value
-                                 : SliceLengths{}[I1] - src_scalar_per_access[I1] - iter1.value;
-
-                // do work
-                // hardcoding for buffer_load
-                // TODO refactor transfer_data() to encapsulate this
-                static_assert(SrcAddressSpace == AddressSpace::Global,
-                              "wrong! hardcoded to use buffer_load, src must be global mem");
-
-                using SrcVectorType = typename vector_type<SrcData, SrcScalarPerVector>::MemoryType;
-
-                vector_type<SrcData, SrcScalarPerVector> src_vector;
-
-#if 1
-                src_vector.Vector() = amd_buffer_load<SrcData, SrcScalarPerVector>(
-                    p_src, src_slice_origin_coord_.GetOffset(), true, src_desc.GetElementSpaceSize());
-
-                const bool is_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                    src_desc, src_slice_origin_coord_);
-
-                src_vector.Vector() = is_valid ? src_vector.Vector() : SrcVectorType{0};
-
-                static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
-                    constexpr index_t buffer_offset = buffer_desc_.CalculateOffset(
-                        make_multi_index(i0, i1) + i * src_scalar_step_in_vector);
-
-                    buffer_(Number<buffer_offset>{}) = src_vector[i];
-                });
-#else
-                const bool is_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                    src_desc, src_slice_origin_coord_);
-
-                src_vector.Vector() = amd_buffer_load<SrcData, SrcScalarPerVector>(
-                    p_src, src_slice_origin_coord_.GetOffset(), is_valid, src_desc.GetElementSpaceSize());
-
-                static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
-                    constexpr index_t buffer_offset = buffer_desc_.CalculateOffset(
-                        make_multi_index(i0, i1) + i * src_scalar_step_in_vector);
-
-                    buffer_(Number<buffer_offset>{}) = src_vector[i];
-                });
-#endif
-
-                // move dim1 iterator
-                if constexpr(iter1.value < access_lengths[I1] - 1)
-                {
-                    if constexpr(forward_dim1)
-                    {
-                        move_dynamic_tensor_coordinate(
-                            src_desc, src_slice_origin_coord_, src_forward_iterators[I1]);
-                    }
-                    else
-                    {
-                        move_dynamic_tensor_coordinate(
-                            src_desc, src_slice_origin_coord_, src_backward_iterators[I1]);
-                    }
-                }
-            });
-
-            // move dim0 iterator
-            if constexpr(iter0.value < access_lengths[I0] - 1)
-            {
-                move_dynamic_tensor_coordinate(
-                    src_desc, src_slice_origin_coord_, src_forward_iterators[I0]);
-            }
-        });
-
-        // move src coordinate back to its slice origin
-        if constexpr(SrcResetCoordinateAfterRun)
-        {
-            const auto src_reset_iterator =
-                make_dynamic_tensor_coordinate_iterator(src_desc, GetSrcCoordinateResetStep());
-
-            move_dynamic_tensor_coordinate(src_desc, src_slice_origin_coord_, src_reset_iterator);
-        }
-    }
-#else
     template <typename SrcIteratorHacks>
     __device__ void RunRead(const SrcDesc& src_desc,
                             const SrcData* p_src,
@@ -684,86 +555,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             move_dynamic_tensor_coordinate(src_desc, src_slice_origin_coord_, src_reset_iterator);
         }
     }
-#endif
 
-#if 0
-    __device__ void RunWrite(const DstDesc& dst_desc, DstData* p_dst)
-    {
-        static_assert(remove_reference_t<DstDesc>::GetNumOfDimension() == 2,
-                      "wrong! hardcoded for 2D tensor");
-
-        // hardcoded for 2D
-        // TODO implement N-D
-        if constexpr(remove_reference_t<SrcDesc>::GetNumOfDimension() == 2)
-        {
-            // TODO use constexpr for coordinate-step to make sure compiler behave correctly
-            const auto dst_step_0_p =
-                make_dynamic_tensor_coordinate_iterator(dst_desc, make_multi_index(0, 1));
-            const auto dst_step_0_m =
-                make_dynamic_tensor_coordinate_iterator(dst_desc, make_multi_index(0, -1));
-
-            const auto dst_step_p_0 =
-                make_dynamic_tensor_coordinate_iterator(dst_desc, make_multi_index(1, 0));
-            const auto dst_step_m_0 =
-                make_dynamic_tensor_coordinate_iterator(dst_desc, make_multi_index(-1, 0));
-
-            constexpr index_t Len0 = SliceLengths{}[0];
-            constexpr index_t Len1 = SliceLengths{}[1];
-
-            static_for<0, Len0, 1>{}([&](auto iter0) {
-                static_for<0, Len1, 1>{}([&](auto iter1) {
-                    // step direction
-                    constexpr bool forward_dim1 = (iter0.value % 2 == 0);
-
-                    constexpr index_t i0 = iter0;
-                    constexpr index_t i1 = forward_dim1 ? iter1.value : Len1 - iter1.value - 1;
-
-                    // do work
-                    constexpr index_t buffer_offset =
-                        buffer_desc_.CalculateOffset(make_multi_index(i0, i1));
-
-                    // hardcoding for ds_write
-                    // TODO refactor transfer_data() to encapsulate this
-                    static_assert(DstAddressSpace == AddressSpace::Lds &&
-                                      DstInMemOp == InMemoryDataOperation::Set,
-                                  "wrong! hardcoded for ds_write");
-
-                    p_dst[dst_slice_origin_coord_.GetOffset()] = buffer_[Number<buffer_offset>{}];
-
-                    // move dim1 iterator
-                    if constexpr(iter1.value < Len1 - 1)
-                    {
-                        if constexpr(forward_dim1)
-                        {
-                            move_dynamic_tensor_coordinate(
-                                dst_desc, dst_slice_origin_coord_, dst_step_0_p);
-                        }
-                        else
-                        {
-                            move_dynamic_tensor_coordinate(
-                                dst_desc, dst_slice_origin_coord_, dst_step_0_m);
-                        }
-                    }
-                });
-
-                // move dim0 iterator
-                if constexpr(iter0.value < Len0 - 1)
-                {
-                    move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_coord_, dst_step_p_0);
-                }
-            });
-        }
-
-        // move dst coordinate back to its slice origin
-        if constexpr(DstResetCoordinateAfterRun)
-        {
-            const auto dst_reset_iterator =
-                make_dynamic_tensor_coordinate_iterator(dst_desc, GetDstCoordinateResetStep());
-
-            move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_coord_, dst_reset_iterator);
-        }
-    }
-#else
     template <typename DstIteratorHacks>
     __device__ void
     RunWrite(const DstDesc& dst_desc, DstData* p_dst, const DstIteratorHacks& dst_iterator_hacks)
@@ -785,7 +577,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         constexpr auto ordered_access_lengths =
             container_reorder_given_new2old(access_lengths, dst_dim_access_order);
 
-#if 0
         // make forward iterators
         const auto dst_forward_iterators = generate_tuple(
             [&](auto i) {
@@ -817,37 +608,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 return backward_iterator;
             },
             Number<nDim>{});
-#elif 0
-        const auto dst_forward_iterators = make_tuple(
-            make_dynamic_tensor_coordinate_iterator(dst_desc,
-                                                    make_multi_index(1, 0) * dst_scalar_per_access,
-                                                    dst_iterator_hacks[I0][I0]),
-            make_dynamic_tensor_coordinate_iterator(dst_desc,
-                                                    make_multi_index(0, 1) * dst_scalar_per_access,
-                                                    dst_iterator_hacks[I0][I1]));
-
-        const auto dst_backward_iterators = make_tuple(
-            make_dynamic_tensor_coordinate_iterator(dst_desc,
-                                                    make_multi_index(-1, 0) * dst_scalar_per_acces,
-                                                    dst_iterator_hacks[I1][I0]),
-            make_dynamic_tensor_coordinate_iterator(dst_desc,
-                                                    make_multi_index(0, -1) * dst_scalar_per_acces,
-                                                    dst_iterator_hacks[I1][I1]));
-#else
-        const auto tmp0 = make_dynamic_tensor_coordinate_iterator(
-            dst_desc, make_multi_index(1, 0) * dst_scalar_per_access, dst_iterator_hacks[I0][I0]);
-        const auto tmp1 = make_dynamic_tensor_coordinate_iterator(
-            dst_desc, make_multi_index(0, 1) * dst_scalar_per_access, dst_iterator_hacks[I0][I1]);
-
-        const auto dst_forward_iterators = make_tuple(tmp0, tmp1);
-
-        const auto tmp2 = make_dynamic_tensor_coordinate_iterator(
-            dst_desc, make_multi_index(-1, 0) * dst_scalar_per_access, dst_iterator_hacks[I1][I0]);
-        const auto tmp3 = make_dynamic_tensor_coordinate_iterator(
-            dst_desc, make_multi_index(0, -1) * dst_scalar_per_access, dst_iterator_hacks[I1][I1]);
-
-        const auto dst_backward_iterators    = make_tuple(tmp2, tmp3);
-#endif
 
         // loop over tensor and copy
         static_ford<decltype(ordered_access_lengths)>{}([&](auto ordered_access_idx) {
@@ -957,38 +717,31 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         }
     }
 
+    __device__ void RunRead(const SrcDesc& src_desc, const SrcData* p_src)
+    {
+        constexpr index_t ntransform_src = SrcDesc::GetNumOfTransform();
+
+        constexpr auto zeros = typename uniform_sequence_gen<ntransform_src, 0>::type{};
+
+        constexpr auto src_iterator_hacks =
+            make_tuple(generate_tuple([&](auto) { return zeros; }, Number<nDim>{}),
+                       generate_tuple([&](auto) { return zeros; }, Number<nDim>{}));
+
+        RunRead(src_desc, p_src, src_iterator_hacks);
+    }
+
     __device__ void RunWrite(const DstDesc& dst_desc, DstData* p_dst)
     {
-
         constexpr index_t ntransform_dst = DstDesc::GetNumOfTransform();
 
-        constexpr auto seq = typename uniform_sequence_gen<ntransform_dst, 0>::type{};
+        constexpr auto zeros = typename uniform_sequence_gen<ntransform_dst, 0>::type{};
 
-#if 1
-        constexpr auto dst_iterator_hacks = make_tuple(make_tuple(seq, seq), make_tuple(seq, seq));
-#elif 0
-        constexpr auto dst_iterator_hacks = make_tuple(make_tuple(Sequence<0>{}, Sequence<0>{}),
-                                                       make_tuple(Sequence<0>{}, Sequence<0>{}));
-#elif 1
-        constexpr auto dst_scalar_per_access = generate_sequence(
-            lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
-
-        const auto dst_forward_iterators =
-            make_tuple(make_dynamic_tensor_coordinate_iterator(
-                           DstDesc{}, make_multi_index(1, 0) * dst_scalar_per_access),
-                       make_dynamic_tensor_coordinate_iterator(
-                           DstDesc{}, make_multi_index(0, 1) * dst_scalar_per_access));
-
-        const auto dst_backward_iterators =
-            make_tuple(make_dynamic_tensor_coordinate_iterator(
-                           dst_desc, make_multi_index(-1, 0) * dst_scalar_per_access),
-                       make_dynamic_tensor_coordinate_iterator(
-                           dst_desc, make_multi_index(0, -1) * dst_scalar_per_access));
-#endif
+        constexpr auto dst_iterator_hacks =
+            make_tuple(generate_tuple([&](auto) { return zeros; }, Number<nDim>{}),
+                       generate_tuple([&](auto) { return zeros; }, Number<nDim>{}));
 
         RunWrite(dst_desc, p_dst, dst_iterator_hacks);
     }
-#endif
 
     __device__ static constexpr auto GetSrcCoordinateResetStep()
     {
