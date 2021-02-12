@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<1, 1>;
     using RightPads = Sequence<1, 1>;
-#elif 0
+#elif 1
     // 1x1, 8x8
     constexpr index_t N  = 128;
     constexpr index_t C  = 1536;

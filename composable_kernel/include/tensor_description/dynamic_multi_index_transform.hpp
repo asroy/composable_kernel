@@ -70,6 +70,14 @@ struct DynamicPassThrough
     {
         return true;
     }
+
+    __host__ __device__ void Print() const
+    {
+        printf("{");
+        printf("DynamicPassThrough, ");
+        print_multi_index(up_lengths_);
+        printf("}");
+    }
 };
 
 template <bool SkipIsValidCheck = false>
@@ -145,6 +153,17 @@ struct DynamicPad
         return SkipIsValidCheck || ((idx_up[Number<0>{}] >= left_pad_) &&
                                     (idx_up[Number<0>{}] < up_lengths_[Number<0>{}] - right_pad_));
     }
+
+    __host__ __device__ void Print() const
+    {
+        printf("{");
+        printf("DynamicPad, ");
+        print_multi_index(up_lengths_);
+        printf("left_pad_ %d", left_pad_);
+        printf(", ");
+        printf("right_pad_ %d", right_pad_);
+        printf("}");
+    }
 };
 
 template <bool SkipIsValidCheck = false>
@@ -213,6 +232,15 @@ struct DynamicLeftPad
     IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& idx_up) const
     {
         return SkipIsValidCheck || (idx_up[Number<0>{}] >= left_pad_);
+    }
+
+    __host__ __device__ void Print() const
+    {
+        printf("{");
+        printf("DynamicLeftPad, ");
+        print_multi_index(up_lengths_);
+        printf("left_pad_ %d", left_pad_);
+        printf("}");
     }
 };
 
@@ -286,6 +314,15 @@ struct DynamicRightPad
     IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& idx_up) const
     {
         return SkipIsValidCheck || (idx_up[Number<0>{}] < low_length_);
+    }
+
+    __host__ __device__ void Print() const
+    {
+        printf("{");
+        printf("DynamicRightPad, ");
+        print_multi_index(up_lengths_);
+        printf("left_pad_ %d", right_pad_);
+        printf("}");
     }
 };
 
@@ -363,6 +400,17 @@ struct DynamicEmbed
     IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& /* idx_up */)
     {
         return true;
+    }
+
+    __host__ __device__ void Print() const
+    {
+        printf("{");
+        printf("DynamicEmbed, ");
+        printf("up_lengths_ ");
+        print_multi_index(up_lengths_);
+        printf("coefficients_ ");
+        print_multi_index(coefficients_);
+        printf("}");
     }
 };
 
@@ -859,7 +907,20 @@ struct DynamicMerge
     {
         return true;
     }
-}; // namespace ck
+
+    __host__ __device__ void Print() const
+    {
+        printf("{");
+        printf("DynamicMerge, ");
+        printf("low_lengths_ ");
+        print_multi_index(low_lengths_);
+        printf("low_lengths_scan_ ");
+        print_multi_index(low_lengths_scan_);
+        printf("up_lengths_ ");
+        print_multi_index(up_lengths_);
+        printf("}");
+    }
+};
 
 template <index_t NDimUp, bool Use24BitIntegerCalculation = false>
 struct DynamicUnMerge
@@ -938,6 +999,15 @@ struct DynamicUnMerge
     {
         return true;
     }
+
+    __host__ __device__ void Print() const
+    {
+        printf("{");
+        printf("DynamicUnMerge, ");
+        print_multi_index(up_lengths_);
+        print_multi_index(up_lengths_scan_);
+        printf("}");
+    }
 };
 
 struct DynamicFreeze
@@ -997,6 +1067,8 @@ struct DynamicFreeze
     {
         return true;
     }
+
+    __host__ __device__ void Print() const { printf("DynamicFreeze"); }
 };
 
 } // namespace ck

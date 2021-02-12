@@ -163,6 +163,16 @@ __host__ __device__ constexpr auto operator*(index_t a, const Tuple<Xs...>& x)
     return r;
 }
 
+template <typename... Xs>
+__host__ __device__ void print_multi_index(const Tuple<Xs...>& x)
+{
+    printf("{");
+    printf("MultiIndex, ");
+    printf("size %d,", index_t{sizeof...(Xs)});
+    static_for<0, sizeof...(Xs), 1>{}([&](auto i) { printf("%d ", x.At(i)); });
+    printf("}");
+}
+
 #endif
 } // namespace ck
 #endif

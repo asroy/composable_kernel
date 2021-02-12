@@ -168,6 +168,14 @@ struct Sequence
     {
         return Sequence<f(Is)...>{};
     }
+
+    __host__ __device__ static void Print()
+    {
+        printf("{");
+        printf("size %d, ", index_t{Size()});
+        static_for<0, Size(), 1>{}([&](auto i) { printf("%d ", At(i).value); });
+        printf("}");
+    }
 };
 
 // merge sequence

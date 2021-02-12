@@ -146,6 +146,23 @@ struct DynamicTensorDescriptor
         return hidden_lengths;
     }
 
+    __host__ __device__ void Print() const
+    {
+        printf("{");
+        printf("DynamicTensorDescriptor, ");
+        static_for<0, ntransform_, 1>{}([&](auto i) {
+            printf("transforms: ");
+            transforms_[i].Print();
+            printf("LowerDimensionIds:");
+            LowerDimensionIdss{}.At(i).Print();
+            printf("UpperDimensionIds:");
+            UpperDimensionIdss{}.At(i).Print();
+        });
+        printf("}");
+
+        VisibleDimensionIds::Print();
+    }
+
     // TODO make these private
     Transforms transforms_;
     // TODO maybe hidden_lengths_ should use reference_wrapper (reference to transforms_'s member
