@@ -47,7 +47,12 @@ template <index_t BlockSize,
           bool BThreadTransferSrcResetCoordinateAfterRun,
           typename CThreadTransferSrcDstAccessOrder,
           index_t CThreadTransferSrcDstVectorDim,
-          index_t CThreadTransferDstScalarPerVector>
+          index_t CThreadTransferDstScalarPerVector,
+          typename AGlobalIteratorHacks,
+          typename BGlobalIteratorHacks,
+          typename CGlobalIteratorHacks,
+          typename AGlobalMoveSliceWindowIteratorHacks,
+          typename BGlobalMoveSliceWindowIteratorHacks>
 struct GridwiseDynamicGemm_km_kn_mn_v1
 {
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
@@ -90,7 +95,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
     {
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
-        constexpr auto I2 = Number<2>{};
 
         const index_t K = a_k_m_global_desc.GetLength(I0);
         const index_t M = a_k_m_global_desc.GetLength(I1);
@@ -100,17 +104,15 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
 #if 0
         const index_t m_block_work_num = M / MPerBlock;
         const index_t n_block_work_num = N / NPerBlock;
+
+        const index_t m_block_work_id = get_block_1d_id() / n_block_work_num;
+        const index_t n_block_work_id = get_block_1d_id() - m_block_work_id * n_block_work_num;
+
 #else
         // Hack: this force result into SGPR
         const index_t m_block_work_num = __builtin_amdgcn_readfirstlane(M / MPerBlock);
         const index_t n_block_work_num = __builtin_amdgcn_readfirstlane(N / NPerBlock);
-#endif
 
-#if 0
-        const index_t m_block_work_id = get_block_1d_id() / n_block_work_num;
-        const index_t n_block_work_id = get_block_1d_id() - m_block_work_id * n_block_work_num;
-#else
-        // Hack: this force result into SGPR
         const index_t m_block_work_id =
             __builtin_amdgcn_readfirstlane(get_block_1d_id() / n_block_work_num);
         const index_t n_block_work_id = get_block_1d_id() - m_block_work_id * n_block_work_num;
@@ -258,42 +260,16 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0);
         constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0);
 
-        // hack to control index calculation when iterating over a_k_m_global tensor
-        constexpr auto a_k_m_global_iterator_hacks =
-            make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
-                       make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
+        // hack to control index calculation when iterating over A and B matrix for threadwise copy
+        constexpr auto a_k_m_global_iterator_hacks = AGlobalIteratorHacks{};
+        constexpr auto b_k_n_global_iterator_hacks = BGlobalIteratorHacks{};
 
-        constexpr auto a_k_m_global_reset_iterator_hacks =
-            make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
-                       make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
-
-        // hack to control index calculation when iterating over b_k_n_global tensor
-#if 1
-        // for padded input
-        constexpr auto b_k_n_global_iterator_hacks =
-            make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>{},
-                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>{}),
-                       make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0>{},
-                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>{}));
-
+        // hack to control index calculation when move slice window for A and B matrix for
+        // threadwise copy
+        constexpr auto a_k_m_global_move_slice_window_iterator_hack =
+            AGlobalMoveSliceWindowIteratorHacks{};
         constexpr auto b_k_n_global_move_slice_window_iterator_hack =
-            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2>{};
-#elif 0
-        // for non-padded input
-        constexpr auto b_k_n_global_iterator_hacks = make_tuple(
-            make_tuple(Sequence<0, 0, 0, 0, 0, 1, 0>{}, Sequence<0, 0, 0, 0, 0, 0, 1>{}),
-            make_tuple(Sequence<0, 0, 0, 0, 0, 2, 0>{}, Sequence<0, 0, 0, 0, 0, 0, 2>{}));
-
-        constexpr auto b_k_n_global_move_slice_window_iterator_hack =
-            Sequence<0, 0, 0, 0, 0, 1, 2>{};
-#elif 1
-        // for 1x1 case
-        constexpr auto b_k_n_global_iterator_hacks =
-            make_tuple(make_tuple(Sequence<0, 1, 0>{}, Sequence<0, 0, 1>{}),
-                       make_tuple(Sequence<0, 2, 0>{}, Sequence<0, 0, 2>{}));
-
-        constexpr auto b_k_n_global_move_slice_window_iterator_hack = Sequence<0, 1, 2>{};
-#endif
+            BGlobalMoveSliceWindowIteratorHacks{};
 
         // LDS double buffer: preload data into LDS
         {
@@ -319,7 +295,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
             do
             {
                 // even iteration
-                a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
+                a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc,
+                                                    a_block_slice_copy_step,
+                                                    a_k_m_global_move_slice_window_iterator_hack);
                 b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc,
                                                     b_block_slice_copy_step,
                                                     b_k_n_global_move_slice_window_iterator_hack);
@@ -340,7 +318,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                 b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_odd);
 
                 // odd iteration
-                a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
+                a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc,
+                                                    a_block_slice_copy_step,
+                                                    a_k_m_global_move_slice_window_iterator_hack);
                 b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc,
                                                     b_block_slice_copy_step,
                                                     b_k_n_global_move_slice_window_iterator_hack);
@@ -367,7 +347,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         // LDS double buffer: tail
         if constexpr(HasDoubleTailKBlockLoop) // if has 2 iteration left
         {
-            a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc, a_block_slice_copy_step);
+            a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc,
+                                                a_block_slice_copy_step,
+                                                a_k_m_global_move_slice_window_iterator_hack);
             b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc,
                                                 b_block_slice_copy_step,
                                                 b_k_n_global_move_slice_window_iterator_hack);
@@ -428,16 +410,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                 n_block_data_on_global + c_thread_mtx_on_block.col;
 
             // hack to control index calculation when iterating over c_m0_m1_n0_n1_global tensor
-            // hack for NKHW format
-            constexpr auto c_m0_m1_n0_n1_global_tensor_iterator_hacks =
-                make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
-                                      Sequence<0, 0, 0, 0, 0>{},
-                                      Sequence<0, 0, 1, 0, 0>{},
-                                      Sequence<0, 0, 1, 0, 0>{}),
-                           make_tuple(Sequence<0, 0, 0, 0, 0>{},
-                                      Sequence<0, 0, 0, 0, 0>{},
-                                      Sequence<0, 0, 2, 0, 0>{},
-                                      Sequence<0, 0, 2, 0, 0>{}));
+            constexpr auto c_m0_m1_n0_n1_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
 
             ThreadwiseDynamicTensorSliceTransfer_v1r3<
                 AccFloat,

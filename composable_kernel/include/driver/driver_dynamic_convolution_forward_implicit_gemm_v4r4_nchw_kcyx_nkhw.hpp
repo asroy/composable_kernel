@@ -147,6 +147,35 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
                 make_tuple(Sequence<0>{}, Sequence<1>{}),
                 make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
 
+        // hack to control index calculation when iterating over a_k_m_global tensor
+        constexpr auto a_k_m_global_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
+                       make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
+
+        constexpr auto a_k_m_global_move_slice_window_iterator_hack = Sequence<0, 0, 0>{};
+
+        // hack to control index calculation when iterating over b_k_n_global tensor
+        constexpr auto b_k_n_global_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>{},
+                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>{}),
+                       make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0>{},
+                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>{}));
+
+        constexpr auto b_k_n_global_move_slice_window_iterator_hack =
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2>{};
+
+        // hack to control index calculation when iterating over c_m0_m1_n0_n1_global tensor
+        // hack for NKHW format
+        constexpr auto c_m0_m1_n0_n1_global_tensor_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 1, 0, 0>{},
+                                  Sequence<0, 0, 1, 0, 0>{}),
+                       make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 2, 0, 0>{},
+                                  Sequence<0, 0, 2, 0, 0>{}));
+
         // GEMM
         using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v1<
             BlockSize,
@@ -185,7 +214,12 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
                    // MoveSrcSliceWindow() to save addr computation
             Sequence<2, 3, 0, 1>,
             3,
-            GemmCThreadTransferDstScalarPerVector_GemmN1>;
+            GemmCThreadTransferDstScalarPerVector_GemmN1,
+            decltype(a_k_m_global_iterator_hacks),
+            decltype(b_k_n_global_iterator_hacks),
+            decltype(c_m0_m1_n0_n1_global_tensor_iterator_hacks),
+            decltype(a_k_m_global_move_slice_window_iterator_hack),
+            decltype(b_k_n_global_move_slice_window_iterator_hack)>;
 
         const index_t GridSize = (GemmM / GemmMPerBlock) * (GemmN / GemmNPerBlock);
 
@@ -804,6 +838,33 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
                 make_tuple(Sequence<0>{}, Sequence<1>{}),
                 make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
 
+        // hack to control index calculation when iterating over a_k_m_global tensor
+        constexpr auto a_k_m_global_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
+                       make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
+
+        constexpr auto a_k_m_global_move_slice_window_iterator_hack = Sequence<0, 0, 0>{};
+
+        // hack to control index calculation when iterating over b_k_n_global tensor
+        constexpr auto b_k_n_global_iterator_hacks = make_tuple(
+            make_tuple(Sequence<0, 0, 0, 0, 0, 1, 0>{}, Sequence<0, 0, 0, 0, 0, 0, 1>{}),
+            make_tuple(Sequence<0, 0, 0, 0, 0, 2, 0>{}, Sequence<0, 0, 0, 0, 0, 0, 2>{}));
+
+        constexpr auto b_k_n_global_move_slice_window_iterator_hack =
+            Sequence<0, 0, 0, 0, 0, 1, 2>{};
+
+        // hack to control index calculation when iterating over c_m0_m1_n0_n1_global tensor
+        // hack for NKHW format
+        constexpr auto c_m0_m1_n0_n1_global_tensor_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 1, 0, 0>{},
+                                  Sequence<0, 0, 1, 0, 0>{}),
+                       make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 2, 0, 0>{},
+                                  Sequence<0, 0, 2, 0, 0>{}));
+
         // GEMM
         using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v1<
             BlockSize,
@@ -842,7 +903,12 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
                    // MoveSrcSliceWindow() to save addr computation
             Sequence<2, 3, 0, 1>,
             3,
-            GemmCThreadTransferDstScalarPerVector_GemmN1>;
+            GemmCThreadTransferDstScalarPerVector_GemmN1,
+            decltype(a_k_m_global_iterator_hacks),
+            decltype(b_k_n_global_iterator_hacks),
+            decltype(c_m0_m1_n0_n1_global_tensor_iterator_hacks),
+            decltype(a_k_m_global_move_slice_window_iterator_hack),
+            decltype(b_k_n_global_move_slice_window_iterator_hack)>;
 
         const index_t GridSize = (GemmM / GemmMPerBlock) * (GemmN / GemmNPerBlock);
 
@@ -1424,6 +1490,31 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1
                 make_tuple(Sequence<0>{}, Sequence<1>{}),
                 make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
 
+        // hack to control index calculation when iterating over a_k_m_global tensor
+        constexpr auto a_k_m_global_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
+                       make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
+
+        constexpr auto a_k_m_global_move_slice_window_iterator_hack = Sequence<0, 0, 0>{};
+
+        // hack to control index calculation when iterating over b_k_n_global tensor
+        constexpr auto b_k_n_global_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 1, 0>{}, Sequence<0, 0, 1>{}),
+                       make_tuple(Sequence<0, 2, 0>{}, Sequence<0, 0, 2>{}));
+
+        constexpr auto b_k_n_global_move_slice_window_iterator_hack = Sequence<0, 1, 2>{};
+
+        // hack to control index calculation when iterating over c_m0_m1_n0_n1_global tensor
+        constexpr auto c_m0_m1_n0_n1_global_tensor_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 1, 0, 0>{},
+                                  Sequence<0, 0, 1, 0, 0>{}),
+                       make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 2, 0, 0>{},
+                                  Sequence<0, 0, 2, 0, 0>{}));
+
         // GEMM
         using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v1<
             BlockSize,
@@ -1462,7 +1553,12 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1
                    // MoveSrcSliceWindow() to save addr computation
             Sequence<2, 3, 0, 1>,
             3,
-            GemmCThreadTransferDstScalarPerVector_GemmN1>;
+            GemmCThreadTransferDstScalarPerVector_GemmN1,
+            decltype(a_k_m_global_iterator_hacks),
+            decltype(b_k_n_global_iterator_hacks),
+            decltype(c_m0_m1_n0_n1_global_tensor_iterator_hacks),
+            decltype(a_k_m_global_move_slice_window_iterator_hack),
+            decltype(b_k_n_global_move_slice_window_iterator_hack)>;
 
         const index_t GridSize = (GemmM / GemmMPerBlock) * (GemmN / GemmNPerBlock);
 
