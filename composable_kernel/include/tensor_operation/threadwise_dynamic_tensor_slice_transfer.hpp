@@ -80,7 +80,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
 
-        // TODO: don't use this
+        // scalar per access on each dim
+        // TODO: don't use lambda_scalar_per_access
         constexpr auto dst_scalar_per_access = generate_sequence(
             lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
 
@@ -260,31 +261,64 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
 
     __device__ static constexpr auto GetDstCoordinateResetStep()
     {
-        constexpr auto dst_scalar_per_access = [&]() {
-            Index dst_scalar_per_access;
+        constexpr auto I0 = Number<0>{};
 
-            static_for<0, nDim, 1>{}([&](auto i) {
-                dst_scalar_per_access(i) = (i == DstVectorDim) ? DstScalarPerVector : 1;
+        // scalar per access on each dim
+        // TODO: don't use lambda_scalar_per_access
+        constexpr auto dst_scalar_per_access = generate_sequence(
+            lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
+
+        constexpr auto access_lengths = SliceLengths{} / dst_scalar_per_access;
+
+        constexpr auto dim_access_order = DimAccessOrder{};
+
+        constexpr auto ordered_access_lengths =
+            container_reorder_given_new2old(access_lengths, dim_access_order);
+
+        // judge move forward or move backward during the last iteration
+        constexpr auto forward_sweep = [&]() {
+            StaticallyIndexedArray<bool, nDim> forward_sweep;
+
+            forward_sweep(I0) = true;
+
+            static_for<1, nDim, 1>{}([&](auto i) {
+                index_t tmp = ordered_access_lengths[I0] - 1;
+
+                static_for<0, i, 1>{}([&](auto j) {
+                    tmp = tmp * ordered_access_lengths[j] + ordered_access_lengths[j] - 1;
+                });
+
+                forward_sweep(i) = tmp % 2 == 0;
             });
 
-            return dst_scalar_per_access;
+            return forward_sweep;
         }();
 
-        MultiIndex<nDim> dst_reset_iterator;
+        // calculate dst data index after last iteration in RunWrite(), if it has not being reset by
+        // RunWrite()
+        constexpr auto dst_data_idx = [&]() {
+            Index ordered_idx;
 
-        // TODO: this is wrong, need to consider DimAccessOrder
-        dst_reset_iterator(Number<0>{}) = dst_scalar_per_access[Number<0>{}] - SliceLengths{}[0];
+            static_for<0, nDim, 1>{}([&](auto i) {
+                ordered_idx(i) = forward_sweep[i] ? ordered_access_lengths[i] - 1 : 0;
+            });
 
-        static_for<1, nDim, 1>{}([&](auto i) {
-            constexpr auto i_m1 = i - Number<1>{};
+            auto dst_data_idx = container_reorder_given_old2new(ordered_idx, dim_access_order) *
+                                dst_scalar_per_access;
 
-            // TODO: this is wrong
-            dst_reset_iterator(i) = (SliceLengths{}[i_m1] % (2 * dst_scalar_per_access[i_m1]) == 0)
-                                        ? 0
-                                        : (dst_scalar_per_access[i] - SliceLengths{}[i]);
-        });
+            return dst_data_idx;
+        }();
 
-        return dst_reset_iterator;
+        //
+        constexpr auto reset_dst_data_step = [&]() {
+            Index reset_dst_data_step;
+
+            static_for<0, nDim, 1>{}([&](auto i) { reset_dst_data_step(i) = -dst_data_idx[i]; });
+
+            return reset_dst_data_step;
+        }();
+
+        return reset_dst_data_step;
     }
 
     // dst_slice_origin_step_idx need to be known at compile-time, for performance reason
@@ -385,19 +419,20 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
 
-        // TODO: don't use this
+        // scalar per access on each dim
+        // TODO: don't use lambda_scalar_per_access
         constexpr auto src_scalar_per_access = generate_sequence(
             lambda_scalar_per_access<SrcVectorDim, SrcScalarPerVector>{}, Number<nDim>{});
 
         constexpr auto src_scalar_step_in_vector =
             generate_sequence(lambda_scalar_step_in_vector<SrcVectorDim>{}, Number<nDim>{});
 
-        constexpr auto access_lengths = SliceLengths{} / src_scalar_per_access;
+        constexpr auto src_access_lengths = SliceLengths{} / src_scalar_per_access;
 
         constexpr auto src_dim_access_order = SrcDimAccessOrder{};
 
-        constexpr auto ordered_access_lengths =
-            container_reorder_given_new2old(access_lengths, src_dim_access_order);
+        constexpr auto ordered_src_access_lengths =
+            container_reorder_given_new2old(src_access_lengths, src_dim_access_order);
 
         // make forward iterators
         const auto src_forward_iterators = generate_tuple(
@@ -428,7 +463,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             Number<nDim>{});
 
         // loop over tensor and copy
-        static_ford<decltype(ordered_access_lengths)>{}([&](auto ordered_access_idx) {
+        static_ford<decltype(ordered_src_access_lengths)>{}([&](auto ordered_src_access_idx) {
 
             // judge move forward or move backward
             constexpr auto forward_sweep = [&]() {
@@ -437,10 +472,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 forward_sweep(I0) = true;
 
                 static_for<1, nDim, 1>{}([&](auto i) {
-                    index_t tmp = ordered_access_idx[I0];
+                    index_t tmp = ordered_src_access_idx[I0];
 
                     static_for<0, i, 1>{}([&](auto j) {
-                        tmp = tmp * ordered_access_lengths[j] + ordered_access_idx[j];
+                        tmp = tmp * ordered_src_access_lengths[j] + ordered_src_access_idx[j];
                     });
 
                     forward_sweep(i) = tmp % 2 == 0;
@@ -450,19 +485,20 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             }();
 
             // calculate src data index
-            constexpr auto data_idx = [&]() {
+            constexpr auto src_data_idx = [&]() {
                 Index ordered_idx;
 
                 static_for<0, nDim, 1>{}([&](auto i) {
-                    ordered_idx(i) = forward_sweep[i]
-                                         ? ordered_access_idx[i]
-                                         : ordered_access_lengths[i] - 1 - ordered_access_idx[i];
+                    ordered_idx(i) = forward_sweep[i] ? ordered_src_access_idx[i]
+                                                      : ordered_src_access_lengths[i] - 1 -
+                                                            ordered_src_access_idx[i];
                 });
 
-                auto data_idx = container_reorder_given_old2new(ordered_idx, src_dim_access_order) *
-                                src_scalar_per_access;
+                auto src_data_idx =
+                    container_reorder_given_old2new(ordered_idx, src_dim_access_order) *
+                    src_scalar_per_access;
 
-                return data_idx;
+                return src_data_idx;
             }();
 
             // copy data
@@ -486,7 +522,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
             static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
                 constexpr index_t buffer_offset =
-                    buffer_desc_.CalculateOffset(data_idx + i * src_scalar_step_in_vector);
+                    buffer_desc_.CalculateOffset(src_data_idx + i * src_scalar_step_in_vector);
 
                 buffer_(Number<buffer_offset>{}) = src_vector[i];
             });
@@ -502,7 +538,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
             static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
                 constexpr index_t buffer_offset =
-                    buffer_desc_.CalculateOffset(data_idx + i * src_scalar_step_in_vector);
+                    buffer_desc_.CalculateOffset(src_data_idx + i * src_scalar_step_in_vector);
 
                 buffer_(Number<buffer_offset>{}) = src_vector[i];
             });
@@ -513,10 +549,11 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 StaticallyIndexedArray<bool, nDim> move_on_dim;
 
                 static_for<0, nDim, 1>{}([&](auto i) {
-                    move_on_dim(i) = ordered_access_idx[i] < ordered_access_lengths[i] - 1;
+                    move_on_dim(i) = ordered_src_access_idx[i] < ordered_src_access_lengths[i] - 1;
 
                     static_for<i + 1, nDim, 1>{}([&](auto j) {
-                        move_on_dim(i) &= ordered_access_idx[j] == ordered_access_lengths[j] - 1;
+                        move_on_dim(i) &=
+                            ordered_src_access_idx[j] == ordered_src_access_lengths[j] - 1;
                     });
                 });
 
@@ -563,6 +600,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
 
+        // src scalar per access on each dim
         // TODO: don't use this
         constexpr auto dst_scalar_per_access = generate_sequence(
             lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
@@ -570,12 +608,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         constexpr auto dst_scalar_step_in_vector =
             generate_sequence(lambda_scalar_step_in_vector<DstVectorDim>{}, Number<nDim>{});
 
-        constexpr auto access_lengths = SliceLengths{} / dst_scalar_per_access;
+        constexpr auto dst_access_lengths = SliceLengths{} / dst_scalar_per_access;
 
         constexpr auto dst_dim_access_order = DstDimAccessOrder{};
 
-        constexpr auto ordered_access_lengths =
-            container_reorder_given_new2old(access_lengths, dst_dim_access_order);
+        constexpr auto ordered_dst_access_lengths =
+            container_reorder_given_new2old(dst_access_lengths, dst_dim_access_order);
 
         // make forward iterators
         const auto dst_forward_iterators = generate_tuple(
@@ -610,7 +648,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             Number<nDim>{});
 
         // loop over tensor and copy
-        static_ford<decltype(ordered_access_lengths)>{}([&](auto ordered_access_idx) {
+        static_ford<decltype(ordered_dst_access_lengths)>{}([&](auto ordered_dst_access_idx) {
 
             // judge move forward or move backward
             constexpr auto forward_sweep = [&]() {
@@ -619,10 +657,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 forward_sweep(I0) = true;
 
                 static_for<1, nDim, 1>{}([&](auto i) {
-                    index_t tmp = ordered_access_idx[I0];
+                    index_t tmp = ordered_dst_access_idx[I0];
 
                     static_for<0, i, 1>{}([&](auto j) {
-                        tmp = tmp * ordered_access_lengths[j] + ordered_access_idx[j];
+                        tmp = tmp * ordered_dst_access_lengths[j] + ordered_dst_access_idx[j];
                     });
 
                     forward_sweep(i) = tmp % 2 == 0;
@@ -636,9 +674,9 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 Index ordered_idx;
 
                 static_for<0, nDim, 1>{}([&](auto i) {
-                    ordered_idx(i) = forward_sweep[i]
-                                         ? ordered_access_idx[i]
-                                         : ordered_access_lengths[i] - 1 - ordered_access_idx[i];
+                    ordered_idx(i) = forward_sweep[i] ? ordered_dst_access_idx[i]
+                                                      : ordered_dst_access_lengths[i] - 1 -
+                                                            ordered_dst_access_idx[i];
                 });
 
                 auto dst_data_idx =
@@ -674,10 +712,11 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 StaticallyIndexedArray<bool, nDim> move_on_dim;
 
                 static_for<0, nDim, 1>{}([&](auto i) {
-                    move_on_dim(i) = ordered_access_idx[i] < ordered_access_lengths[i] - 1;
+                    move_on_dim(i) = ordered_dst_access_idx[i] < ordered_dst_access_lengths[i] - 1;
 
                     static_for<i + 1, nDim, 1>{}([&](auto j) {
-                        move_on_dim(i) &= ordered_access_idx[j] == ordered_access_lengths[j] - 1;
+                        move_on_dim(i) &=
+                            ordered_dst_access_idx[j] == ordered_dst_access_lengths[j] - 1;
                     });
                 });
 
@@ -745,70 +784,126 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
     __device__ static constexpr auto GetSrcCoordinateResetStep()
     {
-        constexpr auto src_scalar_per_access = [&]() {
-            Index src_scalar_per_access;
+        constexpr auto I0 = Number<0>{};
 
-            static_for<0, nDim, 1>{}([&](auto i) {
-                if constexpr(i == SrcVectorDim)
-                {
-                    src_scalar_per_access(i) = SrcScalarPerVector;
-                }
-                else
-                {
-                    src_scalar_per_access(i) = 1;
-                }
+        // scalar per access on each dim
+        // TODO: don't use lambda_scalar_per_access
+        constexpr auto src_scalar_per_access = generate_sequence(
+            lambda_scalar_per_access<SrcVectorDim, SrcScalarPerVector>{}, Number<nDim>{});
+
+        constexpr auto src_access_lengths = SliceLengths{} / src_scalar_per_access;
+
+        constexpr auto src_dim_access_order = SrcDimAccessOrder{};
+
+        constexpr auto ordered_src_access_lengths =
+            container_reorder_given_new2old(src_access_lengths, src_dim_access_order);
+
+        // judge move forward or move backward during the last iteration
+        constexpr auto forward_sweep = [&]() {
+            StaticallyIndexedArray<bool, nDim> forward_sweep;
+
+            forward_sweep(I0) = true;
+
+            static_for<1, nDim, 1>{}([&](auto i) {
+                index_t tmp = ordered_src_access_lengths[I0] - 1;
+
+                static_for<0, i, 1>{}([&](auto j) {
+                    tmp = tmp * ordered_src_access_lengths[j] + ordered_src_access_lengths[j] - 1;
+                });
+
+                forward_sweep(i) = tmp % 2 == 0;
             });
 
-            return src_scalar_per_access;
+            return forward_sweep;
         }();
 
-        MultiIndex<nDim> src_reset_iterator;
+        // calculate src data index after last iteration in RunRead(), if it has not being reset by
+        // RunRead()
+        constexpr auto src_data_idx = [&]() {
+            Index ordered_idx;
 
-        src_reset_iterator(Number<0>{}) = src_scalar_per_access[Number<0>{}] - SliceLengths{}[0];
+            static_for<0, nDim, 1>{}([&](auto i) {
+                ordered_idx(i) = forward_sweep[i] ? ordered_src_access_lengths[i] - 1 : 0;
+            });
 
-        static_for<1, nDim, 1>{}([&](auto i) {
-            constexpr auto i_m1 = i - Number<1>{};
+            auto src_data_idx = container_reorder_given_old2new(ordered_idx, src_dim_access_order) *
+                                src_scalar_per_access;
 
-            src_reset_iterator(i) = (SliceLengths{}[i_m1] % (2 * src_scalar_per_access[i_m1]) == 0)
-                                        ? 0
-                                        : (src_scalar_per_access[i] - SliceLengths{}[i]);
-        });
+            return src_data_idx;
+        }();
 
-        return src_reset_iterator;
+        //
+        constexpr auto reset_src_data_step = [&]() {
+            Index reset_src_data_step;
+
+            static_for<0, nDim, 1>{}([&](auto i) { reset_src_data_step(i) = -src_data_idx[i]; });
+
+            return reset_src_data_step;
+        }();
+
+        return reset_src_data_step;
     }
 
     __device__ static constexpr auto GetDstCoordinateResetStep()
     {
-        constexpr auto dst_scalar_per_access = [&]() {
-            Index dst_scalar_per_access;
+        constexpr auto I0 = Number<0>{};
 
-            static_for<0, nDim, 1>{}([&](auto i) {
-                if constexpr(i == DstVectorDim)
-                {
-                    dst_scalar_per_access(i) = DstScalarPerVector;
-                }
-                else
-                {
-                    dst_scalar_per_access(i) = 1;
-                }
+        // scalar per access on each dim
+        // TODO: don't use lambda_scalar_per_access
+        constexpr auto dst_scalar_per_access = generate_sequence(
+            lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
+
+        constexpr auto dst_access_lengths = SliceLengths{} / dst_scalar_per_access;
+
+        constexpr auto dst_dim_access_order = DstDimAccessOrder{};
+
+        constexpr auto ordered_dst_access_lengths =
+            container_reorder_given_new2old(dst_access_lengths, dst_dim_access_order);
+
+        // judge move forward or move backward during the last iteration
+        constexpr auto forward_sweep = [&]() {
+            StaticallyIndexedArray<bool, nDim> forward_sweep;
+
+            forward_sweep(I0) = true;
+
+            static_for<1, nDim, 1>{}([&](auto i) {
+                index_t tmp = ordered_dst_access_lengths[I0] - 1;
+
+                static_for<0, i, 1>{}([&](auto j) {
+                    tmp = tmp * ordered_dst_access_lengths[j] + ordered_dst_access_lengths[j] - 1;
+                });
+
+                forward_sweep(i) = tmp % 2 == 0;
             });
 
-            return dst_scalar_per_access;
+            return forward_sweep;
         }();
 
-        MultiIndex<nDim> dst_reset_iterator;
+        // calculate dst data index after last iteration in RunWrite(), if it has not being reset by
+        // RunWrite()
+        constexpr auto dst_data_idx = [&]() {
+            Index ordered_idx;
 
-        dst_reset_iterator(Number<0>{}) = dst_scalar_per_access[Number<0>{}] - SliceLengths{}[0];
+            static_for<0, nDim, 1>{}([&](auto i) {
+                ordered_idx(i) = forward_sweep[i] ? ordered_dst_access_lengths[i] - 1 : 0;
+            });
 
-        static_for<1, nDim, 1>{}([&](auto i) {
-            constexpr auto i_m1 = i - Number<1>{};
+            auto dst_data_idx = container_reorder_given_old2new(ordered_idx, dst_dim_access_order) *
+                                dst_scalar_per_access;
 
-            dst_reset_iterator(i) = (SliceLengths{}[i_m1] % (2 * dst_scalar_per_access[i_m1]) == 0)
-                                        ? 0
-                                        : (dst_scalar_per_access[i] - SliceLengths{}[i]);
-        });
+            return dst_data_idx;
+        }();
 
-        return dst_reset_iterator;
+        //
+        constexpr auto reset_dst_data_step = [&]() {
+            Index reset_dst_data_step;
+
+            static_for<0, nDim, 1>{}([&](auto i) { reset_dst_data_step(i) = -dst_data_idx[i]; });
+
+            return reset_dst_data_step;
+        }();
+
+        return reset_dst_data_step;
     }
 
     // src_slice_origin_step_idx need to be known at compile-time, for performance reason
