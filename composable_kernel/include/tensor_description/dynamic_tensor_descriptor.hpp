@@ -12,6 +12,25 @@ struct DynamicTensorCoordinate;
 template <index_t NTransform, index_t NDimVisible, typename UpdateLowerIndexHack>
 struct DynamicTensorCoordinateIterator;
 
+template <typename LowerDimensionIdss, typename UpperDimensionIdss>
+__host__ __device__ constexpr index_t GetNumOfHiddenDimension(LowerDimensionIdss,
+                                                              UpperDimensionIdss)
+{
+    constexpr auto all_low_dim_ids =
+        unpack([](auto&&... xs) constexpr { return merge_sequences(xs...); }, LowerDimensionIdss{});
+
+    constexpr auto all_up_dim_ids =
+        unpack([](auto&&... xs) constexpr { return merge_sequences(xs...); }, UpperDimensionIdss{});
+
+    constexpr auto all_dim_ids = merge_sequences(all_low_dim_ids, all_up_dim_ids);
+
+    using unique_sort_all_dim_ids = typename sequence_unique_sort<decltype(all_dim_ids),
+                                                                  math::less<index_t>,
+                                                                  math::equal<index_t>>::type;
+
+    return unique_sort_all_dim_ids::Size();
+}
+
 // Transforms: Tuple<transforms...>
 // LowerDimensionIdss : Tuple<Sequence<...>, ...>
 // UpperDimensionIdss : Tuple<Sequence<...>, ...>
@@ -19,7 +38,9 @@ struct DynamicTensorCoordinateIterator;
 template <typename Transforms,
           typename LowerDimensionIdss,
           typename UpperDimensionIdss,
-          typename VisibleDimensionIds>
+          typename VisibleDimensionIds,
+          typename ElementSize      = index_t,
+          typename ElementSpaceSize = index_t>
 struct DynamicTensorDescriptor
 {
     // TODO make these private
@@ -63,7 +84,9 @@ struct DynamicTensorDescriptor
     __host__ __device__ constexpr DynamicTensorDescriptor(const Transforms& transforms,
                                                           index_t element_space_size)
         : transforms_{transforms},
-          hidden_lengths_{InitializeHiddenLengths(transforms_, element_space_size)}
+          element_size_{InitializeElementSize(transforms)},
+          element_space_size_{element_space_size}
+
     {
         static_assert(Transforms::Size() == ntransform_ &&
                           LowerDimensionIdss::Size() == ntransform_ &&
@@ -79,24 +102,27 @@ struct DynamicTensorDescriptor
     }
 
     template <index_t IDim>
-    __host__ __device__ constexpr index_t GetLength(Number<IDim>) const
+    __host__ __device__ constexpr auto GetLength(Number<IDim>) const
     {
-        return hidden_lengths_[VisibleDimensionIds::At(Number<IDim>{})];
+        static_assert(IDim >= 0 && IDim < ndim_visible_, "wrong! out of range");
+
+        constexpr auto tmp = FindTransformAndItsUpperDimension(Number<IDim>{});
+
+        constexpr index_t itran   = tmp[Number<0>{}];
+        constexpr index_t idim_up = tmp[Number<1>{}];
+        constexpr bool found      = tmp[Number<2>{}];
+
+        static_assert(found == true,
+                      "wrong! not found matching transformation and upper-dimension");
+
+        return transforms_[Number<itran>{}].GetUpperLengths()[Number<idim_up>{}];
     }
 
-    __host__ __device__ constexpr auto GetLengths() const
-    {
-        return get_container_subset(hidden_lengths_, VisibleDimensionIds{});
-    }
+    __host__ __device__ constexpr auto GetElementSize() const { return element_size_; }
 
-    __host__ __device__ constexpr index_t GetElementSize() const
+    __host__ __device__ constexpr auto GetElementSpaceSize() const
     {
-        return container_reduce(GetLengths(), math::multiplies<index_t>{}, index_t{1});
-    }
-
-    __host__ __device__ constexpr index_t GetElementSpaceSize() const
-    {
-        return hidden_lengths_[Number<0>{}];
+        return element_space_size_;
     }
 
     template <typename Idx>
@@ -125,25 +151,55 @@ struct DynamicTensorDescriptor
         return VisibleDimensionIds{};
     }
 
-    __host__ __device__ static constexpr auto InitializeHiddenLengths(const Transforms& transforms,
-                                                                      index_t element_space_size)
+    __host__ __device__ static constexpr auto InitializeElementSize(const Transforms& transforms)
     {
-        // zero initialization
-        HiddenIndex hidden_lengths = make_zero_multi_index<ndim_hidden_>();
+        const auto lengths = generate_tuple(
+            [&](auto idim_visible) {
+                constexpr auto tmp = FindTransformAndItsUpperDimension(idim_visible);
 
-        // this is the orignal tensor element space size
-        hidden_lengths(Number<0>{}) = element_space_size;
+                constexpr index_t itran   = tmp[Number<0>{}];
+                constexpr index_t idim_up = tmp[Number<1>{}];
+                constexpr bool found      = tmp[Number<2>{}];
 
-        // lengths for all other hidden dimensions
-        static_for<0, ntransform_, 1>{}([&transforms, &hidden_lengths](auto itran) {
-            const auto& tran = transforms.At(itran);
+                static_assert(found == true,
+                              "wrong! not found matching transformation and upper-dimension");
 
-            constexpr auto up_dim_ids = UpperDimensionIdss{}.At(itran);
+                const auto length =
+                    transforms[Number<itran>{}].GetUpperLengths()[Number<idim_up>{}];
 
-            set_container_subset(hidden_lengths, up_dim_ids, tran.GetUpperLengths());
+                return length;
+            },
+            Number<ndim_visible_>{});
+
+        // TODO: make container_reduce support tuple of Number and index_t
+        return container_reduce(lengths, math::multiplies<index_t>{}, index_t{1});
+    }
+
+    template <index_t IDim>
+    __host__ __device__ static constexpr auto FindTransformAndItsUpperDimension(Number<IDim>)
+    {
+        constexpr auto idim_visible = Number<IDim>{};
+
+        constexpr index_t idim_hidden = VisibleDimensionIds::At(idim_visible);
+
+        index_t itran_found   = 0;
+        index_t idim_up_found = 0;
+        bool found            = false;
+
+        static_for<0, ntransform_, 1>{}([&](auto itran) {
+            constexpr auto up_dim_ids = UpperDimensionIdss{}[itran];
+
+            static_for<0, up_dim_ids.Size(), 1>{}([&](auto idim_up) {
+                if constexpr(up_dim_ids[idim_up] == idim_hidden)
+                {
+                    itran_found   = itran;
+                    idim_up_found = idim_up;
+                    found         = true;
+                }
+            });
         });
 
-        return hidden_lengths;
+        return make_tuple(itran_found, idim_up_found, found);
     }
 
     __host__ __device__ void Print() const
@@ -165,9 +221,8 @@ struct DynamicTensorDescriptor
 
     // TODO make these private
     Transforms transforms_;
-    // TODO maybe hidden_lengths_ should use reference_wrapper (reference to transforms_'s member
-    //  variable lengths_) to save space on stack?
-    HiddenIndex hidden_lengths_;
+    ElementSize element_size_;
+    ElementSpaceSize element_space_size_;
 };
 
 template <index_t NDimHidden, typename VisibleDimensionIds>

@@ -326,6 +326,7 @@ struct DynamicRightPad
     }
 };
 
+#if 0
 // idx_low = coefficients[0, ...nDimUp-1] * idx_up[0, ...nDimUp-1]
 template <index_t NDimUp>
 struct DynamicEmbed
@@ -413,6 +414,103 @@ struct DynamicEmbed
         printf("}");
     }
 };
+#else
+// idx_low = coefficients[0, ...nDimUp-1] * idx_up[0, ...nDimUp-1]
+// UpLengths and Coefficients can be either of the followings:
+//   1) Tuple of index_t, which is known at run-time, or
+//   2) Tuple of Number, which is known at compile-time, or
+//   3) Tuple of mixture of index_t and Number, which is known partially at run-time and partially
+//   at compile-time
+template <index_t NDimUp,
+          typename UpLengths                  = MultiIndex<NDimUp>,
+          typename Coefficients               = MultiIndex<NDimUp>,
+          typename std::enable_if<UpLengths::Size() == NDimUp && Coefficients::Size() == NDimUp,
+                                  bool>::type = false>
+struct DynamicEmbed
+{
+    using LowerIndex = MultiIndex<1>;
+    using UpperIndex = MultiIndex<NDimUp>;
+
+    UpLengths up_lengths_;
+    Coefficients coefficients_;
+
+    __host__ __device__ constexpr DynamicEmbed() = default;
+
+    __host__ __device__ constexpr DynamicEmbed(const UpperIndex& up_lengths,
+                                               const UpperIndex& coefficients)
+        : up_lengths_{up_lengths}, coefficients_{coefficients}
+    {
+    }
+
+    __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
+
+    __host__ __device__ static constexpr index_t GetNumOfUpperDimension() { return NDimUp; }
+
+    __host__ __device__ constexpr const auto& GetUpperLengths() const { return up_lengths_; }
+
+    template <typename LowIdx, typename UpIdx>
+    __host__ __device__ constexpr void CalculateLowerIndex(LowIdx& idx_low,
+                                                           const UpIdx& idx_up) const
+    {
+        static_assert(LowIdx::Size() == 1 && UpIdx::Size() == NDimUp,
+                      "wrong! inconsistent # of dimension");
+
+        idx_low(Number<0>{}) = 0;
+
+        static_for<0, NDimUp, 1>{}([&idx_low, &idx_up, this](auto i) {
+            idx_low(Number<0>{}) += idx_up[i] * this->coefficients_[i];
+        });
+    }
+
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ void UpdateLowerIndex(LowIdxDiff& idx_diff_low,
+                                              const UpIdxDiff& idx_diff_up,
+                                              LowIdx& idx_low,
+                                              const UpIdx& idx_up_new,
+                                              Number<Hack>) const
+    {
+        static_assert(LowIdxDiff::Size() == 1 && UpIdxDiff::Size() == NDimUp &&
+                          LowIdx::Size() == 1 && UpIdx::Size() == NDimUp,
+                      "wrong! inconsistent # of dimension");
+
+        idx_diff_low(Number<0>{}) = 0;
+
+        static_for<0, NDimUp, 1>{}(
+            [&](auto i) { idx_diff_low(Number<0>{}) += idx_diff_up[i] * coefficients_[i]; });
+
+        idx_low += idx_diff_low;
+    }
+
+    __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
+
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
+    {
+        return true;
+    }
+
+    template <typename UpIdx>
+    __host__ __device__ static constexpr bool
+    IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& /* idx_up */)
+    {
+        return true;
+    }
+
+    __host__ __device__ void Print() const
+    {
+        printf("{");
+        printf("DynamicEmbed, ");
+        printf("up_lengths_ ");
+        // print_multi_index(up_lengths_);
+        printf("coefficients_ ");
+        // print_multi_index(coefficients_);
+        printf("}");
+    }
+};
+#endif
 
 template <index_t NDimLow>
 struct DynamicMerge
@@ -922,6 +1020,7 @@ struct DynamicMerge
     }
 };
 
+#if 0
 template <index_t NDimUp, bool Use24BitIntegerCalculation = false>
 struct DynamicUnMerge
 {
@@ -1009,6 +1108,100 @@ struct DynamicUnMerge
         printf("}");
     }
 };
+#else
+template <index_t NDimUp,
+          bool Use24BitIntegerCalculation     = false,
+          typename UpLengths                  = MultiIndex<NDimUp>,
+          typename UpLengthsScan              = MultiIndex<NDimUp>,
+          typename std::enable_if<UpLengths::Size() == NDimUp && UpLengthsScan::Size() == NDimUp,
+                                  bool>::type = false>
+struct DynamicUnMerge
+{
+    using LowerIndex = MultiIndex<1>;
+    using UpperIndex = MultiIndex<NDimUp>;
+
+    UpLengths up_lengths_;
+    UpLengthsScan up_lengths_scan_;
+
+    __host__ __device__ constexpr DynamicUnMerge() = default;
+
+    __host__ __device__ constexpr DynamicUnMerge(const UpperIndex& up_lengths)
+        : up_lengths_{up_lengths},
+          up_lengths_scan_{
+              container_reverse_exclusive_scan(up_lengths, math::multiplies<index_t>(), index_t{1})}
+    {
+    }
+
+    __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
+
+    __host__ __device__ static constexpr index_t GetNumOfUpperDimension() { return NDimUp; }
+
+    __host__ __device__ constexpr const auto& GetUpperLengths() const { return up_lengths_; }
+
+    template <typename LowIdx, typename UpIdx>
+    __host__ __device__ constexpr void CalculateLowerIndex(LowIdx& idx_low,
+                                                           const UpIdx& idx_up) const
+    {
+
+        if constexpr(!Use24BitIntegerCalculation)
+        {
+            idx_low(Number<0>{}) = idx_up[Number<NDimUp - 1>{}];
+
+            static_for<0, NDimUp - 1, 1>{}(
+                [&](auto i) { idx_low(Number<0>{}) += idx_up[i] * up_lengths_scan_[i]; });
+        }
+        else
+        {
+            idx_low(Number<0>{}) = idx_up[Number<NDimUp - 1>{}];
+
+            static_for<0, NDimUp - 1, 1>{}([&](auto i) {
+                idx_low(Number<0>{}) =
+                    (0x00ffffff & idx_low[Number<0>{}]) +
+                    (0x00ffffff & idx_up[i]) * (0x00ffffff & up_lengths_scan_[i]);
+            });
+        }
+    }
+
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ void UpdateLowerIndex(LowIdxDiff& idx_diff_low,
+                                              const UpIdxDiff& idx_diff_up,
+                                              LowIdx& idx_low,
+                                              const UpIdx& idx_up_new,
+                                              Number<Hack>) const
+    {
+        CalculateLowerIndex(idx_diff_low, idx_diff_up);
+
+        idx_low += idx_diff_low;
+    }
+
+    __host__ __device__ static constexpr bool IsLinearTransform() { return true; }
+
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
+    {
+        return true;
+    }
+
+    template <typename UpIdx>
+    __host__ __device__ static constexpr bool
+    IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& /* idx_up */)
+    {
+        return true;
+    }
+
+    __host__ __device__ void Print() const
+    {
+        printf("{");
+        printf("DynamicUnMerge, ");
+        // print_multi_index(up_lengths_);
+        // print_multi_index(up_lengths_scan_);
+        printf("}");
+    }
+};
+#endif
 
 struct DynamicFreeze
 {
