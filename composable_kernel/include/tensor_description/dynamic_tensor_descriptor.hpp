@@ -82,7 +82,7 @@ struct DynamicTensorDescriptor
     __host__ __device__ constexpr DynamicTensorDescriptor() = default;
 
     __host__ __device__ constexpr DynamicTensorDescriptor(const Transforms& transforms,
-                                                          index_t element_space_size)
+                                                          ElementSpaceSize element_space_size)
         : transforms_{transforms},
           element_size_{InitializeElementSize(transforms)},
           element_space_size_{element_space_size}
@@ -106,7 +106,7 @@ struct DynamicTensorDescriptor
     {
         static_assert(IDim >= 0 && IDim < ndim_visible_, "wrong! out of range");
 
-        constexpr auto tmp = FindTransformAndItsUpperDimension(Number<IDim>{});
+        constexpr auto tmp = GetTransformAndItsUpperDimension(Number<IDim>{});
 
         constexpr index_t itran   = tmp[Number<0>{}];
         constexpr index_t idim_up = tmp[Number<1>{}];
@@ -120,10 +120,7 @@ struct DynamicTensorDescriptor
 
     __host__ __device__ constexpr auto GetElementSize() const { return element_size_; }
 
-    __host__ __device__ constexpr auto GetElementSpaceSize() const
-    {
-        return element_space_size_;
-    }
+    __host__ __device__ constexpr auto GetElementSpaceSize() const { return element_space_size_; }
 
     template <typename Idx>
     __host__ __device__ constexpr index_t CalculateOffset(const Idx& idx) const
@@ -155,7 +152,7 @@ struct DynamicTensorDescriptor
     {
         const auto lengths = generate_tuple(
             [&](auto idim_visible) {
-                constexpr auto tmp = FindTransformAndItsUpperDimension(idim_visible);
+                constexpr auto tmp = GetTransformAndItsUpperDimension(idim_visible);
 
                 constexpr index_t itran   = tmp[Number<0>{}];
                 constexpr index_t idim_up = tmp[Number<1>{}];
@@ -172,11 +169,11 @@ struct DynamicTensorDescriptor
             Number<ndim_visible_>{});
 
         // TODO: make container_reduce support tuple of Number and index_t
-        return container_reduce(lengths, math::multiplies<index_t>{}, index_t{1});
+        return container_reduce(lengths, math::multiplies_v2{}, Number<1>{});
     }
 
     template <index_t IDim>
-    __host__ __device__ static constexpr auto FindTransformAndItsUpperDimension(Number<IDim>)
+    __host__ __device__ static constexpr auto GetTransformAndItsUpperDimension(Number<IDim>)
     {
         constexpr auto idim_visible = Number<IDim>{};
 
@@ -552,12 +549,8 @@ coordinate_has_valid_offset_assuming_visible_index_is_valid(const TensorDesc& te
             const auto idx_up =
                 get_container_subset(idx_hidden, TensorDesc::GetUpperDimensionIdss().At(itran));
 
-#if 0 // debug
-      // Comment: this implemenetation results in weird control flow in ISA
-            valid = valid && tran.IsValidUpperIndexMappedToValidLowerIndex(idx_up);
-#else
+            // Comment: using valid = valid && .. will result in weird control flow in ISA
             valid &= tran.IsValidUpperIndexMappedToValidLowerIndex(idx_up);
-#endif
         }
     });
 

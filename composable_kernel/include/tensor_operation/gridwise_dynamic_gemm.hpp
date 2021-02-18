@@ -389,14 +389,11 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
 
             // define input tensor descriptor for threadwise copy
             //     thread input tensor, src of threadwise copy
-#if 0 // debug
             constexpr auto c_m0_m1_n0_n1_thread_desc =
-                make_dynamic_naive_tensor_descriptor_packed<4>(
-                    make_multi_index(MRepeat, MPerThread, NRepeat, NPerThread));
-#else
-            constexpr auto c_m0_m1_n0_n1_thread_desc = make_native_tensor_descriptor_packed(
-                Sequence<MRepeat, MPerThread, NRepeat, NPerThread>{});
-#endif
+                make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(Number<MRepeat>{},
+                                                                          Number<MPerThread>{},
+                                                                          Number<NRepeat>{},
+                                                                          Number<NPerThread>{}));
 
             // calculate origin of thread input tensor on global memory
             //     blockwise GEMM c matrix starting index

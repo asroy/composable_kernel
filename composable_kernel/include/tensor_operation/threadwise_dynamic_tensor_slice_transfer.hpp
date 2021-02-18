@@ -80,6 +80,9 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
 
+        // Comments: src_desc is constexpr
+        constexpr auto src_desc = remove_cv_t<remove_reference_t<SrcDesc>>{};
+
         // scalar per access on each dim
         // TODO: don't use lambda_scalar_per_access
         constexpr auto dst_scalar_per_access = generate_sequence(
@@ -175,7 +178,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
                 // assume src_slice_origin_idx is 0
                 // TODO: support non-zero src_slice_oring_idx
                 constexpr index_t src_offset =
-                    SrcDesc::CalculateOffset(dst_data_idx + i * dst_scalar_step_in_vector);
+                    src_desc.CalculateOffset(dst_data_idx + i * dst_scalar_step_in_vector);
 
                 dst_vector(i) = p_src[Number<src_offset>{}];
             });

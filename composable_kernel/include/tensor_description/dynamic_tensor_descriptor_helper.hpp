@@ -39,7 +39,6 @@ template <index_t N>
 __host__ __device__ constexpr auto
 make_dynamic_naive_tensor_descriptor_packed(const MultiIndex<N>& lengths)
 {
-
     const auto transforms              = make_tuple(DynamicUnMerge<N>{lengths});
     constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
     constexpr auto up_dim_hidden_idss =
@@ -54,6 +53,39 @@ make_dynamic_naive_tensor_descriptor_packed(const MultiIndex<N>& lengths)
                                    remove_cv_t<decltype(up_dim_hidden_idss)>,
                                    remove_cv_t<decltype(visible_dim_hidden_ids)>>{
         transforms, element_space_size};
+}
+
+// Is... can be:
+//   1) index_t, which is known at run-time
+//   2) Number<>, which is known at compile-time
+template <typename... Is>
+__host__ __device__ constexpr auto
+make_dynamic_naive_tensor_descriptor_packed_v2(const Tuple<Is...>& lengths)
+{
+    constexpr index_t N = sizeof...(Is);
+
+    using Lengths = remove_cv_t<remove_reference_t<decltype(lengths)>>;
+
+    const auto transforms = make_tuple(DynamicUnMerge<N, false, Lengths>{lengths});
+
+    constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
+
+    constexpr auto up_dim_hidden_idss =
+        make_tuple(typename arithmetic_sequence_gen<1, N + 1, 1>::type{});
+
+    constexpr auto visible_dim_hidden_ids = typename arithmetic_sequence_gen<1, N + 1, 1>::type{};
+
+    const auto element_size = container_reduce(lengths, math::multiplies_v2{}, Number<1>{});
+
+    const auto element_space_size = element_size;
+
+    return DynamicTensorDescriptor<remove_cv_t<decltype(transforms)>,
+                                   remove_cv_t<decltype(low_dim_hidden_idss)>,
+                                   remove_cv_t<decltype(up_dim_hidden_idss)>,
+                                   remove_cv_t<decltype(visible_dim_hidden_ids)>,
+                                   remove_cv_t<decltype(element_size)>,
+                                   remove_cv_t<decltype(element_space_size)>>{transforms,
+                                                                              element_space_size};
 }
 
 template <index_t N>

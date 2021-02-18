@@ -24,15 +24,15 @@ __host__ __device__ constexpr auto container_push_back(const Array<TData, NSize>
 }
 
 template <typename... Ts, typename T>
+__host__ __device__ constexpr auto container_push_front(const Tuple<Ts...>& a, const T& x)
+{
+    return container_cat(make_tuple(x), a);
+}
+
+template <typename... Ts, typename T>
 __host__ __device__ constexpr auto container_push_back(const Tuple<Ts...>& a, const T& x)
 {
-    Tuple<Ts..., T> r;
-
-    static_for<0, sizeof...(Ts), 1>{}([&r, &a ](auto i) constexpr { r(i) = a[i]; });
-
-    r(Number<sizeof...(Ts)>{}) = x;
-
-    return r;
+    return container_cat(a, make_tuple(x));
 }
 
 template <typename TData, index_t NSize, index_t... IRs>
@@ -97,17 +97,29 @@ __host__ __device__ constexpr auto container_reorder_given_old2new(Sequence<Is..
     return container_reorder_give_new2old(old_seq, new2old);
 }
 
-template <typename TData, typename Container, typename Reduce>
-__host__ __device__ constexpr TData container_reduce(const Container& a, Reduce f, TData init)
+template <typename Container, typename Reduce, typename Init>
+__host__ __device__ constexpr auto container_reduce(const Container& x, Reduce reduce, Init init)
 {
-    // static_assert(is_same<typename Arr::data_type, TData>::value, "wrong! different data type");
-    static_assert(Container::Size() > 0, "wrong");
+    constexpr index_t NSize = Container::Size();
 
-    TData result = init;
+    // f is recursive function, fs is a dummy of f
+    // i is index, y_old is current scan, r_old is current reduction
+    auto f = [&](auto fs, auto i, auto r_old) {
+        auto r_new = reduce(x[i], r_old);
 
-    static_for<0, Container::Size(), 1>{}([&](auto I) { result = f(result, a[I]); });
+        if constexpr(i.value > 0)
+        {
+            // recursively call f/fs
+            return fs(fs, i - Number<1>{}, r_new);
+        }
+        else
+        {
+            return r_new;
+        }
+    };
 
-    return result;
+    // start recursion
+    return f(f, Number<NSize - 1>{}, init);
 }
 
 template <typename TData, index_t NSize, typename Reduce>
@@ -147,30 +159,35 @@ container_reverse_exclusive_scan(const Array<TData, NSize>& x, Reduce f, TData i
     return y;
 }
 
-// Here should use StaticallyIndexedArray<TData, NSize>, instead of Tuple<Xs...>,
-// although the former is the alias of the latter. This is because compiler cannot
-// infer the NSize if using StaticallyIndexedArray<TData, NSize>
-// TODO: how to fix this?
-template <typename... Xs, typename Reduce, typename TData>
+template <typename... Xs, typename Reduce, typename Init>
 __host__ __device__ constexpr auto
-container_reverse_exclusive_scan(const Tuple<Xs...>& x, Reduce f, TData init)
+container_reverse_exclusive_scan(const Tuple<Xs...>& x, Reduce reduce, Init init)
 {
     constexpr index_t NSize = sizeof...(Xs);
 
-    Tuple<Xs...> y;
+    // f is recursive function, fs is a dummy of f
+    // i is index, y_old is current scan, r_old is current reduction
+    auto f = [&](auto fs, auto i, auto y_old, auto r_old) {
+        auto r_new = reduce(x[i], r_old);
 
-    TData r = init;
+        auto y_new = container_push_front(y_old, r_new);
 
-    static_for<NSize - 1, 0, -1>{}([&](auto i) {
-        y(i) = r;
-        r    = f(r, x[i]);
-    });
+        if constexpr(i.value > 1)
+        {
+            // recursively call f/fs
+            return fs(fs, i - Number<1>{}, y_new, r_new);
+        }
+        else
+        {
+            return y_new;
+        }
+    };
 
-    y(Number<0>{}) = r;
-
-    return y;
+    // start recursion
+    return f(f, Number<NSize - 1>{}, make_tuple(init), init);
 }
 
+// TODO: update to like container_reverse_exclusive_scan to deal with Tuple of Numebr<>
 template <typename... Xs, typename Reduce, typename TData>
 __host__ __device__ constexpr auto
 container_reverse_inclusive_scan(const Tuple<Xs...>& x, Reduce f, TData init)

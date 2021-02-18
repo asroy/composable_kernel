@@ -139,6 +139,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
         const index_t GemmM0 = GemmM / GemmM1;
         const index_t GemmN0 = GemmN / GemmN1;
 
+#if 0
         const auto out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc =
             transform_dynamic_tensor_descriptor(
                 out_gemmm_gemmn_global_desc,
@@ -146,6 +147,19 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
                            DynamicUnMerge<2>{make_multi_index(GemmN0, GemmN1)}),
                 make_tuple(Sequence<0>{}, Sequence<1>{}),
                 make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
+#else
+        const auto GemmM0_GemmM1 = make_tuple(GemmM0, Number<GemmM1>{});
+        const auto GemmN0_GemmN1 = make_tuple(GemmN0, Number<GemmN1>{});
+
+        const auto out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc =
+            transform_dynamic_tensor_descriptor(
+                out_gemmm_gemmn_global_desc,
+                make_tuple(
+                    DynamicUnMerge<2, false, remove_cv_t<decltype(GemmM0_GemmM1)>>{GemmM0_GemmM1},
+                    DynamicUnMerge<2, false, remove_cv_t<decltype(GemmN0_GemmN1)>>{GemmN0_GemmN1}),
+                make_tuple(Sequence<0>{}, Sequence<1>{}),
+                make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
+#endif
 
         // hack to control index calculation when iterating over a_k_m_global tensor
         constexpr auto a_k_m_global_iterator_hacks =
