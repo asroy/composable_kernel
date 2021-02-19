@@ -14,59 +14,17 @@ namespace ck {
  * functions on GPU without worrying about scratch memory usage.
  */
 
-template <index_t N>
+template <typename... Lengths,
+          typename... Strides,
+          typename std::enable_if<sizeof...(Lengths) == sizeof...(Strides), bool>::type = false>
 __host__ __device__ constexpr auto
-make_dynamic_naive_tensor_descriptor(const MultiIndex<N>& lengths, const MultiIndex<N>& strides)
+make_dynamic_naive_tensor_descriptor_v2(const Tuple<Lengths...>& lengths,
+                                        const Tuple<Strides...>& strides)
 {
-    const auto transforms              = make_tuple(DynamicEmbed<N>{lengths, strides});
-    constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
-    constexpr auto up_dim_hidden_idss =
-        make_tuple(typename arithmetic_sequence_gen<1, N + 1, 1>::type{});
-    constexpr auto visible_dim_hidden_ids = typename arithmetic_sequence_gen<1, N + 1, 1>::type{};
+    constexpr index_t N = sizeof...(Lengths);
 
-    index_t element_space_size = 1;
-
-    static_for<0, N, 1>{}([&](auto i) { element_space_size += (lengths[i] - 1) * strides[i]; });
-
-    return DynamicTensorDescriptor<remove_cv_t<decltype(transforms)>,
-                                   remove_cv_t<decltype(low_dim_hidden_idss)>,
-                                   remove_cv_t<decltype(up_dim_hidden_idss)>,
-                                   remove_cv_t<decltype(visible_dim_hidden_ids)>>{
-        transforms, element_space_size};
-}
-
-template <index_t N>
-__host__ __device__ constexpr auto
-make_dynamic_naive_tensor_descriptor_packed(const MultiIndex<N>& lengths)
-{
-    const auto transforms              = make_tuple(DynamicUnMerge<N>{lengths});
-    constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
-    constexpr auto up_dim_hidden_idss =
-        make_tuple(typename arithmetic_sequence_gen<1, N + 1, 1>::type{});
-    constexpr auto visible_dim_hidden_ids = typename arithmetic_sequence_gen<1, N + 1, 1>::type{};
-
-    const index_t element_space_size =
-        container_reduce(lengths, math::multiplies<index_t>{}, index_t{1});
-
-    return DynamicTensorDescriptor<remove_cv_t<decltype(transforms)>,
-                                   remove_cv_t<decltype(low_dim_hidden_idss)>,
-                                   remove_cv_t<decltype(up_dim_hidden_idss)>,
-                                   remove_cv_t<decltype(visible_dim_hidden_ids)>>{
-        transforms, element_space_size};
-}
-
-// Is... can be:
-//   1) index_t, which is known at run-time
-//   2) Number<>, which is known at compile-time
-template <typename... Is>
-__host__ __device__ constexpr auto
-make_dynamic_naive_tensor_descriptor_packed_v2(const Tuple<Is...>& lengths)
-{
-    constexpr index_t N = sizeof...(Is);
-
-    using Lengths = remove_cv_t<remove_reference_t<decltype(lengths)>>;
-
-    const auto transforms = make_tuple(DynamicUnMerge<N, false, Lengths>{lengths});
+    const auto transforms =
+        make_tuple(DynamicEmbed<N, Tuple<Lengths...>, Tuple<Strides...>>{lengths, strides});
 
     constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
 
@@ -75,34 +33,87 @@ make_dynamic_naive_tensor_descriptor_packed_v2(const Tuple<Is...>& lengths)
 
     constexpr auto visible_dim_hidden_ids = typename arithmetic_sequence_gen<1, N + 1, 1>::type{};
 
-    const auto element_size = container_reduce(lengths, math::multiplies_v2{}, Number<1>{});
+    // recursive function for reduction
+    auto f = [&](auto fs, auto i, auto acc_old) {
+        auto acc_new = acc_old + (lengths[i] - Number<1>{}) * strides[i];
 
-    const auto element_space_size = element_size;
+        if constexpr(i.value < N - 1)
+        {
+            return fs(fs, i + Number<1>{}, acc_new);
+        }
+        else
+        {
+            return acc_new;
+        }
+    };
+
+    const auto element_space_size = f(f, Number<0>{}, Number<1>{});
 
     return DynamicTensorDescriptor<remove_cv_t<decltype(transforms)>,
                                    remove_cv_t<decltype(low_dim_hidden_idss)>,
                                    remove_cv_t<decltype(up_dim_hidden_idss)>,
                                    remove_cv_t<decltype(visible_dim_hidden_ids)>,
-                                   remove_cv_t<decltype(element_size)>,
                                    remove_cv_t<decltype(element_space_size)>>{transforms,
                                                                               element_space_size};
 }
 
-template <index_t N>
+// Lengths... can be:
+//   1) index_t, which is known at run-time
+//   2) Number<>, which is known at compile-time
+template <typename... Lengths>
 __host__ __device__ constexpr auto
-make_dynamic_naive_tensor_descriptor_aligned(const MultiIndex<N>& lengths, index_t align)
+make_dynamic_naive_tensor_descriptor_packed_v2(const Tuple<Lengths...>& lengths)
 {
-    auto strides = make_zero_multi_index<N>();
+    constexpr index_t N = sizeof...(Lengths);
 
-    strides(Number<N - 1>{}) = 1;
-    strides(Number<N - 2>{}) = math::lcm(lengths[Number<N - 1>{}], align);
+    const auto transforms = make_tuple(DynamicUnMerge<N, false, Tuple<Lengths...>>{lengths});
 
-    static_for<N - 3, -1, -1>{}([&](auto i) {
-        constexpr auto i_p1 = i + Number<1>{};
-        strides(i)          = strides(i_p1) * lengths(i_p1);
-    });
+    constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
 
-    return make_dynamic_naive_tensor_descriptor<N>(lengths, strides);
+    constexpr auto up_dim_hidden_idss =
+        make_tuple(typename arithmetic_sequence_gen<1, N + 1, 1>::type{});
+
+    constexpr auto visible_dim_hidden_ids = typename arithmetic_sequence_gen<1, N + 1, 1>::type{};
+
+    const auto element_space_size = container_reduce(lengths, math::multiplies_v2{}, Number<1>{});
+
+    return DynamicTensorDescriptor<remove_cv_t<decltype(transforms)>,
+                                   remove_cv_t<decltype(low_dim_hidden_idss)>,
+                                   remove_cv_t<decltype(up_dim_hidden_idss)>,
+                                   remove_cv_t<decltype(visible_dim_hidden_ids)>,
+                                   remove_cv_t<decltype(element_space_size)>>{transforms,
+                                                                              element_space_size};
+}
+
+template <typename... Lengths, typename Align>
+__host__ __device__ constexpr auto
+make_dynamic_naive_tensor_descriptor_aligned_v2(const Tuple<Lengths...>& lengths, Align align)
+{
+    constexpr index_t N = sizeof...(Lengths);
+
+    auto strides = generate_tuple(
+        [&](auto i) {
+            if constexpr(i.value == N - 1)
+            {
+                return Number<1>{};
+            }
+            else if constexpr(i.value == N - 2)
+            {
+                return math::lcm(lengths[Number<N - 1>{}], align);
+            }
+            else
+            {
+                return container_reduce(lengths,
+                                        math::multiplies_v2{},
+                                        math::lcm(lengths[Number<N - 1>{}], align),
+                                        i,
+                                        Number<N - 2>{},
+                                        Number<1>{});
+            }
+        },
+        Number<N>{});
+
+    return make_dynamic_naive_tensor_descriptor_v2(lengths, strides);
 }
 
 } // namespace ck

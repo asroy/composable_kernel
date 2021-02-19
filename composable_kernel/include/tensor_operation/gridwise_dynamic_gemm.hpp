@@ -64,12 +64,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto a_k_m_block_desc = make_dynamic_naive_tensor_descriptor_aligned<2>(
+        constexpr auto a_k_m_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
             make_multi_index(KPerBlock, MPerBlock), max_lds_align);
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto b_k_n_block_desc = make_dynamic_naive_tensor_descriptor_aligned<2>(
+        constexpr auto b_k_n_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
             make_multi_index(KPerBlock, NPerBlock), max_lds_align);
 
         // LDS allocation for A and B: be careful of alignment
@@ -129,12 +129,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto a_k_m_block_desc = make_dynamic_naive_tensor_descriptor_aligned<2>(
+        constexpr auto a_k_m_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
             make_multi_index(KPerBlock, MPerBlock), max_lds_align);
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto b_k_n_block_desc = make_dynamic_naive_tensor_descriptor_aligned<2>(
+        constexpr auto b_k_n_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
             make_multi_index(KPerBlock, NPerBlock), max_lds_align);
 
         // A matrix blockwise copy

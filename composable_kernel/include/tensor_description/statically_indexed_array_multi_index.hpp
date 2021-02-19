@@ -99,7 +99,7 @@ __host__ __device__ void print_multi_index(const Tuple<Xs...>& x)
     printf("{");
     printf("MultiIndex, ");
     printf("size %d,", index_t{sizeof...(Xs)});
-    static_for<0, sizeof...(Xs), 1>{}([&](auto i) { printf("%d ", x.At(i)); });
+    static_for<0, sizeof...(Xs), 1>{}([&](auto i) { printf("%d ", index_t{x.At(i)}); });
     printf("}");
 }
 

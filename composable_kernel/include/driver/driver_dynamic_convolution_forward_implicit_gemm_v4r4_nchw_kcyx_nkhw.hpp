@@ -80,7 +80,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
 
         // weight tensor
         const auto wei_gemmk_gemmm_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed<2>(make_multi_index(K, C * Y * X)),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(K, C * Y * X)),
             make_tuple(DynamicPassThrough{K}, DynamicPassThrough{C * Y * X}),
             make_tuple(Sequence<0>{}, Sequence<1>{}),
             make_tuple(Sequence<1>{}, Sequence<0>{}));
@@ -118,7 +118,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
 
         // output tensor
         const auto out_gemmm_gemmn_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed<3>(make_multi_index(N, K, Ho * Wo)),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(N, K, Ho * Wo)),
             make_tuple(DynamicPassThrough{K}, DynamicMerge<2>{make_multi_index(N, Ho * Wo)}),
             make_tuple(Sequence<1>{}, Sequence<0, 2>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
@@ -781,7 +781,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
             make_tuple(Sequence<1>{}, Sequence<0>{}));
 #else
         const auto wei_gemmk_gemmm_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed<2>(make_multi_index(K, C * Y * X)),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(K, C * Y * X)),
             make_tuple(DynamicPassThrough{K}, DynamicPassThrough{C * Y * X}),
             make_tuple(Sequence<0>{}, Sequence<1>{}),
             make_tuple(Sequence<1>{}, Sequence<0>{}));
@@ -822,7 +822,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
                                         make_tuple(Sequence<0>{}, Sequence<1>{}));
 #else
         const auto out_gemmm_gemmn_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed<3>(make_multi_index(N, K, Ho * Wo)),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(N, K, Ho * Wo)),
             make_tuple(DynamicPassThrough{K}, DynamicMerge<2>{make_multi_index(N, Ho * Wo)}),
             make_tuple(Sequence<1>{}, Sequence<0, 2>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
@@ -1461,7 +1461,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1
 
         // weight tensor
         const auto wei_gemmk_gemmm_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed<2>(make_multi_index(K, C)),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(K, C)),
             make_tuple(DynamicPassThrough{K}, DynamicPassThrough{C}),
             make_tuple(Sequence<0>{}, Sequence<1>{}),
             make_tuple(Sequence<1>{}, Sequence<0>{}));
@@ -1475,7 +1475,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1
 
         // output tensor
         const auto out_gemmm_gemmn_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed<3>(make_multi_index(N, K, Ho * Wo)),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(N, K, Ho * Wo)),
             make_tuple(DynamicPassThrough{K}, DynamicMerge<2>{make_multi_index(N, Ho * Wo)}),
             make_tuple(Sequence<1>{}, Sequence<0, 2>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));

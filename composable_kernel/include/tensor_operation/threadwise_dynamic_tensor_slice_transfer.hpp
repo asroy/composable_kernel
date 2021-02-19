@@ -962,7 +962,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
     private:
     static constexpr auto buffer_desc_ =
-        make_dynamic_naive_tensor_descriptor_packed<nDim>(to_multi_index(SliceLengths{}));
+        make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(SliceLengths{}));
 
     static constexpr index_t buffer_size_ = buffer_desc_.GetElementSpaceSize();
 

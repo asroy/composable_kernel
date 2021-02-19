@@ -97,20 +97,30 @@ __host__ __device__ constexpr auto container_reorder_given_old2new(Sequence<Is..
     return container_reorder_give_new2old(old_seq, new2old);
 }
 
-template <typename Container, typename Reduce, typename Init>
-__host__ __device__ constexpr auto container_reduce(const Container& x, Reduce reduce, Init init)
+template <typename Container,
+          typename Reduce,
+          typename Init,
+          index_t IBegin = 0,
+          index_t IEnd   = Container::Size(),
+          index_t IStep  = 1>
+__host__ __device__ constexpr auto container_reduce(const Container& x,
+                                                    Reduce reduce,
+                                                    Init init,
+                                                    Number<IBegin> = Number<0>{},
+                                                    Number<IEnd>   = Number<Container::Size()>{},
+                                                    Number<IStep>  = Number<1>{})
 {
-    constexpr index_t NSize = Container::Size();
+    static_assert((IEnd - IBegin) % IStep == 0, "wrong!");
 
     // f is recursive function, fs is a dummy of f
     // i is index, y_old is current scan, r_old is current reduction
     auto f = [&](auto fs, auto i, auto r_old) {
         auto r_new = reduce(x[i], r_old);
 
-        if constexpr(i.value > 0)
+        if constexpr(i.value < IEnd - IStep)
         {
             // recursively call f/fs
-            return fs(fs, i - Number<1>{}, r_new);
+            return fs(fs, i + Number<IStep>{}, r_new);
         }
         else
         {
@@ -119,7 +129,7 @@ __host__ __device__ constexpr auto container_reduce(const Container& x, Reduce r
     };
 
     // start recursion
-    return f(f, Number<NSize - 1>{}, init);
+    return f(f, Number<IBegin>{}, init);
 }
 
 template <typename TData, index_t NSize, typename Reduce>

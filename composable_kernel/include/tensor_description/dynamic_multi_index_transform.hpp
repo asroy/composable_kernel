@@ -347,8 +347,8 @@ struct DynamicEmbed
 
     __host__ __device__ constexpr DynamicEmbed() = default;
 
-    __host__ __device__ constexpr DynamicEmbed(const UpperIndex& up_lengths,
-                                               const UpperIndex& coefficients)
+    __host__ __device__ constexpr DynamicEmbed(const UpLengths& up_lengths,
+                                               const Coefficients& coefficients)
         : up_lengths_{up_lengths}, coefficients_{coefficients}
     {
     }
@@ -415,9 +415,9 @@ struct DynamicEmbed
         printf("{");
         printf("DynamicEmbed, ");
         printf("up_lengths_ ");
-        // print_multi_index(up_lengths_);
+        print_multi_index(up_lengths_);
         printf("coefficients_ ");
-        // print_multi_index(coefficients_);
+        print_multi_index(coefficients_);
         printf("}");
     }
 };
@@ -1017,8 +1017,8 @@ struct DynamicUnMerge
     {
         printf("{");
         printf("DynamicUnMerge, ");
-        // print_multi_index(up_lengths_);
-        // print_multi_index(up_lengths_scan_);
+        print_multi_index(up_lengths_);
+        print_multi_index(up_lengths_scan_);
         printf("}");
     }
 };

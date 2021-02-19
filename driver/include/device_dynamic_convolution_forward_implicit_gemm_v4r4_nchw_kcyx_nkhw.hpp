@@ -43,11 +43,11 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
 
     // assume packed tensor
     const auto in_n_c_hi_wi_desc =
-        make_dynamic_naive_tensor_descriptor_packed<4>(to_multi_index(InDesc::GetLengths()));
+        make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(InDesc::GetLengths()));
     const auto wei_k_c_y_x_desc =
-        make_dynamic_naive_tensor_descriptor_packed<4>(to_multi_index(WeiDesc::GetLengths()));
+        make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(WeiDesc::GetLengths()));
     const auto out_n_k_ho_wo_desc =
-        make_dynamic_naive_tensor_descriptor_packed<4>(to_multi_index(OutDesc::GetLengths()));
+        make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(OutDesc::GetLengths()));
 
     const auto conv_strides   = to_multi_index(ConvStrides{});
     const auto conv_dilations = to_multi_index(ConvDilations{});

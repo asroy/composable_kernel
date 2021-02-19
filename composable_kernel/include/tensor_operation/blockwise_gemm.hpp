@@ -95,6 +95,7 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
                            level1_n_id * NPerLevel0Cluster + level0_n_id * NPerThreadSubC};
     }
 
+#if 0
     __device__ static MatrixIndex GetDistanceFromBeginOfThreadMatrixC(index_t m_in_c,
                                                                       index_t n_in_c)
     {
@@ -114,6 +115,7 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
         return MatrixIndex{m_repeat * MPerLevel1Cluster + m_in_sub_c,
                            n_repeat * NPerLevel1Cluster + n_in_sub_c};
     }
+#endif
 
     template <typename FloatA, typename FloatB, typename FloatC>
     __device__ void
@@ -336,9 +338,14 @@ struct BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2
         constexpr index_t MRepeat = MPerThread / MPerThreadSubC;
         constexpr index_t NRepeat = NPerThread / NPerThreadSubC;
 
-        static_if<MRepeat == 2 && NRepeat == 2>{}(
-            [&](auto) { Run_pipelined_2x2(p_a_block, p_b_block, p_c_thread); })
-            .Else([&](auto) { Run_naive(p_a_block, p_b_block, p_c_thread); });
+        if constexpr(MRepeat == 2 && NRepeat == 2)
+        {
+            Run_pipelined_2x2(p_a_block, p_b_block, p_c_thread);
+        }
+        else
+        {
+            Run_naive(p_a_block, p_b_block, p_c_thread);
+        }
 #else
         Run_naive(p_a_block, p_b_block, p_c_thread);
 #endif
