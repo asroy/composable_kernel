@@ -178,7 +178,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
                 dst_vector(i) = p_src[Number<src_offset>{}];
             });
 
-#if 1
             amd_buffer_store_v2<DstData, DstScalarPerVector>(
                 dst_vector.Vector(),
                 p_dst,
@@ -186,17 +185,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
                 coordinate_has_valid_offset_assuming_visible_index_is_valid(
                     dst_desc, dst_slice_origin_coord_),
                 dst_desc.GetElementSpaceSize());
-#else
-            static_for<0, DstScalarPerVector, 1>{}([&](auto i) {
-                amd_buffer_store_v2<DstData, 1>(
-                    dst_vector[i],
-                    p_dst,
-                    dst_slice_origin_coord_.GetOffset() + i.value,
-                    coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                        dst_desc, dst_slice_origin_coord_),
-                    dst_desc.GetElementSpaceSize());
-            });
-#endif
 
             constexpr auto move_on_dim = [&]() constexpr
             {
@@ -480,16 +468,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
 
             if constexpr(SrcAddressSpace == AddressSpace::Global)
             {
-                src_vector.Vector() = amd_buffer_load<SrcData, SrcScalarPerVector>(
-                    p_src,
-                    src_slice_origin_coord_.GetOffset(),
-                    true,
-                    src_desc.GetElementSpaceSize());
-
                 const bool is_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
                     src_desc, src_slice_origin_coord_);
 
-                src_vector.Vector() = is_valid ? src_vector.Vector() : src_vector_t{0};
+                src_vector.Vector() = amd_buffer_load_v2<SrcData, SrcScalarPerVector>(
+                    p_src,
+                    src_slice_origin_coord_.GetOffset(),
+                    is_valid,
+                    src_desc.GetElementSpaceSize());
             }
             else
             {
@@ -816,30 +802,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
             using src_vector_t = typename vector_type<SrcData, SrcScalarPerVector>::MemoryType;
 
-#if 1
-            src_vector.Vector() = amd_buffer_load<SrcData, SrcScalarPerVector>(
-                p_src, src_slice_origin_coord_.GetOffset(), true, src_desc.GetElementSpaceSize());
-
-            const bool is_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                src_desc, src_slice_origin_coord_);
-
-            src_vector.Vector() = is_valid ? src_vector.Vector() : src_vector_t{0};
-
-            static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
-                constexpr index_t buffer_offset =
-                    buffer_desc_.CalculateOffset(src_data_idx + i * src_scalar_step_in_vector);
-
-                buffer_(Number<buffer_offset>{}) = src_vector[i];
-            });
-#else
             const bool is_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
                 src_desc, src_slice_origin_coord_);
 
             src_vector.Vector() =
-                amd_buffer_load<SrcData, SrcScalarPerVector>(p_src,
-                                                             src_slice_origin_coord_.GetOffset(),
-                                                             is_valid,
-                                                             src_desc.GetElementSpaceSize());
+                amd_buffer_load_v2<SrcData, SrcScalarPerVector>(p_src,
+                                                                src_slice_origin_coord_.GetOffset(),
+                                                                is_valid,
+                                                                src_desc.GetElementSpaceSize());
 
             static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
                 constexpr index_t buffer_offset =
@@ -847,7 +817,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
                 buffer_(Number<buffer_offset>{}) = src_vector[i];
             });
-#endif
 
             constexpr auto move_on_dim = [&]() constexpr
             {
