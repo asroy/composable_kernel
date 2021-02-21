@@ -114,8 +114,8 @@ __host__ __device__ constexpr T min(T x, Ts... xs)
 }
 
 // greatest common divisor, aka highest common factor
-template <typename X, typename Y>
-__host__ __device__ constexpr auto gcd(X x, Y y)
+template <typename T>
+__host__ __device__ constexpr T gcd(T x, T y)
 {
     if(x == y || x == 0)
     {
@@ -133,6 +133,14 @@ __host__ __device__ constexpr auto gcd(X x, Y y)
     {
         return gcd(x, y - x);
     }
+}
+
+template<index_t X, index_t Y>
+__host__ __device__ constexpr auto gcd(Number<X>, Number<Y>)
+{
+    constexpr auto r = gcd(X, Y);
+
+    return Number<r>{};
 }
 
 template <typename X, typename... Ys>

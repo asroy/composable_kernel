@@ -130,12 +130,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
         constexpr auto a_k_m_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_multi_index(KPerBlock, MPerBlock), max_lds_align);
+            make_tuple(Number<KPerBlock>{}, Number<MPerBlock>{}), Number<max_lds_align>{});
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
         constexpr auto b_k_n_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_multi_index(KPerBlock, NPerBlock), max_lds_align);
+            make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}), Number<max_lds_align>{});
 
         // A matrix blockwise copy
         auto a_blockwise_copy =
@@ -201,6 +201,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         //     b_mtx[KPerBlocl, NPerBlock] is in LDS
         //     c_mtx[MPerBlock, NPerBlock] is distributed among threads, and saved in
         //       register
+#if 0
         constexpr index_t a_k_m_block_mtx_stride =
             a_k_m_block_desc.CalculateOffset(make_multi_index(1, 0)) -
             a_k_m_block_desc.CalculateOffset(make_multi_index(0, 0));
@@ -212,6 +213,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
             Number<KPerBlock>{}, Number<MPerBlock>{}, Number<a_k_m_block_mtx_stride>{});
         constexpr auto b_k_n_block_mtx_desc = make_ConstantMatrixDescriptor(
             Number<KPerBlock>{}, Number<NPerBlock>{}, Number<b_k_n_block_mtx_stride>{});
+#endif
 
         // sanity check
         static_assert(MPerBlock % (MPerThread * MLevel0Cluster * MLevel1Cluster) == 0 &&
@@ -223,23 +225,28 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
 
         // c_thread_mtx definition: this is a mess
         // TODO:: more elegent way of defining c_thread_mtx
+#if 0
         constexpr auto c_m0m1_n0n1_thread_mtx_desc = make_ConstantMatrixDescriptor_packed(
             Number<MRepeat * MPerThread>{}, Number<NRepeat * NPerThread>{});
+#else
+        constexpr auto c_m0m1_n0n1_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<MRepeat * MPerThread>{}, Number<NRepeat * NPerThread>{}));
+#endif
 
-        const auto blockwise_gemm = BlockwiseGemmBlockABlockBThreadCTransANormalBNormalC_v2<
-            BlockSize,
-            decltype(a_k_m_block_mtx_desc),
-            decltype(b_k_n_block_mtx_desc),
-            decltype(c_m0m1_n0n1_thread_mtx_desc),
-            MPerThread,
-            NPerThread,
-            KPerThread,
-            MLevel0Cluster,
-            NLevel0Cluster,
-            MLevel1Cluster,
-            NLevel1Cluster,
-            MPerThread,
-            NPerThread>{};
+        const auto blockwise_gemm =
+            BlockwiseGemm_km_kn_m0m1n0n1_v1<BlockSize,
+                                            decltype(a_k_m_block_desc),
+                                            decltype(b_k_n_block_desc),
+                                            decltype(c_m0m1_n0n1_thread_desc),
+                                            MPerThread,
+                                            NPerThread,
+                                            KPerThread,
+                                            MLevel0Cluster,
+                                            NLevel0Cluster,
+                                            MLevel1Cluster,
+                                            NLevel1Cluster,
+                                            MPerThread,
+                                            NPerThread>{};
 
         // LDS allocation for A and B: be careful of alignment
         constexpr index_t a_block_space_size =
@@ -252,10 +259,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         Float* p_b_block_double = p_shared_block + 2 * a_block_space_size;
 
         // register allocation for output
-        AccFloat p_c_thread[c_m0m1_n0n1_thread_mtx_desc.GetElementSpace()];
+        AccFloat p_c_thread[c_m0m1_n0n1_thread_desc.GetElementSpaceSize()];
 
         // zero out threadwise output
-        threadwise_matrix_set_zero(c_m0m1_n0n1_thread_mtx_desc, p_c_thread);
+        threadwise_matrix_set_zero(c_m0m1_n0n1_thread_desc, p_c_thread);
 
         constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0);
         constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0);
@@ -422,7 +429,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                 AddressSpace::Global,
                 CGlobalMemoryDataOperation,
                 1,
-                true,
                 true>(c_m0_m1_n0_n1_global_desc,
                       make_multi_index(m_thread_data_on_global / M1,
                                        m_thread_data_on_global % M1,
