@@ -11,9 +11,6 @@
 #define CK_HIP_VERSION_FLAT 0
 #endif
 
-// index type: unsigned or signed
-#define CK_UNSIGNED_INDEX_TYPE 0
-
 // multi index
 #define CK_USE_DYNAMICALLY_INDEXED_MULTI_INDEX 0
 
@@ -117,11 +114,7 @@ enum InMemoryDataOperation
     AtomicAdd
 };
 
-#if CK_UNSIGNED_INDEX_TYPE
-using index_t = uint32_t;
-#else
 using index_t = int32_t;
-#endif
 
 typedef int32_t int32x2_t __attribute__((ext_vector_type(2)));
 

@@ -2,19 +2,9 @@
 #define CK_AMD_BUFFER_ADDRESSING_HPP
 
 #include "float_type.hpp"
+#include "amd_buffer_addressing_v2.hpp"
 
 namespace ck {
-
-// For 128 bit SGPRs to supply resource constant in buffer instructions
-// https://rocm-documentation.readthedocs.io/en/latest/GCN_ISA_Manuals/testdocbook.html#vector-memory-buffer-instructions
-template <typename T>
-union BufferResourceConstant
-{
-    int32x4_t data;
-    T* address[2];
-    int32_t range[4];
-    int32_t config[4];
-};
 
 __device__ float __llvm_amdgcn_buffer_load_f32(int32x4_t srsrc,
                                                index_t vindex,
