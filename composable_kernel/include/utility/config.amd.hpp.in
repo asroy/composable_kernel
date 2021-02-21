@@ -26,6 +26,10 @@
 #define CK_THREADWISE_GEMM_USE_AMD_INLINE_ASM 1
 #endif
 
+#ifndef CK_USE_AMD_V_FMAC_F32
+#define CK_USE_AMD_V_FMAC_F32 1
+#endif
+
 // AMD buffer addressing
 #ifndef CK_USE_AMD_BUFFER_ADDRESSING
 #define CK_USE_AMD_BUFFER_ADDRESSING 1
