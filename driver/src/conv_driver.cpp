@@ -20,6 +20,20 @@ int main(int argc, char* argv[])
     using namespace ck;
 
 #if 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 32;
+    constexpr index_t HI = 540;
+    constexpr index_t WI = 960;
+    constexpr index_t K  = 32;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<1, 1>;
+    using RightPads = Sequence<1, 1>;
+#elif 0
     // 3x3, 36x36, stride 2
     constexpr index_t N  = 128;
     constexpr index_t C  = 192;

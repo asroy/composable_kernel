@@ -401,12 +401,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1
         constexpr index_t NRepeat =
             N / (NPerThreadSubC * NLevel0ThreadCluster * NLevel1ThreadCluster);
 
-        static_assert(M == 128, "wrong!");
-        static_assert(MPerThreadSubC == 4, "wrong!");
-        static_assert(MRepeat == 2, "wrong!");
-        static_assert(NRepeat == 2, "wrong!");
-        static_assert(NPerThreadSubC == 4, "wrong!");
-
         return Sequence<MRepeat * MPerThreadSubC, NRepeat * NPerThreadSubC>{};
     }
 
