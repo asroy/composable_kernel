@@ -434,10 +434,10 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1
         constexpr auto b_block_mtx  = BlockMatrixB{};
         constexpr auto c_thread_mtx = ThreadMatrixC{};
 
-        constexpr index_t K = a_block_mtx[I0];
+        constexpr auto K = a_block_mtx.GetLength(I0);
 
-        constexpr index_t MPerThread = c_thread_mtx[I0];
-        constexpr index_t NPerThread = c_thread_mtx[I1];
+        constexpr auto MPerThread = c_thread_mtx.GetLength(I0);
+        constexpr auto NPerThread = c_thread_mtx.GetLength(I1);
 
         constexpr index_t MPerLevel1Cluster =
             MPerThreadSubC * MLevel0ThreadCluster * MLevel1ThreadCluster;
