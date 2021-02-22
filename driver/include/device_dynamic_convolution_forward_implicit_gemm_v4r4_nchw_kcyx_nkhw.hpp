@@ -3,19 +3,6 @@
 #include "host_tensor.hpp"
 #include "driver_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 
-template <typename T>
-__host__ __device__ constexpr auto sequence_to_tuple_of_number(const T& x)
-{
-    using namespace ck;
-
-    return generate_tuple(
-        [&](auto i) {
-            constexpr index_t tmp = T::At(i);
-            return Number<tmp>{};
-        },
-        T::Size());
-}
-
 template <class T,
           class InDesc,
           class WeiDesc,
@@ -269,7 +256,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     constexpr auto conv_driver =
 #if 1
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
-#elif 0
+#elif 1
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
 #elif 1
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1

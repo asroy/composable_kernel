@@ -74,6 +74,11 @@ struct DynamicPassThrough
         return true;
     }
 
+    __host__ __device__ static constexpr bool IsKnownAtCompileTime()
+    {
+        return is_known_at_compile_time<UpLengths>::value;
+    }
+
     __host__ __device__ void Print() const
     {
         printf("{");
@@ -160,6 +165,13 @@ struct DynamicPad
                                     (idx_up[Number<0>{}] < up_lengths_[Number<0>{}] - right_pad_));
     }
 
+    __host__ __device__ static constexpr bool IsKnownAtCompileTime()
+    {
+        return is_known_at_compile_time<UpLengths>::value &&
+               is_known_at_compile_time<LeftPad>::value &&
+               is_known_at_compile_time<RightPad>::value;
+    }
+
     __host__ __device__ void Print() const
     {
         printf("{");
@@ -241,6 +253,12 @@ struct DynamicLeftPad
     IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& idx_up) const
     {
         return SkipIsValidCheck || (idx_up[Number<0>{}] >= left_pad_);
+    }
+
+    __host__ __device__ static constexpr bool IsKnownAtCompileTime()
+    {
+        return is_known_at_compile_time<UpLengths>::value &&
+               is_known_at_compile_time<LeftPad>::value;
     }
 
     __host__ __device__ void Print() const
@@ -326,6 +344,13 @@ struct DynamicRightPad
     IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& idx_up) const
     {
         return SkipIsValidCheck || (idx_up[Number<0>{}] < low_length_);
+    }
+
+    __host__ __device__ static constexpr bool IsKnownAtCompileTime()
+    {
+        return is_known_at_compile_time<UpLengths>::value &&
+               is_known_at_compile_time<LowLength>::value &&
+               is_known_at_compile_time<RightPad>::value;
     }
 
     __host__ __device__ void Print() const
@@ -422,6 +447,12 @@ struct DynamicEmbed
     IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& /* idx_up */)
     {
         return true;
+    }
+
+    __host__ __device__ static constexpr bool IsKnownAtCompileTime()
+    {
+        return is_known_at_compile_time<UpLengths>::value &&
+               is_known_at_compile_time<Coefficients>::value;
     }
 
     __host__ __device__ void Print() const
@@ -930,6 +961,13 @@ struct DynamicMerge
         return true;
     }
 
+    __host__ __device__ static constexpr bool IsKnownAtCompileTime()
+    {
+        return is_known_at_compile_time<LowLengths>::value &&
+               is_known_at_compile_time<LowLengthsScan>::value &&
+               is_known_at_compile_time<UpLengths>::value;
+    }
+
     template <typename UpIdx>
     __host__ __device__ static constexpr bool
     IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& /* idx_up */)
@@ -1033,6 +1071,12 @@ struct DynamicUnMerge
         return true;
     }
 
+    __host__ __device__ static constexpr bool IsKnownAtCompileTime()
+    {
+        return is_known_at_compile_time<UpLengths>::value &&
+               is_known_at_compile_time<UpLengthsScan>::value;
+    }
+
     __host__ __device__ void Print() const
     {
         printf("{");
@@ -1095,6 +1139,11 @@ struct DynamicFreeze
     IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& /* idx_up */)
     {
         return true;
+    }
+
+    __host__ __device__ static constexpr bool IsKnownAtCompileTime()
+    {
+        return is_known_at_compile_time<LowerIndex>::value;
     }
 
     __host__ __device__ void Print() const

@@ -2,13 +2,12 @@
 #define CK_GRIDWISE_DYNAMIC_GEMM_HPP
 
 #include "common_header.hpp"
+#include "dynamic_multi_index_transform_helper.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
-#include "tensor_descriptor_helper.hpp"
 #include "blockwise_dynamic_tensor_slice_transfer.hpp"
 #include "threadwise_dynamic_tensor_slice_transfer.hpp"
-#include "ConstantMatrixDescriptor.hpp"
-#include "blockwise_gemm.hpp"
+#include "blockwise_gemm_v2.hpp"
 
 namespace ck {
 
@@ -396,6 +395,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
 
             // hack to control index calculation when iterating over c_m0_m1_n0_n1_global tensor
             constexpr auto c_m0_m1_n0_n1_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
+
+            constexpr auto tmp = make_unmerge_transform(make_tuple(
+                Number<MRepeat>{}, Number<MPerThread>{}, Number<NRepeat>{}, Number<NPerThread>{}));
 
             ThreadwiseDynamicTensorSliceTransfer_v1r3<
                 AccFloat,

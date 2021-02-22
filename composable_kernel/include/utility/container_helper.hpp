@@ -279,5 +279,18 @@ set_container_subset(Tuple<Ys...>& y, Sequence<Is...> picks, const Tuple<Xs...>&
     static_for<0, sizeof...(Is), 1>{}([&](auto i) { y(picks[i]) = x[i]; });
 }
 
+template <index_t... Is>
+__host__ __device__ constexpr auto sequence_to_tuple_of_number(Sequence<Is...>)
+{
+    using Seq = Sequence<Is...>;
+
+    return generate_tuple(
+        [&](auto i) {
+            constexpr index_t tmp = Seq::At(i);
+            return Number<tmp>{};
+        },
+        Seq::Size());
+}
+
 } // namespace ck
 #endif

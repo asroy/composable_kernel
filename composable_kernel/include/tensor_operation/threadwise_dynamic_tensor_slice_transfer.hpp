@@ -44,7 +44,8 @@ template <typename SrcData,
           AddressSpace DstAddressSpace,
           InMemoryDataOperation DstInMemOp,
           index_t DstScalarStrideInVector,
-          bool DstResetCoordinateAfterRun>
+          bool DstResetCoordinateAfterRun,
+          typename std::enable_if<SrcDesc::IsKnownAtCompileTime(), bool>::type = false>
 struct ThreadwiseDynamicTensorSliceTransfer_v1r3
 {
     static constexpr index_t nDim = SliceLengths::Size();
@@ -59,6 +60,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
         const DstDesc& dst_desc, const Index& dst_slice_origin_idx)
         : dst_slice_origin_coord_(make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_idx))
     {
+        static_assert(SrcDesc::IsKnownAtCompileTime(),
+                      "wrong! SrcDesc need to known at compile-time");
     }
 
     __device__ void SetDstSliceOrigin(const DstDesc& dst_desc, const Index& dst_slice_origin_idx)
@@ -342,7 +345,8 @@ template <typename SrcData,
           AddressSpace SrcAddressSpace,
           AddressSpace DstAddressSpace,
           index_t SrcScalarStrideInVector,
-          bool SrcResetCoordinateAfterRun>
+          bool SrcResetCoordinateAfterRun,
+          typename std::enable_if<DstDesc::IsKnownAtCompileTime(), bool>::type = false>
 struct ThreadwiseDynamicTensorSliceTransfer_v2
 {
     static constexpr index_t nDim = SliceLengths::Size();
@@ -357,6 +361,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
                                                                  const Index& src_slice_origin_idx)
         : src_slice_origin_coord_(make_dynamic_tensor_coordinate(src_desc, src_slice_origin_idx))
     {
+        static_assert(DstDesc::IsKnownAtCompileTime(),
+                      "wrong! SrcDesc need to known at compile-time");
     }
 
     __device__ void SetDstSliceOrigin(const SrcDesc& src_desc, const Index& src_slice_origin_idx)
@@ -1233,9 +1239,9 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
     private:
     static constexpr auto buffer_desc_ =
-        make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(SliceLengths{}));
+        make_dynamic_naive_tensor_descriptor_packed_v2(sequence_to_tuple_of_number(SliceLengths{}));
 
-    static constexpr index_t buffer_size_ = buffer_desc_.GetElementSpaceSize();
+    static constexpr auto buffer_size_ = buffer_desc_.GetElementSpaceSize();
 
     StaticallyIndexedArray<SrcData, buffer_size_> buffer_;
 
