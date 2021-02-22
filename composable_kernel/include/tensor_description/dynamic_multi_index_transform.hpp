@@ -6,7 +6,7 @@
 
 namespace ck {
 
-template <typename LowLength = index_t>
+template <typename LowLength>
 struct DynamicPassThrough
 {
     using LowerIndex = MultiIndex<1>;
@@ -84,10 +84,7 @@ struct DynamicPassThrough
     }
 };
 
-template <bool SkipIsValidCheck = false,
-          typename LowLength    = index_t,
-          typename LeftPad      = index_t,
-          typename RightPad     = index_t>
+template <typename LowLength, typename LeftPad, typename RightPad, bool SkipIsValidCheck = false>
 struct DynamicPad
 {
     using LowerIndex = MultiIndex<1>;
@@ -175,7 +172,7 @@ struct DynamicPad
     }
 };
 
-template <bool SkipIsValidCheck = false, typename LowLength = index_t, typename LeftPad = index_t>
+template <typename LowLength, typename LeftPad, bool SkipIsValidCheck = false>
 struct DynamicLeftPad
 {
     using LowerIndex = MultiIndex<1>;
@@ -257,7 +254,7 @@ struct DynamicLeftPad
     }
 };
 
-template <bool SkipIsValidCheck = false, typename LowLength = index_t, typename RightPad = index_t>
+template <typename LowLength, typename RightPad, bool SkipIsValidCheck = false>
 struct DynamicRightPad
 {
     using LowerIndex = MultiIndex<1>;
@@ -349,13 +346,13 @@ struct DynamicRightPad
 //   2) Tuple of Number, which is known at compile-time, or
 //   3) Tuple of mixture of index_t and Number, which is known partially at run-time and partially
 //   at compile-time
-template <index_t NDimUp,
-          typename UpLengths                  = MultiIndex<NDimUp>,
-          typename Coefficients               = MultiIndex<NDimUp>,
-          typename std::enable_if<UpLengths::Size() == NDimUp && Coefficients::Size() == NDimUp,
-                                  bool>::type = false>
+template <typename UpLengths,
+          typename Coefficients,
+          typename std::enable_if<UpLengths::Size() == Coefficients::Size(), bool>::type = false>
 struct DynamicEmbed
 {
+    static constexpr index_t NDimUp = UpLengths::Size();
+
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<NDimUp>;
 
@@ -439,9 +436,11 @@ struct DynamicEmbed
     }
 };
 
-template <index_t NDimLow, typename LowLengths = MultiIndex<NDimLow>>
+template <typename LowLengths>
 struct DynamicMerge
 {
+    static constexpr index_t NDimLow = LowLengths::Size();
+
     using LowerIndex = MultiIndex<NDimLow>;
     using UpperIndex = MultiIndex<1>;
 
@@ -952,12 +951,11 @@ struct DynamicMerge
     }
 };
 
-template <index_t NDimUp,
-          bool Use24BitIntegerCalculation                                  = false,
-          typename UpLengths                                               = MultiIndex<NDimUp>,
-          typename std::enable_if<UpLengths::Size() == NDimUp, bool>::type = false>
+template <typename UpLengths, bool Use24BitIntegerCalculation>
 struct DynamicUnMerge
 {
+    static constexpr index_t NDimUp = UpLengths::Size();
+
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<NDimUp>;
 
@@ -1046,7 +1044,7 @@ struct DynamicUnMerge
     }
 };
 
-template <typename LowerIndex = index_t>
+template <typename LowerIndex>
 struct DynamicFreeze
 {
     LowerIndex low_idx_;

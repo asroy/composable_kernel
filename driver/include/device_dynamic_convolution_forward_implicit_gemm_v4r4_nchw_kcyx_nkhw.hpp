@@ -49,7 +49,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     wei_kcyx_device_buf.ToDevice(wei_kcyx.mData.data());
     out_nkhw_device_buf.ToDevice(out_nkhw.mData.data());
 
-#if 1
+#if 0
+    // run-time variables
     const auto in_n_c_hi_wi_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(InDesc::GetLengths()));
     const auto wei_k_c_y_x_desc =
@@ -62,6 +63,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     const auto in_left_pads   = to_multi_index(InLeftPads{});
     const auto in_right_pads  = to_multi_index(InRightPads{});
 #else
+    // compile-time variables
     const auto in_n_c_hi_wi_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
         sequence_to_tuple_of_number(InDesc::GetLengths()));
     const auto wei_k_c_y_x_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
@@ -234,7 +236,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     constexpr auto conv_driver =
 #if 1
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
-#elif 1
+#elif 0
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
 #elif 1
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1

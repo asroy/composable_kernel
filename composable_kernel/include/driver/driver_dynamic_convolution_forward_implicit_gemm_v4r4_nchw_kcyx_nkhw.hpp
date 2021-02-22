@@ -86,46 +86,43 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
 
         // weight tensor
         const auto wei_gemmk_gemmm_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(K, C * Y * X)),
-            make_tuple(DynamicPassThrough{K}, DynamicPassThrough{C * Y * X}),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, C * Y * X)),
+            make_tuple(make_pass_through_transform(K), make_pass_through_transform(C * Y * X)),
             make_tuple(Sequence<0>{}, Sequence<1>{}),
             make_tuple(Sequence<1>{}, Sequence<0>{}));
 
         // input tensor
         const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor(
             in_n_c_hi_wi_global_desc,
-            make_tuple(DynamicPassThrough{N},
-                       DynamicPassThrough{C},
-                       DynamicPad{Hi, InLeftPadH, InRightPadH},
-                       DynamicPad{Wi, InLeftPadW, InRightPadW}),
+            make_tuple(make_pass_through_transform(N),
+                       make_pass_through_transform(C),
+                       make_pad_transform(Hi, InLeftPadH, InRightPadH),
+                       make_pad_transform(Wi, InLeftPadW, InRightPadW)),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 
-        const auto Hip = in_n_c_hip_wip_global_desc.GetLength(I2);
-        const auto Wip = in_n_c_hip_wip_global_desc.GetLength(I3);
-
         const auto in_n_c_y_ho_x_wo_global_desc = transform_dynamic_tensor_descriptor(
             in_n_c_hip_wip_global_desc,
-            make_tuple(DynamicPassThrough{N},
-                       DynamicPassThrough{C},
-                       DynamicEmbed<2>{make_multi_index(Y, Ho),
-                                       make_multi_index(ConvDilationH, ConvStrideH)},
-                       DynamicEmbed<2>{make_multi_index(X, Wo),
-                                       make_multi_index(ConvDilationW, ConvStrideW)}),
+            make_tuple(
+                make_pass_through_transform(N),
+                make_pass_through_transform(C),
+                make_embed_transform(make_tuple(Y, Ho), make_tuple(ConvDilationH, ConvStrideH)),
+                make_embed_transform(make_tuple(X, Wo), make_tuple(ConvDilationW, ConvStrideW))),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 
         const auto in_gemmk_gemmn_global_desc = transform_dynamic_tensor_descriptor(
             in_n_c_y_ho_x_wo_global_desc,
-            make_tuple(DynamicMerge<3>{make_multi_index(C, Y, X)},
-                       DynamicMerge<3>{make_multi_index(N, Ho, Wo)}),
+            make_tuple(make_merge_transform(make_tuple(C, Y, X)),
+                       make_merge_transform(make_tuple(N, Ho, Wo))),
             make_tuple(Sequence<1, 2, 4>{}, Sequence<0, 3, 5>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
         // output tensor
         const auto out_gemmm_gemmn_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(N, K, Ho * Wo)),
-            make_tuple(DynamicPassThrough{K}, DynamicMerge<2>{make_multi_index(N, Ho * Wo)}),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K, Ho * Wo)),
+            make_tuple(make_pass_through_transform(K),
+                       make_merge_transform(make_tuple(N, Ho * Wo))),
             make_tuple(Sequence<1>{}, Sequence<0, 2>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
@@ -139,21 +136,17 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
             throw std::runtime_error("wrong! GEMM size no divisible");
         }
 
-        constexpr auto GemmM1 = GemmMPerThread * GemmMLevel0Cluster * GemmMLevel1Cluster;
-        constexpr auto GemmN1 = GemmNPerThread * GemmNLevel0Cluster * GemmNLevel1Cluster;
+        constexpr auto GemmM1 = Number<GemmMPerThread * GemmMLevel0Cluster * GemmMLevel1Cluster>{};
+        constexpr auto GemmN1 = Number<GemmNPerThread * GemmNLevel0Cluster * GemmNLevel1Cluster>{};
 
         const auto GemmM0 = GemmM / GemmM1;
         const auto GemmN0 = GemmN / GemmN1;
 
-        const auto GemmM0_GemmM1 = make_tuple(GemmM0, Number<GemmM1>{});
-        const auto GemmN0_GemmN1 = make_tuple(GemmN0, Number<GemmN1>{});
-
         const auto out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc =
             transform_dynamic_tensor_descriptor(
                 out_gemmm_gemmn_global_desc,
-                make_tuple(
-                    DynamicUnMerge<2, false, remove_cv_t<decltype(GemmM0_GemmM1)>>{GemmM0_GemmM1},
-                    DynamicUnMerge<2, false, remove_cv_t<decltype(GemmN0_GemmN1)>>{GemmN0_GemmN1}),
+                make_tuple(make_unmerge_transform(make_tuple(GemmM0, GemmM1)),
+                           make_unmerge_transform(make_tuple(GemmN0, GemmN1))),
                 make_tuple(Sequence<0>{}, Sequence<1>{}),
                 make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
 
@@ -770,65 +763,41 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
 
         if(!(InLeftPadH == 0 && InLeftPadW == 0 && InRightPadH == 0 && InRightPadW == 0))
         {
-            throw std::runtime_error("wrong! 1x1, stride 1, no padding");
+            throw std::runtime_error("wrong! no padding");
         }
 
-            // weight tensor
-#if 0
-        // TODO implement graph optimization of tensor descriptor transformation
+        // weight tensor
         const auto wei_gemmk_gemmm_global_desc = transform_dynamic_tensor_descriptor(
-            wei_k_c_y_x_global_desc,
-            make_tuple(DynamicPassThrough{K}, DynamicMerge<3>{make_multi_index(C, Y, X)}),
-            make_tuple(Sequence<0>{}, Sequence<1, 2, 3>{}),
-            make_tuple(Sequence<1>{}, Sequence<0>{}));
-#else
-        const auto wei_gemmk_gemmm_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(K, C * Y * X)),
-            make_tuple(DynamicPassThrough{K}, DynamicPassThrough{C * Y * X}),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, C * Y * X)),
+            make_tuple(make_pass_through_transform(K), make_pass_through_transform(C * Y * X)),
             make_tuple(Sequence<0>{}, Sequence<1>{}),
             make_tuple(Sequence<1>{}, Sequence<0>{}));
-#endif
 
         // input tensor
-        // debug: don't do padding
-        const auto in_n_c_hip_wip_global_desc = in_n_c_hi_wi_global_desc;
-
-        const auto Hip = in_n_c_hip_wip_global_desc.GetLength(I2);
-        const auto Wip = in_n_c_hip_wip_global_desc.GetLength(I3);
-
         const auto in_n_c_y_ho_x_wo_global_desc = transform_dynamic_tensor_descriptor(
-            in_n_c_hip_wip_global_desc,
-            make_tuple(DynamicPassThrough{N},
-                       DynamicPassThrough{C},
-                       DynamicEmbed<2>{make_multi_index(Y, Ho),
-                                       make_multi_index(ConvDilationH, ConvStrideH)},
-                       DynamicEmbed<2>{make_multi_index(X, Wo),
-                                       make_multi_index(ConvDilationW, ConvStrideW)}),
+            in_n_c_hi_wi_global_desc,
+            make_tuple(
+                make_pass_through_transform(N),
+                make_pass_through_transform(C),
+                make_embed_transform(make_tuple(Y, Ho), make_tuple(ConvDilationH, ConvStrideH)),
+                make_embed_transform(make_tuple(X, Wo), make_tuple(ConvDilationW, ConvStrideW))),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 
         const auto in_gemmk_gemmn_global_desc = transform_dynamic_tensor_descriptor(
             in_n_c_y_ho_x_wo_global_desc,
-            make_tuple(DynamicMerge<3>{make_multi_index(C, Y, X)},
-                       DynamicMerge<3>{make_multi_index(N, Ho, Wo)}),
+            make_tuple(make_merge_transform(make_tuple(C, Y, X)),
+                       make_merge_transform(make_tuple(N, Ho, Wo))),
             make_tuple(Sequence<1, 2, 4>{}, Sequence<0, 3, 5>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
         // output tensor
-#if 0
-        //TODO: implement graph optimization of tensor descriptor transformation
-        const auto out_gemmm_gemmn_global_desc =
-            transform_dynamic_tensor_descriptor(out_n_k_ho_wo_global_desc,
-                                        make_tuple(DynamicPassThrough{K}, DynamicMerge<3>{make_mult_index(N, Ho, Wo)}),
-                                        make_tuple(Sequence<1>{}, Sequence<0, 2, 3>{}),
-                                        make_tuple(Sequence<0>{}, Sequence<1>{}));
-#else
         const auto out_gemmm_gemmn_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(N, K, Ho * Wo)),
-            make_tuple(DynamicPassThrough{K}, DynamicMerge<2>{make_multi_index(N, Ho * Wo)}),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K, Ho * Wo)),
+            make_tuple(make_pass_through_transform(K),
+                       make_merge_transform(make_tuple(N, Ho * Wo))),
             make_tuple(Sequence<1>{}, Sequence<0, 2>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
-#endif
 
         const auto GemmM = out_gemmm_gemmn_global_desc.GetLength(I0);
         const auto GemmN = out_gemmm_gemmn_global_desc.GetLength(I1);
@@ -840,8 +809,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
             throw std::runtime_error("wrong! GEMM size no divisible");
         }
 
-        constexpr auto GemmM1 = GemmMPerThread * GemmMLevel0Cluster * GemmMLevel1Cluster;
-        constexpr auto GemmN1 = GemmNPerThread * GemmNLevel0Cluster * GemmNLevel1Cluster;
+        constexpr auto GemmM1 = Number<GemmMPerThread * GemmMLevel0Cluster * GemmMLevel1Cluster>{};
+        constexpr auto GemmN1 = Number<GemmNPerThread * GemmNLevel0Cluster * GemmNLevel1Cluster>{};
 
         const auto GemmM0 = GemmM / GemmM1;
         const auto GemmN0 = GemmN / GemmN1;
@@ -849,8 +818,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
         const auto out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc =
             transform_dynamic_tensor_descriptor(
                 out_gemmm_gemmn_global_desc,
-                make_tuple(DynamicUnMerge<2>{make_multi_index(GemmM0, GemmM1)},
-                           DynamicUnMerge<2>{make_multi_index(GemmN0, GemmN1)}),
+                make_tuple(make_unmerge_transform(make_tuple(GemmM0, GemmM1)),
+                           make_unmerge_transform(make_tuple(GemmN0, GemmN1))),
                 make_tuple(Sequence<0>{}, Sequence<1>{}),
                 make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
 
@@ -1469,22 +1438,23 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1
 
         // weight tensor
         const auto wei_gemmk_gemmm_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(K, C)),
-            make_tuple(DynamicPassThrough{K}, DynamicPassThrough{C}),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, C)),
+            make_tuple(make_pass_through_transform(K), make_pass_through_transform(C)),
             make_tuple(Sequence<0>{}, Sequence<1>{}),
             make_tuple(Sequence<1>{}, Sequence<0>{}));
 
         // input tensor
         const auto in_gemmk_gemmn_global_desc = transform_dynamic_tensor_descriptor(
             in_n_c_hi_wi_global_desc,
-            make_tuple(DynamicPassThrough{C}, DynamicMerge<3>{make_multi_index(N, Ho, Wo)}),
+            make_tuple(make_pass_through_transform(C), make_merge_transform(make_tuple(N, Ho, Wo))),
             make_tuple(Sequence<1>{}, Sequence<0, 2, 3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
         // output tensor
         const auto out_gemmm_gemmn_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(N, K, Ho * Wo)),
-            make_tuple(DynamicPassThrough{K}, DynamicMerge<2>{make_multi_index(N, Ho * Wo)}),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K, Ho * Wo)),
+            make_tuple(make_pass_through_transform(K),
+                       make_merge_transform(make_tuple(N, Ho * Wo))),
             make_tuple(Sequence<1>{}, Sequence<0, 2>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
@@ -1498,8 +1468,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1
             throw std::runtime_error("wrong! GEMM size no divisible");
         }
 
-        constexpr auto GemmM1 = GemmMPerThread * GemmMLevel0Cluster * GemmMLevel1Cluster;
-        constexpr auto GemmN1 = GemmNPerThread * GemmNLevel0Cluster * GemmNLevel1Cluster;
+        constexpr auto GemmM1 = Number<GemmMPerThread * GemmMLevel0Cluster * GemmMLevel1Cluster>{};
+        constexpr auto GemmN1 = Number<GemmNPerThread * GemmNLevel0Cluster * GemmNLevel1Cluster>{};
 
         const auto GemmM0 = GemmM / GemmM1;
         const auto GemmN0 = GemmN / GemmN1;
@@ -1507,8 +1477,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1
         const auto out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc =
             transform_dynamic_tensor_descriptor(
                 out_gemmm_gemmn_global_desc,
-                make_tuple(DynamicUnMerge<2>{make_multi_index(GemmM0, GemmM1)},
-                           DynamicUnMerge<2>{make_multi_index(GemmN0, GemmN1)}),
+                make_tuple(make_unmerge_transform(make_tuple(GemmM0, GemmM1)),
+                           make_unmerge_transform(make_tuple(GemmN0, GemmN1))),
                 make_tuple(Sequence<0>{}, Sequence<1>{}),
                 make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
 

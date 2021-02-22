@@ -3,6 +3,7 @@
 
 #include "common_header.hpp"
 #include "dynamic_tensor_descriptor.hpp"
+#include "dynamic_multi_index_transform_helper.hpp"
 
 namespace ck {
 
@@ -23,8 +24,7 @@ make_dynamic_naive_tensor_descriptor_v2(const Tuple<Lengths...>& lengths,
 {
     constexpr index_t N = sizeof...(Lengths);
 
-    const auto transforms =
-        make_tuple(DynamicEmbed<N, Tuple<Lengths...>, Tuple<Strides...>>{lengths, strides});
+    const auto transforms = make_tuple(make_embed_transform(lengths, strides));
 
     constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
 
@@ -66,7 +66,7 @@ make_dynamic_naive_tensor_descriptor_packed_v2(const Tuple<Lengths...>& lengths)
 {
     constexpr index_t N = sizeof...(Lengths);
 
-    const auto transforms = make_tuple(DynamicUnMerge<N, false, Tuple<Lengths...>>{lengths});
+    const auto transforms = make_tuple(make_unmerge_transform(lengths));
 
     constexpr auto low_dim_hidden_idss = make_tuple(Sequence<0>{});
 
