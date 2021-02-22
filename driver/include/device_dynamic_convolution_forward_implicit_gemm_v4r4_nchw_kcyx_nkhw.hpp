@@ -3,6 +3,19 @@
 #include "host_tensor.hpp"
 #include "driver_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 
+template <typename T>
+__host__ __device__ constexpr auto sequence_to_tuple_of_number(const T& x)
+{
+    using namespace ck;
+
+    return generate_tuple(
+        [&](auto i) {
+            constexpr index_t tmp = T::At(i);
+            return Number<tmp>{};
+        },
+        T::Size());
+}
+
 template <class T,
           class InDesc,
           class WeiDesc,
@@ -27,11 +40,6 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
 
     using TDevice = typename conditional<is_same<half_float::half, T>::value, half_t, T>::type;
 
-    constexpr auto I0 = Number<0>{};
-    constexpr auto I1 = Number<1>{};
-    constexpr auto I2 = Number<2>{};
-    constexpr auto I3 = Number<3>{};
-
     std::size_t data_sz = sizeof(T);
     DeviceMem in_nchw_device_buf(data_sz * in_nchw.mDesc.GetElementSpace());
     DeviceMem wei_kcyx_device_buf(data_sz * wei_kcyx.mDesc.GetElementSpace());
@@ -41,7 +49,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     wei_kcyx_device_buf.ToDevice(wei_kcyx.mData.data());
     out_nkhw_device_buf.ToDevice(out_nkhw.mData.data());
 
-    // assume packed tensor
+#if 1
     const auto in_n_c_hi_wi_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(InDesc::GetLengths()));
     const auto wei_k_c_y_x_desc =
@@ -53,6 +61,19 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
     const auto conv_dilations = to_multi_index(ConvDilations{});
     const auto in_left_pads   = to_multi_index(InLeftPads{});
     const auto in_right_pads  = to_multi_index(InRightPads{});
+#else
+    const auto in_n_c_hi_wi_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+        sequence_to_tuple_of_number(InDesc::GetLengths()));
+    const auto wei_k_c_y_x_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+        sequence_to_tuple_of_number(WeiDesc::GetLengths()));
+    const auto out_n_k_ho_wo_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+        sequence_to_tuple_of_number(OutDesc::GetLengths()));
+
+    const auto conv_strides   = sequence_to_tuple_of_number(ConvStrides{});
+    const auto conv_dilations = sequence_to_tuple_of_number(ConvDilations{});
+    const auto in_left_pads   = sequence_to_tuple_of_number(InLeftPads{});
+    const auto in_right_pads  = sequence_to_tuple_of_number(InRightPads{});
+#endif
 
 #if 0
     // cdata = 64, BlockSize = 256, 128x128x2
@@ -209,28 +230,6 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 4;
 #endif
-
-    const index_t N  = out_n_k_ho_wo_desc.GetLength(I0);
-    const index_t K  = out_n_k_ho_wo_desc.GetLength(I1);
-    const index_t Ho = out_n_k_ho_wo_desc.GetLength(I2);
-    const index_t Wo = out_n_k_ho_wo_desc.GetLength(I3);
-
-    const index_t C = wei_k_c_y_x_desc.GetLength(I1);
-    const index_t Y = wei_k_c_y_x_desc.GetLength(I2);
-    const index_t X = wei_k_c_y_x_desc.GetLength(I3);
-
-    const index_t GemmM = K;
-    const index_t GemmN = N * Ho * Wo;
-    const index_t GemmK = C * Y * X;
-
-    if(!(GemmM % GemmMPerBlock == 0 && GemmN % GemmNPerBlock == 0 && GemmK % GemmKPerBlock == 0))
-    {
-        throw std::runtime_error("wrong! GEMM size no divisible");
-    }
-
-    const index_t GridSize = (GemmM / GemmMPerBlock) * (GemmN / GemmNPerBlock);
-
-    printf("%s: BlockSize %u, GridSize %u \n", __func__, BlockSize, GridSize);
 
     constexpr auto conv_driver =
 #if 1

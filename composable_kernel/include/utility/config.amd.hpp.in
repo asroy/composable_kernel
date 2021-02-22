@@ -118,6 +118,7 @@ enum InMemoryDataOperation
     AtomicAdd
 };
 
+// index type
 using index_t = int32_t;
 
 typedef int32_t int32x2_t __attribute__((ext_vector_type(2)));

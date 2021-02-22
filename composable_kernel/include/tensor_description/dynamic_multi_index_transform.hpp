@@ -6,17 +6,20 @@
 
 namespace ck {
 
+template <typename LowLength = index_t>
 struct DynamicPassThrough
 {
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<1>;
 
-    UpperIndex up_lengths_;
+    using UpLengths = decltype(make_tuple(LowLength{}));
+
+    UpLengths up_lengths_;
 
     __host__ __device__ constexpr DynamicPassThrough() = default;
 
-    __host__ __device__ constexpr DynamicPassThrough(const index_t& low_length)
-        : up_lengths_{make_multi_index(low_length)}
+    __host__ __device__ constexpr DynamicPassThrough(const LowLength& low_length)
+        : up_lengths_{make_tuple(low_length)}
     {
     }
 
@@ -75,27 +78,33 @@ struct DynamicPassThrough
     {
         printf("{");
         printf("DynamicPassThrough, ");
+        printf("up_lengths_");
         print_multi_index(up_lengths_);
         printf("}");
     }
 };
 
-template <bool SkipIsValidCheck = false>
+template <bool SkipIsValidCheck = false,
+          typename LowLength    = index_t,
+          typename LeftPad      = index_t,
+          typename RightPad     = index_t>
 struct DynamicPad
 {
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<1>;
 
-    UpperIndex up_lengths_;
-    index_t left_pad_;
-    index_t right_pad_;
+    using UpLengths = decltype(make_tuple(LowLength{} + LeftPad{} + RightPad{}));
+
+    UpLengths up_lengths_;
+    LeftPad left_pad_;
+    RightPad right_pad_;
 
     __host__ __device__ constexpr DynamicPad() = default;
 
-    __host__ __device__ constexpr DynamicPad(const index_t& low_length,
-                                             const index_t& left_pad,
-                                             const index_t& right_pad)
-        : up_lengths_{make_multi_index(low_length + left_pad + right_pad)},
+    __host__ __device__ constexpr DynamicPad(const LowLength& low_length,
+                                             const LeftPad& left_pad,
+                                             const RightPad& right_pad)
+        : up_lengths_{make_tuple(low_length + left_pad + right_pad)},
           left_pad_{left_pad},
           right_pad_{right_pad}
     {
@@ -158,27 +167,30 @@ struct DynamicPad
     {
         printf("{");
         printf("DynamicPad, ");
+        printf("up_lengths_");
         print_multi_index(up_lengths_);
-        printf("left_pad_ %d", left_pad_);
-        printf(", ");
-        printf("right_pad_ %d", right_pad_);
+        printf("left_pad_ %d", index_t{left_pad_});
+        printf("right_pad_ %d", index_t{right_pad_});
         printf("}");
     }
 };
 
-template <bool SkipIsValidCheck = false>
+template <bool SkipIsValidCheck = false, typename LowLength = index_t, typename LeftPad = index_t>
 struct DynamicLeftPad
 {
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<1>;
 
-    UpperIndex up_lengths_;
-    index_t left_pad_;
+    using UpLengths = decltype(make_tuple(LowLength{} + LeftPad{}));
+
+    UpLengths up_lengths_;
+    LeftPad left_pad_;
 
     __host__ __device__ constexpr DynamicLeftPad() = default;
 
-    __host__ __device__ constexpr DynamicLeftPad(const index_t& low_length, const index_t& left_pad)
-        : up_lengths_{make_multi_index(low_length + left_pad)}, left_pad_{left_pad}
+    __host__ __device__ constexpr DynamicLeftPad(const LowLength& low_length,
+                                                 const LeftPad& left_pad)
+        : up_lengths_{make_tuple(low_length + left_pad)}, left_pad_{left_pad}
     {
     }
 
@@ -238,27 +250,30 @@ struct DynamicLeftPad
     {
         printf("{");
         printf("DynamicLeftPad, ");
+        printf("up_lengths_");
         print_multi_index(up_lengths_);
-        printf("left_pad_ %d", left_pad_);
+        printf("left_pad_ %d", index_t{left_pad_});
         printf("}");
     }
 };
 
-template <bool SkipIsValidCheck = false>
+template <bool SkipIsValidCheck = false, typename LowLength = index_t, typename RightPad = index_t>
 struct DynamicRightPad
 {
     using LowerIndex = MultiIndex<1>;
     using UpperIndex = MultiIndex<1>;
 
-    UpperIndex up_lengths_;
-    index_t low_length_;
-    index_t right_pad_;
+    using UpLengths = decltype(make_tuple(LowLength{} + RightPad{}));
+
+    UpLengths up_lengths_;
+    LowLength low_length_;
+    RightPad right_pad_;
 
     __host__ __device__ constexpr DynamicRightPad() = default;
 
-    __host__ __device__ constexpr DynamicRightPad(const index_t& low_length,
-                                                  const index_t& right_pad)
-        : up_lengths_{make_multi_index(low_length + right_pad)},
+    __host__ __device__ constexpr DynamicRightPad(const LowLength& low_length,
+                                                  const RightPad& right_pad)
+        : up_lengths_{make_tuple(low_length + right_pad)},
           low_length_{low_length},
           right_pad_{right_pad}
     {
@@ -320,8 +335,10 @@ struct DynamicRightPad
     {
         printf("{");
         printf("DynamicRightPad, ");
+        printf("up_lengths_");
         print_multi_index(up_lengths_);
-        printf("left_pad_ %d", right_pad_);
+        printf("low_length_ %d", index_t{low_length_});
+        printf("left_pad_ %d", index_t{right_pad_});
         printf("}");
     }
 };
@@ -422,24 +439,29 @@ struct DynamicEmbed
     }
 };
 
-template <index_t NDimLow>
+template <index_t NDimLow, typename LowLengths = MultiIndex<NDimLow>>
 struct DynamicMerge
 {
     using LowerIndex = MultiIndex<NDimLow>;
     using UpperIndex = MultiIndex<1>;
 
-    LowerIndex low_lengths_;
-    LowerIndex low_lengths_scan_;
-    UpperIndex up_lengths_;
+    using LowLengthsScan = decltype(
+        container_reverse_exclusive_scan(LowLengths{}, math::multiplies_v2{}, Number<1>{}));
+
+    using UpLengths =
+        decltype(make_tuple(container_reduce(LowLengths{}, math::multiplies_v2{}, Number<1>{})));
+
+    LowLengths low_lengths_;
+    LowLengthsScan low_lengths_scan_;
+    UpLengths up_lengths_;
 
     __host__ __device__ constexpr DynamicMerge() = default;
 
-    __host__ __device__ constexpr DynamicMerge(const LowerIndex& low_lengths)
+    __host__ __device__ constexpr DynamicMerge(const LowLengths& low_lengths)
         : low_lengths_{low_lengths},
-          low_lengths_scan_{container_reverse_exclusive_scan(
-              low_lengths, math::multiplies<index_t>{}, index_t{1})},
-          up_lengths_{make_multi_index(
-              container_reduce(low_lengths, math::multiplies<index_t>(), index_t{1}))}
+          low_lengths_scan_{
+              container_reverse_exclusive_scan(low_lengths, math::multiplies_v2{}, Number<1>{})},
+          up_lengths_{make_tuple(container_reduce(low_lengths, math::multiplies_v2{}, Number<1>{}))}
     {
         static_assert(LowerIndex::Size() == NDimLow, "wrong!");
     }
@@ -1017,31 +1039,27 @@ struct DynamicUnMerge
     {
         printf("{");
         printf("DynamicUnMerge, ");
+        printf("up_lengths_");
         print_multi_index(up_lengths_);
         print_multi_index(up_lengths_scan_);
         printf("}");
     }
 };
 
+template <typename LowerIndex = index_t>
 struct DynamicFreeze
 {
-    using LowerIndex = MultiIndex<1>;
-    using UpperIndex = MultiIndex<0>;
-
     LowerIndex low_idx_;
 
     __host__ __device__ constexpr DynamicFreeze() = default;
 
-    __host__ __device__ constexpr DynamicFreeze(const index_t& low_idx)
-        : low_idx_{make_multi_index(low_idx)}
-    {
-    }
+    __host__ __device__ constexpr DynamicFreeze(const LowerIndex& low_idx) : low_idx_{low_idx} {}
 
     __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return 1; }
 
     __host__ __device__ static constexpr index_t GetNumOfUpperDimension() { return 0; }
 
-    __host__ __device__ static constexpr auto GetUpperLengths() { return UpperIndex{}; }
+    __host__ __device__ static constexpr auto GetUpperLengths() { return Tuple<>{}; }
 
     template <typename LowIdx, typename UpIdx>
     __host__ __device__ constexpr void CalculateLowerIndex(LowIdx& idx_low,
@@ -1081,7 +1099,11 @@ struct DynamicFreeze
         return true;
     }
 
-    __host__ __device__ void Print() const { printf("DynamicFreeze"); }
+    __host__ __device__ void Print() const
+    {
+        printf("DynamicFreeze");
+        printf("low_idx_ %d", index_t{low_idx_});
+    }
 };
 
 } // namespace ck
