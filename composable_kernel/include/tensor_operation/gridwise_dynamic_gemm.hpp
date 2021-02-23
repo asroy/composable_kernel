@@ -417,7 +417,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                                        m_thread_data_on_global % M1,
                                        n_thread_data_on_global / N1,
                                        n_thread_data_on_global % N1))
-                .Run(p_c_thread,
+                .Run(c_m0_m1_n0_n1_thread_desc,
+                     make_tuple(I0, I0, I0, I0),
+                     p_c_thread,
                      c_m0_m1_n0_n1_global_desc,
                      p_c_global,
                      c_m0_m1_n0_n1_global_tensor_iterator_hacks);
