@@ -23,6 +23,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc
                                                                           InRightPads,
                                                                           ck::index_t nrepeat)
 {
+    std::cout << "device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw"
+              << std::endl;
+
     using namespace ck;
 
     using TDevice = typename conditional<is_same<half_float::half, T>::value, half_t, T>::type;

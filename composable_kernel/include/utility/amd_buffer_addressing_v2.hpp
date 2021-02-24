@@ -169,6 +169,51 @@ __device__ float4_t amd_buffer_load_v2<float, 4>(const float* p_src_wave,
 }
 
 template <>
+__device__ float8_t amd_buffer_load_v2<float, 8>(const float* p_src_wave,
+                                                 index_t src_thread_data_offset,
+                                                 bool src_thread_data_valid,
+                                                 index_t src_data_range)
+{
+    BufferResourceConstant<float> src_wave_buffer_resource;
+
+    // wavewise base address (64 bit)
+    src_wave_buffer_resource.address[0] = const_cast<float*>(p_src_wave);
+    // wavewise range (32 bit)
+    src_wave_buffer_resource.range[2] = src_data_range * sizeof(float);
+    // wavewise setting (32 bit)
+    src_wave_buffer_resource.config[3] = 0x00027000;
+
+    index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
+
+#if CK_EXPERIMENTAL_USE_BUFFER_LOAD_OOB_CHECK_OFFSET_TRICK
+    uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
+
+    vector_type<float, 8> vector;
+
+    vector.Set(Number<4>{}, Number<0>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
+        src_wave_buffer_resource.data, src_addr_shift + src_thread_addr_offset, 0, 0);
+
+    vector.Set(Number<4>{}, Number<1>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
+        src_wave_buffer_resource.data,
+        src_addr_shift + src_thread_addr_offset + 4 * sizeof(float),
+        0,
+        0);
+
+    return vector.Get(Number<8>{}, Number<0>{});
+#else
+    vector_type<float, 8> vector;
+
+    vector.Set(Number<4>{}, Number<0>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
+        src_wave_buffer_resource.data, src_thread_addr_offset, 0, 0);
+
+    vector.Set(Number<4>{}, Number<1>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
+        src_wave_buffer_resource.data, src_thread_addr_offset + 4 * sizeof(float), 0, 0);
+
+    return src_thread_data_valid ? vector.Get(Number<8>{}, Number<0>{}) : float8_t(0);
+#endif
+}
+
+template <>
 __device__ void amd_buffer_store_v2<float, 1>(const float src_thread_data,
                                               float* p_dst_wave,
                                               const index_t dst_thread_data_offset,
