@@ -22,10 +22,80 @@ int main(int argc, char* argv[])
 
 #if 0
     constexpr index_t N  = 1;
-    constexpr index_t C  = 32;
+    constexpr index_t C  = 4;
+    constexpr index_t HI = 1080;
+    constexpr index_t WI = 1920;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 4;
     constexpr index_t HI = 540;
     constexpr index_t WI = 960;
-    constexpr index_t K  = 32;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 4;
+    constexpr index_t HI = 270;
+    constexpr index_t WI = 480;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
+#elif 1
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 2;
+    constexpr index_t HI = 1080;
+    constexpr index_t WI = 1920;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<1, 1>;
+    using RightPads = Sequence<1, 1>;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 4;
+    constexpr index_t HI = 540;
+    constexpr index_t WI = 960;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<1, 1>;
+    using RightPads = Sequence<1, 1>;
+#elif 1
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 4;
+    constexpr index_t HI = 270;
+    constexpr index_t WI = 480;
+    constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -616,7 +686,7 @@ int main(int argc, char* argv[])
                                                                  LeftPads{},
                                                                  RightPads{},
                                                                  nrepeat);
-#elif 1
+#elif 0
     device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(in_nchw_desc,
                                                                          in_nchw,
                                                                          wei_kcyx_desc,
