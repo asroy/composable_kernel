@@ -186,7 +186,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
                     src_desc.CalculateOffset(to_multi_index(src_slice_origin_idx) + dst_data_idx +
                                              i * dst_scalar_step_in_vector);
 
-                dst_vector(i) = p_src[Number<src_offset>{}];
+                dst_vector.Scalars()(i) = p_src[Number<src_offset>{}];
             });
 
             amd_buffer_store_v2<DstData, DstScalarPerVector>(
@@ -837,7 +837,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 constexpr index_t buffer_offset =
                     buffer_desc_.CalculateOffset(src_data_idx + i * src_scalar_step_in_vector);
 
-                buffer_(Number<buffer_offset>{}) = src_vector[i];
+                buffer_(Number<buffer_offset>{}) = src_vector.Scalars()[i];
             });
 
             constexpr auto move_on_dim = [&]() constexpr
@@ -995,7 +995,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 constexpr index_t buffer_offset =
                     buffer_desc_.CalculateOffset(dst_data_idx + i * dst_scalar_step_in_vector);
 
-                dst_vector(i) = buffer_[Number<buffer_offset>{}];
+                dst_vector.Scalars()(i) = buffer_[Number<buffer_offset>{}];
             });
 
             using DstVectorType = typename vector_type<DstData, DstScalarPerVector>::MemoryType;

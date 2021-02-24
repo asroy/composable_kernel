@@ -177,47 +177,27 @@ struct vector_type<T, 1>
 {
     using MemoryType = T;
 
-    T data_;
+    union
+    {
+        T d1_;
+        StaticallyIndexedArray<T, 1> d1x1_;
+    } data_;
 
     __host__ __device__ constexpr vector_type() : data_{T{0}} {}
 
     __host__ __device__ static constexpr index_t Size() { return 1; }
 
-    __host__ __device__ constexpr const auto& Vector() const { return data_; }
+    __host__ __device__ constexpr const auto& Vector() const { return data_.d1_; }
 
-    __host__ __device__ constexpr auto& Vector() { return data_; }
+    __host__ __device__ constexpr auto& Vector() { return data_.d1_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr const auto& Get(Number<1>, Number<I>) const
-    {
-        static_assert(I == 0, "wrong!");
+    __host__ __device__ constexpr const auto& Scalars() const { return data_.d1x1_; }
 
-        return data_;
-    }
+    __host__ __device__ constexpr auto& Scalars() { return data_.d1x1_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr auto& Set(Number<1>, Number<I>)
-    {
-        static_assert(I == 0, "wrong!");
+    __host__ __device__ constexpr const auto& Vectors(Number<1>) const { return data_.d1x1_; }
 
-        return data_;
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr const auto& operator[](Number<I>) const
-    {
-        static_assert(I == 0, "wrong!");
-
-        return data_;
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr auto& operator()(Number<I>)
-    {
-        static_assert(I == 0, "wrong!");
-
-        return data_;
-    }
+    __host__ __device__ constexpr auto& Vectors(Number<1>) { return data_.d1x1_; }
 };
 
 template <typename T>
@@ -232,6 +212,7 @@ struct vector_type<T, 2>
     {
         d2_t d2_;
         StaticallyIndexedArray<d1_t, 2> d1x2_;
+        StaticallyIndexedArray<d2_t, 1> d2x1_;
     } data_;
 
     __host__ __device__ constexpr vector_type() : data_{d2_t{0}} {}
@@ -242,53 +223,17 @@ struct vector_type<T, 2>
 
     __host__ __device__ constexpr auto& Vector() { return data_.d2_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr const auto& Get(Number<1>, Number<I> i) const
-    {
-        static_assert(I >= 0 && I < 2, "wrong!");
+    __host__ __device__ constexpr const auto& Scalars() const { return data_.d1x2_; }
 
-        return data_.d1x2_[i];
-    }
+    __host__ __device__ constexpr auto& Scalars() { return data_.d1x2_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr const auto& Get(Number<2>, Number<I>) const
-    {
-        static_assert(I == 0, "wrong!");
+    __host__ __device__ constexpr const auto& Vectors(Number<1>) const { return data_.d1x2_; }
 
-        return data_.d2_;
-    }
+    __host__ __device__ constexpr const auto& Vectors(Number<2>) const { return data_.d2x1_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr auto& Set(Number<1>, Number<I> i)
-    {
-        static_assert(I >= 0 && I < 2, "wrong!");
+    __host__ __device__ constexpr auto& Vectors(Number<1>) { return data_.d1x2_; }
 
-        return data_.d1x2_(i);
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr auto& Set(Number<2>, Number<I>)
-    {
-        static_assert(I == 0, "wrong!");
-
-        return data_.d2_;
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr const auto& operator[](Number<I>) const
-    {
-        static_assert(I >= 0 && I < 2, "wrong!");
-
-        return data_.d1x2_[Number<I>{}];
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr auto& operator()(Number<I>)
-    {
-        static_assert(I >= 0 && I < 2, "wrong!");
-
-        return data_.d1x2_(Number<I>{});
-    }
+    __host__ __device__ constexpr auto& Vectors(Number<2>) { return data_.d2x1_; }
 };
 
 template <typename T>
@@ -305,6 +250,7 @@ struct vector_type<T, 4>
         d4_t d4_;
         StaticallyIndexedArray<d1_t, 4> d1x4_;
         StaticallyIndexedArray<d2_t, 2> d2x2_;
+        StaticallyIndexedArray<d4_t, 1> d4x1_;
     } data_;
 
     __host__ __device__ constexpr vector_type() : data_{d4_t{0}} {}
@@ -315,69 +261,21 @@ struct vector_type<T, 4>
 
     __host__ __device__ constexpr auto& Vector() { return data_.d4_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr const auto& Get(Number<1>, Number<I> i) const
-    {
-        static_assert(I >= 0 && I < 4, "wrong!");
+    __host__ __device__ constexpr const auto& Scalars() const { return data_.d1x4_; }
 
-        return data_.d1x4_[i];
-    }
+    __host__ __device__ constexpr auto& Scalars() { return data_.d1x4_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr const auto& Get(Number<2>, Number<I> i) const
-    {
-        static_assert(I >= 0 && I < 2, "wrong!");
+    __host__ __device__ constexpr const auto& Vectors(Number<1>) const { return data_.d1x4_; }
 
-        return data_.d2x2_[i];
-    }
+    __host__ __device__ constexpr const auto& Vectors(Number<2>) const { return data_.d2x2_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr const auto& Get(Number<4>, Number<I>) const
-    {
-        static_assert(I == 0, "wrong!");
+    __host__ __device__ constexpr const auto& Vectors(Number<4>) const { return data_.d4x1_; }
 
-        return data_.d4_;
-    }
+    __host__ __device__ constexpr auto& Vectors(Number<1>) { return data_.d1x4_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr auto& Set(Number<1>, Number<I> i)
-    {
-        static_assert(I >= 0 && I < 4, "wrong!");
+    __host__ __device__ constexpr auto& Vectors(Number<2>) { return data_.d2x2_; }
 
-        return data_.d1x4_(i);
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr auto& Set(Number<2>, Number<I> i)
-    {
-        static_assert(I >= 0 && I < 3, "wrong!");
-
-        return data_.d2x2_(i);
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr auto& Set(Number<4>, Number<I>)
-    {
-        static_assert(I == 0, "wrong!");
-
-        return data_.d4_;
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr const auto& operator[](Number<I>) const
-    {
-        static_assert(I >= 0 && I < 4, "wrong!");
-
-        return data_.d1x4_[Number<I>{}];
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr auto& operator()(Number<I>)
-    {
-        static_assert(I >= 0 && I < 4, "wrong!");
-
-        return data_.d1x4_(Number<I>{});
-    }
+    __host__ __device__ constexpr auto& Vectors(Number<4>) { return data_.d4x1_; }
 };
 
 template <typename T>
@@ -396,6 +294,7 @@ struct vector_type<T, 8>
         StaticallyIndexedArray<d1_t, 8> d1x8_;
         StaticallyIndexedArray<d2_t, 4> d2x4_;
         StaticallyIndexedArray<d4_t, 2> d4x2_;
+        StaticallyIndexedArray<d8_t, 1> d8x1_;
     } data_;
 
     __host__ __device__ constexpr vector_type() : data_{d8_t{0}} {}
@@ -406,85 +305,25 @@ struct vector_type<T, 8>
 
     __host__ __device__ constexpr auto& Vector() { return data_.d8_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr const auto& Get(Number<1>, Number<I> i) const
-    {
-        static_assert(I >= 0 && I < 8, "wrong!");
+    __host__ __device__ constexpr const auto& Scalars() const { return data_.d1x8_; }
 
-        return data_.d1x8_[i];
-    }
+    __host__ __device__ constexpr auto& Scalars() { return data_.d1x8_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr const auto& Get(Number<2>, Number<I> i) const
-    {
-        static_assert(I >= 0 && I < 4, "wrong!");
+    __host__ __device__ constexpr const auto& Vectors(Number<1>) const { return data_.d1x8_; }
 
-        return data_.d2x4_[i];
-    }
+    __host__ __device__ constexpr const auto& Vectors(Number<2>) const { return data_.d2x4_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr const auto& Get(Number<4>, Number<I> i) const
-    {
-        static_assert(I >= 0 && I < 2, "wrong!");
+    __host__ __device__ constexpr const auto& Vectors(Number<4>) const { return data_.d4x2_; }
 
-        return data_.d4x2_[i];
-    }
+    __host__ __device__ constexpr const auto& Vectors(Number<8>) const { return data_.d8x1_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr const auto& Get(Number<8>, Number<I>) const
-    {
-        static_assert(I == 0, "wrong!");
+    __host__ __device__ constexpr auto& Vectors(Number<1>) { return data_.d1x8_; }
 
-        return data_.d8_;
-    }
+    __host__ __device__ constexpr auto& Vectors(Number<2>) { return data_.d2x4_; }
 
-    template <index_t I>
-    __host__ __device__ constexpr auto& Set(Number<1>, Number<I> i)
-    {
-        static_assert(I >= 0 && I < 8, "wrong!");
+    __host__ __device__ constexpr auto& Vectors(Number<4>) { return data_.d4x2_; }
 
-        return data_.d1x8_(i);
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr auto& Set(Number<2>, Number<I> i)
-    {
-        static_assert(I >= 0 && I < 4, "wrong!");
-
-        return data_.d2x4_(i);
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr auto& Set(Number<4>, Number<I> i)
-    {
-        static_assert(I >= 0 && I < 2, "wrong!");
-
-        return data_.d4x2_(i);
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr auto& Set(Number<8>, Number<I> i)
-    {
-        static_assert(I == 0, "wrong!");
-
-        return data_.d8_;
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr const auto& operator[](Number<I>) const
-    {
-        static_assert(I >= 0 && I < 8, "wrong!");
-
-        return data_.d1x8_[Number<I>{}];
-    }
-
-    template <index_t I>
-    __host__ __device__ constexpr auto& operator()(Number<I>)
-    {
-        static_assert(I >= 0 && I < 8, "wrong!");
-
-        return data_.d1x8_(Number<I>{});
-    }
+    __host__ __device__ constexpr auto& Vectors(Number<8>) { return data_.d8x1_; }
 };
 
 // data type conversion

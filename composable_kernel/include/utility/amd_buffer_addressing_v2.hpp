@@ -188,28 +188,28 @@ __device__ float8_t amd_buffer_load_v2<float, 8>(const float* p_src_wave,
 #if CK_EXPERIMENTAL_USE_BUFFER_LOAD_OOB_CHECK_OFFSET_TRICK
     uint32_t src_addr_shift = src_thread_data_valid ? 0 : 0x7fffffff;
 
-    vector_type<float, 8> vector;
+    vector_type<float, 8> tmp;
 
-    vector.Set(Number<4>{}, Number<0>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
+    tmp.Vectors(Number<4>{})(Number<0>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
         src_wave_buffer_resource.data, src_addr_shift + src_thread_addr_offset, 0, 0);
 
-    vector.Set(Number<4>{}, Number<1>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
+    tmp.Vectors(Number<4>{})(Number<1>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
         src_wave_buffer_resource.data,
         src_addr_shift + src_thread_addr_offset + 4 * sizeof(float),
         0,
         0);
 
-    return vector.Get(Number<8>{}, Number<0>{});
+    return tmp.Vector();
 #else
-    vector_type<float, 8> vector;
+    vector_type<float, 8> tmp;
 
-    vector.Set(Number<4>{}, Number<0>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
+    tmp.Vectors(Number<4>{})(Number<0>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
         src_wave_buffer_resource.data, src_thread_addr_offset, 0, 0);
 
-    vector.Set(Number<4>{}, Number<1>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
+    tmp.Vectors(Number<4>{})(Number<1>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
         src_wave_buffer_resource.data, src_thread_addr_offset + 4 * sizeof(float), 0, 0);
 
-    return src_thread_data_valid ? vector.Get(Number<8>{}, Number<0>{}) : float8_t(0);
+    return src_thread_data_valid ? tmp.Vector() : float8_t(0);
 #endif
 }
 
