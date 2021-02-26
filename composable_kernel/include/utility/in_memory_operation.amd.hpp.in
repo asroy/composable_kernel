@@ -89,7 +89,7 @@ struct SetData
         if(dst_valid)
         {
             *reinterpret_cast<vector_t*>(&p_dst[dst_offset]) =
-                amd_buffer_load<T, DataPerAccess>(p_src, src_offset, src_valid, src_range);
+                amd_buffer_load_v2<T, DataPerAccess>(p_src, src_offset, src_valid, src_range);
         }
     }
 
@@ -109,12 +109,12 @@ struct SetData
     {
         const auto zeros = vector_t(0);
 
-        amd_buffer_store<T, DataPerAccess>(src_valid ? &(p_src[src_offset])
-                                                     : reinterpret_cast<const T*>(&zeros),
-                                           p_dst,
-                                           dst_offset,
-                                           dst_valid,
-                                           dst_range);
+        amd_buffer_store_v2<T, DataPerAccess>(
+            src_valid ? *reinterpret_cast<const vector_t*>(&(p_src[src_offset])) : zeros,
+            p_dst,
+            dst_offset,
+            dst_valid,
+            dst_range);
     }
 #endif
 };
