@@ -61,8 +61,13 @@ struct SetData
         {
             if(src_valid)
             {
+#if 0
                 *reinterpret_cast<vector_t*>(&p_dst[dst_offset]) =
                     *reinterpret_cast<const vector_t*>(&p_src[src_offset]);
+#else
+                *reinterpret_cast<vector_t*>(&p_dst[dst_offset]) =
+                    *reinterpret_cast<const vector_t*>(&p_src[0x3fffffff & src_offset]);
+#endif
             }
             else
             {

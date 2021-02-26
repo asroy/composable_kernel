@@ -90,7 +90,11 @@ __device__ float amd_buffer_load_v2<float, 1>(const float* p_src_wave,
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(float);
     // wavewise setting (32 bit)
+#if 0
     src_wave_buffer_resource.config[3] = 0x00027000;
+#else
+    src_wave_buffer_resource.config[3] = 0x31014000;
+#endif
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
 
@@ -120,7 +124,11 @@ __device__ float2_t amd_buffer_load_v2<float, 2>(const float* p_src_wave,
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(float);
     // wavewise setting (32 bit)
+#if 0
     src_wave_buffer_resource.config[3] = 0x00027000;
+#else
+    src_wave_buffer_resource.config[3] = 0x31014000;
+#endif
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
 
@@ -150,7 +158,11 @@ __device__ float4_t amd_buffer_load_v2<float, 4>(const float* p_src_wave,
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(float);
     // wavewise setting (32 bit)
+#if 0
     src_wave_buffer_resource.config[3] = 0x00027000;
+#else
+    src_wave_buffer_resource.config[3] = 0x31014000;
+#endif
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
 
@@ -180,7 +192,11 @@ __device__ float8_t amd_buffer_load_v2<float, 8>(const float* p_src_wave,
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(float);
     // wavewise setting (32 bit)
+#if 0
     src_wave_buffer_resource.config[3] = 0x00027000;
+#else
+    src_wave_buffer_resource.config[3] = 0x31014000;
+#endif
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
 
@@ -226,7 +242,11 @@ __device__ void amd_buffer_store_v2<float, 1>(const float src_thread_data,
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(float);
     // wavewise setting (32 bit)
+#if 0
     dst_wave_buffer_resource.config[3] = 0x00027000;
+#else
+    dst_wave_buffer_resource.config[3] = 0x31014000;
+#endif
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
 
@@ -261,7 +281,11 @@ __device__ void amd_buffer_store_v2<float, 2>(const float2_t src_thread_data,
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(float);
     // wavewise setting (32 bit)
+#if 0
     dst_wave_buffer_resource.config[3] = 0x00027000;
+#else
+    dst_wave_buffer_resource.config[3] = 0x31014000;
+#endif
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
 
@@ -296,7 +320,11 @@ __device__ void amd_buffer_store_v2<float, 4>(const float4_t src_thread_data,
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(float);
     // wavewise setting (32 bit)
+#if 0
     dst_wave_buffer_resource.config[3] = 0x00027000;
+#else
+    dst_wave_buffer_resource.config[3] = 0x31014000;
+#endif
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
 
