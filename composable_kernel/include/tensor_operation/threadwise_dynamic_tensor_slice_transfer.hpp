@@ -175,7 +175,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
             // copy data
             vector_type<DstData, DstScalarPerVector> dst_vector;
 
-            using dst_vector_t = typename vector_type<DstData, DstScalarPerVector>::MemoryType;
+            using dst_vector_t = typename vector_type<DstData, DstScalarPerVector>::type;
 
             static_for<0, DstScalarPerVector, 1>{}([&](auto i) {
                 constexpr index_t src_offset =
@@ -504,7 +504,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
 
             vector_type<SrcData, SrcScalarPerVector> src_vector;
 
-            using src_vector_t = typename vector_type<SrcData, SrcScalarPerVector>::MemoryType;
+            using src_vector_t = typename vector_type<SrcData, SrcScalarPerVector>::type;
 
             const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
                 src_desc, src_slice_origin_coord_);
@@ -838,7 +838,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             // copy data
             vector_type<SrcData, SrcScalarPerVector> src_vector;
 
-            using src_vector_t = typename vector_type<SrcData, SrcScalarPerVector>::MemoryType;
+            using src_vector_t = typename vector_type<SrcData, SrcScalarPerVector>::type;
 
             const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
                 src_desc, src_slice_origin_coord_);
@@ -1031,7 +1031,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 dst_vector.Scalars()(i) = buffer_[Number<buffer_offset>{}];
             });
 
-            using DstVectorType = typename vector_type<DstData, DstScalarPerVector>::MemoryType;
+            using DstVectorType = typename vector_type<DstData, DstScalarPerVector>::type;
 
             *reinterpret_cast<DstVectorType*>(p_dst + dst_slice_origin_coord_.GetOffset()) =
                 dst_vector.Vector();

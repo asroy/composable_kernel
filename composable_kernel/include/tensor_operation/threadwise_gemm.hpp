@@ -39,7 +39,7 @@ struct ThreadwiseMatrixSliceCopy
     template <typename Data>
     __device__ static void Run(const Data* p_src, Data* p_dst)
     {
-        using vector_t = typename vector_type<Data, DataPerAccess>::MemoryType;
+        using vector_t = typename vector_type<Data, DataPerAccess>::type;
 
         for(index_t i = 0; i < NSliceRow; ++i)
         {

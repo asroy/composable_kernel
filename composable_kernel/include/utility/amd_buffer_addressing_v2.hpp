@@ -60,7 +60,7 @@ __llvm_amdgcn_raw_buffer_store_fp32x4(float4_t vdata,
 //   2) p_src_wave to be a wavewise pointer.
 // It is user's responsibility to make sure that is true.
 template <typename T, index_t VectorSize>
-__device__ typename vector_type<T, VectorSize>::MemoryType
+__device__ typename vector_type<T, VectorSize>::type
 amd_buffer_load_v2(const T* p_src_wave,
                    index_t src_thread_data_offset,
                    bool src_thread_data_valid,
@@ -71,12 +71,11 @@ amd_buffer_load_v2(const T* p_src_wave,
 //   2) p_dst_wave to be a wavewise pointer.
 // It is user's responsibility to make sure that is true.
 template <typename T, index_t VectorSize>
-__device__ void
-amd_buffer_store_v2(const typename vector_type<T, VectorSize>::MemoryType src_thread_data,
-                    T* p_dst_wave,
-                    const index_t dst_thread_data_offset,
-                    const bool dst_thread_data_valid,
-                    const index_t dst_data_range);
+__device__ void amd_buffer_store_v2(const typename vector_type<T, VectorSize>::type src_thread_data,
+                                    T* p_dst_wave,
+                                    const index_t dst_thread_data_offset,
+                                    const bool dst_thread_data_valid,
+                                    const index_t dst_data_range);
 
 template <>
 __device__ float amd_buffer_load_v2<float, 1>(const float* p_src_wave,

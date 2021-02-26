@@ -91,11 +91,10 @@ __llvm_amdgcn_buffer_atomic_add_f32(float vdata,
 //   2) p_src_wave to be a wavewise pointer.
 // It is user's responsibility to make sure that is true.
 template <typename T, index_t VectorSize>
-__device__ typename vector_type<T, VectorSize>::MemoryType
-amd_buffer_load(const T* p_src_wave,
-                index_t src_thread_data_offset,
-                bool src_thread_data_valid,
-                index_t src_elemenst_space);
+__device__ typename vector_type<T, VectorSize>::type amd_buffer_load(const T* p_src_wave,
+                                                                     index_t src_thread_data_offset,
+                                                                     bool src_thread_data_valid,
+                                                                     index_t src_elemenst_space);
 
 // buffer_store requires:
 //   1) p_src_thread must be in vgpr space, p_dst_thread must be global memory

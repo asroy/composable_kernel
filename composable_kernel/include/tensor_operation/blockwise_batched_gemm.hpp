@@ -305,7 +305,7 @@ struct BlockwiseBatchGemmBlockABlockBThreadCTransANormalBNormalC_V2
                       "Run_amd_asm can only deal with BlockMatrixStrideA == 0 && BatchPerThread == "
                       "1 for now\n");
 
-        using Float4 = vector_type<float, 4>::MemoryType;
+        using Float4 = vector_type<float, 4>::type;
 
         Float4* reg_a = (Float4*)(p_a_thread);
         Float4* reg_b = (Float4*)(p_b_thread);

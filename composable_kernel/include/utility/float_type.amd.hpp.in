@@ -175,7 +175,7 @@ struct vector_type;
 template <typename T>
 struct vector_type<T, 1>
 {
-    using MemoryType = T;
+    using type = T;
 
     union
     {
@@ -206,7 +206,7 @@ struct vector_type<T, 2>
     using d1_t = T;
     typedef T d2_t __attribute__((ext_vector_type(2)));
 
-    using MemoryType = d2_t;
+    using type = d2_t;
 
     union
     {
@@ -243,7 +243,7 @@ struct vector_type<T, 4>
     typedef T d2_t __attribute__((ext_vector_type(2)));
     typedef T d4_t __attribute__((ext_vector_type(4)));
 
-    using MemoryType = d4_t;
+    using type = d4_t;
 
     union
     {
@@ -286,7 +286,7 @@ struct vector_type<T, 8>
     typedef T d4_t __attribute__((ext_vector_type(4)));
     typedef T d8_t __attribute__((ext_vector_type(8)));
 
-    using MemoryType = d8_t;
+    using type = d8_t;
 
     union
     {
