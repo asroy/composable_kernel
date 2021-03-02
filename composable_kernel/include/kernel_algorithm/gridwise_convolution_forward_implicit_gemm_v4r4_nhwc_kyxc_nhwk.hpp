@@ -103,7 +103,7 @@ struct GridwiseConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk
 
         constexpr auto in_gemmk_gemmn_global_desc = transform_tensor_descriptor(
             in_n_y_ho_x_wo_c_global_desc,
-            make_tuple(Merge<Sequence<C, Y, X>>{}, Merge<Sequence<N, Ho, Wo>>{}),
+            make_tuple(Merge<Sequence<Y, X, C>>{}, Merge<Sequence<N, Ho, Wo>>{}),
             make_tuple(Sequence<1, 3, 5>{}, Sequence<0, 2, 4>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
