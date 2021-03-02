@@ -7,6 +7,20 @@
 #endif
 #include "bfloat16_dev.hpp"
 
+#if 1
+#define CK_AMD_GPU_GFX906 1
+#elif 0
+#define CK_AMD_GPU_GFX908 1
+#else
+#define CK_AMD_GPU_GFX906 1
+#endif
+
+#if defined(CK_AMD_GPU_GFX906) || defined(CK_AMD_GPU_GFX908)
+#define CK_BUFFER_RESOURCE_3RD_DWORD 0x00020000
+#elif defined(CK_AMD_GPU_GFX_1030)
+#define CK_BUFFER_RESOURCE_3RD_DWORD 0x31014000
+#endif
+
 #ifndef CK_HIP_VERSION_FLAT
 #define CK_HIP_VERSION_FLAT 0
 #endif

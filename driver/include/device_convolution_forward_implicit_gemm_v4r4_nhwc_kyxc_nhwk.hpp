@@ -51,8 +51,7 @@ void device_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc,
     // compile-time variables
     constexpr auto in_n_hi_wi_c_desc =
         make_native_tensor_descriptor_packed(Sequence<N, Hi, Wi, C>{});
-    constexpr auto wei_k_y_x_c_desc =
-        make_native_tensor_descriptor_packed(Sequence<K, Y, X, C>{});
+    constexpr auto wei_k_y_x_c_desc = make_native_tensor_descriptor_packed(Sequence<K, Y, X, C>{});
     constexpr auto out_n_ho_wo_k_desc =
         make_native_tensor_descriptor_packed(Sequence<N, Ho, Wo, K>{});
 

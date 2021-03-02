@@ -201,8 +201,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
 #else
                 if(is_dst_valid)
                 {
-                    *reinterpret_cast<dst_vector_t*>(&(p_dst[dst_slice_origin_coord_.GetOffset()])) =
-                        dst_vector.Vector();
+                    *reinterpret_cast<dst_vector_t*>(
+                        &(p_dst[dst_slice_origin_coord_.GetOffset()])) = dst_vector.Vector();
                 }
 #endif
             }
@@ -210,8 +210,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
             {
                 if(is_dst_valid)
                 {
-                    *reinterpret_cast<dst_vector_t*>(&(p_dst[dst_slice_origin_coord_.GetOffset()])) =
-                        dst_vector.Vector();
+                    *reinterpret_cast<dst_vector_t*>(
+                        &(p_dst[dst_slice_origin_coord_.GetOffset()])) = dst_vector.Vector();
                 }
             }
 

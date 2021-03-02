@@ -124,14 +124,14 @@ __device__ float amd_buffer_load<float, 1>(const float* p_src_wave,
                                            bool src_thread_data_valid,
                                            index_t src_data_range)
 {
-    BufferResourceConstant<float> src_wave_buffer_resource;
+    BufferResource<float> src_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     src_wave_buffer_resource.address[0] = const_cast<float*>(p_src_wave);
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(float);
     // wavewise setting (32 bit)
-    src_wave_buffer_resource.config[3] = 0x00027000;
+    src_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
 
@@ -154,14 +154,14 @@ __device__ float2_t amd_buffer_load<float, 2>(const float* p_src_wave,
                                               bool src_thread_data_valid,
                                               index_t src_data_range)
 {
-    BufferResourceConstant<float> src_wave_buffer_resource;
+    BufferResource<float> src_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     src_wave_buffer_resource.address[0] = const_cast<float*>(p_src_wave);
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(float);
     // wavewise setting (32 bit)
-    src_wave_buffer_resource.config[3] = 0x00027000;
+    src_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
 
@@ -184,14 +184,14 @@ __device__ float4_t amd_buffer_load<float, 4>(const float* p_src_wave,
                                               bool src_thread_data_valid,
                                               index_t src_data_range)
 {
-    BufferResourceConstant<float> src_wave_buffer_resource;
+    BufferResource<float> src_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     src_wave_buffer_resource.address[0] = const_cast<float*>(p_src_wave);
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(float);
     // wavewise setting (32 bit)
-    src_wave_buffer_resource.config[3] = 0x00027000;
+    src_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(float);
 
@@ -214,14 +214,14 @@ __device__ half_t amd_buffer_load<half_t, 1>(const half_t* p_src_wave,
                                              bool src_thread_data_valid,
                                              index_t src_data_range)
 {
-    BufferResourceConstant<half_t> src_wave_buffer_resource;
+    BufferResource<half_t> src_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     src_wave_buffer_resource.address[0] = const_cast<half_t*>(p_src_wave);
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(half_t);
     // wavewise setting (32 bit)
-    src_wave_buffer_resource.config[3] = 0x00027000;
+    src_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(half_t);
 
@@ -249,14 +249,14 @@ __device__ half2_t amd_buffer_load<half_t, 2>(const half_t* p_src_wave,
                                               bool src_thread_data_valid,
                                               index_t src_data_range)
 {
-    BufferResourceConstant<half_t> src_wave_buffer_resource;
+    BufferResource<half_t> src_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     src_wave_buffer_resource.address[0] = const_cast<half_t*>(p_src_wave);
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(half_t);
     // wavewise setting (32 bit)
-    src_wave_buffer_resource.config[3] = 0x00027000;
+    src_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(half_t);
 
@@ -283,14 +283,14 @@ __device__ half4_t amd_buffer_load<half_t, 4>(const half_t* p_src_wave,
                                               bool src_thread_data_valid,
                                               index_t src_data_range)
 {
-    BufferResourceConstant<half_t> src_wave_buffer_resource;
+    BufferResource<half_t> src_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     src_wave_buffer_resource.address[0] = const_cast<half_t*>(p_src_wave);
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(half_t);
     // wavewise setting (32 bit)
-    src_wave_buffer_resource.config[3] = 0x00027000;
+    src_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(half_t);
 
@@ -317,14 +317,14 @@ __device__ half8_t amd_buffer_load<half_t, 8>(const half_t* p_src_wave,
                                               bool src_thread_data_valid,
                                               index_t src_data_range)
 {
-    BufferResourceConstant<half_t> src_wave_buffer_resource;
+    BufferResource<half_t> src_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     src_wave_buffer_resource.address[0] = const_cast<half_t*>(p_src_wave);
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(half_t);
     // wavewise setting (32 bit)
-    src_wave_buffer_resource.config[3] = 0x00027000;
+    src_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(half_t);
 
@@ -351,14 +351,14 @@ __device__ ushort amd_buffer_load<ushort, 1>(const ushort* p_src_wave,
                                              bool src_thread_data_valid,
                                              index_t src_data_range)
 {
-    BufferResourceConstant<ushort> src_wave_buffer_resource;
+    BufferResource<ushort> src_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     src_wave_buffer_resource.address[0] = const_cast<ushort*>(p_src_wave);
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(ushort);
     // wavewise setting (32 bit)
-    src_wave_buffer_resource.config[3] = 0x00027000;
+    src_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(ushort);
 
@@ -386,14 +386,14 @@ __device__ ushort2_t amd_buffer_load<ushort, 2>(const ushort* p_src_wave,
                                                 bool src_thread_data_valid,
                                                 index_t src_data_range)
 {
-    BufferResourceConstant<ushort> src_wave_buffer_resource;
+    BufferResource<ushort> src_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     src_wave_buffer_resource.address[0] = const_cast<ushort*>(p_src_wave);
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(ushort);
     // wavewise setting (32 bit)
-    src_wave_buffer_resource.config[3] = 0x00027000;
+    src_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(ushort);
 
@@ -420,14 +420,14 @@ __device__ ushort4_t amd_buffer_load<ushort, 4>(const ushort* p_src_wave,
                                                 bool src_thread_data_valid,
                                                 index_t src_data_range)
 {
-    BufferResourceConstant<ushort> src_wave_buffer_resource;
+    BufferResource<ushort> src_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     src_wave_buffer_resource.address[0] = const_cast<ushort*>(p_src_wave);
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(ushort);
     // wavewise setting (32 bit)
-    src_wave_buffer_resource.config[3] = 0x00027000;
+    src_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(ushort);
 
@@ -454,14 +454,14 @@ __device__ ushort8_t amd_buffer_load<ushort, 8>(const ushort* p_src_wave,
                                                 bool src_thread_data_valid,
                                                 index_t src_data_range)
 {
-    BufferResourceConstant<ushort> src_wave_buffer_resource;
+    BufferResource<ushort> src_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     src_wave_buffer_resource.address[0] = const_cast<ushort*>(p_src_wave);
     // wavewise range (32 bit)
     src_wave_buffer_resource.range[2] = src_data_range * sizeof(ushort);
     // wavewise setting (32 bit)
-    src_wave_buffer_resource.config[3] = 0x00027000;
+    src_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t src_thread_addr_offset = src_thread_data_offset * sizeof(ushort);
 
@@ -489,14 +489,14 @@ __device__ void amd_buffer_store<float, 1>(const float* p_src_thread,
                                            bool dst_thread_data_valid,
                                            index_t dst_data_range)
 {
-    BufferResourceConstant<float> dst_wave_buffer_resource;
+    BufferResource<float> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(float);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
 
@@ -525,14 +525,14 @@ __device__ void amd_buffer_store<float, 2>(const float* p_src_thread,
                                            bool dst_thread_data_valid,
                                            index_t dst_data_range)
 {
-    BufferResourceConstant<float> dst_wave_buffer_resource;
+    BufferResource<float> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(float);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
 
@@ -565,14 +565,14 @@ __device__ void amd_buffer_store<float, 4>(const float* p_src_thread,
                                            bool dst_thread_data_valid,
                                            index_t dst_data_range)
 {
-    BufferResourceConstant<float> dst_wave_buffer_resource;
+    BufferResource<float> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(float);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
 
@@ -605,14 +605,14 @@ __device__ void amd_buffer_store<half_t, 1>(const half_t* p_src_thread,
                                             bool dst_thread_data_valid,
                                             index_t dst_data_range)
 {
-    BufferResourceConstant<half_t> dst_wave_buffer_resource;
+    BufferResource<half_t> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(half_t);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(half_t);
 
@@ -644,14 +644,14 @@ __device__ void amd_buffer_store<half_t, 2>(const half_t* p_src_thread,
                                             bool dst_thread_data_valid,
                                             index_t dst_data_range)
 {
-    BufferResourceConstant<half_t> dst_wave_buffer_resource;
+    BufferResource<half_t> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(half_t);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(half_t);
 
@@ -682,14 +682,14 @@ __device__ void amd_buffer_store<half_t, 4>(const half_t* p_src_thread,
                                             bool dst_thread_data_valid,
                                             index_t dst_data_range)
 {
-    BufferResourceConstant<half_t> dst_wave_buffer_resource;
+    BufferResource<half_t> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(half_t);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(half_t);
 
@@ -720,14 +720,14 @@ __device__ void amd_buffer_store<half_t, 8>(const half_t* p_src_thread,
                                             bool dst_thread_data_valid,
                                             index_t dst_data_range)
 {
-    BufferResourceConstant<half_t> dst_wave_buffer_resource;
+    BufferResource<half_t> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(half_t);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(half_t);
 
@@ -758,14 +758,14 @@ __device__ void amd_buffer_store<ushort, 1>(const ushort* p_src_thread,
                                             bool dst_thread_data_valid,
                                             index_t dst_data_range)
 {
-    BufferResourceConstant<ushort> dst_wave_buffer_resource;
+    BufferResource<ushort> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(ushort);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(ushort);
 
@@ -793,14 +793,14 @@ __device__ void amd_buffer_store<ushort, 2>(const ushort* p_src_thread,
                                             bool dst_thread_data_valid,
                                             index_t dst_data_range)
 {
-    BufferResourceConstant<ushort> dst_wave_buffer_resource;
+    BufferResource<ushort> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(ushort);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(ushort);
 
@@ -831,14 +831,14 @@ __device__ void amd_buffer_store<ushort, 4>(const ushort* p_src_thread,
                                             bool dst_thread_data_valid,
                                             index_t dst_data_range)
 {
-    BufferResourceConstant<ushort> dst_wave_buffer_resource;
+    BufferResource<ushort> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(ushort);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(ushort);
 
@@ -869,14 +869,14 @@ __device__ void amd_buffer_store<ushort, 8>(const ushort* p_src_thread,
                                             bool dst_thread_data_valid,
                                             index_t dst_data_range)
 {
-    BufferResourceConstant<ushort> dst_wave_buffer_resource;
+    BufferResource<ushort> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(ushort);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(ushort);
 
@@ -908,14 +908,14 @@ __device__ void amd_buffer_atomic_add<float, 1>(const float* p_src_thread,
                                                 bool dst_thread_data_valid,
                                                 index_t dst_data_range)
 {
-    BufferResourceConstant<float> dst_wave_buffer_resource;
+    BufferResource<float> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(float);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
 
@@ -943,14 +943,14 @@ __device__ void amd_buffer_atomic_add<float, 2>(const float* p_src_thread,
                                                 bool dst_thread_data_valid,
                                                 index_t dst_data_range)
 {
-    BufferResourceConstant<float> dst_wave_buffer_resource;
+    BufferResource<float> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range;
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
 
@@ -988,14 +988,14 @@ __device__ void amd_buffer_atomic_add<float, 4>(const float* p_src_thread,
                                                 bool dst_thread_data_valid,
                                                 index_t dst_data_range)
 {
-    BufferResourceConstant<float> dst_wave_buffer_resource;
+    BufferResource<float> dst_wave_buffer_resource;
 
     // wavewise base address (64 bit)
     dst_wave_buffer_resource.address[0] = p_dst_wave;
     // wavewise range (32 bit)
     dst_wave_buffer_resource.range[2] = dst_data_range * sizeof(float);
     // wavewise setting (32 bit)
-    dst_wave_buffer_resource.config[3] = 0x00027000;
+    dst_wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     index_t dst_thread_addr_offset = dst_thread_data_offset * sizeof(float);
 

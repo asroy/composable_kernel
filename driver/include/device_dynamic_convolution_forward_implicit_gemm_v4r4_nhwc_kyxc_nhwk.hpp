@@ -109,7 +109,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc
     wei_kyxc_device_buf.ToDevice(wei_kyxc.mData.data());
     out_nhwk_device_buf.ToDevice(out_nhwk.mData.data());
 
-#if 0
+#if 1
     // cdata = 16, BlockSize = 64, 16x64x4
     constexpr index_t BlockSize = 64;
 

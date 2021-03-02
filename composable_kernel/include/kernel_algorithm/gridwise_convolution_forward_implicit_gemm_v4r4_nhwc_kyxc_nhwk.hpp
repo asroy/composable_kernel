@@ -81,13 +81,13 @@ struct GridwiseConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk
             unfold_tensor_descriptor(wei_k_y_x_c_global_desc, I1, I3), Sequence<1, 0>{});
 
         // input tensor
-        constexpr auto in_n_hip_wip_c_global_desc = transform_tensor_descriptor(
-            in_n_hi_wi_c_global_desc,
-            make_tuple(PassThrough<N>{},
-                       Pad<Sequence<Hi, Wi>, InLeftPads, InRightPads>{},
-                       PassThrough<C>{}),
-            make_tuple(Sequence<0>{}, Sequence<1, 2>{}, Sequence<3>{}),
-            make_tuple(Sequence<0>{}, Sequence<1, 2>{}, Sequence<3>{}));
+        constexpr auto in_n_hip_wip_c_global_desc =
+            transform_tensor_descriptor(in_n_hi_wi_c_global_desc,
+                                        make_tuple(PassThrough<N>{},
+                                                   Pad<Sequence<Hi, Wi>, InLeftPads, InRightPads>{},
+                                                   PassThrough<C>{}),
+                                        make_tuple(Sequence<0>{}, Sequence<1, 2>{}, Sequence<3>{}),
+                                        make_tuple(Sequence<0>{}, Sequence<1, 2>{}, Sequence<3>{}));
 
         constexpr index_t Hip = in_n_hip_wip_c_global_desc.GetLengths()[I1];
         constexpr index_t Wip = in_n_hip_wip_c_global_desc.GetLengths()[I2];
@@ -108,11 +108,11 @@ struct GridwiseConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk
             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
         // output tensor
-        constexpr auto out_gemmm_gemmn_global_desc =
-            transform_tensor_descriptor(unfold_tensor_descriptor(out_n_ho_wo_k_global_desc, I0, I2),
-                                        make_tuple(PassThrough<K>{}, Merge<Sequence<N * Ho * Wo>>{}),
-                                        make_tuple(Sequence<1>{}, Sequence<0>{}),
-                                        make_tuple(Sequence<0>{}, Sequence<1>{}));
+        constexpr auto out_gemmm_gemmn_global_desc = transform_tensor_descriptor(
+            unfold_tensor_descriptor(out_n_ho_wo_k_global_desc, I0, I2),
+            make_tuple(PassThrough<K>{}, Merge<Sequence<N * Ho * Wo>>{}),
+            make_tuple(Sequence<1>{}, Sequence<0>{}),
+            make_tuple(Sequence<0>{}, Sequence<1>{}));
 
         // GEMM
         constexpr auto gridwise_gemm =

@@ -56,7 +56,7 @@ void device_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     wei_kcyx_device_buf.ToDevice(wei_kcyx.mData.data());
     out_nkhw_device_buf.ToDevice(out_nkhw.mData.data());
 
-#if 1
+#if 0
     // cdata = 16, BlockSize = 64, 16x64x4
     constexpr index_t BlockSize = 64;
 
@@ -167,14 +167,14 @@ void device_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(InDesc,
     constexpr index_t GemmNPerBlock = 256;
     constexpr index_t GemmKPerBlock = 8;
 
-    constexpr index_t GemmMPerThread     = 4;
-    constexpr index_t GemmNPerThread     = 4;
-    constexpr index_t GemmKPerThread     = 1;
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
 
-    constexpr index_t GemmMLevel0Cluster     = 2;
-    constexpr index_t GemmNLevel0Cluster     = 2;
-    constexpr index_t GemmMLevel1Cluster     = 4;
-    constexpr index_t GemmNLevel1Cluster     = 16;
+    constexpr index_t GemmMLevel0Cluster = 2;
+    constexpr index_t GemmNLevel0Cluster = 2;
+    constexpr index_t GemmMLevel1Cluster = 4;
+    constexpr index_t GemmNLevel1Cluster = 16;
 
     constexpr index_t ThreadGemmDataPerReadM = 4;
     constexpr index_t ThreadGemmDataPerReadN = 4;
