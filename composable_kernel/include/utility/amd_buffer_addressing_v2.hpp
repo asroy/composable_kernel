@@ -17,7 +17,7 @@ union BufferResource
 };
 
 template <typename T>
-__device__ auto make_wave_buffer_resource(T* p_wave, index_t data_space_size)
+__device__ int32x4_t make_wave_buffer_resource(T* p_wave, index_t data_space_size)
 {
     BufferResource<T> wave_buffer_resource;
 
