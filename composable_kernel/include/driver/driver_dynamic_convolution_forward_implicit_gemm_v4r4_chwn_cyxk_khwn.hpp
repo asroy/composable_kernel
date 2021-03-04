@@ -31,7 +31,7 @@ template <index_t BlockSize,
           index_t GemmABlockTransferDstScalarPerVector_GemmM,
           typename GemmBBlockTransferThreadSliceLengths_GemmK_GemmN,
           typename GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
-          index_t GemmBBlockTransferSrcScalarPerVector_GemmK,
+          index_t GemmBBlockTransferSrcScalarPerVector_GemmN,
           index_t GemmBBlockTransferDstScalarPerVector_GemmN,
           index_t GemmCThreadTransferDstScalarPerVector_GemmM1>
 struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_chwn_cyxk_khwn_pad
@@ -209,8 +209,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_chwn_cyxk_khwn_pad
             GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
             Sequence<1, 0>,
             Sequence<1, 0>,
-            0,
-            GemmBBlockTransferSrcScalarPerVector_GemmK,
+            1,
+            GemmBBlockTransferSrcScalarPerVector_GemmN,
             GemmBBlockTransferDstScalarPerVector_GemmN,
             false, // don't move back src coordinate after threadwise copy, which will be fused with
                    // MoveSrcSliceWindow() to save addr computation
@@ -701,7 +701,7 @@ template <index_t BlockSize,
           index_t GemmABlockTransferDstScalarPerVector_GemmM,
           typename GemmBBlockTransferThreadSliceLengths_GemmK_GemmN,
           typename GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
-          index_t GemmBBlockTransferSrcScalarPerVector_GemmK,
+          index_t GemmBBlockTransferSrcScalarPerVector_GemmN,
           index_t GemmBBlockTransferDstScalarPerVector_GemmN,
           index_t GemmCThreadTransferDstScalarPerVector_GemmM1>
 struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_chwn_cyxk_khwn_1x1
@@ -862,8 +862,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_chwn_cyxk_khwn_1x1
             GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
             Sequence<1, 0>,
             Sequence<1, 0>,
-            0,
-            GemmBBlockTransferSrcScalarPerVector_GemmK,
+            1,
+            GemmBBlockTransferSrcScalarPerVector_GemmN,
             GemmBBlockTransferDstScalarPerVector_GemmN,
             false, // don't move back src coordinate after threadwise copy, which will be fused with
                    // MoveSrcSliceWindow() to save addr computation
