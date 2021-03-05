@@ -97,6 +97,8 @@ __host__ __device__ constexpr auto container_reorder_given_old2new(Sequence<Is..
     return container_reorder_give_new2old(old_seq, new2old);
 }
 
+#if !CK_WORKAROUND_SWDEV_275126
+// rocm-4.1 compiler would crash for recursive lambda
 template <typename Container,
           typename Reduce,
           typename Init,
@@ -131,6 +133,50 @@ __host__ __device__ constexpr auto container_reduce(const Container& x,
     // start recursion
     return f(f, Number<IBegin>{}, init);
 }
+#else
+// i is index, y_old is current scan, r_old is current reduction
+template <typename Container,
+          typename Reduce,
+          typename ROld,
+          index_t I,
+          index_t IEnd,
+          index_t IStep>
+__host__ __device__ constexpr auto container_reduce_impl(
+    const Container& x, Reduce reduce, ROld r_old, Number<I> i, Number<IEnd>, Number<IStep>)
+{
+    auto r_new = reduce(x[i], r_old);
+
+    if constexpr(i.value < IEnd - IStep)
+    {
+        return container_reduce_impl(
+            x, reduce, r_new, i + Number<IStep>{}, Number<IEnd>{}, Number<IStep>{});
+    }
+    else
+    {
+        return r_new;
+    }
+}
+
+// rocm-4.1 compiler would crash for recursive lambda
+template <typename Container,
+          typename Reduce,
+          typename Init,
+          index_t IBegin = 0,
+          index_t IEnd   = Container::Size(),
+          index_t IStep  = 1>
+__host__ __device__ constexpr auto container_reduce(const Container& x,
+                                                    Reduce reduce,
+                                                    Init init,
+                                                    Number<IBegin> = Number<0>{},
+                                                    Number<IEnd>   = Number<Container::Size()>{},
+                                                    Number<IStep>  = Number<1>{})
+{
+    static_assert((IEnd - IBegin) % IStep == 0, "wrong!");
+
+    return container_reduce_impl(
+        x, reduce, init, Number<IBegin>{}, Number<IEnd>{}, Number<IStep>{});
+}
+#endif
 
 template <typename TData, index_t NSize, typename Reduce>
 __host__ __device__ constexpr auto
@@ -169,6 +215,8 @@ container_reverse_exclusive_scan(const Array<TData, NSize>& x, Reduce f, TData i
     return y;
 }
 
+#if !CK_WORKAROUND_SWDEV_275126
+// rocm4.1 compiler would crash with recursive lambda
 template <typename... Xs, typename Reduce, typename Init>
 __host__ __device__ constexpr auto
 container_reverse_exclusive_scan(const Tuple<Xs...>& x, Reduce reduce, Init init)
@@ -196,6 +244,37 @@ container_reverse_exclusive_scan(const Tuple<Xs...>& x, Reduce reduce, Init init
     // start recursion
     return f(f, Number<NSize - 1>{}, make_tuple(init), init);
 }
+#else
+// i is index, y_old is current scan, r_old is current reduction
+template <typename... Xs, typename Reduce, index_t I, typename YOld, typename ROld>
+__host__ __device__ constexpr auto container_reverse_exclusive_scan_impl(
+    const Tuple<Xs...>& x, Reduce reduce, Number<I> i, YOld y_old, ROld r_old)
+{
+    auto r_new = reduce(x[i], r_old);
+
+    auto y_new = container_push_front(y_old, r_new);
+
+    if constexpr(i.value > 1)
+    {
+        // recursively call f/fs
+        return container_reverse_exclusive_scan_impl(x, reduce, i - Number<1>{}, y_new, r_new);
+    }
+    else
+    {
+        return y_new;
+    }
+}
+
+template <typename... Xs, typename Reduce, typename Init>
+__host__ __device__ constexpr auto
+container_reverse_exclusive_scan(const Tuple<Xs...>& x, Reduce reduce, Init init)
+{
+    constexpr index_t NSize = sizeof...(Xs);
+
+    return container_reverse_exclusive_scan_impl(
+        x, reduce, Number<NSize - 1>{}, make_tuple(init), init);
+}
+#endif
 
 // TODO: update to like container_reverse_exclusive_scan to deal with Tuple of Numebr<>
 template <typename... Xs, typename Reduce, typename TData>

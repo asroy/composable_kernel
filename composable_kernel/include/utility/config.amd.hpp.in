@@ -116,6 +116,11 @@
 #define CK_WORKAROUND_SWDEV_241664 1
 #endif
 
+// workaround for compiler crash when compiling recursive lambda
+#ifndef CK_WORKAROUND_SWDEV_275126
+#define CK_WORKAROUND_SWDEV_275126 1
+#endif
+
 namespace ck {
 
 enum AddressSpace

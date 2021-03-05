@@ -15,6 +15,26 @@ namespace ck {
  * functions on GPU without worrying about scratch memory usage.
  */
 
+#if CK_WORKAROUND_SWDEV_275126
+template <typename Lengths, typename Strides, index_t I, typename AccOld>
+__host__ __device__ constexpr auto calculate_element_space_size_impl(const Lengths& lengths,
+                                                                     const Strides& strides,
+                                                                     Number<I> i,
+                                                                     AccOld acc_old)
+{
+    auto acc_new = acc_old + (lengths[i] - Number<1>{}) * strides[i];
+
+    if constexpr(i.value < Lengths::Size() - 1)
+    {
+        return calculate_element_space_size_impl(lengths, strides, i + Number<1>{}, acc_new);
+    }
+    else
+    {
+        return acc_new;
+    }
+}
+#endif
+
 template <typename... Lengths,
           typename... Strides,
           typename std::enable_if<sizeof...(Lengths) == sizeof...(Strides), bool>::type = false>
@@ -33,6 +53,8 @@ make_dynamic_naive_tensor_descriptor_v2(const Tuple<Lengths...>& lengths,
 
     constexpr auto visible_dim_hidden_ids = typename arithmetic_sequence_gen<1, N + 1, 1>::type{};
 
+#if !CK_WORKAROUND_SWDEV_275126
+    // rocm-4.1 compiler would crash for recursive labmda
     // recursive function for reduction
     auto f = [&](auto fs, auto i, auto acc_old) {
         auto acc_new = acc_old + (lengths[i] - Number<1>{}) * strides[i];
@@ -48,6 +70,10 @@ make_dynamic_naive_tensor_descriptor_v2(const Tuple<Lengths...>& lengths,
     };
 
     const auto element_space_size = f(f, Number<0>{}, Number<1>{});
+#else
+    const auto element_space_size =
+        calculate_element_space_size_impl(lengths, strides, Number<0>{}, Number<1>{});
+#endif
 
     return DynamicTensorDescriptor<remove_cv_t<decltype(transforms)>,
                                    remove_cv_t<decltype(low_dim_hidden_idss)>,
