@@ -3,14 +3,17 @@
 #include "host_tensor.hpp"
 #include "driver_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk.hpp"
 
-template <class T,
+template <class TInWei,
+          class TAcc,
+          class TOut,
           class InDesc,
           class WeiDesc,
           class OutDesc,
           class ConvStrides,
           class ConvDilations,
           class InLeftPads,
-          class InRightPads>
+          class InRightPads,
+          class T>
 void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc,
                                                                           const Tensor<T>& in_nchw,
                                                                           WeiDesc,
@@ -27,8 +30,6 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc
               << std::endl;
 
     using namespace ck;
-
-    using TDevice = typename conditional<is_same<half_float::half, T>::value, half_t, T>::type;
 
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -76,11 +77,11 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc
     const auto in_right_pads  = sequence_to_tuple_of_number(InRightPads{});
 #endif
 
-    Tensor<float> in_nhwc(
+    Tensor<TInWei> in_nhwc(
         make_HostTensorDescriptor(make_native_tensor_descriptor_packed(Sequence<N, Hi, Wi, C>{})));
-    Tensor<float> wei_kyxc(
+    Tensor<TInWei> wei_kyxc(
         make_HostTensorDescriptor(make_native_tensor_descriptor_packed(Sequence<K, Y, X, C>{})));
-    Tensor<float> out_nhwk(
+    Tensor<TOut> out_nhwk(
         make_HostTensorDescriptor(make_native_tensor_descriptor_packed(Sequence<N, Ho, Wo, K>{})));
 
     auto f_nchw2nhwc = [&](auto n, auto hi, auto wi, auto c) {
@@ -95,15 +96,13 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc
         out_nhwk(n, ho, wo, k) = out_nkhw(n, k, ho, wo);
     };
 
-    make_ParallelTensorFunctor(f_nchw2nhwc, N, Hi, Wi, C)(std::thread::hardware_concurrency());
-    make_ParallelTensorFunctor(f_kcyx2kyxc, K, Y, X, C)(std::thread::hardware_concurrency());
-    make_ParallelTensorFunctor(f_nkhw2nhwk, N, Ho, Wo, K)(std::thread::hardware_concurrency());
+    make_ParallelTensorFunctor(f_nchw2nhwc, N, Hi, Wi, C)();
+    make_ParallelTensorFunctor(f_kcyx2kyxc, K, Y, X, C)();
+    make_ParallelTensorFunctor(f_nkhw2nhwk, N, Ho, Wo, K)();
 
-    std::size_t data_sz = sizeof(T);
-
-    DeviceMem in_nhwc_device_buf(data_sz * in_nhwc.mDesc.GetElementSpace());
-    DeviceMem wei_kyxc_device_buf(data_sz * wei_kyxc.mDesc.GetElementSpace());
-    DeviceMem out_nhwk_device_buf(data_sz * out_nhwk.mDesc.GetElementSpace());
+    DeviceMem in_nhwc_device_buf(sizeof(TInWei) * in_nhwc.mDesc.GetElementSpace());
+    DeviceMem wei_kyxc_device_buf(sizeof(TInWei) * wei_kyxc.mDesc.GetElementSpace());
+    DeviceMem out_nhwk_device_buf(sizeof(TOut) * out_nhwk.mDesc.GetElementSpace());
 
     in_nhwc_device_buf.ToDevice(in_nhwc.mData.data());
     wei_kyxc_device_buf.ToDevice(wei_kyxc.mData.data());
@@ -378,8 +377,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_1x1
 #endif
         <BlockSize,
-         TDevice,
-         TDevice,
+         TInWei,
+         TAcc,
+         TOut,
          GemmMPerBlock,
          GemmNPerBlock,
          GemmKPerBlock,
@@ -407,9 +407,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc
                     conv_dilations,
                     in_left_pads,
                     in_right_pads,
-                    static_cast<TDevice*>(wei_kyxc_device_buf.GetDeviceBuffer()),
-                    static_cast<TDevice*>(in_nhwc_device_buf.GetDeviceBuffer()),
-                    static_cast<TDevice*>(out_nhwk_device_buf.GetDeviceBuffer()));
+                    static_cast<TInWei*>(wei_kyxc_device_buf.GetDeviceBuffer()),
+                    static_cast<TInWei*>(in_nhwc_device_buf.GetDeviceBuffer()),
+                    static_cast<TOut*>(out_nhwk_device_buf.GetDeviceBuffer()));
 
     out_nhwk_device_buf.FromDevice(out_nhwk.mData.data());
 
@@ -417,5 +417,5 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc
         out_nkhw(n, k, ho, wo) = out_nhwk(n, ho, wo, k);
     };
 
-    make_ParallelTensorFunctor(f_nhwk2nkhw, N, K, Ho, Wo)(std::thread::hardware_concurrency());
+    make_ParallelTensorFunctor(f_nhwk2nkhw, N, K, Ho, Wo)();
 }

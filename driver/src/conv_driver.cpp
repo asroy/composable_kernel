@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
+#elif 1
     constexpr index_t N  = 1;
     constexpr index_t C  = 4;
     constexpr index_t HI = 270;
@@ -644,14 +644,15 @@ int main(int argc, char* argv[])
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
-    if(argc != 3)
+    if(argc != 4)
     {
-        printf("arg1: do_verification, arg2: nrepeat\n");
+        printf("arg1: do_verification, arg2: do_log, arg3: nrepeat\n");
         exit(1);
     }
 
     bool do_verification = atoi(argv[1]);
-    index_t nrepeat      = atoi(argv[2]);
+    bool do_log          = atoi(argv[2]);
+    index_t nrepeat      = atoi(argv[3]);
 
     if(do_verification)
     {
@@ -660,13 +661,16 @@ int main(int argc, char* argv[])
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-        wei_kcyx.GenerateTensorValue(GeneratorTensor_3{}, num_thread);
+        wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-#elif 1
+#elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+#elif 1
+        in_nchw.GenerateTensorValue(GeneratorTensor_2{-2, 2}, num_thread);
+        wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-2, 2}, num_thread);
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_2{1, 5}, num_thread);
 
@@ -726,17 +730,24 @@ int main(int argc, char* argv[])
                                                                          RightPads{},
                                                                          nrepeat);
 #elif 1
-    device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(in_nchw_desc,
-                                                                         in_nchw,
-                                                                         wei_kcyx_desc,
-                                                                         wei_kcyx,
-                                                                         out_nkhw_desc,
-                                                                         out_nkhw_device,
-                                                                         ConvStrides{},
-                                                                         ConvDilations{},
-                                                                         LeftPads{},
-                                                                         RightPads{},
-                                                                         nrepeat);
+#if 0
+    device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<float, float, float>(
+#elif 1
+    device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<int8x4_t, int32_t, int32_t>(
+#elif 1
+    device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<int8x4_t, int32_t, int8_t>(
+#endif
+        in_nchw_desc,
+        in_nchw,
+        wei_kcyx_desc,
+        wei_kcyx,
+        out_nkhw_desc,
+        out_nkhw_device,
+        ConvStrides{},
+        ConvDilations{},
+        LeftPads{},
+        RightPads{},
+        nrepeat);
 #endif
 
     if(do_verification)
@@ -761,11 +772,12 @@ int main(int argc, char* argv[])
         }
         check_error(out_nkhw_host, out_nkhw_device);
 
-#if 0
-        LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
-        LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
-        LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
-        LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
-#endif
+        if(do_log)
+        {
+            LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
+            LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
+            LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
+            LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
+        }
     }
 }
