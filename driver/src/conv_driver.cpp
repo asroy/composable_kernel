@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 1
+#elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 4;
     constexpr index_t HI = 270;
@@ -730,10 +730,12 @@ int main(int argc, char* argv[])
                                                                          RightPads{},
                                                                          nrepeat);
 #elif 1
-#if 0
+#if 1
     device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<float, float, float>(
 #elif 1
-    device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<int8x4_t, int32_t, int32_t>(
+    device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<int8x4_t,
+                                                                         int32_t,
+                                                                         int32_t>(
 #elif 1
     device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<int8x4_t, int32_t, int8_t>(
 #endif

@@ -322,6 +322,8 @@ struct inner_product_with_conversion
         return acc;
     }
 
+    __device__ T operator()(float_t a, float_t b) const { return convert(a) * convert(b); }
+
     // hack for int8x4_t, because compiler does not have native support for int8x4_t
     // int8x4_t is defined as int32_t
     __device__ T operator()(int8x4_t a, int8x4_t b) const
