@@ -4,6 +4,7 @@
 #include "driver_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk.hpp"
 
 template <class TInWei,
+          ck::index_t InWeiVectorSize,
           class TAcc,
           class TOut,
           class InDesc,
@@ -14,17 +15,18 @@ template <class TInWei,
           class InLeftPads,
           class InRightPads,
           class T>
-void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc,
-                                                                          const Tensor<T>& in_nchw,
-                                                                          WeiDesc,
-                                                                          const Tensor<T>& wei_kcyx,
-                                                                          OutDesc,
-                                                                          Tensor<T>& out_nkhw,
-                                                                          ConvStrides,
-                                                                          ConvDilations,
-                                                                          InLeftPads,
-                                                                          InRightPads,
-                                                                          ck::index_t nrepeat)
+void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
+    InDesc,
+    const Tensor<T>& in_n_c_hi_wi,
+    WeiDesc,
+    const Tensor<T>& wei_k_c_y_x,
+    OutDesc,
+    Tensor<T>& out_n_k_ho_wo,
+    ConvStrides,
+    ConvDilations,
+    InLeftPads,
+    InRightPads,
+    ck::index_t nrepeat)
 {
     std::cout << "device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk"
               << std::endl;
@@ -49,6 +51,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc
     constexpr auto Y = WeiDesc::GetLengths()[I2];
     constexpr auto X = WeiDesc::GetLengths()[I3];
 
+    constexpr auto C0 = C / Number<InWeiVectorSize>{};
+    constexpr auto C1 = Number<InWeiVectorSize>{};
+
 #if 0
     // run-time variables
     constexpr auto in_n_hi_wi_c_desc =
@@ -64,10 +69,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc
     const auto in_right_pads  = to_multi_index(InRightPads{});
 #else
     // compile-time variables
-    constexpr auto in_n_hi_wi_c_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, Hi, Wi, C));
-    constexpr auto wei_k_y_x_c_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, Y, X, C));
+    constexpr auto in_n_hi_wi_c0_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, Hi, Wi, C0));
+    constexpr auto wei_k_y_x_c0_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, Y, X, C0));
     constexpr auto out_n_ho_wo_k_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, Ho, Wo, K));
 
@@ -77,36 +82,38 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc
     const auto in_right_pads  = sequence_to_tuple_of_number(InRightPads{});
 #endif
 
-    Tensor<TInWei> in_nhwc(
+    Tensor<TInWei> in_n_hi_wi_c(
         make_HostTensorDescriptor(make_native_tensor_descriptor_packed(Sequence<N, Hi, Wi, C>{})));
-    Tensor<TInWei> wei_kyxc(
+    Tensor<TInWei> wei_k_y_x_c(
         make_HostTensorDescriptor(make_native_tensor_descriptor_packed(Sequence<K, Y, X, C>{})));
-    Tensor<TOut> out_nhwk(
+    Tensor<TOut> out_n_ho_wo_k(
         make_HostTensorDescriptor(make_native_tensor_descriptor_packed(Sequence<N, Ho, Wo, K>{})));
 
     auto f_nchw2nhwc = [&](auto n, auto hi, auto wi, auto c) {
-        in_nhwc(n, hi, wi, c) = in_nchw(n, c, hi, wi);
+        in_n_hi_wi_c(n, hi, wi, c) = in_n_c_hi_wi(n, c, hi, wi);
     };
 
     auto f_kcyx2kyxc = [&](auto k, auto y, auto x, auto c) {
-        wei_kyxc(k, y, x, c) = wei_kcyx(k, c, y, x);
+        wei_k_y_x_c(k, y, x, c) = wei_k_c_y_x(k, c, y, x);
     };
 
     auto f_nkhw2nhwk = [&](auto n, auto ho, auto wo, auto k) {
-        out_nhwk(n, ho, wo, k) = out_nkhw(n, k, ho, wo);
+        out_n_ho_wo_k(n, ho, wo, k) = out_n_k_ho_wo(n, k, ho, wo);
     };
 
     make_ParallelTensorFunctor(f_nchw2nhwc, N, Hi, Wi, C)();
     make_ParallelTensorFunctor(f_kcyx2kyxc, K, Y, X, C)();
     make_ParallelTensorFunctor(f_nkhw2nhwk, N, Ho, Wo, K)();
 
-    DeviceMem in_nhwc_device_buf(sizeof(TInWei) * in_nhwc.mDesc.GetElementSpace());
-    DeviceMem wei_kyxc_device_buf(sizeof(TInWei) * wei_kyxc.mDesc.GetElementSpace());
-    DeviceMem out_nhwk_device_buf(sizeof(TOut) * out_nhwk.mDesc.GetElementSpace());
+    DeviceMem in_n_hi_wi_c_device_buf(sizeof(TInWei) * in_n_hi_wi_c.mDesc.GetElementSpace());
+    DeviceMem wei_k_y_x_c_device_buf(sizeof(TInWei) * wei_k_y_x_c.mDesc.GetElementSpace());
+    DeviceMem out_n_ho_wo_k_device_buf(sizeof(TOut) * out_n_ho_wo_k.mDesc.GetElementSpace());
 
-    in_nhwc_device_buf.ToDevice(in_nhwc.mData.data());
-    wei_kyxc_device_buf.ToDevice(wei_kyxc.mData.data());
-    out_nhwk_device_buf.ToDevice(out_nhwk.mData.data());
+#if 1
+    in_n_hi_wi_c_device_buf.ToDevice(in_n_hi_wi_c.mData.data());
+#endif
+    wei_k_y_x_c_device_buf.ToDevice(wei_k_y_x_c.mData.data());
+    out_n_ho_wo_k_device_buf.ToDevice(out_n_ho_wo_k.mData.data());
 
 #if 1
     // cdata = 16, BlockSize = 64, 16x64x4
@@ -377,7 +384,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_1x1
 #endif
         <BlockSize,
-         TInWei,
+         typename vector_type<TInWei, InWeiVectorSize>::type,
          TAcc,
          TOut,
          GemmMPerBlock,
@@ -400,21 +407,25 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(InDesc
          GemmBBlockTransferDstScalarPerVector_GemmN,
          GemmCThreadTransferDstScalarPerVector_GemmM1>{};
 
-    conv_driver.Run(wei_k_y_x_c_desc,
-                    in_n_hi_wi_c_desc,
+    conv_driver.Run(wei_k_y_x_c0_desc,
+                    in_n_hi_wi_c0_desc,
                     out_n_ho_wo_k_desc,
                     conv_strides,
                     conv_dilations,
                     in_left_pads,
                     in_right_pads,
-                    static_cast<TInWei*>(wei_kyxc_device_buf.GetDeviceBuffer()),
-                    static_cast<TInWei*>(in_nhwc_device_buf.GetDeviceBuffer()),
-                    static_cast<TOut*>(out_nhwk_device_buf.GetDeviceBuffer()));
+                    static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
+                        wei_k_y_x_c_device_buf.GetDeviceBuffer()),
+                    static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
+                        in_n_hi_wi_c_device_buf.GetDeviceBuffer()),
+                    static_cast<TOut*>(out_n_ho_wo_k_device_buf.GetDeviceBuffer()));
 
-    out_nhwk_device_buf.FromDevice(out_nhwk.mData.data());
+#if 1
+    out_n_ho_wo_k_device_buf.FromDevice(out_n_ho_wo_k.mData.data());
+#endif
 
     auto f_nhwk2nkhw = [&](auto n, auto k, auto ho, auto wo) {
-        out_nkhw(n, k, ho, wo) = out_nhwk(n, ho, wo, k);
+        out_n_k_ho_wo(n, k, ho, wo) = out_n_ho_wo_k(n, ho, wo, k);
     };
 
     make_ParallelTensorFunctor(f_nhwk2nkhw, N, K, Ho, Wo)();
