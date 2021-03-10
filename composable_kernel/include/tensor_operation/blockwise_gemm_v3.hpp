@@ -130,13 +130,13 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
 
         // thread A, B for GEMM
         constexpr auto a_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
-            Number<KPerThreadLoop>{}, Number<MPerThread>{});
+            make_tuple(Number<KPerThreadLoop>{}, Number<MPerThread>{}));
 
         constexpr auto b_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
-            Number<KPerThreadLoop>{}, Number<NPerThread>{});
+            make_tuple(Number<KPerThreadLoop>{}, Number<NPerThread>{}));
 
-        FloatA p_a_thread[a_thread_mtx.GetElementSpace()];
-        FloatB p_b_thread[b_thread_mtx.GetElementSpace()];
+        FloatA p_a_thread[a_thread_mtx.GetElementSpaceSize()];
+        FloatB p_b_thread[b_thread_mtx.GetElementSpaceSize()];
 
         constexpr auto a_thread_copy = ThreadwiseMatrixSliceCopy_v3<BlockMatrixA,
                                                                     decltype(a_thread_mtx),
@@ -342,7 +342,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
     template <typename FloatA, typename FloatB, typename FloatC>
     __device__ void Run(const FloatA* p_a_block, const FloatB* p_b_block, FloatC* p_c_thread) const
     {
-#if CK_EXPERIMENTAL_BLOCKWISE_GEMM_USE_PIPELINE
+#if 0
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
 
