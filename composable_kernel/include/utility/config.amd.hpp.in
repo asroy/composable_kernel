@@ -7,7 +7,7 @@
 #endif
 #include "bfloat16_dev.hpp"
 
-#if 1
+#if 0
 #define CK_AMD_GPU_GFX906 1
 #elif 0
 #define CK_AMD_GPU_GFX908 1

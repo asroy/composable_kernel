@@ -56,10 +56,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
 
 #if 0
     // run-time variables
-    constexpr auto in_n_hi_wi_c_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(N, Hi, Wi, C));
-    constexpr auto wei_k_y_x_c_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(K, Y, X, C));
+    constexpr auto in_n_hi_wi_c0_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(N, Hi, Wi, C0));
+    constexpr auto wei_k_y_x_c0_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(K, Y, X, C0));
     constexpr auto out_n_ho_wo_k_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(N, Ho, Wo, K));
 
@@ -109,9 +109,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
     DeviceMem wei_k_y_x_c_device_buf(sizeof(TInWei) * wei_k_y_x_c.mDesc.GetElementSpace());
     DeviceMem out_n_ho_wo_k_device_buf(sizeof(TOut) * out_n_ho_wo_k.mDesc.GetElementSpace());
 
-#if 1
     in_n_hi_wi_c_device_buf.ToDevice(in_n_hi_wi_c.mData.data());
-#endif
     wei_k_y_x_c_device_buf.ToDevice(wei_k_y_x_c.mData.data());
     out_n_ho_wo_k_device_buf.ToDevice(out_n_ho_wo_k.mData.data());
 

@@ -750,7 +750,6 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 1
         host_direct_convolution(in_nchw,
                                 wei_kcyx,
                                 out_nkhw_host,
@@ -758,11 +757,8 @@ int main(int argc, char* argv[])
                                 ConvDilations{},
                                 LeftPads{},
                                 RightPads{});
-#endif
 
-#if 1
         check_error(out_nkhw_host, out_nkhw_device);
-#endif
 
         if(do_log)
         {
