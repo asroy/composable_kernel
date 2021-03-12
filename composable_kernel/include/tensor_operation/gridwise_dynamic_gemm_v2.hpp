@@ -68,15 +68,15 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto b_k_n_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}), max_lds_align);
+        constexpr auto b_cyx_n_h_w_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(Number<KPerBlock>{}, Number<1>{}, Number<8>{}, Number<8>{}), max_lds_align);
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
             math::integer_least_multiple(a_k_m_block_desc.GetElementSpaceSize(), max_lds_align);
 
         constexpr auto b_block_space_size =
-            math::integer_least_multiple(b_k_n_block_desc.GetElementSpaceSize(), max_lds_align);
+            math::integer_least_multiple(b_cyx_n_h_w_block_desc.GetElementSpaceSize(), max_lds_align);
 
         return 2 * (a_block_space_size + b_block_space_size) * sizeof(Float);
     }
@@ -84,9 +84,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const AGlobalDesc& a_k_m_global_desc,
                         const Float* __restrict__ p_a_global,
-                        const BGlobalDesc& b_k_n_global_desc,
+                        const BGlobalDesc& b_cyx_n_h_w_global_desc,
                         const Float* __restrict__ p_b_global,
-                        const CGlobalDesc& c_m0_m1_n0_n1_global_desc,
+                        const CGlobalDesc& c_k_n_h_w_global_desc,
                         Float* __restrict__ p_c_global,
                         Float* __restrict__ p_shared_block,
                         integral_constant<bool, HasMainKBlockLoop>,
@@ -97,7 +97,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         const auto K = a_k_m_global_desc.GetLength(I0);
         const auto M = a_k_m_global_desc.GetLength(I1);
-        const auto N = b_k_n_global_desc.GetLength(I1);
+        const auto N = b_cyx_n_h_w_global_desc.GetLength(I1);
 
         // divide block work by [M, N]
 #if 0
@@ -118,7 +118,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 #endif
 
         const index_t m_block_data_on_global = m_block_work_id * MPerBlock;
-        const index_t n_block_data_on_global = n_block_work_id * NPerBlock;
+
+        const index_t h_block_data_on_global = n_block_work_id * 8;
+        const index_t w_block_data_on_global = n_block_work_id * 8;
 
         // lds max alignment
         constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_M>{},
@@ -133,8 +135,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto b_k_n_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}), max_lds_align);
+        constexpr auto b_cyx_n_h_w_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(Number<KPerBlock>{}, Number<1>{}, Number<8>{}, Number<8>{}), max_lds_align);
 
         // A matrix blockwise copy
         auto a_blockwise_copy =
@@ -166,33 +168,52 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                 make_multi_index(0, 0));
 
         // B matrix blockwise copy
-        auto b_blockwise_copy =
-            BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
-                                                   InMemoryDataOperation::Set,
-                                                   Sequence<KPerBlock, NPerBlock>,
-                                                   BBlockTransferThreadSliceLengths_K_N,
-                                                   BBlockTransferThreadClusterLengths_K_N,
-                                                   BBlockTransferThreadClusterArrangeOrder,
-                                                   Float,
-                                                   Float,
-                                                   decltype(b_k_n_global_desc),
-                                                   decltype(b_k_n_block_desc),
-                                                   BBlockTransferSrcAccessOrder,
-                                                   Sequence<0, 1>,
-                                                   BBlockTransferSrcVectorDim,
-                                                   1,
-                                                   BBlockTransferSrcScalarPerVector,
-                                                   BBlockTransferDstScalarPerVector_N,
-                                                   AddressSpace::Global,
-                                                   AddressSpace::Lds,
-                                                   1,
-                                                   1,
-                                                   BThreadTransferSrcResetCoordinateAfterRun,
-                                                   true>(
-                b_k_n_global_desc,
-                make_multi_index(0, n_block_data_on_global),
-                b_k_n_block_desc,
-                make_multi_index(0, 0));
+        auto b_blockwise_copy = BlockwiseDynamicTensorSliceTransfer_v4<
+            BlockSize,
+            InMemoryDataOperation::Set,
+            Sequence<KPerBlock, 1, 8, 8>, // BlockSliceLengths
+            Sequence<KPerBlock, 1, 1, 1>, // ThreadSliceLengths_K_N
+            Sequence<1, 1, 8, 8>,         // ThreadClusterLengths_K_N
+            Sequence<3, 2, 0, 1>,         // ThreadClusterArrangeOrder
+            Float,
+            Float,
+            decltype(b_cyx_n_h_w_global_desc), // SrcDesc
+            decltype(b_cyx_n_h_w_block_desc),  // DstDesc
+            Sequence<3, 2, 0, 1>,        // SrcDimAccessOrder
+            Sequence<3, 2, 0, 1>,        // DstDimAccessOrder
+            3,                           // SrcVectorDim
+            3,                           // DstVectorDim
+            1,                           // SrcScalarPerVector
+            1,                           // DstScalarPerVector
+            AddressSpace::Global,
+            AddressSpace::Lds,
+            1,
+            1,
+            BThreadTransferSrcResetCoordinateAfterRun,
+            true>(b_cyx_n_h_w_global_desc,
+                  make_multi_index(0, 0, h_block_data_on_global, w_block_data_on_global),
+                  b_cyx_n_h_w_block_desc,
+                  make_multi_index(0, 0, 0, 0));
+
+#if 0
+        constexpr auto b_cyx_n_h_w_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<KPerThread>{}, Number<NPerThread>{}));
+
+        using BThreadwiseTransfer =
+            ThreadwiseDynamicTensorSliceTransfer_v2<Float,
+                                                      Float,
+                                                      decltype(b_cyx_n_h_w_global_desc),
+                                                      decltype(b_cyx_n_h_w_thread_desc),
+                                                      Sequence<KPerThread, NPerThread>,
+                                                      BBlockTransferSrcAccessOrder,
+                                                      BBlockTransferSrcVectorDim,
+                                                      BBlockTransferSrcScalarPerVector,
+                                                      AddressSpace::Global,
+                                                      AddressSpace::Vgpr,
+                                                      InMemoryDataOperation::Set,
+                                                      1,
+                                                      true>;
+#endif
 
         // GEMM definition
         //   c_mtx += transpose(a_mtx) * b_mtx
@@ -201,70 +222,77 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         //     c_mtx[MPerBlock, NPerBlock] is distributed among threads, and saved in
         //       register
         // sanity check
-        static_assert(MPerBlock % (MPerThread * MLevel0Cluster * MLevel1Cluster) == 0 &&
-                          NPerBlock % (NPerThread * NLevel0Cluster * NLevel1Cluster) == 0,
-                      "wrong!");
+        //static_assert(MPerBlock % (MPerThread * MLevel0Cluster * MLevel1Cluster) == 0 &&
+                          //NPerBlock % (NPerThread * NLevel0Cluster * NLevel1Cluster) == 0,
+                      //"wrong!");
 
-        constexpr index_t MRepeat = MPerBlock / (MPerThread * MLevel0Cluster * MLevel1Cluster);
-        constexpr index_t NRepeat = NPerBlock / (NPerThread * NLevel0Cluster * NLevel1Cluster);
+        // constexpr index_t MRepeat = MPerBlock / (MPerThread * MLevel0Cluster * MLevel1Cluster);
+        // constexpr index_t NRepeat = NPerBlock / (NPerThread * NLevel0Cluster * NLevel1Cluster);
 
         // c_thread_mtx definition: this is a mess
         // TODO:: more elegent way of defining c_thread_mtx
-        constexpr auto c_m0m1_n0n1_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-            make_tuple(Number<MRepeat * MPerThread>{}, Number<NRepeat * NPerThread>{}));
+        constexpr auto c_k_n_h_w_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<MPerThread>{}, Number<1>{}, Number<1>{}, Number<1>{}));
 
+#if 0
         const auto blockwise_gemm =
             BlockwiseGemm_km_kn_m0m1n0n1_v3<BlockSize,
-                                            decltype(a_k_m_block_desc),
-                                            decltype(b_k_n_block_desc),
-                                            decltype(c_m0m1_n0n1_thread_desc),
-                                            MPerThread,
-                                            NPerThread,
-                                            KPerThread,
-                                            MLevel0Cluster,
-                                            NLevel0Cluster,
-                                            MLevel1Cluster,
-                                            NLevel1Cluster,
-                                            MPerThread,
-                                            NPerThread>{};
+            decltype(a_k_m_block_desc),
+            decltype(b_cyx_n_h_w_block_desc),
+            decltype(c_k_n_h_w_thread_desc),
+            MPerThread,
+            NPerThread,
+            KPerThread,
+            MLevel0Cluster,
+            NLevel0Cluster,
+            MLevel1Cluster,
+            NLevel1Cluster,
+            1,
+            1>{};
+#endif
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
             math::integer_least_multiple(a_k_m_block_desc.GetElementSpaceSize(), max_lds_align);
 
         constexpr auto b_block_space_size =
-            math::integer_least_multiple(b_k_n_block_desc.GetElementSpaceSize(), max_lds_align);
+            math::integer_least_multiple(b_cyx_n_h_w_block_desc.GetElementSpaceSize(), max_lds_align);
 
         Float* p_a_block_double = p_shared_block;
         Float* p_b_block_double = p_shared_block + 2 * a_block_space_size;
 
         // register allocation for output
-        AccFloat p_c_thread[c_m0m1_n0n1_thread_desc.GetElementSpaceSize()];
+        AccFloat p_c_thread[c_k_n_h_w_thread_desc.GetElementSpaceSize()];
+
+        for(index_t i = 0; i < c_k_n_h_w_thread_desc.GetElementSpaceSize(); i++)
+        {
+            p_c_thread[i] = 0;
+        }
 
         // zero out threadwise output
-        threadwise_matrix_set_zero_v2(c_m0m1_n0n1_thread_desc, p_c_thread);
+        // threadwise_matrix_set_zero_v2(c_k_n_h_w_thread_desc, p_c_thread);
 
         constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0);
-        constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0);
+        constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0, 0, 0);
 
         // hack to control index calculation when iterating over A and B matrix for threadwise copy
         constexpr auto a_k_m_global_iterator_hacks = AGlobalIteratorHacks{};
-        constexpr auto b_k_n_global_iterator_hacks = BGlobalIteratorHacks{};
+        constexpr auto b_cyx_n_h_w_global_iterator_hacks = BGlobalIteratorHacks{};
 
         // hack to control index calculation when move slice window for A and B matrix for
         // threadwise copy
         constexpr auto a_k_m_global_move_slice_window_iterator_hack =
             AGlobalMoveSliceWindowIteratorHacks{};
-        constexpr auto b_k_n_global_move_slice_window_iterator_hack =
+        constexpr auto b_cyx_n_h_w_global_move_slice_window_iterator_hack =
             BGlobalMoveSliceWindowIteratorHacks{};
 
         // LDS double buffer: preload data into LDS
         {
             a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global, a_k_m_global_iterator_hacks);
-            b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global, b_k_n_global_iterator_hacks);
+            b_blockwise_copy.RunRead(b_cyx_n_h_w_global_desc, p_b_global, b_cyx_n_h_w_global_iterator_hacks);
 
             a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_double);
-            b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_double);
+            b_blockwise_copy.RunWrite(b_cyx_n_h_w_block_desc, p_b_block_double);
         }
 
         if constexpr(HasMainKBlockLoop)
@@ -285,9 +313,14 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                 a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc,
                                                     a_block_slice_copy_step,
                                                     a_k_m_global_move_slice_window_iterator_hack);
-                b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc,
+
+                // b_blockwise_copy.MoveSrcSliceWindow(b_cyx_n_h_w_global_desc,
+                // b_block_slice_copy_step,
+                // b_cyx_n_h_w_global_move_slice_window_iterator_hack);
+
+                b_blockwise_copy.MoveSrcSliceWindow(b_cyx_n_h_w_global_desc,
                                                     b_block_slice_copy_step,
-                                                    b_k_n_global_move_slice_window_iterator_hack);
+                                                    b_cyx_n_h_w_global_move_slice_window_iterator_hack);
 
                 __syncthreads();
 
@@ -295,22 +328,22 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                 a_blockwise_copy.RunRead(
                     a_k_m_global_desc, p_a_global, a_k_m_global_iterator_hacks);
                 b_blockwise_copy.RunRead(
-                    b_k_n_global_desc, p_b_global, b_k_n_global_iterator_hacks);
+                    b_cyx_n_h_w_global_desc, p_b_global, b_cyx_n_h_w_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(p_a_block_even, p_b_block_even, p_c_thread);
+                // blockwise_gemm.Run(p_a_block_even, p_b_block_even, p_c_thread);
 
                 // LDS double buffer: store next data to LDS
                 a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_odd);
-                b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_odd);
+                b_blockwise_copy.RunWrite(b_cyx_n_h_w_block_desc, p_b_block_odd);
 
                 // odd iteration
                 a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc,
                                                     a_block_slice_copy_step,
                                                     a_k_m_global_move_slice_window_iterator_hack);
-                b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc,
+                b_blockwise_copy.MoveSrcSliceWindow(b_cyx_n_h_w_global_desc,
                                                     b_block_slice_copy_step,
-                                                    b_k_n_global_move_slice_window_iterator_hack);
+                                                    b_cyx_n_h_w_global_move_slice_window_iterator_hack);
 
                 __syncthreads();
 
@@ -318,14 +351,14 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                 a_blockwise_copy.RunRead(
                     a_k_m_global_desc, p_a_global, a_k_m_global_iterator_hacks);
                 b_blockwise_copy.RunRead(
-                    b_k_n_global_desc, p_b_global, b_k_n_global_iterator_hacks);
+                    b_cyx_n_h_w_global_desc, p_b_global, b_cyx_n_h_w_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(p_a_block_odd, p_b_block_odd, p_c_thread);
+                // blockwise_gemm.Run(p_a_block_odd, p_b_block_odd, p_c_thread);
 
                 // LDS double buffer: store next data to LDS
                 a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_even);
-                b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_even);
+                b_blockwise_copy.RunWrite(b_cyx_n_h_w_block_desc, p_b_block_even);
 
                 k_block_data_begin += 2 * KPerBlock;
             } while(k_block_data_begin < K - 2 * KPerBlock);
@@ -337,53 +370,49 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
             a_blockwise_copy.MoveSrcSliceWindow(a_k_m_global_desc,
                                                 a_block_slice_copy_step,
                                                 a_k_m_global_move_slice_window_iterator_hack);
-            b_blockwise_copy.MoveSrcSliceWindow(b_k_n_global_desc,
+            b_blockwise_copy.MoveSrcSliceWindow(b_cyx_n_h_w_global_desc,
                                                 b_block_slice_copy_step,
-                                                b_k_n_global_move_slice_window_iterator_hack);
+                                                b_cyx_n_h_w_global_move_slice_window_iterator_hack);
 
             __syncthreads();
 
             // LDS double buffer: load last data from device mem
             a_blockwise_copy.RunRead(a_k_m_global_desc, p_a_global, a_k_m_global_iterator_hacks);
-            b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global, b_k_n_global_iterator_hacks);
+            b_blockwise_copy.RunRead(b_cyx_n_h_w_global_desc, p_b_global, b_cyx_n_h_w_global_iterator_hacks);
 
             // LDS double buffer: GEMM on 2nd-last data
-            blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
+            // blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
 
             // LDS double buffer: store last data to LDS
             a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_double + a_block_space_size);
-            b_blockwise_copy.RunWrite(b_k_n_block_desc, p_b_block_double + b_block_space_size);
+            b_blockwise_copy.RunWrite(b_cyx_n_h_w_block_desc, p_b_block_double + b_block_space_size);
 
             __syncthreads();
 
             // LDS double buffer: GEMM on last data
-            blockwise_gemm.Run(p_a_block_double + a_block_space_size,
-                               p_b_block_double + b_block_space_size,
-                               p_c_thread);
+            // blockwise_gemm.Run(p_a_block_double + a_block_space_size,
+            // p_b_block_double + b_block_space_size,
+            // p_c_thread);
         }
         else // if has 1 iteration left
         {
             __syncthreads();
 
             // LDS double buffer: GEMM on last data
-            blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
+            // blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
         }
 
+#if 1
         // output: register to global memory
         {
-            constexpr auto M1 = Number<MPerThread * MLevel0Cluster * MLevel1Cluster>{};
-            constexpr auto N1 = Number<NPerThread * NLevel0Cluster * NLevel1Cluster>{};
-
             // define input tensor descriptor for threadwise copy
             //     thread input tensor, src of threadwise copy
-            constexpr auto c_m0_m1_n0_n1_thread_desc =
-                make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(Number<MRepeat>{},
-                                                                          Number<MPerThread>{},
-                                                                          Number<NRepeat>{},
-                                                                          Number<NPerThread>{}));
+            constexpr auto c_k_n_h_w_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+                make_tuple(Number<MPerThread>{}, Number<1>{}, Number<1>{}, Number<1>{}));
 
             // calculate origin of thread input tensor on global memory
             //     blockwise GEMM c matrix starting index
+#if 0
             const auto c_thread_mtx_on_block =
                 blockwise_gemm.GetBeginOfThreadMatrixC(get_thread_local_1d_id());
 
@@ -392,47 +421,54 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
             const index_t n_thread_data_on_global =
                 n_block_data_on_global + c_thread_mtx_on_block.col;
+#endif
+            const index_t h_thread_id = get_thread_local_1d_id() / 8;
+            const index_t w_thread_id = get_thread_local_1d_id() % 8;
 
-            // hack to control index calculation when iterating over c_m0_m1_n0_n1_global tensor
-            constexpr auto c_m0_m1_n0_n1_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
+            const index_t m_thread_data_on_global = m_block_data_on_global;
+            const index_t h_thread_data_on_global = h_block_data_on_global + h_thread_id;
+            const index_t w_thread_data_on_global = w_block_data_on_global + w_thread_id;
 
-            constexpr auto tmp = make_unmerge_transform(make_tuple(
-                Number<MRepeat>{}, Number<MPerThread>{}, Number<NRepeat>{}, Number<NPerThread>{}));
+            // hack to control index calculation when iterating over c_k_n_h_w_global tensor
+            constexpr auto c_k_n_h_w_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
+
+            // constexpr auto tmp = make_unmerge_transform(make_tuple(
+            // Number<MRepeat>{}, Number<MPerThread>{}, Number<NRepeat>{}, Number<NPerThread>{}));
 
             ThreadwiseDynamicTensorSliceTransfer_v1r3<
                 AccFloat,
                 Float,
-                decltype(c_m0_m1_n0_n1_thread_desc),
-                decltype(c_m0_m1_n0_n1_global_desc),
-                Sequence<MRepeat, MPerThread, NRepeat, NPerThread>,
-                CThreadTransferSrcDstAccessOrder,
-                CThreadTransferSrcDstVectorDim,
-                CThreadTransferDstScalarPerVector,
+                decltype(c_k_n_h_w_thread_desc),
+                decltype(c_k_n_h_w_global_desc),
+                Sequence<MPerThread, 1, 1, 1>,
+                Sequence<3, 2, 0, 1>, // CThreadTransferSrcDstAccessOrder
+                3,                    // CThreadTransferSrcDstVectorDim
+                1,                    // CThreadTransferDstScalarPerVector,
                 AddressSpace::Vgpr,
                 AddressSpace::Global,
                 CGlobalMemoryDataOperation,
                 1,
-                true>(c_m0_m1_n0_n1_global_desc,
-                      make_multi_index(m_thread_data_on_global / M1,
-                                       m_thread_data_on_global % M1,
-                                       n_thread_data_on_global / N1,
-                                       n_thread_data_on_global % N1))
-                .Run(c_m0_m1_n0_n1_thread_desc,
+                true>(
+                c_k_n_h_w_global_desc,
+                make_multi_index(
+                    m_thread_data_on_global, 0, h_thread_data_on_global, w_thread_data_on_global))
+                .Run(c_k_n_h_w_thread_desc,
                      make_tuple(I0, I0, I0, I0),
                      p_c_thread,
-                     c_m0_m1_n0_n1_global_desc,
+                     c_k_n_h_w_global_desc,
                      p_c_global,
-                     c_m0_m1_n0_n1_global_tensor_iterator_hacks);
+                     c_k_n_h_w_global_tensor_iterator_hacks);
         }
+#endif
     }
 
     // pass tensor descriptor by reference
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const AGlobalDesc& a_k_m_global_desc,
                         const Float* __restrict__ p_a_global,
-                        const BGlobalDesc& b_k_n_global_desc,
+                        const BGlobalDesc& b_cyx_n_h_w_global_desc,
                         const Float* __restrict__ p_b_global,
-                        const CGlobalDesc& c_m0_m1_n0_n1_global_desc,
+                        const CGlobalDesc& c_k_n_h_w_global_desc,
                         Float* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
@@ -443,9 +479,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         Run(a_k_m_global_desc,
             p_a_global,
-            b_k_n_global_desc,
+            b_cyx_n_h_w_global_desc,
             p_b_global,
-            c_m0_m1_n0_n1_global_desc,
+            c_k_n_h_w_global_desc,
             p_c_global,
             p_shared_block,
             integral_constant<bool, HasMainKBlockLoop>{},
@@ -456,22 +492,22 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const AGlobalDesc* p_a_k_m_global_desc,
                         const Float* __restrict__ p_a_global,
-                        const BGlobalDesc* p_b_k_n_global_desc,
+                        const BGlobalDesc* p_b_cyx_n_h_w_global_desc,
                         const Float* __restrict__ p_b_global,
-                        const CGlobalDesc* p_c_m0_m1_n0_n1_global_desc,
+                        const CGlobalDesc* p_c_k_n_h_w_global_desc,
                         Float* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
         const auto a_k_m_global_desc         = *p_a_k_m_global_desc;
-        const auto b_k_n_global_desc         = *p_b_k_n_global_desc;
-        const auto c_m0_m1_n0_n1_global_desc = *p_c_m0_m1_n0_n1_global_desc;
+        const auto b_cyx_n_h_w_global_desc         = *p_b_cyx_n_h_w_global_desc;
+        const auto c_k_n_h_w_global_desc = *p_c_k_n_h_w_global_desc;
 
         Run(a_k_m_global_desc,
             p_a_global,
-            b_k_n_global_desc,
+            b_cyx_n_h_w_global_desc,
             p_b_global,
-            c_m0_m1_n0_n1_global_desc,
+            c_k_n_h_w_global_desc,
             p_c_global,
             integral_constant<bool, HasMainKBlockLoop>{},
             integral_constant<bool, HasDoubleTailKBlockLoop>{});
@@ -481,23 +517,23 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const void* p_a_k_m_global_desc,
                         const Float* __restrict__ p_a_global,
-                        const void* p_b_k_n_global_desc,
+                        const void* p_b_cyx_n_h_w_global_desc,
                         const Float* __restrict__ p_b_global,
-                        const void* p_c_m0_m1_n0_n1_global_desc,
+                        const void* p_c_k_n_h_w_global_desc,
                         Float* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
         const auto a_k_m_global_desc = *reinterpret_cast<const AGlobalDesc*>(p_a_k_m_global_desc);
-        const auto b_k_n_global_desc = *reinterpret_cast<const BGlobalDesc*>(p_b_k_n_global_desc);
-        const auto c_m0_m1_n0_n1_global_desc =
-            *reinterpret_cast<const CGlobalDesc*>(p_c_m0_m1_n0_n1_global_desc);
+        const auto b_cyx_n_h_w_global_desc = *reinterpret_cast<const BGlobalDesc*>(p_b_cyx_n_h_w_global_desc);
+        const auto c_k_n_h_w_global_desc =
+            *reinterpret_cast<const CGlobalDesc*>(p_c_k_n_h_w_global_desc);
 
         Run(a_k_m_global_desc,
             p_a_global,
-            b_k_n_global_desc,
+            b_cyx_n_h_w_global_desc,
             p_b_global,
-            c_m0_m1_n0_n1_global_desc,
+            c_k_n_h_w_global_desc,
             p_c_global,
             integral_constant<bool, HasMainKBlockLoop>{},
             integral_constant<bool, HasDoubleTailKBlockLoop>{});

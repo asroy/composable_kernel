@@ -75,9 +75,9 @@ struct ThreadwiseGemm_km_kn_mn_v1
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
 
-        constexpr auto M = CDesc{}[I0];
-        constexpr auto N = CDesc{}[I1];
-        constexpr auto K = ADesc{}[I0];
+        constexpr auto M = CDesc{}.GetLength(I0);
+        constexpr auto N = CDesc{}.GetLength(I1);
+        constexpr auto K = ADesc{}.GetLength(I0);
 
         static_for<0, K, 1>{}([&](auto k) {
             static_for<0, M, 1>{}([&](auto m) {

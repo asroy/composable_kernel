@@ -82,8 +82,8 @@ int main(int argc, char* argv[])
 #elif 1
     constexpr index_t N  = 1;
     constexpr index_t C  = 4;
-    constexpr index_t HI = 1080;
-    constexpr index_t WI = 1920;
+    constexpr index_t HI = 8;
+    constexpr index_t WI = 8;
     constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
@@ -657,7 +657,7 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 0
+#if 1
         in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 0
@@ -776,9 +776,9 @@ int main(int argc, char* argv[])
         }
         check_error(out_nkhw_host, out_nkhw_device);
 
-#if 0
-        LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
-        LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
+#if 1
+        // LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
+        // LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
         LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
         LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
 #endif

@@ -136,7 +136,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
 
         // loop over tensor and copy
         static_ford<decltype(ordered_access_lengths)>{}([&](auto ordered_access_idx) {
-
             // judge move forward or move backward
             constexpr auto forward_sweep = [&]() {
                 StaticallyIndexedArray<bool, nDim> forward_sweep;
@@ -463,7 +462,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
 
         // loop over tensor and copy
         static_ford<decltype(ordered_access_lengths)>{}([&](auto ordered_access_idx) {
-
             // judge move forward or move backward
             constexpr auto forward_sweep = [&]() {
                 StaticallyIndexedArray<bool, nDim> forward_sweep;
@@ -500,7 +498,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
             }();
 
             // copy data
-            static_assert(DstAddressSpace == AddressSpace::Vgpr, "wrong! hardcode for ds_read");
+            static_assert(DstAddressSpace == AddressSpace::Vgpr, "wrong! hardcode for vgpr dst");
 
             vector_type<SrcData, SrcScalarPerVector> src_vector;
 
@@ -798,7 +796,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
         // loop over tensor and copy
         static_ford<decltype(ordered_src_access_lengths)>{}([&](auto ordered_src_access_idx) {
-
             // judge move forward or move backward
             constexpr auto forward_sweep = [&]() {
                 StaticallyIndexedArray<bool, nDim> forward_sweep;
@@ -978,7 +975,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
         // loop over tensor and copy
         static_ford<decltype(ordered_dst_access_lengths)>{}([&](auto ordered_dst_access_idx) {
-
             // judge move forward or move backward
             constexpr auto forward_sweep = [&]() {
                 StaticallyIndexedArray<bool, nDim> forward_sweep;
