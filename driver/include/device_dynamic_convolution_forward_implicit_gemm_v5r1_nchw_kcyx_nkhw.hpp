@@ -76,7 +76,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
 
     constexpr index_t GemmMPerThread = 16;
     constexpr index_t GemmNPerThread = 1;
-    constexpr index_t GemmKPerThread = 1;
+    constexpr index_t GemmKPerThread = 4;
 
     constexpr index_t GemmMLevel0Cluster = 1;
     constexpr index_t GemmNLevel0Cluster = 1;

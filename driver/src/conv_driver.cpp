@@ -779,7 +779,7 @@ int main(int argc, char* argv[])
 #if 1
         // LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
         // LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
-        LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
+        // LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
         LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
 #endif
     }
