@@ -33,7 +33,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
     };
 
     index_t mMyThreadOffsetA;
-    index_t mMyThreadOffsetB;
 
     __device__ BlockwiseGemm_km_kn_m0m1n0n1_v3()
     {
@@ -68,8 +67,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         auto c_thread_mtx_index = GetBeginOfThreadMatrixC(get_thread_local_1d_id());
 
         mMyThreadOffsetA = BlockMatrixA{}.CalculateOffset(make_tuple(0, c_thread_mtx_index.k));
-        mMyThreadOffsetB = BlockMatrixB{}.CalculateOffset(
-            make_tuple(0, 0, c_thread_mtx_index.h, c_thread_mtx_index.w));
     }
 
     __device__ static constexpr auto GetThreadMatrixCLengths()
@@ -109,38 +106,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         }
     };
 
-    template <typename SrcDesc,
-              typename DstDesc,
-              index_t NSliceCYX,
-              index_t NSliceH,
-              index_t NSliceW,
-              index_t DataPerAccess>
-    struct ThreadwiseSliceCopy_b
-    {
-        template <typename Data>
-        __device__ static void Run(const Data* p_src, Data* p_dst)
-        {
-            static_assert(SrcDesc::IsKnownAtCompileTime() && DstDesc::IsKnownAtCompileTime(),
-                          "wrong! Desc should be known at compile-time");
-
-            using vector_t = typename vector_type<Data, DataPerAccess>::type;
-
-            static_for<0, NSliceCYX, 1>{}([&](auto i) {
-                static_for<0, NSliceH, 1>{}([&](auto j) {
-                    static_for<0, NSliceW, 1>{}([&](auto k) {
-                        constexpr auto src_offset =
-                            SrcDesc{}.CalculateOffset(make_tuple(i, 0, j, k));
-                        constexpr auto dst_offset =
-                            DstDesc{}.CalculateOffset(make_tuple(i, 0, j, k));
-
-                        *reinterpret_cast<vector_t*>(&p_dst[dst_offset]) =
-                            *reinterpret_cast<const vector_t*>(&p_src[src_offset]);
-                    });
-                });
-            });
-        }
-    };
-
     template <typename FloatA, typename FloatB, typename FloatC>
     __device__ void
     Run_naive(const FloatA* p_a_block, const FloatB* p_b_thread, FloatC* p_c_thread) const
@@ -160,7 +125,8 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
             make_tuple(Number<CYXPerThreadLoop>{}, Number<KPerThread>{}));
 
         constexpr auto b_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
-            make_tuple(Number<CYXPerThreadLoop>{}, Number<1>{}, Number<1>{}, Number<1>{}));
+            // make_tuple(Number<CYXPerThreadLoop>{}, Number<1>{}, Number<1>{}, Number<1>{}));
+            make_tuple(Number<CYXPerThreadLoop>{}, Number<1>{}));
 
         constexpr auto c_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
             make_tuple(Number<KPerThread>{}, Number<1>{}));
@@ -183,7 +149,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
                                   mMyThreadOffsetA,
                               p_a_thread + a_thread_mtx.CalculateOffset(make_tuple(0, 0)));
 
-            // threadwise_gemm.Run(p_a_thread, p_b_thread, p_c_thread);
+            threadwise_gemm.Run(p_a_thread, p_b_thread + CYXPerThreadLoop * cyx_begin, p_c_thread);
         }
     }
 

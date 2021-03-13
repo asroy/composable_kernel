@@ -56,32 +56,19 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 {
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
-        constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_M>{},
-                                                 Number<BBlockTransferDstScalarPerVector_N>{},
-                                                 Number<KPerThread>{},
-                                                 Number<HWPerThread>{});
-
-        static_assert(CYXPerBlock == 4 && HWPerBlock == 64 && KPerBlock == 16, "");
+        constexpr auto max_lds_align =
+            math::lcm(Number<ABlockTransferDstScalarPerVector_M>{}, Number<KPerThread>{});
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
         constexpr auto a_cyx_k_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
             make_tuple(Number<CYXPerBlock>{}, Number<KPerBlock>{}), max_lds_align);
 
-        // B matrix in LDS memory, dst of blockwise copy
-        //   be careful of LDS alignment
-        constexpr auto b_cyx_n_h_w_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<CYXPerBlock>{}, Number<1>{}, Number<8>{}, Number<8>{}),
-            max_lds_align);
-
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
             math::integer_least_multiple(a_cyx_k_block_desc.GetElementSpaceSize(), max_lds_align);
 
-        constexpr auto b_block_space_size = math::integer_least_multiple(
-            b_cyx_n_h_w_block_desc.GetElementSpaceSize(), max_lds_align);
-
-        return 2 * (a_block_space_size + b_block_space_size) * sizeof(Float);
+        return 2 * (a_block_space_size) * sizeof(Float);
     }
 
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
@@ -180,17 +167,17 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
 #if 1
         constexpr auto b_cyx_n_h_w_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-            make_tuple(Number<CYXPerThread>{}, Number<1>{}, Number<1>{}, Number<1>{}));
+            make_tuple(Number<CYXPerBlock>{}, Number<1>{}, Number<1>{}, Number<1>{}));
 
         const index_t h_thread_id = get_thread_local_1d_id() / 8;
         const index_t w_thread_id = get_thread_local_1d_id() % 8;
 
-        auto b_threadwise_transfer = ThreadwiseDynamicTensorSliceTransfer_v2<
+        using ThreadwiseTensorSliceTransferB = ThreadwiseDynamicTensorSliceTransfer_v2<
             Float,
             Float,
             decltype(b_cyx_n_h_w_global_desc),
             decltype(b_cyx_n_h_w_thread_desc),
-            Sequence<CYXPerThread, 1, 1, 1>,
+            Sequence<CYXPerBlock, 1, 1, 1>,
             Sequence<3, 2, 0, 1>, // BBlockTransferSrcAccessOrder,
             3,                    // BBlockTransferSrcVectorDim,
             1,                    // BBlockTransferSrcScalarPerVector,
@@ -198,7 +185,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
             AddressSpace::Vgpr,
             InMemoryDataOperation::Set,
             1,
-            true>(
+            true>;
+
+        ThreadwiseTensorSliceTransferB b_threadwise_transfer(
             b_cyx_n_h_w_global_desc,
             make_multi_index(
                 0, 0, h_block_data_on_global + h_thread_id, w_block_data_on_global + w_thread_id));
@@ -234,7 +223,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
             b_cyx_n_h_w_block_desc.GetElementSpaceSize(), max_lds_align);
 
         Float* p_a_block_double = p_shared_block;
-        Float* p_b_block_double = p_shared_block + 2 * a_block_space_size;
 
         // register allocation for output
         AccFloat p_c_thread[c_k_n_h_w_thread_desc.GetElementSpaceSize()];
@@ -279,16 +267,16 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
             a_blockwise_copy.RunWrite(a_cyx_k_block_desc, p_a_block_double);
 
             __syncthreads();
+
+            blockwise_gemm.Run(p_a_block_double, p_b_thread, p_c_thread);
         }
 
 #if 0
         if constexpr(HasMainKBlockLoop)
         {
             Float* p_a_block_even = p_a_block_double;
-            Float* p_b_block_even = p_b_block_double;
 
             Float* p_a_block_odd = p_a_block_double + a_block_space_size;
-            Float* p_b_block_odd = p_b_block_double + b_block_space_size;
 
             index_t b_block_data_begin = 0;
 
