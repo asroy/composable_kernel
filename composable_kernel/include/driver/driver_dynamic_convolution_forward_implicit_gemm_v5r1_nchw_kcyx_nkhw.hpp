@@ -9,22 +9,17 @@
 
 namespace ck {
 
-// GemmM = K
-// GemmN = N * Ho * Wo
-// GemmK = C * Y * X
 template <index_t BlockSize,
           typename Float,
           typename AccFloat,
-          index_t GemmMPerBlock,
-          index_t GemmNPerBlock,
-          index_t GemmKPerBlock,
-          index_t GemmMPerThread,
-          index_t GemmNPerThread,
-          index_t GemmKPerThread,
-          index_t GemmMLevel0Cluster,
-          index_t GemmNLevel0Cluster,
-          index_t GemmMLevel1Cluster,
-          index_t GemmNLevel1Cluster,
+          index_t KPerBlock,
+          index_t HPerBlock,
+          index_t WPerBlock,
+          index_t CYXPerBlock,
+          index_t KPerThread,
+          index_t HPerThread,
+          index_t WPerThread,
+          index_t CYXPerThread,
           typename GemmABlockTransferThreadSliceLengths_GemmK_GemmM,
           typename GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
           index_t GemmABlockTransferSrcScalarPerVector_GemmK,
@@ -130,12 +125,10 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             make_tuple(Sequence<1>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 
-        const auto GemmM = K;
-        const auto GemmN = N * Ho * Wo;
-        const auto GemmK = C * Y * X;
+        const auto CYX = C * Y * X;
 
-        if(!(GemmM % GemmMPerBlock == 0 && GemmN % GemmNPerBlock == 0 &&
-             GemmK % GemmKPerBlock == 0))
+        if(!(K % KPerBlock == 0 && Ho % HPerBlock == 0 && Wo % WPerBlock == 0 &&
+             CYX % CYXPerBlock == 0))
         {
             throw std::runtime_error("wrong! GEMM size no divisible");
         }
@@ -182,16 +175,14 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             decltype(wei_gemmk_gemmm_global_desc),
             decltype(in_gemmk_n_ho_wo_global_desc),
             decltype(out_gemmm_n_ho_wo_global_desc),
-            GemmMPerBlock,
-            GemmNPerBlock,
-            GemmKPerBlock,
-            GemmMPerThread,
-            GemmNPerThread,
-            GemmKPerThread,
-            GemmMLevel0Cluster,
-            GemmNLevel0Cluster,
-            GemmMLevel1Cluster,
-            GemmNLevel1Cluster,
+            KPerBlock,
+            HPerBlock,
+            WPerBlock,
+            CYXPerBlock,
+            KPerThread,
+            HPerThread,
+            WPerThread,
+            CYXPerThread,
             GemmABlockTransferThreadSliceLengths_GemmK_GemmM,
             GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
             Sequence<1, 0>,
@@ -218,11 +209,11 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             decltype(a_k_m_global_move_slice_window_iterator_hack),
             decltype(b_k_n_global_move_slice_window_iterator_hack)>;
 
-        const auto GridSize = (GemmM / GemmMPerBlock) * (GemmN / GemmNPerBlock);
+        const auto GridSize = (K / KPerBlock) * (Ho / HPerBlock) * (Wo / WPerBlock);
 
-        const bool has_main_k_block_loop = (GemmK + GemmKPerBlock) / (2 * GemmKPerBlock) > 1;
+        const bool has_main_k_block_loop = (CYX + CYXPerBlock) / (2 * CYXPerBlock) > 1;
 
-        const bool has_double_tail_k_block_loop = (GemmK / GemmKPerBlock) % 2 == 0;
+        const bool has_double_tail_k_block_loop = (CYX / CYXPerBlock) % 2 == 0;
 
         index_t nrepeat = 100;
 

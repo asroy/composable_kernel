@@ -19,15 +19,13 @@ template <index_t BlockSize,
           typename BGlobalDesc,
           typename CGlobalDesc,
           index_t KPerBlock,
-          index_t HWPerBlock,
+          index_t HPerBlock,
+          index_t WPerBlock,
           index_t CYXPerBlock,
           index_t KPerThread,
-          index_t HWPerThread,
+          index_t HPerThread,
+          index_t WPerThread,
           index_t CYXPerThread,
-          index_t MLevel0Cluster,
-          index_t NLevel0Cluster,
-          index_t MLevel1Cluster,
-          index_t NLevel1Cluster,
           typename ABlockTransferThreadSliceLengths_K_M,
           typename ABlockTransferThreadClusterLengths_K_M,
           typename ABlockTransferThreadClusterArrangeOrder,
@@ -99,7 +97,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         // divide block work by [M, N]
 #if 1
         const auto m_block_work_num   = K / Number<KPerBlock>{};
-        const auto nhw_block_work_num = (N * H * W) / Number<HWPerBlock>{};
+        const auto nhw_block_work_num = (N * H * W) / (Number<HPerBlock>{} * Number<WPerBlock>{});
 
         const index_t k_block_work_id   = get_block_1d_id() / nhw_block_work_num;
         const index_t nhw_block_work_id = get_block_1d_id() - k_block_work_id * nhw_block_work_num;
@@ -120,10 +118,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         const index_t w_block_data_on_global = nhw_block_work_id * 8;
 
         // lds max alignment
-        constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_M>{},
-                                                 Number<BBlockTransferDstScalarPerVector_N>{},
-                                                 Number<KPerThread>{},
-                                                 Number<HWPerThread>{});
+        constexpr auto max_lds_align =
+            math::lcm(Number<ABlockTransferDstScalarPerVector_M>{}, Number<KPerThread>{});
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
