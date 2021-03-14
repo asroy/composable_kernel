@@ -147,7 +147,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         // loop over k
         for(index_t cyx_begin = 0; cyx_begin < CYXPerBlock; cyx_begin += CYXPerThreadLoop)
         {
-#if 1
+#if 0
             a_thread_copy.Run(p_a_block + a_block_mtx.CalculateOffset(make_tuple(cyx_begin, 0)) +
                                   mMyThreadOffsetA,
                               p_a_thread + a_thread_mtx.CalculateOffset(make_tuple(0, 0)));
