@@ -209,7 +209,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             decltype(a_k_m_global_move_slice_window_iterator_hack),
             decltype(b_k_n_global_move_slice_window_iterator_hack)>;
 
-        const auto GridSize = (K / KPerBlock) * (Ho / HPerBlock) * (Wo / WPerBlock);
+        const auto GridSize = (K / KPerBlock) * (Ho / HPerBlock) * (Wo / WPerBlock) * N;
 
         const bool has_main_k_block_loop = (CYX + CYXPerBlock) / (2 * CYXPerBlock) > 1;
 

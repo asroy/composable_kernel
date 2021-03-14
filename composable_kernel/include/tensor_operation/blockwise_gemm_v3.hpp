@@ -110,15 +110,17 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
     __device__ void
     Run_naive(const FloatA* p_a_block, const FloatB* p_b_thread, FloatC* p_c_thread) const
     {
+
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
 
         constexpr auto a_block_mtx = BlockMatrixA{};
-        constexpr auto b_block_mtx = BlockMatrixB{};
 
         constexpr auto CYXPerBlock = a_block_mtx.GetLength(I0);
+
+        static_assert(CYXPerBlock == CYXPerThreadLoop, "");
 
         // thread A, B for GEMM
         constexpr auto a_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
@@ -145,11 +147,16 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         // loop over k
         for(index_t cyx_begin = 0; cyx_begin < CYXPerBlock; cyx_begin += CYXPerThreadLoop)
         {
+#if 1
             a_thread_copy.Run(p_a_block + a_block_mtx.CalculateOffset(make_tuple(cyx_begin, 0)) +
                                   mMyThreadOffsetA,
                               p_a_thread + a_thread_mtx.CalculateOffset(make_tuple(0, 0)));
+#else
+            for(index_t i = 0; i < a_thread_mtx.GetElementSpaceSize(); i++)
+                p_a_thread[i] = 1;
+#endif
 
-            threadwise_gemm.Run(p_a_thread, p_b_thread + CYXPerThreadLoop * cyx_begin, p_c_thread);
+            threadwise_gemm.Run(p_a_thread, p_b_thread + cyx_begin, p_c_thread);
         }
     }
 
