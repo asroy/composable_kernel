@@ -82,8 +82,8 @@ int main(int argc, char* argv[])
 #elif 1
     constexpr index_t N  = 1;
     constexpr index_t C  = 4;
-    constexpr index_t HI = 8;
-    constexpr index_t WI = 8;
+    constexpr index_t HI = 1080;
+    constexpr index_t WI = 1920;
     constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;

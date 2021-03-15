@@ -47,20 +47,26 @@ struct ThreadwiseGemm_km_kn_mn_v3
 
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
+        constexpr auto I2 = Number<2>{};
+        constexpr auto I3 = Number<3>{};
 
-        constexpr auto M = CDesc{}.GetLength(I0);
-        constexpr auto N = CDesc{}.GetLength(I1);
-        constexpr auto K = ADesc{}.GetLength(I0);
+        constexpr auto H = BDesc{}.GetLength(I2);
+        constexpr auto W = BDesc{}.GetLength(I3);
 
-        static_for<0, K, 1>{}([&](auto k) {
-            static_for<0, M, 1>{}([&](auto m) {
-                static_for<0, N, 1>{}([&](auto n) {
-                    constexpr auto a_offset = ADesc{}.CalculateOffset(make_tuple(k, m));
-                    constexpr auto b_offset = BDesc{}.CalculateOffset(make_tuple(k, n));
-                    constexpr auto c_offset = CDesc{}.CalculateOffset(make_tuple(m, n));
+        constexpr auto CYX = ADesc{}.GetLength(I0);
+        constexpr auto K   = ADesc{}.GetLength(I1);
 
-                    p_c[c_offset] +=
-                        inner_product_with_conversion<FloatC>{}(p_a[a_offset], p_b[b_offset]);
+        static_for<0, CYX, 1>{}([&](auto e) {
+            static_for<0, K, 1>{}([&](auto k) {
+                static_for<0, H, 1>{}([&](auto h) {
+                    static_for<0, W, 1>{}([&](auto w) {
+                        constexpr auto a_offset = ADesc{}.CalculateOffset(make_tuple(e, k));
+                        constexpr auto b_offset = BDesc{}.CalculateOffset(make_tuple(e, 0, h, w));
+                        constexpr auto c_offset = CDesc{}.CalculateOffset(make_tuple(k, 0, h, w));
+
+                        p_c[c_offset] +=
+                            inner_product_with_conversion<FloatC>{}(p_a[a_offset], p_b[b_offset]);
+                    });
                 });
             });
         });

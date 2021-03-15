@@ -137,15 +137,11 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         constexpr auto a_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
             make_tuple(Number<CYXPerThreadLoop>{}, Number<KPerThread>{}));
 
-        constexpr auto b_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
-            // make_tuple(Number<CYXPerThreadLoop>{}, Number<1>{}, Number<HPerThread>{},
-            // Number<WPerThread>{}));
-            make_tuple(Number<CYXPerThreadLoop>{}, Number<1>{}));
+        constexpr auto b_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
+            Number<CYXPerThreadLoop>{}, Number<1>{}, Number<HPerThread>{}, Number<WPerThread>{}));
 
-        constexpr auto c_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
-            // make_tuple(Number<KPerThread>{}, Number<1>{},
-            // Number<HPerThread>{}, Number<WPerThread>{}));
-            make_tuple(Number<KPerThread>{}, Number<1>{}));
+        constexpr auto c_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
+            Number<KPerThread>{}, Number<1>{}, Number<HPerThread>{}, Number<WPerThread>{}));
 
         FloatA p_a_thread[a_thread_mtx.GetElementSpaceSize()];
 

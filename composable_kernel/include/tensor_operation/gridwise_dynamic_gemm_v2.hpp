@@ -95,10 +95,15 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         // divide block work by [M, N]
 #if 1
         const auto m_block_work_num  = K / Number<KPerBlock>{};
-        const auto hw_block_work_num = (N * H * W) / (Number<HPerBlock>{} * Number<WPerBlock>{});
+        const auto h_block_work_num  = H / Number<HPerBlock>{};
+        const auto w_block_work_num  = W / Number<WPerBlock>{};
+        const auto hw_block_work_num = h_block_work_num * w_block_work_num;
 
         const index_t k_block_work_id  = get_block_1d_id() / hw_block_work_num;
         const index_t hw_block_work_id = get_block_1d_id() - k_block_work_id * hw_block_work_num;
+
+        const index_t h_block_work_id = hw_block_work_id / w_block_work_num;
+        const index_t w_block_work_id = hw_block_work_id - h_block_work_id * w_block_work_num;
 
         constexpr auto h_num_threads = HPerBlock / HPerThread;
         constexpr auto w_num_threads = WPerBlock / WPerThread;
@@ -119,8 +124,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         const index_t m_block_data_on_global = k_block_work_id * KPerBlock;
 
-        const index_t h_block_data_on_global = hw_block_work_id * HPerBlock;
-        const index_t w_block_data_on_global = hw_block_work_id * WPerBlock;
+        const index_t h_block_data_on_global = h_block_work_id * HPerBlock;
+        const index_t w_block_data_on_global = w_block_work_id * WPerBlock;
 
         // lds max alignment
         constexpr auto max_lds_align =
@@ -187,8 +192,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         ThreadwiseTensorSliceTransferB b_threadwise_transfer(
             b_cyx_n_h_w_global_desc,
-            make_multi_index(
-                0, 0, h_block_data_on_global + h_thread_id, w_block_data_on_global + w_thread_id));
+            make_multi_index(0,
+                             0,
+                             h_block_data_on_global + h_thread_id * HPerThread,
+                             w_block_data_on_global + w_thread_id * WPerThread));
 
         // c_thread_mtx definition: this is a mess
         // TODO:: more elegent way of defining c_thread_mtx
@@ -426,7 +433,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                 Float,
                 decltype(c_k_n_h_w_thread_desc),
                 decltype(c_k_n_h_w_global_desc),
-                Sequence<KPerThread, 1, 1, 1>,
+                Sequence<KPerThread, 1, HPerThread, WPerThread>,
                 Sequence<3, 2, 0, 1>, // CThreadTransferSrcDstAccessOrder
                 3,                    // CThreadTransferSrcDstVectorDim
                 1,                    // CThreadTransferDstScalarPerVector,
