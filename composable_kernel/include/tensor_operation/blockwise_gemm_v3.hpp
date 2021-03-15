@@ -76,7 +76,18 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
 
     __device__ static MatrixIndex GetBeginOfThreadMatrixC(index_t thread_id)
     {
-        return MatrixIndex{1, 8, 8};
+        constexpr index_t H = BlockMatrixB{}.GetLength(Number<2>{});
+        constexpr index_t W = BlockMatrixB{}.GetLength(Number<3>{});
+
+        constexpr auto num_w_threads = W / WPerThread;
+        constexpr auto num_h_threads = H / HPerThread;
+
+        index_t k_thread_id = thread_id / (num_w_threads * num_h_threads);
+
+        index_t h_thread_id = thread_id / num_w_threads;
+        index_t w_thread_id = thread_id % num_w_threads;
+
+        return MatrixIndex{k_thread_id, h_thread_id, w_thread_id};
     }
 
     template <typename SrcDesc,
@@ -127,10 +138,13 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
             make_tuple(Number<CYXPerThreadLoop>{}, Number<KPerThread>{}));
 
         constexpr auto b_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
-            // make_tuple(Number<CYXPerThreadLoop>{}, Number<1>{}, Number<1>{}, Number<1>{}));
+            // make_tuple(Number<CYXPerThreadLoop>{}, Number<1>{}, Number<HPerThread>{},
+            // Number<WPerThread>{}));
             make_tuple(Number<CYXPerThreadLoop>{}, Number<1>{}));
 
         constexpr auto c_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
+            // make_tuple(Number<KPerThread>{}, Number<1>{},
+            // Number<HPerThread>{}, Number<WPerThread>{}));
             make_tuple(Number<KPerThread>{}, Number<1>{}));
 
         FloatA p_a_thread[a_thread_mtx.GetElementSpaceSize()];
@@ -147,15 +161,14 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         // loop over k
         for(index_t cyx_begin = 0; cyx_begin < CYXPerBlock; cyx_begin += CYXPerThreadLoop)
         {
-#if 0
+#if 1
             a_thread_copy.Run(p_a_block + a_block_mtx.CalculateOffset(make_tuple(cyx_begin, 0)) +
                                   mMyThreadOffsetA,
-                              p_a_thread + a_thread_mtx.CalculateOffset(make_tuple(0, 0)));
+                              p_a_thread);
 #else
             for(index_t i = 0; i < a_thread_mtx.GetElementSpaceSize(); i++)
                 p_a_thread[i] = 1;
 #endif
-
             threadwise_gemm.Run(p_a_thread, p_b_thread + cyx_begin, p_c_thread);
         }
     }

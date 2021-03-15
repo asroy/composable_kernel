@@ -94,33 +94,33 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         // divide block work by [M, N]
 #if 1
-        const auto m_block_work_num   = K / Number<KPerBlock>{};
-        const auto nhw_block_work_num = (N * H * W) / (Number<HPerBlock>{} * Number<WPerBlock>{});
+        const auto m_block_work_num  = K / Number<KPerBlock>{};
+        const auto hw_block_work_num = (N * H * W) / (Number<HPerBlock>{} * Number<WPerBlock>{});
 
-        const index_t k_block_work_id   = get_block_1d_id() / nhw_block_work_num;
-        const index_t nhw_block_work_id = get_block_1d_id() - k_block_work_id * nhw_block_work_num;
+        const index_t k_block_work_id  = get_block_1d_id() / hw_block_work_num;
+        const index_t hw_block_work_id = get_block_1d_id() - k_block_work_id * hw_block_work_num;
 
         constexpr auto h_num_threads = HPerBlock / HPerThread;
         constexpr auto w_num_threads = WPerBlock / WPerThread;
 
         static_assert(KPerBlock == KPerThread, "");
 
-        const auto h_thread_id = get_thread_local_1d_id() / h_num_threads;
+        const auto h_thread_id = get_thread_local_1d_id() / w_num_threads;
         const auto w_thread_id = get_thread_local_1d_id() % w_num_threads;
 #else
         // Hack: this force result into SGPR
-        const index_t m_block_work_num   = __builtin_amdgcn_readfirstlane(K / KPerBlock);
-        const index_t nhw_block_work_num = __builtin_amdgcn_readfirstlane(N / HWPerBlock);
+        const index_t m_block_work_num  = __builtin_amdgcn_readfirstlane(K / KPerBlock);
+        const index_t hw_block_work_num = __builtin_amdgcn_readfirstlane(N / HWPerBlock);
 
         const index_t k_block_work_id =
-            __builtin_amdgcn_readfirstlane(get_block_1d_id() / nhw_block_work_num);
-        const index_t nhw_block_work_id = get_block_1d_id() - k_block_work_id * nhw_block_work_num;
+            __builtin_amdgcn_readfirstlane(get_block_1d_id() / hw_block_work_num);
+        const index_t hw_block_work_id = get_block_1d_id() - k_block_work_id * hw_block_work_num;
 #endif
 
         const index_t m_block_data_on_global = k_block_work_id * KPerBlock;
 
-        const index_t h_block_data_on_global = nhw_block_work_id * HPerBlock;
-        const index_t w_block_data_on_global = nhw_block_work_id * WPerBlock;
+        const index_t h_block_data_on_global = hw_block_work_id * HPerBlock;
+        const index_t w_block_data_on_global = hw_block_work_id * WPerBlock;
 
         // lds max alignment
         constexpr auto max_lds_align =
@@ -166,7 +166,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                 a_cyx_k_block_desc,
                 make_multi_index(0, 0));
 
-#if 1
         constexpr auto b_cyx_n_h_w_thread_desc =
             make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
                 Number<CYXPerThread>{}, Number<1>{}, Number<HPerThread>{}, Number<WPerThread>{}));
@@ -191,7 +190,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
             make_multi_index(
                 0, 0, h_block_data_on_global + h_thread_id, w_block_data_on_global + w_thread_id));
 
-#endif
         // c_thread_mtx definition: this is a mess
         // TODO:: more elegent way of defining c_thread_mtx
         constexpr auto c_k_n_h_w_thread_desc =
@@ -264,20 +262,20 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
             a_blockwise_copy.RunWrite(a_cyx_k_block_desc, p_a_block_double);
 
-#if 0
+#if 1
             __syncthreads();
-
-            //blockwise_gemm.Run(p_a_block_double, p_b_thread_double, p_c_thread);
 
             index_t sum = 0;
             for(index_t i = 0; i < b_cyx_n_h_w_thread_desc.GetElementSpaceSize(); i++)
-                sum += p_b_thread[i];
+                sum += p_b_thread_double[i];
 
-            p_c_thread[0] = get_thread_local_1d_id() * 10000 + sum;
+            p_c_thread[0] += p_b_thread_double[0] + p_b_thread_double[1] + p_b_thread_double[2];
+            p_c_thread[0] += p_b_thread_double[3] + p_b_thread_double[4] + p_b_thread_double[5];
+            p_c_thread[0] += p_b_thread_double[6] + p_b_thread_double[7] + p_b_thread_double[8];
 #endif
         }
 
-#if 1
+#if 0
         if constexpr(HasMainKBlockLoop)
         {
             Float* p_a_block_even = p_a_block_double;
@@ -398,8 +396,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         {
             // define input tensor descriptor for threadwise copy
             //     thread input tensor, src of threadwise copy
-            constexpr auto c_k_n_h_w_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-                make_tuple(Number<KPerThread>{}, Number<1>{}, Number<1>{}, Number<1>{}));
+            constexpr auto c_k_n_h_w_thread_desc =
+                make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
+                    Number<KPerThread>{}, Number<1>{}, Number<HPerThread>{}, Number<WPerThread>{}));
 
             // calculate origin of thread input tensor on global memory
             //     blockwise GEMM c matrix starting index
@@ -414,8 +413,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                 n_block_data_on_global + c_thread_mtx_on_block.col;
 #endif
             const index_t m_thread_data_on_global = m_block_data_on_global;
-            const index_t h_thread_data_on_global = h_block_data_on_global + h_thread_id;
-            const index_t w_thread_data_on_global = w_block_data_on_global + w_thread_id;
+            const index_t h_thread_data_on_global =
+                h_block_data_on_global + h_thread_id * HPerThread;
+            const index_t w_thread_data_on_global =
+                w_block_data_on_global + w_thread_id * WPerThread;
 
             // hack to control index calculation when iterating over c_k_n_h_w_global tensor
             constexpr auto c_k_n_h_w_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
