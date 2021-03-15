@@ -262,12 +262,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
             a_blockwise_copy.RunWrite(a_cyx_k_block_desc, p_a_block_double);
 
-#if 1
+#if 0
             __syncthreads();
 
-            index_t sum = 0;
-            for(index_t i = 0; i < b_cyx_n_h_w_thread_desc.GetElementSpaceSize(); i++)
-                sum += p_b_thread_double[i];
+            //index_t sum = 0;
+            //for(index_t i = 0; i < b_cyx_n_h_w_thread_desc.GetElementSpaceSize(); i++)
+                //sum += p_b_thread_double[i];
 
             p_c_thread[0] += p_b_thread_double[0] + p_b_thread_double[1] + p_b_thread_double[2];
             p_c_thread[0] += p_b_thread_double[3] + p_b_thread_double[4] + p_b_thread_double[5];
@@ -275,7 +275,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 #endif
         }
 
-#if 0
+#if 1
         if constexpr(HasMainKBlockLoop)
         {
             Float* p_a_block_even = p_a_block_double;

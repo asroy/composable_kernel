@@ -657,7 +657,7 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-#if 1
+#if 0
         in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 0
@@ -776,7 +776,7 @@ int main(int argc, char* argv[])
         }
         check_error(out_nkhw_host, out_nkhw_device);
 
-#if 1
+#if 0
         // LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
         // LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
         LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
