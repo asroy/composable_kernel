@@ -53,7 +53,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
         constexpr auto max_lds_align =
-            math::lcm(Number<ABlockTransferDstScalarPerVector_M>{}, Number<KPerThread>{});
+            math::lcm(Number<ABlockTransferDstScalarPerVector_M>{}, Number<KPerBlock>{});
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -92,7 +92,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         // divide block work by [M, N]
 #if 1
-        const auto m_block_work_num  = K / Number<KPerBlock>{};
+        const auto k_block_work_num  = K / Number<KPerBlock>{};
         const auto h_block_work_num  = H / Number<HPerBlock>{};
         const auto w_block_work_num  = W / Number<WPerBlock>{};
         const auto hw_block_work_num = h_block_work_num * w_block_work_num;
@@ -102,7 +102,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
 #else
         // Hack: this force result into SGPR
-        const index_t m_block_work_num  = __builtin_amdgcn_readfirstlane(K / KPerBlock);
+        const index_t k_block_work_num  = __builtin_amdgcn_readfirstlane(K / KPerBlock);
         const index_t h_block_work_num  = __builtin_amdgcn_readfirstlane(H / HPerBlock);
         const index_t w_block_work_num  = __builtin_amdgcn_readfirstlane(W / WPerBlock);
         const index_t hw_block_work_num = h_block_work_num * w_block_work_num;
@@ -115,11 +115,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         const index_t h_block_work_id = hw_block_work_id / w_block_work_num;
         const index_t w_block_work_id = hw_block_work_id - h_block_work_id * w_block_work_num;
 
-        static_assert(KPerBlock == KPerThread, "");
-
         // lds max alignment
         constexpr auto max_lds_align =
-            math::lcm(Number<ABlockTransferDstScalarPerVector_M>{}, Number<KPerThread>{});
+            math::lcm(Number<ABlockTransferDstScalarPerVector_M>{}, Number<KPerBlock>{});
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -161,7 +159,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         const index_t h_block_data_on_global = h_block_work_id * HPerBlock;
         const index_t w_block_data_on_global = w_block_work_id * WPerBlock;
 
-        const index_t k_thread_data_on_global = k_block_data_on_global + k_thread_id * KPerThread;
         const index_t h_thread_data_on_global = h_block_data_on_global + h_thread_id * HPerThread;
         const index_t w_thread_data_on_global = w_block_data_on_global + w_thread_id * WPerThread;
 
@@ -211,10 +208,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
             AddressSpace::Vgpr,
             InMemoryDataOperation::Set,
             1,
-            true>(
-            b_cyx_n_h_w_global_desc,
-            make_multi_index(
-                k_thread_data_on_global, 0, h_thread_data_on_global, w_thread_data_on_global));
+            true>(b_cyx_n_h_w_global_desc,
+                  make_multi_index(0, 0, h_thread_data_on_global, w_thread_data_on_global));
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
@@ -380,14 +375,11 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 #if 1
         // output: register to global memory
         {
-            // define input tensor descriptor for threadwise copy
-            //     thread input tensor, src of threadwise copy
-            constexpr auto c_k_n_h_w_thread_desc =
-                make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
-                    Number<KPerThread>{}, Number<1>{}, Number<HPerThread>{}, Number<WPerThread>{}));
-
             // hack to control index calculation when iterating over c_k_n_h_w_global tensor
             constexpr auto c_k_n_h_w_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
+
+            const index_t k_thread_data_on_global =
+                k_block_data_on_global + k_thread_id * KPerThread;
 
             ThreadwiseDynamicTensorSliceTransfer_v1r3<
                 AccFloat,

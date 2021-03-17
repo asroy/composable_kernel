@@ -55,14 +55,17 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         static_assert(K % KPerThread == 0 && H % HPerThread == 0 && W % WPerThread == 0,
                       "wrong! Cannot evenly divide work among\n");
 
+        constexpr auto KThreadCluster = K / KPerThread;
         constexpr auto HThreadCluster = H / HPerThread;
         constexpr auto WThreadCluster = W / WPerThread;
 
-        static_assert(BlockSize == HThreadCluster * WThreadCluster, "wrong! wrong blocksize\n");
+        static_assert(BlockSize == KThreadCluster * HThreadCluster * WThreadCluster,
+                      "wrong! wrong blocksize\n");
 
         auto c_thread_mtx_index = GetBeginOfThreadMatrixC(get_thread_local_1d_id());
 
-        mMyThreadOffsetA = BlockMatrixA{}.CalculateOffset(make_tuple(0, c_thread_mtx_index.k));
+        mMyThreadOffsetA =
+            BlockMatrixA{}.CalculateOffset(make_tuple(0, c_thread_mtx_index.k * KPerThread));
     }
 
     __device__ static constexpr auto GetThreadMatrixCLengths()
@@ -75,13 +78,15 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         constexpr index_t H = BlockMatrixB{}.GetLength(Number<2>{});
         constexpr index_t W = BlockMatrixB{}.GetLength(Number<3>{});
 
-        constexpr auto num_w_threads = W / WPerThread;
-        constexpr auto num_h_threads = H / HPerThread;
+        constexpr auto num_w_threads  = W / WPerThread;
+        constexpr auto num_h_threads  = H / HPerThread;
+        constexpr auto num_hw_threads = num_w_threads * num_h_threads;
 
-        index_t k_thread_id = thread_id / (num_w_threads * num_h_threads);
+        index_t k_thread_id  = thread_id / num_hw_threads;
+        index_t hw_thread_id = thread_id % num_hw_threads;
 
-        index_t h_thread_id = thread_id / num_w_threads;
-        index_t w_thread_id = thread_id % num_w_threads;
+        index_t h_thread_id = hw_thread_id / num_w_threads;
+        index_t w_thread_id = hw_thread_id % num_w_threads;
 
         return MatrixIndex{k_thread_id, h_thread_id, w_thread_id};
     }
@@ -127,8 +132,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
 
         constexpr auto CYXPerBlock = a_block_mtx.GetLength(I0);
 
-        static_assert(CYXPerBlock == CYXPerThreadLoop, "");
-
         // thread A, B for GEMM
         constexpr auto a_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
             make_tuple(Number<CYXPerThreadLoop>{}, Number<KPerThread>{}));
@@ -153,23 +156,21 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         // loop over k
         for(index_t cyx_begin = 0; cyx_begin < CYXPerBlock; cyx_begin += CYXPerThreadLoop)
         {
-#if 1
             a_thread_copy.Run(p_a_block + a_block_mtx.CalculateOffset(make_tuple(cyx_begin, 0)) +
                                   mMyThreadOffsetA,
-                              p_a_thread +
-                                  b_thread_mtx.CalculateOffset(make_tuple(cyx_begin, 0, 0, 0)));
-#else
-            for(index_t i = 0; i < a_thread_mtx.GetElementSpaceSize(); i++)
-                p_a_thread[i] = 1;
-#endif
-            threadwise_gemm.Run(p_a_thread, p_b_thread + cyx_begin, p_c_thread);
+                              p_a_thread);
+
+            threadwise_gemm.Run(p_a_thread,
+                                p_b_thread +
+                                    b_thread_mtx.CalculateOffset(make_tuple(cyx_begin, 0, 0, 0)),
+                                p_c_thread);
         }
     }
 
     template <typename FloatA, typename FloatB, typename FloatC>
-    __device__ void Run(const FloatA* p_a_block, const FloatB* p_b_block, FloatC* p_c_thread) const
+    __device__ void Run(const FloatA* p_a_block, const FloatB* p_b_thread, FloatC* p_c_thread) const
     {
-        Run_naive(p_a_block, p_b_block, p_c_thread);
+        Run_naive(p_a_block, p_b_thread, p_c_thread);
     }
 };
 
