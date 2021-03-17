@@ -160,7 +160,8 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
 #if 1
             a_thread_copy.Run(p_a_block + a_block_mtx.CalculateOffset(make_tuple(cyx_begin, 0)) +
                                   mMyThreadOffsetA,
-                              p_a_thread);
+                              p_a_thread +
+                                  b_thread_mtx.CalculateOffset(make_tuple(cyx_begin, 0, 0, 0)));
 #else
             for(index_t i = 0; i < a_thread_mtx.GetElementSpaceSize(); i++)
                 p_a_thread[i] = 1;

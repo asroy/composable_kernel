@@ -102,6 +102,18 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         const index_t k_block_work_id  = get_block_1d_id() / hw_block_work_num;
         const index_t hw_block_work_id = get_block_1d_id() - k_block_work_id * hw_block_work_num;
 
+#else
+        // Hack: this force result into SGPR
+        const index_t m_block_work_num  = __builtin_amdgcn_readfirstlane(K / KPerBlock);
+        const index_t h_block_work_num  = __builtin_amdgcn_readfirstlane(H / HPerBlock);
+        const index_t w_block_work_num  = __builtin_amdgcn_readfirstlane(W / WPerBlock);
+        const index_t hw_block_work_num = h_block_work_num * w_block_work_num;
+
+        const index_t k_block_work_id =
+            __builtin_amdgcn_readfirstlane(get_block_1d_id() / hw_block_work_num);
+        const index_t hw_block_work_id = get_block_1d_id() - k_block_work_id * hw_block_work_num;
+#endif
+
         const index_t h_block_work_id = hw_block_work_id / w_block_work_num;
         const index_t w_block_work_id = hw_block_work_id - h_block_work_id * w_block_work_num;
 
@@ -110,22 +122,17 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         static_assert(KPerBlock == KPerThread, "");
 
+        const auto k_thread_id = 0;
         const auto h_thread_id = get_thread_local_1d_id() / w_num_threads;
         const auto w_thread_id = get_thread_local_1d_id() % w_num_threads;
-#else
-        // Hack: this force result into SGPR
-        const index_t m_block_work_num  = __builtin_amdgcn_readfirstlane(K / KPerBlock);
-        const index_t hw_block_work_num = __builtin_amdgcn_readfirstlane(N / HWPerBlock);
 
-        const index_t k_block_work_id =
-            __builtin_amdgcn_readfirstlane(get_block_1d_id() / hw_block_work_num);
-        const index_t hw_block_work_id = get_block_1d_id() - k_block_work_id * hw_block_work_num;
-#endif
-
-        const index_t m_block_data_on_global = k_block_work_id * KPerBlock;
-
+        const index_t k_block_data_on_global = k_block_work_id * KPerBlock;
         const index_t h_block_data_on_global = h_block_work_id * HPerBlock;
         const index_t w_block_data_on_global = w_block_work_id * WPerBlock;
+
+        const index_t k_thread_data_on_global = k_block_data_on_global + k_thread_id * KPerThread;
+        const index_t h_thread_data_on_global = h_block_data_on_global + h_thread_id * HPerThread;
+        const index_t w_thread_data_on_global = w_block_data_on_global + w_thread_id * WPerThread;
 
         // lds max alignment
         constexpr auto max_lds_align =
@@ -167,20 +174,20 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                                                    AThreadTransferSrcResetCoordinateAfterRun,
                                                    true>(
                 a_cyx_k_global_desc,
-                make_multi_index(0, m_block_data_on_global),
+                make_multi_index(0, k_block_data_on_global),
                 a_cyx_k_block_desc,
                 make_multi_index(0, 0));
 
         constexpr auto b_cyx_n_h_w_thread_desc =
             make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
-                Number<CYXPerThread>{}, Number<1>{}, Number<HPerThread>{}, Number<WPerThread>{}));
+                Number<CYXPerBlock>{}, Number<1>{}, Number<HPerThread>{}, Number<WPerThread>{}));
 
         using ThreadwiseTensorSliceTransferB = ThreadwiseDynamicTensorSliceTransfer_v2<
             Float,
             Float,
             decltype(b_cyx_n_h_w_global_desc),
             decltype(b_cyx_n_h_w_thread_desc),
-            Sequence<CYXPerThread, 1, HPerThread, WPerThread>,
+            Sequence<CYXPerBlock, 1, HPerThread, WPerThread>,
             Sequence<3, 2, 0, 1>, // BBlockTransferSrcAccessOrder,
             3,                    // BBlockTransferSrcVectorDim,
             1,                    // BBlockTransferSrcScalarPerVector,
@@ -192,10 +199,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         ThreadwiseTensorSliceTransferB b_threadwise_transfer(
             b_cyx_n_h_w_global_desc,
-            make_multi_index(0,
-                             0,
-                             h_block_data_on_global + h_thread_id * HPerThread,
-                             w_block_data_on_global + w_thread_id * WPerThread));
+            make_multi_index(0, 0, h_thread_data_on_global, w_thread_data_on_global));
 
         // c_thread_mtx definition: this is a mess
         // TODO:: more elegent way of defining c_thread_mtx
@@ -229,13 +233,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         // register allocation for output
         AccFloat p_c_thread[c_k_n_h_w_thread_desc.GetElementSpaceSize()];
 
-        for(index_t i = 0; i < c_k_n_h_w_thread_desc.GetElementSpaceSize(); i++)
-        {
-            p_c_thread[i] = 0;
-        }
-
         // zero out threadwise output
-        // threadwise_matrix_set_zero_v2(c_k_n_h_w_thread_desc, p_c_thread);
+        threadwise_matrix_set_zero_v3(c_k_n_h_w_thread_desc, p_c_thread);
 
         constexpr auto a_block_slice_copy_step  = make_multi_index(CYXPerBlock, 0);
         constexpr auto b_thread_slice_copy_step = make_multi_index(CYXPerBlock, 0, 0, 0);
@@ -271,10 +270,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
 #if 0
             __syncthreads();
-
-            //index_t sum = 0;
-            //for(index_t i = 0; i < b_cyx_n_h_w_thread_desc.GetElementSpaceSize(); i++)
-                //sum += p_b_thread_double[i];
 
             p_c_thread[0] += p_b_thread_double[0] + p_b_thread_double[1] + p_b_thread_double[2];
             p_c_thread[0] += p_b_thread_double[3] + p_b_thread_double[4] + p_b_thread_double[5];
@@ -407,24 +402,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                 make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
                     Number<KPerThread>{}, Number<1>{}, Number<HPerThread>{}, Number<WPerThread>{}));
 
-            // calculate origin of thread input tensor on global memory
-            //     blockwise GEMM c matrix starting index
-#if 0
-            const auto c_thread_mtx_on_block =
-                blockwise_gemm.GetBeginOfThreadMatrixC(get_thread_local_1d_id());
-
-            const index_t m_thread_data_on_global =
-                m_block_data_on_global + c_thread_mtx_on_block.row;
-
-            const index_t n_thread_data_on_global =
-                n_block_data_on_global + c_thread_mtx_on_block.col;
-#endif
-            const index_t m_thread_data_on_global = m_block_data_on_global;
-            const index_t h_thread_data_on_global =
-                h_block_data_on_global + h_thread_id * HPerThread;
-            const index_t w_thread_data_on_global =
-                w_block_data_on_global + w_thread_id * WPerThread;
-
             // hack to control index calculation when iterating over c_k_n_h_w_global tensor
             constexpr auto c_k_n_h_w_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
 
@@ -444,7 +421,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                 true>(
                 c_k_n_h_w_global_desc,
                 make_multi_index(
-                    m_thread_data_on_global, 0, h_thread_data_on_global, w_thread_data_on_global))
+                    k_thread_data_on_global, 0, h_thread_data_on_global, w_thread_data_on_global))
                 .Run(c_k_n_h_w_thread_desc,
                      make_tuple(I0, I0, I0, I0),
                      p_c_thread,

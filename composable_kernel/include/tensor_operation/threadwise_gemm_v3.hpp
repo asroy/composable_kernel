@@ -12,18 +12,22 @@ __device__ void threadwise_matrix_set_zero_v3(Desc, Float* __restrict__ p_thread
     static_assert(Desc::IsKnownAtCompileTime(), "wrong! Desc should be known at compile-time");
 
     constexpr auto I0 = Number<0>{};
-    constexpr auto I1 = Number<1>{};
+    constexpr auto I2 = Number<2>{};
+    constexpr auto I3 = Number<3>{};
 
     constexpr auto desc = Desc{};
 
-    constexpr auto M = desc.GetLength(I0);
-    constexpr auto N = desc.GetLength(I1);
+    constexpr auto K = desc.GetLength(I0);
+    constexpr auto H = desc.GetLength(I2);
+    constexpr auto W = desc.GetLength(I3);
 
-    static_for<0, M, 1>{}([&](auto i) {
-        static_for<0, N, 1>{}([&](auto j) {
-            constexpr auto offset = desc.CalculateOffset(make_tuple(i, j));
+    static_for<0, K, 1>{}([&](auto i) {
+        static_for<0, H, 1>{}([&](auto j) {
+            static_for<0, W, 1>{}([&](auto k) {
+                constexpr auto offset = desc.CalculateOffset(make_tuple(i, 0, j, k));
 
-            p_thread[offset] = Float(0);
+                p_thread[offset] = Float(0);
+            });
         });
     });
 }
