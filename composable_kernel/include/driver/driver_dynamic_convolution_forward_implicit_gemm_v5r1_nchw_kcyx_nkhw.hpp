@@ -24,8 +24,6 @@ template <index_t BlockSize,
           typename GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
           index_t GemmABlockTransferSrcScalarPerVector_GemmK,
           index_t GemmABlockTransferDstScalarPerVector_GemmM,
-          typename GemmBBlockTransferThreadSliceLengths_GemmK_GemmN,
-          typename GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
           index_t GemmBBlockTransferSrcScalarPerVector_GemmN,
           index_t GemmBBlockTransferDstScalarPerVector_GemmN,
           index_t GemmCThreadTransferDstScalarPerVector_GemmN1>
@@ -191,8 +189,6 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             GemmABlockTransferSrcScalarPerVector_GemmK,
             GemmABlockTransferDstScalarPerVector_GemmM,
             false, // don't move back src coordinate after threadwise copy
-            GemmBBlockTransferThreadSliceLengths_GemmK_GemmN,
-            GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
             Sequence<3, 2, 1, 0>,
             Sequence<3, 2, 1, 0>,
             3,

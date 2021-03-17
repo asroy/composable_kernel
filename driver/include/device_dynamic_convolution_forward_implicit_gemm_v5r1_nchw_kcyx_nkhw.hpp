@@ -71,13 +71,13 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
     constexpr index_t BlockSize = 64;
 
     constexpr index_t KPerBlock   = 16;
-    constexpr index_t HPerBlock   = 16;
-    constexpr index_t WPerBlock   = 16;
+    constexpr index_t HPerBlock   = 8;
+    constexpr index_t WPerBlock   = 8;
     constexpr index_t CYXPerBlock = 4;
 
-    constexpr index_t KPerThread   = KPerBlock;
-    constexpr index_t HPerThread   = 2;
-    constexpr index_t WPerThread   = 2;
+    constexpr index_t KPerThread   = 8;
+    constexpr index_t HPerThread   = 1;
+    constexpr index_t WPerThread   = 1;
     constexpr index_t CYXPerThread = 4;
 
     using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<1, 1>;
@@ -85,9 +85,6 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
 
     constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 1;
     constexpr index_t GemmABlockTransferDstScalarPerVector_GemmM = 1;
-
-    using GemmBBlockTransferThreadSliceLengths_GemmK_GemmN   = Sequence<4, 1>;
-    using GemmBBlockTransferThreadClusterLengths_GemmK_GemmN = Sequence<1, 64>;
 
     constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmN = 1;
     constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmN = 1;
@@ -111,8 +108,6 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
             GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
             GemmABlockTransferSrcScalarPerVector_GemmK,
             GemmABlockTransferDstScalarPerVector_GemmM,
-            GemmBBlockTransferThreadSliceLengths_GemmK_GemmN,
-            GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
             GemmBBlockTransferSrcScalarPerVector_GemmN,
             GemmBBlockTransferDstScalarPerVector_GemmN,
             GemmCThreadTransferDstScalarPerVector_GemmN1>{};
