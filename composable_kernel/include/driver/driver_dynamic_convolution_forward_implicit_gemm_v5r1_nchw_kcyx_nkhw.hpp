@@ -165,7 +165,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
 
 #if 1
         // GEMM
-        using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v2<
+        using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v3<
             BlockSize,
             Float,
             AccFloat,

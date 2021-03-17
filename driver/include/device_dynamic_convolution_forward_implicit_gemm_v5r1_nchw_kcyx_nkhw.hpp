@@ -78,7 +78,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
     constexpr index_t KPerThread   = 8;
     constexpr index_t HPerThread   = 1;
     constexpr index_t WPerThread   = 1;
-    constexpr index_t CYXPerThread = 1;
+    constexpr index_t CYXPerThread = 4;
 
     using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<1, 1>;
     using GemmABlockTransferThreadClusterLengths_GemmK_GemmM = Sequence<4, 16>;
