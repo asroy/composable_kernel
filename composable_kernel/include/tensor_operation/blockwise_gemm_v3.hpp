@@ -19,8 +19,6 @@ template <index_t BlockSize,
           index_t HPerThread,
           index_t WPerThread,
           index_t CYXPerThreadLoop,
-          index_t HThreadCluster,
-          index_t WThreadCluster,
           index_t ThreadGemmADataPerRead_K,
           index_t ThreadGemmBDataPerRead_W>
 struct BlockwiseGemm_km_kn_m0m1n0n1_v3
@@ -46,11 +44,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
 
-        // constexpr index_t ThreadPerLevel1Cluster = MLevel0ThreadCluster * NLevel0ThreadCluster *
-        // MLevel1ThreadCluster * NLevel1ThreadCluster;
-
-        static_assert(BlockSize == HThreadCluster * WThreadCluster, "wrong! wrong blocksize\n");
-
         static_assert(BlockMatrixA{}.GetLength(I0) == BlockMatrixB{}.GetLength(I0),
                       "wrong! K dimension not consistent\n");
 
@@ -59,10 +52,13 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         constexpr index_t H = BlockMatrixB{}.GetLength(I2);
         constexpr index_t W = BlockMatrixB{}.GetLength(I3);
 
-        static_assert(
-            K % (KPerThread) == 0 &&
-                (N * H * W) % (HPerThread * WPerThread * HThreadCluster * WThreadCluster) == 0,
-            "wrong! Cannot evenly divide work among\n");
+        static_assert(K % KPerThread == 0 && H % HPerThread == 0 && W % WPerThread == 0,
+                      "wrong! Cannot evenly divide work among\n");
+
+        constexpr auto HThreadCluster = H / HPerThread;
+        constexpr auto WThreadCluster = W / WPerThread;
+
+        static_assert(BlockSize == HThreadCluster * WThreadCluster, "wrong! wrong blocksize\n");
 
         auto c_thread_mtx_index = GetBeginOfThreadMatrixC(get_thread_local_1d_id());
 
