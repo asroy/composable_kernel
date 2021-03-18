@@ -650,8 +650,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             BlockSize,
             InMemoryDataOperation::Set,
             Sequence<CYX, K>,
-            Sequence<9, 1>,  // ABlockTransferThreadSliceLengths_K_M,
-            Sequence<4, 16>, // ABlockTransferThreadClusterLengths_K_M,
+            ABlockTransferThreadSliceLengths_K_M,
+            ABlockTransferThreadClusterLengths_K_M,
             ABlockTransferThreadClusterArrangeOrder,
             Float,
             Float,
@@ -841,7 +841,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                 Sequence<KPerThread, 1, HPerThread, WPerThread>,
                 Sequence<3, 2, 0, 1>, // CThreadTransferSrcDstAccessOrder
                 3,                    // CThreadTransferSrcDstVectorDim
-                1,                    // CThreadTransferDstScalarPerVector,
+                CThreadTransferDstScalarPerVector,
                 AddressSpace::Vgpr,
                 AddressSpace::Global,
                 CGlobalMemoryDataOperation,
