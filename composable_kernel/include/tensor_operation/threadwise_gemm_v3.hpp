@@ -57,10 +57,10 @@ struct ThreadwiseGemm_km_kn_mn_v3
         constexpr auto H = BDesc{}.GetLength(I2);
         constexpr auto W = BDesc{}.GetLength(I3);
 
-        constexpr auto CYX = ADesc{}.GetLength(I0);
-        constexpr auto K   = ADesc{}.GetLength(I1);
+        constexpr auto E = ADesc{}.GetLength(I0);
+        constexpr auto K = ADesc{}.GetLength(I1);
 
-        static_for<0, CYX, 1>{}([&](auto e) {
+        static_for<0, E, 1>{}([&](auto e) {
             static_for<0, K, 1>{}([&](auto k) {
                 static_for<0, H, 1>{}([&](auto h) {
                     static_for<0, W, 1>{}([&](auto w) {
