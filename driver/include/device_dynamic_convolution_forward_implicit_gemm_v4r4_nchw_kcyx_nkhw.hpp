@@ -135,6 +135,39 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 4;
 #elif 1
+    // cdata = 64, BlockSize 64, 16x256x2
+    constexpr index_t BlockSize = 64;
+
+    constexpr index_t GemmMPerBlock = 16;
+    constexpr index_t GemmNPerBlock = 256;
+    constexpr index_t GemmKPerBlock = 2;
+
+    constexpr index_t GemmMPerThread = 4;
+    constexpr index_t GemmNPerThread = 4;
+    constexpr index_t GemmKPerThread = 1;
+
+    constexpr index_t GemmMLevel0Cluster = 2;
+    constexpr index_t GemmNLevel0Cluster = 2;
+    constexpr index_t GemmMLevel1Cluster = 1;
+    constexpr index_t GemmNLevel1Cluster = 16;
+
+    constexpr index_t ThreadGemmDataPerReadM = 4;
+    constexpr index_t ThreadGemmDataPerReadN = 4;
+
+    using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<1, 1>;
+    using GemmABlockTransferThreadClusterLengths_GemmK_GemmM = Sequence<2, 16>;
+
+    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 1;
+    constexpr index_t GemmABlockTransferDstScalarPerVector_GemmM = 1;
+
+    using GemmBBlockTransferThreadSliceLengths_GemmK_GemmN   = Sequence<2, 4>;
+    using GemmBBlockTransferThreadClusterLengths_GemmK_GemmN = Sequence<1, 64>;
+
+    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmN = 1;
+    constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmN = 1;
+
+    constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 4;
+#elif 1
     // cdata = 64, BlockSize 64, 16x256x4
     constexpr index_t BlockSize = 64;
 

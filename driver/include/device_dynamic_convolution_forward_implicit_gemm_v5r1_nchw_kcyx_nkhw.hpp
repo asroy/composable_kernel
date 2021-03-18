@@ -70,15 +70,15 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
     // cdata = 16, BlockSize = 64, 16x64x4
     constexpr index_t BlockSize = 256;
 
-    constexpr index_t KPerBlock   = 16;
-    constexpr index_t HPerBlock   = 16;
-    constexpr index_t WPerBlock   = 16;
-    constexpr index_t CYXPerBlock = 4;
+    constexpr index_t KPerBlock  = 16;
+    constexpr index_t HoPerBlock = 16;
+    constexpr index_t WoPerBlock = 16;
+    constexpr index_t EPerBlock  = 4;
 
-    constexpr index_t KPerThread   = 4;
-    constexpr index_t HPerThread   = 2;
-    constexpr index_t WPerThread   = 2;
-    constexpr index_t CYXPerThread = 4;
+    constexpr index_t KPerThread  = 4;
+    constexpr index_t HoPerThread = 2;
+    constexpr index_t WoPerThread = 2;
+    constexpr index_t EPerThread  = 4;
 
     using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<1, 1>;
     using GemmABlockTransferThreadClusterLengths_GemmK_GemmM = Sequence<4, 16>;
@@ -97,13 +97,13 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
             TDevice,
             TDevice,
             KPerBlock,
-            HPerBlock,
-            WPerBlock,
-            CYXPerBlock,
+            HoPerBlock,
+            WoPerBlock,
+            EPerBlock,
             KPerThread,
-            HPerThread,
-            WPerThread,
-            CYXPerThread,
+            HoPerThread,
+            WoPerThread,
+            EPerThread,
             GemmABlockTransferThreadSliceLengths_GemmK_GemmM,
             GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
             GemmABlockTransferSrcScalarPerVector_GemmK,
