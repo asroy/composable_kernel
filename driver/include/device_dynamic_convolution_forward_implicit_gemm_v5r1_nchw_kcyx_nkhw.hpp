@@ -68,14 +68,14 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
 #endif
 
     // cdata = 16, BlockSize = 64, 16x64x4
-    constexpr index_t BlockSize = 64;
+    constexpr index_t BlockSize = 256;
 
     constexpr index_t KPerBlock   = 16;
     constexpr index_t HPerBlock   = 16;
     constexpr index_t WPerBlock   = 16;
     constexpr index_t CYXPerBlock = 4;
 
-    constexpr index_t KPerThread   = 16;
+    constexpr index_t KPerThread   = 4;
     constexpr index_t HPerThread   = 2;
     constexpr index_t WPerThread   = 2;
     constexpr index_t CYXPerThread = 4;
