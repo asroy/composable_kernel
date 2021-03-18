@@ -102,6 +102,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         const index_t k_block_work_id   = get_block_1d_id() / hwo_block_work_num;
         const index_t hwo_block_work_id = get_block_1d_id() - k_block_work_id * hwo_block_work_num;
 
+        const index_t ho_block_work_id = hwo_block_work_id / wo_block_work_num;
+        const index_t wo_block_work_id = hwo_block_work_id - ho_block_work_id * wo_block_work_num;
 #else
         // Hack: this force result into SGPR
         const index_t k_block_work_num   = __builtin_amdgcn_readfirstlane(K / KPerBlock);
@@ -112,10 +114,11 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         const index_t k_block_work_id =
             __builtin_amdgcn_readfirstlane(get_block_1d_id() / hwo_block_work_num);
         const index_t hwo_block_work_id = get_block_1d_id() - k_block_work_id * hwo_block_work_num;
-#endif
 
-        const index_t ho_block_work_id = hwo_block_work_id / wo_block_work_num;
+        const index_t ho_block_work_id =
+            __builtin_amdgcn_readfirstlane(hwo_block_work_id / wo_block_work_num);
         const index_t wo_block_work_id = hwo_block_work_id - ho_block_work_id * wo_block_work_num;
+#endif
 
         // lds max alignment
         constexpr auto max_lds_align =
