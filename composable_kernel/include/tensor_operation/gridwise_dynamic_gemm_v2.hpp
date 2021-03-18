@@ -34,7 +34,6 @@ template <index_t BlockSize,
           index_t ABlockTransferSrcScalarPerVector,
           index_t ABlockTransferDstScalarPerVector_M,
           bool AThreadTransferSrcResetCoordinateAfterRun,
-          typename BBlockTransferThreadClusterArrangeOrder,
           typename BBlockTransferSrcAccessOrder,
           index_t BBlockTransferSrcVectorDim,
           index_t BBlockTransferSrcScalarPerVector,
@@ -195,21 +194,22 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
             make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
                 Number<EPerBlock>{}, Number<1>{}, Number<HPerThread>{}, Number<WPerThread>{}));
 
-        auto b_threadwise_transfer = ThreadwiseDynamicTensorSliceTransfer_v2<
-            Float,
-            Float,
-            decltype(b_e_n_h_w_global_desc),
-            decltype(b_e_n_h_w_thread_desc),
-            Sequence<EPerBlock, 1, HPerThread, WPerThread>,
-            Sequence<3, 2, 0, 1>, // BBlockTransferSrcAccessOrder,
-            3,                    // BBlockTransferSrcVectorDim,
-            1,                    // BBlockTransferSrcScalarPerVector,
-            AddressSpace::Global,
-            AddressSpace::Vgpr,
-            InMemoryDataOperation::Set,
-            1,
-            true>(b_e_n_h_w_global_desc,
-                  make_multi_index(0, 0, h_thread_data_on_global, w_thread_data_on_global));
+        auto b_threadwise_transfer =
+            ThreadwiseDynamicTensorSliceTransfer_v2<Float,
+                                                    Float,
+                                                    decltype(b_e_n_h_w_global_desc),
+                                                    decltype(b_e_n_h_w_thread_desc),
+                                                    Sequence<EPerBlock, 1, HPerThread, WPerThread>,
+                                                    BBlockTransferSrcAccessOrder,
+                                                    BBlockTransferSrcVectorDim,
+                                                    BBlockTransferSrcScalarPerVector,
+                                                    AddressSpace::Global,
+                                                    AddressSpace::Vgpr,
+                                                    InMemoryDataOperation::Set,
+                                                    1,
+                                                    true>(
+                b_e_n_h_w_global_desc,
+                make_multi_index(0, 0, h_thread_data_on_global, w_thread_data_on_global));
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
@@ -387,9 +387,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                 decltype(c_k_n_h_w_thread_desc),
                 decltype(c_k_n_h_w_global_desc),
                 Sequence<KPerThread, 1, HPerThread, WPerThread>,
-                Sequence<3, 2, 0, 1>, // CThreadTransferSrcDstAccessOrder
-                3,                    // CThreadTransferSrcDstVectorDim
-                1,                    // CThreadTransferDstScalarPerVector,
+                CThreadTransferSrcDstAccessOrder,
+                CThreadTransferSrcDstVectorDim,
+                CThreadTransferDstScalarPerVector,
                 AddressSpace::Vgpr,
                 AddressSpace::Global,
                 CGlobalMemoryDataOperation,
@@ -510,7 +510,6 @@ template <index_t BlockSize,
           index_t ABlockTransferSrcScalarPerVector,
           index_t ABlockTransferDstScalarPerVector_M,
           bool AThreadTransferSrcResetCoordinateAfterRun,
-          typename BBlockTransferThreadClusterArrangeOrder,
           typename BBlockTransferSrcAccessOrder,
           index_t BBlockTransferSrcVectorDim,
           index_t BBlockTransferSrcScalarPerVector,

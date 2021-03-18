@@ -190,7 +190,6 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             GemmABlockTransferDstScalarPerVector_GemmM,
             false, // don't move back src coordinate after threadwise copy
             Sequence<3, 2, 1, 0>,
-            Sequence<3, 2, 1, 0>,
             3,
             GemmBBlockTransferSrcScalarPerVector_GemmN,
             GemmBBlockTransferDstScalarPerVector_GemmN,
