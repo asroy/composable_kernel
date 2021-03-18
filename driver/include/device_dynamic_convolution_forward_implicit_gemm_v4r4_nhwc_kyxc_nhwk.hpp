@@ -223,9 +223,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
     constexpr index_t GemmNPerThread = 4;
     constexpr index_t GemmKPerThread = 1;
 
-    constexpr index_t GemmMLevel0Cluster = 1;
+    constexpr index_t GemmMLevel0Cluster = 2;
     constexpr index_t GemmNLevel0Cluster = 2;
-    constexpr index_t GemmMLevel1Cluster = 2;
+    constexpr index_t GemmMLevel1Cluster = 1;
     constexpr index_t GemmNLevel1Cluster = 16;
 
     constexpr index_t ThreadGemmDataPerReadM = 4;

@@ -134,7 +134,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
     constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmN = 1;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 4;
-#elif 1
+#elif 0
     // cdata = 64, BlockSize 64, 16x256x2
     constexpr index_t BlockSize = 64;
 
