@@ -537,12 +537,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto a_cyx_k_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+        constexpr auto a_cyx_k_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
             make_tuple(Number<CYX>{}, Number<K>{}), max_lds_align);
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
-            math::integer_least_multiple(a_cyx_k_block_desc.GetElementSpaceSize(), max_lds_align);
+            math::integer_least_multiple(a_cyx_k_desc.GetElementSpaceSize(), max_lds_align);
 
         return a_block_space_size * sizeof(Float);
     }

@@ -3,10 +3,10 @@
 
 template <typename GridwiseOp, typename... Xs>
 __global__ void
-#if 0
-    __launch_bounds__(256, 2)
+#if 1
+    __launch_bounds__(64, 2)
 #endif
-run_gridwise_operation(Xs... xs)
+        run_gridwise_operation(Xs... xs)
 {
     GridwiseOp{}.Run(xs...);
 }

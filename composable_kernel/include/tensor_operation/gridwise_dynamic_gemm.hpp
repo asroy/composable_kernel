@@ -12,8 +12,9 @@
 namespace ck {
 
 template <index_t BlockSize,
-          typename Float,
-          typename AccFloat,
+          typename FloatAB,
+          typename FloatAcc,
+          typename FloatC,
           InMemoryDataOperation CGlobalMemoryDataOperation,
           typename AGlobalDesc,
           typename BGlobalDesc,
@@ -52,7 +53,7 @@ template <index_t BlockSize,
           typename CGlobalIteratorHacks,
           typename AGlobalMoveSliceWindowIteratorHacks,
           typename BGlobalMoveSliceWindowIteratorHacks>
-struct GridwiseDynamicGemm_km_kn_mn_v1
+struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
 {
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
@@ -78,17 +79,17 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         constexpr auto b_block_space_size =
             math::integer_least_multiple(b_k_n_block_desc.GetElementSpaceSize(), max_lds_align);
 
-        return 2 * (a_block_space_size + b_block_space_size) * sizeof(Float);
+        return 2 * (a_block_space_size + b_block_space_size) * sizeof(FloatAB);
     }
 
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const AGlobalDesc& a_k_m_global_desc,
-                        const Float* __restrict__ p_a_global,
+                        const FloatAB* __restrict__ p_a_global,
                         const BGlobalDesc& b_k_n_global_desc,
-                        const Float* __restrict__ p_b_global,
+                        const FloatAB* __restrict__ p_b_global,
                         const CGlobalDesc& c_m0_m1_n0_n1_global_desc,
-                        Float* __restrict__ p_c_global,
-                        Float* __restrict__ p_shared_block,
+                        FloatC* __restrict__ p_c_global,
+                        FloatAB* __restrict__ p_shared_block,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
@@ -144,8 +145,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                                                    ABlockTransferThreadSliceLengths_K_M,
                                                    ABlockTransferThreadClusterLengths_K_M,
                                                    ABlockTransferThreadClusterArrangeOrder,
-                                                   Float,
-                                                   Float,
+                                                   FloatAB,
+                                                   FloatAB,
                                                    decltype(a_k_m_global_desc),
                                                    decltype(a_k_m_block_desc),
                                                    ABlockTransferSrcAccessOrder,
@@ -173,8 +174,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                                                    BBlockTransferThreadSliceLengths_K_N,
                                                    BBlockTransferThreadClusterLengths_K_N,
                                                    BBlockTransferThreadClusterArrangeOrder,
-                                                   Float,
-                                                   Float,
+                                                   FloatAB,
+                                                   FloatAB,
                                                    decltype(b_k_n_global_desc),
                                                    decltype(b_k_n_block_desc),
                                                    BBlockTransferSrcAccessOrder,
@@ -235,11 +236,11 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
         constexpr auto b_block_space_size =
             math::integer_least_multiple(b_k_n_block_desc.GetElementSpaceSize(), max_lds_align);
 
-        Float* p_a_block_double = p_shared_block;
-        Float* p_b_block_double = p_shared_block + 2 * a_block_space_size;
+        FloatAB* p_a_block_double = p_shared_block;
+        FloatAB* p_b_block_double = p_shared_block + 2 * a_block_space_size;
 
         // register allocation for output
-        AccFloat p_c_thread[c_m0m1_n0n1_thread_desc.GetElementSpaceSize()];
+        FloatAcc p_c_thread[c_m0m1_n0n1_thread_desc.GetElementSpaceSize()];
 
         // zero out threadwise output
         threadwise_matrix_set_zero_v2(c_m0m1_n0n1_thread_desc, p_c_thread);
@@ -269,11 +270,11 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
 
         if constexpr(HasMainKBlockLoop)
         {
-            Float* p_a_block_even = p_a_block_double;
-            Float* p_b_block_even = p_b_block_double;
+            FloatAB* p_a_block_even = p_a_block_double;
+            FloatAB* p_b_block_even = p_b_block_double;
 
-            Float* p_a_block_odd = p_a_block_double + a_block_space_size;
-            Float* p_b_block_odd = p_b_block_double + b_block_space_size;
+            FloatAB* p_a_block_odd = p_a_block_double + a_block_space_size;
+            FloatAB* p_b_block_odd = p_b_block_double + b_block_space_size;
 
             index_t k_block_data_begin = 0;
 
@@ -400,8 +401,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
                 Number<MRepeat>{}, Number<MPerThread>{}, Number<NRepeat>{}, Number<NPerThread>{}));
 
             ThreadwiseDynamicTensorSliceTransfer_v1r3<
-                AccFloat,
-                Float,
+                FloatAcc,
+                FloatC,
                 decltype(c_m0_m1_n0_n1_thread_desc),
                 decltype(c_m0_m1_n0_n1_global_desc),
                 Sequence<MRepeat, MPerThread, NRepeat, NPerThread>,
@@ -429,17 +430,17 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
     // pass tensor descriptor by reference
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const AGlobalDesc& a_k_m_global_desc,
-                        const Float* __restrict__ p_a_global,
+                        const FloatAB* __restrict__ p_a_global,
                         const BGlobalDesc& b_k_n_global_desc,
-                        const Float* __restrict__ p_b_global,
+                        const FloatAB* __restrict__ p_b_global,
                         const CGlobalDesc& c_m0_m1_n0_n1_global_desc,
-                        Float* __restrict__ p_c_global,
+                        FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
-        constexpr index_t shared_block_size = GetSharedMemoryNumberOfByte() / sizeof(Float);
+        constexpr index_t shared_block_size = GetSharedMemoryNumberOfByte() / sizeof(FloatAB);
 
-        __shared__ Float p_shared_block[shared_block_size];
+        __shared__ FloatAB p_shared_block[shared_block_size];
 
         Run(a_k_m_global_desc,
             p_a_global,
@@ -452,14 +453,14 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
             integral_constant<bool, HasDoubleTailKBlockLoop>{});
     }
 
-    // pass tensor descriptors by their pointers
+    // pass tensor descriptors by pointers
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const AGlobalDesc* p_a_k_m_global_desc,
-                        const Float* __restrict__ p_a_global,
+                        const FloatAB* __restrict__ p_a_global,
                         const BGlobalDesc* p_b_k_n_global_desc,
-                        const Float* __restrict__ p_b_global,
+                        const FloatAB* __restrict__ p_b_global,
                         const CGlobalDesc* p_c_m0_m1_n0_n1_global_desc,
-                        Float* __restrict__ p_c_global,
+                        FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
@@ -480,11 +481,11 @@ struct GridwiseDynamicGemm_km_kn_mn_v1
     // pass tensor descriptors by void*
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const void* p_a_k_m_global_desc,
-                        const Float* __restrict__ p_a_global,
+                        const FloatAB* __restrict__ p_a_global,
                         const void* p_b_k_n_global_desc,
-                        const Float* __restrict__ p_b_global,
+                        const FloatAB* __restrict__ p_b_global,
                         const void* p_c_m0_m1_n0_n1_global_desc,
-                        Float* __restrict__ p_c_global,
+                        FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {

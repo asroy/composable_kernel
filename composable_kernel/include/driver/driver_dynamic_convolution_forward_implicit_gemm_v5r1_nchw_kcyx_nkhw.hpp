@@ -219,6 +219,9 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
 
             KernelTimer timer;
             timer.Start();
+            std::cout << "has_main_k_block_loop: " << has_main_k_block_loop
+                      << " has_double_tail_k_block_loop: " << has_double_tail_k_block_loop
+                      << std::endl;
 
             for(index_t j = 0; j < nrepeat; ++j)
             {

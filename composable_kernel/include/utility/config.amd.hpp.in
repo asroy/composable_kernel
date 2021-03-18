@@ -140,10 +140,5 @@ enum InMemoryDataOperation
 // index type
 using index_t = int32_t;
 
-typedef int32_t int32x2_t __attribute__((ext_vector_type(2)));
-
-// int32x4_t use by buffer_load and buffer_store llvm intrinsic
-typedef int32_t int32x4_t __attribute__((ext_vector_type(4)));
-
 } // namespace ck
 #endif

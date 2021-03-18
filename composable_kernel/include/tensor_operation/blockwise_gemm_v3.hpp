@@ -154,6 +154,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
                                                                     decltype(b_thread_mtx),
                                                                     decltype(c_thread_mtx)>{};
         // loop over k
+#pragma unroll
         for(index_t cyx_begin = 0; cyx_begin < CYXPerBlock; cyx_begin += CYXPerThreadLoop)
         {
             a_thread_copy.Run(p_a_block + a_block_mtx.CalculateOffset(make_tuple(cyx_begin, 0)) +

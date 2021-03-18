@@ -25,9 +25,37 @@ int main(int argc, char* argv[])
 
 #if 0
     constexpr index_t N  = 1;
-    constexpr index_t C  = 4;
+    constexpr index_t C  = 16;
+    constexpr index_t HI = 1;
+    constexpr index_t WI = 64;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<1, 1>;
+    using RightPads = Sequence<1, 1>;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 16;
     constexpr index_t HI = 1080;
     constexpr index_t WI = 1920;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads                   = Sequence<0, 0>;
+    using RightPads                  = Sequence<0, 0>;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 16;
+    constexpr index_t HI = 540;
+    constexpr index_t WI = 960;
     constexpr index_t K  = 16;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
@@ -39,21 +67,7 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     constexpr index_t N  = 1;
-    constexpr index_t C  = 4;
-    constexpr index_t HI = 540;
-    constexpr index_t WI = 960;
-    constexpr index_t K  = 16;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
-
-    using ConvStrides   = Sequence<1, 1>;
-    using ConvDilations = Sequence<1, 1>;
-
-    using LeftPads   = Sequence<0, 0>;
-    using RightPads  = Sequence<0, 0>;
-#elif 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 4;
+    constexpr index_t C  = 16;
     constexpr index_t HI = 270;
     constexpr index_t WI = 480;
     constexpr index_t K  = 16;
@@ -65,20 +79,6 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 4;
-    constexpr index_t HI = 1080;
-    constexpr index_t WI = 1920;
-    constexpr index_t K  = 16;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    using ConvStrides   = Sequence<1, 1>;
-    using ConvDilations = Sequence<1, 1>;
-
-    using LeftPads  = Sequence<1, 1>;
-    using RightPads = Sequence<1, 1>;
 #elif 1
     constexpr index_t N  = 1;
     constexpr index_t C  = 4;
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<1, 1>;
 #elif 0
     constexpr index_t N  = 1;
-    constexpr index_t C  = 4;
+    constexpr index_t C  = 16;
     constexpr index_t HI = 540;
     constexpr index_t WI = 960;
     constexpr index_t K  = 16;
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<1, 1>;
 #elif 0
     constexpr index_t N  = 1;
-    constexpr index_t C  = 4;
+    constexpr index_t C  = 16;
     constexpr index_t HI = 270;
     constexpr index_t WI = 480;
     constexpr index_t K  = 16;
@@ -631,12 +631,16 @@ int main(int argc, char* argv[])
     print_array("ConvStrides", to_multi_index(ConvStrides{}));
     print_array("ConvDilations", to_multi_index(ConvDilations{}));
 
-#if 1
-    using in_data_t  = float;
+#if 0
+    using in_data_t = float;
+    constexpr index_t in_vector_size = 1;
     using out_data_t = float;
+    using acc_data_t = float;
 #else
-    using in_data_t  = half_float::half;
-    using out_data_t = half_float::half;
+    using in_data_t                  = int8_t;
+    constexpr index_t in_vector_size = 4;
+    using acc_data_t                 = int32_t;
+    using out_data_t                 = int8_t;
 #endif
 
     Tensor<in_data_t> in_nchw(make_HostTensorDescriptor(in_nchw_desc));
@@ -646,14 +650,15 @@ int main(int argc, char* argv[])
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
-    if(argc != 3)
+    if(argc != 4)
     {
-        printf("arg1: do_verification, arg2: nrepeat\n");
+        printf("arg1: do_verification, arg2: do_log, arg3: nrepeat\n");
         exit(1);
     }
 
     bool do_verification = atoi(argv[1]);
-    index_t nrepeat      = atoi(argv[2]);
+    bool do_log          = atoi(argv[2]);
+    index_t nrepeat      = atoi(argv[3]);
 
     if(do_verification)
     {
@@ -662,7 +667,7 @@ int main(int argc, char* argv[])
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-        wei_kcyx.GenerateTensorValue(GeneratorTensor_3{}, num_thread);
+        wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
@@ -751,36 +756,42 @@ int main(int argc, char* argv[])
                                                                          LeftPads{},
                                                                          RightPads{},
                                                                          nrepeat);
-
+#elif 1
+    device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<in_data_t,
+                                                                         in_vector_size,
+                                                                         acc_data_t,
+                                                                         out_data_t>(
+        in_nchw_desc,
+        in_nchw,
+        wei_kcyx_desc,
+        wei_kcyx,
+        out_nkhw_desc,
+        out_nkhw_device,
+        ConvStrides{},
+        ConvDilations{},
+        LeftPads{},
+        RightPads{},
+        nrepeat);
 #endif
 
     if(do_verification)
     {
-#if 0
-        if(Y == 3 && X == 3 && ConvStrides{}[0] == 1 && ConvStrides{}[1] == 1 &&
-           ConvDilations{}[0] == 1 && ConvDilations{}[1] == 1)
-        {
-            host_winograd_3x3_convolution(
-                in_nchw, wei_kcyx, out_nkhw_host, LeftPads{}, RightPads{});
-        }
-        else
-#endif
-        {
-            host_direct_convolution(in_nchw,
-                                    wei_kcyx,
-                                    out_nkhw_host,
-                                    ConvStrides{},
-                                    ConvDilations{},
-                                    LeftPads{},
-                                    RightPads{});
-        }
+        host_direct_convolution(in_nchw,
+                                wei_kcyx,
+                                out_nkhw_host,
+                                ConvStrides{},
+                                ConvDilations{},
+                                LeftPads{},
+                                RightPads{});
+
         check_error(out_nkhw_host, out_nkhw_device);
 
-#if 0
-        // LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
-        // LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
-        LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
-        LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
-#endif
+        if(do_log)
+        {
+            LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
+            LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
+            LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
+            LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
+        }
     }
 }

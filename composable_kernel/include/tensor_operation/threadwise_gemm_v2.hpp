@@ -161,19 +161,7 @@ struct ThreadwiseGemm_km_kn_mn_v1
     __device__ static void Run(const FloatA* p_a, const FloatB* p_b, FloatC* p_c)
     {
 #if CK_THREADWISE_GEMM_USE_AMD_INLINE_ASM
-        constexpr bool has_amd_asm = is_same<FloatC, float>{} &&
-                                     ((is_same<FloatA, float>{} && is_same<FloatB, float>{}) ||
-                                      (is_same<FloatA, half2_t>{} && is_same<FloatB, half2_t>{}) ||
-                                      (is_same<FloatA, half4_t>{} && is_same<FloatB, half4_t>{}));
-
-        if constexpr(has_amd_asm)
-        {
-            Run_amd_asm(p_a, p_b, p_c);
-        }
-        else
-        {
-            Run_source(p_a, p_b, p_c);
-        }
+        Run_amd_asm(p_a, p_b, p_c);
 #else
         Run_source(p_a, p_b, p_c);
 #endif

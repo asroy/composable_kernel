@@ -181,7 +181,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
                     src_desc.CalculateOffset(to_multi_index(src_slice_origin_idx) + dst_data_idx +
                                              i * dst_scalar_step_in_vector);
 
-                dst_vector.Scalars()(i) = p_src[Number<src_offset>{}];
+                dst_vector.Scalars()(i) = type_convert<DstData>{}(p_src[Number<src_offset>{}]);
             });
 
             const bool is_dst_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
