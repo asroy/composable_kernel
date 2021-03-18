@@ -91,7 +91,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         const auto W = b_cyx_n_h_w_global_desc.GetLength(I3);
 
         // divide block work by [M, N]
-#if 1
+#if 0
         const auto k_block_work_num  = K / Number<KPerBlock>{};
         const auto h_block_work_num  = H / Number<HPerBlock>{};
         const auto w_block_work_num  = W / Number<WPerBlock>{};
@@ -646,32 +646,33 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         const index_t w_thread_data_on_global = w_block_data_on_global + w_thread_id * WPerThread;
 
         // A matrix blockwise copy
-        auto a_blockwise_copy = BlockwiseDynamicTensorSliceTransfer_v4<
-            BlockSize,
-            InMemoryDataOperation::Set,
-            Sequence<CYX, K>,
-            ABlockTransferThreadSliceLengths_K_M,
-            ABlockTransferThreadClusterLengths_K_M,
-            ABlockTransferThreadClusterArrangeOrder,
-            Float,
-            Float,
-            decltype(a_cyx_k_global_desc),
-            decltype(a_cyx_k_desc),
-            ABlockTransferSrcAccessOrder,
-            Sequence<0, 1>,
-            ABlockTransferSrcVectorDim,
-            1,
-            ABlockTransferSrcScalarPerVector,
-            ABlockTransferDstScalarPerVector_M,
-            AddressSpace::Global,
-            AddressSpace::Lds,
-            1,
-            1,
-            AThreadTransferSrcResetCoordinateAfterRun,
-            true>(a_cyx_k_global_desc,
-                  make_multi_index(0, k_block_data_on_global),
-                  a_cyx_k_desc,
-                  make_multi_index(0, 0));
+        auto a_blockwise_copy =
+            BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
+                                                   InMemoryDataOperation::Set,
+                                                   Sequence<CYX, K>,
+                                                   ABlockTransferThreadSliceLengths_K_M,
+                                                   ABlockTransferThreadClusterLengths_K_M,
+                                                   ABlockTransferThreadClusterArrangeOrder,
+                                                   Float,
+                                                   Float,
+                                                   decltype(a_cyx_k_global_desc),
+                                                   decltype(a_cyx_k_desc),
+                                                   ABlockTransferSrcAccessOrder,
+                                                   Sequence<0, 1>,
+                                                   ABlockTransferSrcVectorDim,
+                                                   1,
+                                                   ABlockTransferSrcScalarPerVector,
+                                                   ABlockTransferDstScalarPerVector_M,
+                                                   AddressSpace::Global,
+                                                   AddressSpace::Lds,
+                                                   1,
+                                                   1,
+                                                   AThreadTransferSrcResetCoordinateAfterRun,
+                                                   true>(
+                a_cyx_k_global_desc,
+                make_multi_index(0, k_block_data_on_global),
+                a_cyx_k_desc,
+                make_multi_index(0, 0));
 
         constexpr auto b_cyx_n_h_w_thread_desc =
             make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
