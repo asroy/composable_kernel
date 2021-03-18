@@ -165,7 +165,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
 
 #if 1
         // GEMM
-        using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v2<
+        using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v3<
             BlockSize,
             Float,
             AccFloat,
@@ -189,13 +189,13 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             GemmABlockTransferSrcScalarPerVector_GemmK,
             GemmABlockTransferDstScalarPerVector_GemmM,
             false, // don't move back src coordinate after threadwise copy
-            Sequence<3, 2, 1, 0>,
+            Sequence<0, 2, 3, 1>,
             3,
             GemmBBlockTransferSrcScalarPerVector_GemmN,
             GemmBBlockTransferDstScalarPerVector_GemmN,
             false, // don't move back src coordinate after threadwise copy, which will be fused with
                    // MoveSrcSliceWindow() to save addr computation
-            Sequence<3, 2, 1, 0>,
+            Sequence<0, 2, 3, 1>,
             3,
             GemmCThreadTransferDstScalarPerVector_GemmN1,
             decltype(a_k_m_global_iterator_hacks),
@@ -224,34 +224,6 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
 
             for(index_t j = 0; j < nrepeat; ++j)
             {
-#if 0
-                {
-                    const auto kernel =
-                        run_gridwise_operation<gridwise_gemm,
-                                               decltype(wei_gemmk_gemmm_global_desc),
-                                               const Float*,
-                                               decltype(in_gemmk_n_ho_wo_global_desc),
-                                               const Float*,
-                                               decltype(out_gemmm_n_ho_wo_global_desc),
-                                               Float*,
-                                               integral_constant<bool, true>,
-                                               integral_constant<bool, false>>;
-
-                    launch_kernel(kernel,
-                                  dim3(GridSize),
-                                  dim3(BlockSize),
-                                  0,
-                                  0,
-                                  wei_gemmk_gemmm_global_desc,
-                                  p_wei_global,
-                                  in_gemmk_n_ho_wo_global_desc,
-                                  p_in_global,
-                                  out_gemmm_n_ho_wo_global_desc,
-                                  p_out_global,
-                                  integral_constant<bool, true>{},
-                                  integral_constant<bool, false>{});
-                }
-#else
                 if(has_main_k_block_loop && has_double_tail_k_block_loop)
                 {
                     const auto kernel =
@@ -360,7 +332,6 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, false>{});
                 }
-#endif
             }
 
             timer.End();
