@@ -27,10 +27,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
     InRightPads,
     ck::index_t nrepeat)
 {
+    using namespace ck;
+
     std::cout << "device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk"
               << std::endl;
-
-    using namespace ck;
 
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -373,7 +373,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
 #endif
 
     constexpr auto conv_driver =
-#if 0
+#if 1
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
 #elif 0
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_no_pad
