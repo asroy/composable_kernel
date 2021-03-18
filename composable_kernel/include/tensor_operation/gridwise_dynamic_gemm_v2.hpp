@@ -363,8 +363,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                 decltype(c_k_n_ho_wo_thread_desc),
                 decltype(c_k_n_ho_wo_global_desc),
                 Sequence<KPerThread, 1, HoPerThread, WoPerThread>,
-                Sequence<3, 2, 0, 1>, // CThreadTransferSrcDstAccessOrder
-                3,                    // CThreadTransferSrcDstVectorDim
+                CThreadTransferSrcDstAccessOrder,
+                CThreadTransferSrcDstVectorDim,
                 CThreadTransferDstScalarPerVector,
                 AddressSpace::Vgpr,
                 AddressSpace::Global,
