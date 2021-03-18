@@ -112,7 +112,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
     wei_k_y_x_c_device_buf.ToDevice(wei_k_y_x_c.mData.data());
     out_n_ho_wo_k_device_buf.ToDevice(out_n_ho_wo_k.mData.data());
 
-#if 1
+#if 0
     // cdata = 16, BlockSize = 64, 16x64x4
     constexpr index_t BlockSize = 64;
 
@@ -211,7 +211,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
     constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmN = 1;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmM1 = 4;
-#elif 0
+#elif 1
     // cdata = 64, BlockSize = 64, 16x256x4
     constexpr index_t BlockSize = 64;
 
