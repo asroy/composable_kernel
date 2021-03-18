@@ -13,15 +13,14 @@ template <class TInWei,
           class ConvStrides,
           class ConvDilations,
           class InLeftPads,
-          class InRightPads,
-          class T>
+          class InRightPads>
 void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
     InDesc,
-    const Tensor<T>& in_n_c_hi_wi,
+    const Tensor<TInWei>& in_n_c_hi_wi,
     WeiDesc,
-    const Tensor<T>& wei_k_c_y_x,
+    const Tensor<TInWei>& wei_k_c_y_x,
     OutDesc,
-    Tensor<T>& out_n_k_ho_wo,
+    Tensor<TOut>& out_n_k_ho_wo,
     ConvStrides,
     ConvDilations,
     InLeftPads,
@@ -374,7 +373,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
 #endif
 
     constexpr auto conv_driver =
-#if 1
+#if 0
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
 #elif 0
         DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_no_pad

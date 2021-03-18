@@ -21,21 +21,7 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 16;
-    constexpr index_t HI = 1;
-    constexpr index_t WI = 64;
-    constexpr index_t K  = 16;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-
-    using ConvStrides   = Sequence<1, 1>;
-    using ConvDilations = Sequence<1, 1>;
-
-    using LeftPads  = Sequence<1, 1>;
-    using RightPads = Sequence<1, 1>;
-#elif 0
+#if 1
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
     constexpr index_t HI = 1080;
@@ -149,7 +135,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 1
+#elif 0
     // 3x3, 71x71
     constexpr index_t N  = 128;
     constexpr index_t C  = 192;
@@ -632,9 +618,9 @@ int main(int argc, char* argv[])
 #if 0
     using in_data_t = float;
     constexpr index_t in_vector_size = 1;
-    using out_data_t = float;
     using acc_data_t = float;
-#else
+    using out_data_t = float;
+#elif 1
     using in_data_t                  = int8_t;
     constexpr index_t in_vector_size = 4;
     using acc_data_t                 = int32_t;
