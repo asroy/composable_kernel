@@ -26,18 +26,17 @@ template <index_t BlockSize,
           index_t HoPerThread,
           index_t WoPerThread,
           index_t EPerThread,
-          typename ABlockTransferThreadSliceLengths_K_M,
-          typename ABlockTransferThreadClusterLengths_K_M,
+          typename ABlockTransferThreadSliceLengths_E_K,
+          typename ABlockTransferThreadClusterLengths_E_K,
           typename ABlockTransferThreadClusterArrangeOrder,
           typename ABlockTransferSrcAccessOrder,
           index_t ABlockTransferSrcVectorDim,
           index_t ABlockTransferSrcScalarPerVector,
-          index_t ABlockTransferDstScalarPerVector_M,
+          index_t ABlockTransferDstScalarPerVector_K,
           bool AThreadTransferSrcResetCoordinateAfterRun,
           typename BBlockTransferSrcAccessOrder,
           index_t BBlockTransferSrcVectorDim,
           index_t BBlockTransferSrcScalarPerVector,
-          index_t BBlockTransferDstScalarPerVector_N,
           bool BThreadTransferSrcResetCoordinateAfterRun,
           typename CThreadTransferSrcDstAccessOrder,
           index_t CThreadTransferSrcDstVectorDim,
@@ -55,7 +54,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         const auto K = 16;
 
         constexpr auto max_lds_align =
-            math::lcm(Number<ABlockTransferDstScalarPerVector_M>{}, Number<K>{});
+            math::lcm(Number<ABlockTransferDstScalarPerVector_K>{}, Number<K>{});
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -122,7 +121,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
         // lds max alignment
         constexpr auto max_lds_align =
-            math::lcm(Number<ABlockTransferDstScalarPerVector_M>{}, Number<KPerBlock>{});
+            math::lcm(Number<ABlockTransferDstScalarPerVector_K>{}, Number<KPerBlock>{});
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -154,7 +153,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                             WoPerThread,
                                             EPerThread,
                                             ABlockTransferSrcScalarPerVector,
-                                            ABlockTransferDstScalarPerVector_M>{};
+                                            ABlockTransferDstScalarPerVector_K>{};
 
         auto c_thread_mtx_index = blockwise_gemm.GetBeginOfThreadMatrixC(get_thread_local_1d_id());
 
@@ -176,8 +175,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
                                                    InMemoryDataOperation::Set,
                                                    Sequence<E, K>,
-                                                   ABlockTransferThreadSliceLengths_K_M,
-                                                   ABlockTransferThreadClusterLengths_K_M,
+                                                   ABlockTransferThreadSliceLengths_E_K,
+                                                   ABlockTransferThreadClusterLengths_E_K,
                                                    ABlockTransferThreadClusterArrangeOrder,
                                                    Float,
                                                    Float,
@@ -188,7 +187,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                                    ABlockTransferSrcVectorDim,
                                                    1,
                                                    ABlockTransferSrcScalarPerVector,
-                                                   ABlockTransferDstScalarPerVector_M,
+                                                   ABlockTransferDstScalarPerVector_K,
                                                    AddressSpace::Global,
                                                    AddressSpace::Lds,
                                                    1,
@@ -231,12 +230,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         constexpr auto b_thread_slice_copy_step = make_multi_index(EPerBlock, 0, 0, 0);
 
         // hack to control index calculation when iterating over A and B matrix for threadwise copy
-        constexpr auto a_k_m_global_iterator_hacks       = AGlobalIteratorHacks{};
+        constexpr auto a_e_k_global_iterator_hacks       = AGlobalIteratorHacks{};
         constexpr auto b_e_n_ho_wo_global_iterator_hacks = BGlobalIteratorHacks{};
 
         // hack to control index calculation when move slice window for A and B matrix for
         // threadwise copy
-        constexpr auto a_k_m_global_move_slice_window_iterator_hack =
+        constexpr auto a_e_k_global_move_slice_window_iterator_hack =
             AGlobalMoveSliceWindowIteratorHacks{};
         constexpr auto b_e_n_ho_wo_global_move_slice_window_iterator_hack =
             BGlobalMoveSliceWindowIteratorHacks{};
@@ -248,7 +247,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
         // LDS double buffer: preload data into LDS
         {
-            a_blockwise_copy.RunRead(a_e_k_global_desc, p_a_global, a_k_m_global_iterator_hacks);
+            a_blockwise_copy.RunRead(a_e_k_global_desc, p_a_global, a_e_k_global_iterator_hacks);
 
             b_threadwise_transfer.Run(b_e_n_ho_wo_global_desc,
                                       p_b_global,
