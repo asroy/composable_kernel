@@ -132,22 +132,26 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
 
         constexpr auto EPerBlock = a_block_mtx.GetLength(I0);
 
+        constexpr auto KPerThreadSubC = 4;
+
+        static_assert(KPerThread % KPerThreadSubC == 0, "");
+
         // thread A, B for GEMM
         constexpr auto a_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
-            make_tuple(Number<EPerThreadLoop>{}, Number<KPerThread>{}));
+            make_tuple(Number<EPerThreadLoop>{}, Number<KPerThreadSubC>{}));
 
         constexpr auto b_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
             Number<EPerThreadLoop>{}, Number<1>{}, Number<HPerThread>{}, Number<WPerThread>{}));
 
         constexpr auto c_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
-            Number<KPerThread>{}, Number<1>{}, Number<HPerThread>{}, Number<WPerThread>{}));
+            Number<KPerThreadSubC>{}, Number<1>{}, Number<HPerThread>{}, Number<WPerThread>{}));
 
         FloatA p_a_thread[a_thread_mtx.GetElementSpaceSize()];
 
         constexpr auto a_thread_copy = ThreadwiseSliceCopy_a<BlockMatrixA,
                                                              decltype(a_thread_mtx),
                                                              EPerThreadLoop,
-                                                             KPerThread,
+                                                             KPerThreadSubC,
                                                              ThreadGemmADataPerRead_K>{};
 
         constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v3<decltype(a_thread_mtx),
@@ -157,14 +161,20 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
 #pragma unroll
         for(index_t e_begin = 0; e_begin < EPerBlock; e_begin += EPerThreadLoop)
         {
-            a_thread_copy.Run(p_a_block + a_block_mtx.CalculateOffset(make_tuple(e_begin, 0)) +
-                                  mMyThreadOffsetA,
-                              p_a_thread);
+#pragma unroll
+            for(index_t k_begin = 0; k_begin < KPerThread; k_begin += KPerThreadSubC)
+            {
 
-            threadwise_gemm.Run(p_a_thread,
-                                p_b_thread +
-                                    b_thread_mtx.CalculateOffset(make_tuple(e_begin, 0, 0, 0)),
-                                p_c_thread);
+                a_thread_copy.Run(p_a_block +
+                                      a_block_mtx.CalculateOffset(make_tuple(e_begin, k_begin)) +
+                                      mMyThreadOffsetA,
+                                  p_a_thread);
+
+                threadwise_gemm.Run(
+                    p_a_thread,
+                    p_b_thread + b_thread_mtx.CalculateOffset(make_tuple(e_begin, 0, 0, 0)),
+                    p_c_thread + c_thread_mtx.CalculateOffset(make_tuple(k_begin, 0, 0, 0)));
+            }
         }
     }
 

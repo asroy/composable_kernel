@@ -73,12 +73,12 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
     constexpr index_t KPerBlock  = 16;
     constexpr index_t HoPerBlock = 16;
     constexpr index_t WoPerBlock = 16;
-    constexpr index_t EPerBlock  = 2;
+    constexpr index_t EPerBlock  = 4;
 
     constexpr index_t KPerThread  = 16;
     constexpr index_t HoPerThread = 2;
     constexpr index_t WoPerThread = 2;
-    constexpr index_t EPerThread  = 2;
+    constexpr index_t EPerThread  = 4;
 
     using ABlockTransferThreadSliceLengths_E_K   = Sequence<9, 1>;
     using ABlockTransferThreadClusterLengths_E_K = Sequence<4, 16>;
@@ -88,7 +88,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
 
     constexpr index_t BThreadTransferSrcScalarPerVector_W = 1;
 
-    constexpr index_t CThreadTransferDstScalarPerVector_W = 1;
+    constexpr index_t CThreadTransferDstScalarPerVector_W = 2;
 
     constexpr auto conv_driver =
         DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad<
