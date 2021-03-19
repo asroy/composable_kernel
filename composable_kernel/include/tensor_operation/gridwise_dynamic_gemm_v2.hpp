@@ -51,15 +51,14 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
         const auto E = 4 * 3 * 3;
-        const auto K = 16;
 
         constexpr auto max_lds_align =
-            math::lcm(Number<ABlockTransferDstScalarPerVector_K>{}, Number<K>{});
+            math::lcm(Number<ABlockTransferDstScalarPerVector_K>{}, Number<KPerBlock>{});
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
         constexpr auto a_e_k_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<E>{}, Number<K>{}), max_lds_align);
+            make_tuple(Number<E>{}, Number<KPerBlock>{}), max_lds_align);
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
@@ -129,7 +128,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             make_tuple(Number<EPerBlock>{}, Number<KPerBlock>{}), max_lds_align);
 
         constexpr auto a_e_k_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<E>{}, Number<K>{}), max_lds_align);
+            make_tuple(Number<E>{}, Number<KPerBlock>{}), max_lds_align);
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -174,7 +173,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         auto a_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
                                                    InMemoryDataOperation::Set,
-                                                   Sequence<E, K>,
+                                                   Sequence<E, KPerBlock>,
                                                    ABlockTransferThreadSliceLengths_E_K,
                                                    ABlockTransferThreadClusterLengths_E_K,
                                                    ABlockTransferThreadClusterArrangeOrder,
