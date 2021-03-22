@@ -232,7 +232,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
 
         const bool has_double_tail_k_block_loop = (GemmK / GemmKPerBlock) % 2 == 0;
 
-#if 1 // pass tensor descriptors by value
+#if CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VALUE
         index_t nrepeat = 100;
 
         for(index_t i = 0; i < 5; ++i)
@@ -370,7 +370,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
             std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s"
                       << std::endl;
         }
-#elif 1 // pass tensor descriptors by pointers
+#elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_POINTER
         using ADesc = decltype(wei_gemmk_gemmm_global_desc);
         using BDesc = decltype(in_gemmk_gemmn_global_desc);
         using CDesc = decltype(out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc);
@@ -399,12 +399,12 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
                 {
                     const auto kernel =
                         run_gridwise_operation<gridwise_gemm,
-                                               decltype(wei_gemmk_gemmm_global_desc),
+                                               const decltype(wei_gemmk_gemmm_global_desc)*,
                                                const FloatAB*,
-                                               decltype(in_gemmk_gemmn_global_desc),
+                                               const decltype(in_gemmk_gemmn_global_desc)*,
                                                const FloatAB*,
-                                               decltype(
-                                                   out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc),
+                                               const decltype(
+                                                   out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc)*,
                                                FloatC*,
                                                integral_constant<bool, true>,
                                                integral_constant<bool, true>>;
@@ -431,12 +431,12 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
                 {
                     const auto kernel =
                         run_gridwise_operation<gridwise_gemm,
-                                               decltype(wei_gemmk_gemmm_global_desc),
+                                               const decltype(wei_gemmk_gemmm_global_desc)*,
                                                const FloatAB*,
-                                               decltype(in_gemmk_gemmn_global_desc),
+                                               const decltype(in_gemmk_gemmn_global_desc)*,
                                                const FloatAB*,
-                                               decltype(
-                                                   out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc),
+                                               const decltype(
+                                                   out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc)*,
                                                FloatC*,
                                                integral_constant<bool, true>,
                                                integral_constant<bool, false>>;
@@ -463,12 +463,12 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
                 {
                     const auto kernel =
                         run_gridwise_operation<gridwise_gemm,
-                                               decltype(wei_gemmk_gemmm_global_desc),
+                                               const decltype(wei_gemmk_gemmm_global_desc)*,
                                                const FloatAB*,
-                                               decltype(in_gemmk_gemmn_global_desc),
+                                               const decltype(in_gemmk_gemmn_global_desc)*,
                                                const FloatAB*,
-                                               decltype(
-                                                   out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc),
+                                               const decltype(
+                                                   out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc)*,
                                                FloatC*,
                                                integral_constant<bool, false>,
                                                integral_constant<bool, true>>;
@@ -495,12 +495,12 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
                 {
                     const auto kernel =
                         run_gridwise_operation<gridwise_gemm,
-                                               decltype(wei_gemmk_gemmm_global_desc),
+                                               const decltype(wei_gemmk_gemmm_global_desc)*,
                                                const FloatAB*,
-                                               decltype(in_gemmk_gemmn_global_desc),
+                                               const decltype(in_gemmk_gemmn_global_desc)*,
                                                const FloatAB*,
-                                               decltype(
-                                                   out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc),
+                                               const decltype(
+                                                   out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc)*,
                                                FloatC*,
                                                integral_constant<bool, false>,
                                                integral_constant<bool, false>>;
@@ -537,7 +537,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
             std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s"
                       << std::endl;
         }
-#elif 1 // pass tensor descriptor by void*
+#elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER
         using ADesc = decltype(wei_gemmk_gemmm_global_desc);
         using BDesc = decltype(in_gemmk_gemmn_global_desc);
         using CDesc = decltype(out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc);
@@ -905,7 +905,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
 
         const bool has_double_tail_k_block_loop = (GemmK / GemmKPerBlock) % 2 == 0;
 
-#if 1 // pass tensor descriptors by value
+#if CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VALUE
         index_t nrepeat = 100;
 
         for(index_t i = 0; i < 5; ++i)
@@ -1043,7 +1043,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
             std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s"
                       << std::endl;
         }
-#elif 1 // pass tensor descriptors by pointers
+#elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_POINTER
         using ADesc = decltype(wei_gemmk_gemmm_global_desc);
         using BDesc = decltype(in_gemmk_gemmn_global_desc);
         using CDesc = decltype(out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc);
@@ -1210,7 +1210,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_no_pad
             std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s"
                       << std::endl;
         }
-#elif 1 // pass tensor descriptor by void*
+#elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER
         using ADesc = decltype(wei_gemmk_gemmm_global_desc);
         using BDesc = decltype(in_gemmk_gemmn_global_desc);
         using CDesc = decltype(out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc);
@@ -1564,7 +1564,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1
 
         const bool has_double_tail_k_block_loop = (GemmK / GemmKPerBlock) % 2 == 0;
 
-#if 1 // pass tensor descriptors by value
+#if CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VALUE
         index_t nrepeat = 100;
 
         for(index_t i = 0; i < 5; ++i)
@@ -1702,7 +1702,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1
             std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s"
                       << std::endl;
         }
-#elif 1 // pass tensor descriptors by pointers
+#elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_POINTER
         using ADesc = decltype(wei_gemmk_gemmm_global_desc);
         using BDesc = decltype(in_gemmk_gemmn_global_desc);
         using CDesc = decltype(out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc);
@@ -1869,7 +1869,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_1x1
             std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s"
                       << std::endl;
         }
-#elif 1 // pass tensor descriptor by void*
+#elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER
         using ADesc = decltype(wei_gemmk_gemmm_global_desc);
         using BDesc = decltype(in_gemmk_gemmn_global_desc);
         using CDesc = decltype(out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc);
