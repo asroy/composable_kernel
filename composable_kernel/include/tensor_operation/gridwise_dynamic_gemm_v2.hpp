@@ -12,8 +12,9 @@
 namespace ck {
 
 template <index_t BlockSize,
-          typename Float,
-          typename AccFloat,
+          typename FloatAB,
+          typename FloatAcc,
+          typename FloatC,
           InMemoryDataOperation CGlobalMemoryDataOperation,
           typename AGlobalDesc,
           typename BGlobalDesc,
@@ -64,17 +65,17 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         constexpr auto a_block_space_size =
             math::integer_least_multiple(a_e_k_desc.GetElementSpaceSize(), max_lds_align);
 
-        return a_block_space_size * sizeof(Float);
+        return a_block_space_size * sizeof(FloatAB);
     }
 
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const AGlobalDesc& a_e_k_global_desc,
-                        const Float* __restrict__ p_a_global,
+                        const FloatAB* __restrict__ p_a_global,
                         const BGlobalDesc& b_e_n_ho_wo_global_desc,
-                        const Float* __restrict__ p_b_global,
+                        const FloatAB* __restrict__ p_b_global,
                         const CGlobalDesc& c_k_n_ho_wo_global_desc,
-                        Float* __restrict__ p_c_global,
-                        Float* __restrict__ p_shared_block,
+                        FloatC* __restrict__ p_c_global,
+                        FloatAB* __restrict__ p_shared_block,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
@@ -177,8 +178,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                                    ABlockTransferThreadSliceLengths_E_K,
                                                    ABlockTransferThreadClusterLengths_E_K,
                                                    ABlockTransferThreadClusterArrangeOrder,
-                                                   Float,
-                                                   Float,
+                                                   FloatAB,
+                                                   FloatAB,
                                                    decltype(a_e_k_global_desc),
                                                    decltype(a_e_k_desc),
                                                    ABlockTransferSrcAccessOrder,
@@ -203,8 +204,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                 Number<EPerBlock>{}, Number<1>{}, Number<HoPerThread>{}, Number<WoPerThread>{}));
 
         auto b_threadwise_transfer = ThreadwiseDynamicTensorSliceTransfer_v2<
-            Float,
-            Float,
+            FloatAB,
+            FloatAB,
             decltype(b_e_n_ho_wo_global_desc),
             decltype(b_e_n_ho_wo_thread_desc),
             Sequence<EPerBlock, 1, HoPerThread, WoPerThread>,
@@ -218,10 +219,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             true>(b_e_n_ho_wo_global_desc,
                   make_multi_index(0, 0, ho_thread_data_on_global, wo_thread_data_on_global));
 
-        Float* p_a_block = p_shared_block;
+        FloatAB* p_a_block = p_shared_block;
 
         // register allocation for output
-        AccFloat p_c_thread[c_k_n_ho_wo_thread_desc.GetElementSpaceSize()];
+        FloatAcc p_c_thread[c_k_n_ho_wo_thread_desc.GetElementSpaceSize()];
 
         // zero out threadwise output
         threadwise_matrix_set_zero_v3(c_k_n_ho_wo_thread_desc, p_c_thread);
@@ -240,9 +241,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             BGlobalMoveSliceWindowIteratorHacks{};
 
         constexpr auto b_thread_space_size = b_e_n_ho_wo_thread_desc.GetElementSpaceSize();
-        Float p_b_thread[b_thread_space_size * 2];
+        FloatAB p_b_thread[b_thread_space_size * 2];
 
-        Float* p_b_thread_double = p_b_thread;
+        FloatAB* p_b_thread_double = p_b_thread;
 
         // LDS double buffer: preload data into LDS
         {
@@ -265,8 +266,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 #if 1
         if constexpr(HasMainKBlockLoop)
         {
-            Float* p_b_thread_even = p_b_thread_double;
-            Float* p_b_thread_odd  = p_b_thread_double + b_thread_space_size;
+            FloatAB* p_b_thread_even = p_b_thread_double;
+            FloatAB* p_b_thread_odd  = p_b_thread_double + b_thread_space_size;
 
             // LDS double buffer: main body
             // use Do-While loop instead of For loop to simplify control flow
@@ -359,8 +360,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                 k_block_data_on_global + k_thread_id * KPerThread;
 
             ThreadwiseDynamicTensorSliceTransfer_v1r3<
-                AccFloat,
-                Float,
+                FloatAcc,
+                FloatC,
                 decltype(c_k_n_ho_wo_thread_desc),
                 decltype(c_k_n_ho_wo_global_desc),
                 Sequence<KPerThread, 1, HoPerThread, WoPerThread>,
@@ -388,17 +389,17 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
     // pass tensor descriptor by reference
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const AGlobalDesc& a_e_k_global_desc,
-                        const Float* __restrict__ p_a_global,
+                        const FloatAB* __restrict__ p_a_global,
                         const BGlobalDesc& b_e_n_ho_wo_global_desc,
-                        const Float* __restrict__ p_b_global,
+                        const FloatAB* __restrict__ p_b_global,
                         const CGlobalDesc& c_k_n_ho_wo_global_desc,
-                        Float* __restrict__ p_c_global,
+                        FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
-        constexpr index_t shared_block_size = GetSharedMemoryNumberOfByte() / sizeof(Float);
+        constexpr index_t shared_block_size = GetSharedMemoryNumberOfByte() / sizeof(FloatAB);
 
-        __shared__ Float p_shared_block[shared_block_size];
+        __shared__ FloatAB p_shared_block[shared_block_size];
 
         Run(a_e_k_global_desc,
             p_a_global,
@@ -414,11 +415,11 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
     // pass tensor descriptors by their pointers
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const AGlobalDesc* p_a_e_k_global_desc,
-                        const Float* __restrict__ p_a_global,
+                        const FloatAB* __restrict__ p_a_global,
                         const BGlobalDesc* p_b_e_n_ho_wo_global_desc,
-                        const Float* __restrict__ p_b_global,
+                        const FloatAB* __restrict__ p_b_global,
                         const CGlobalDesc* p_c_k_n_ho_wo_global_desc,
-                        Float* __restrict__ p_c_global,
+                        FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
@@ -439,11 +440,11 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
     // pass tensor descriptors by void*
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const void* p_a_e_k_global_desc,
-                        const Float* __restrict__ p_a_global,
+                        const FloatAB* __restrict__ p_a_global,
                         const void* p_b_e_n_ho_wo_global_desc,
-                        const Float* __restrict__ p_b_global,
+                        const FloatAB* __restrict__ p_b_global,
                         const void* p_c_k_n_ho_wo_global_desc,
-                        Float* __restrict__ p_c_global,
+                        FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {

@@ -3,7 +3,10 @@
 #include "host_tensor.hpp"
 #include "driver_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw.hpp"
 
-template <class T,
+template <class TInWei,
+          ck::index_t InWeiVectorSize,
+          class TAcc,
+          class TOut,
           class InDesc,
           class WeiDesc,
           class OutDesc,
@@ -11,33 +14,31 @@ template <class T,
           class ConvDilations,
           class InLeftPads,
           class InRightPads>
-void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc,
-                                                                          const Tensor<T>& in_nchw,
-                                                                          WeiDesc,
-                                                                          const Tensor<T>& wei_kcyx,
-                                                                          OutDesc,
-                                                                          Tensor<T>& out_nkhw,
-                                                                          ConvStrides,
-                                                                          ConvDilations,
-                                                                          InLeftPads,
-                                                                          InRightPads,
-                                                                          ck::index_t nrepeat)
+void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
+    InDesc,
+    const Tensor<TInWei>& in_n_c_hi_wi,
+    WeiDesc,
+    const Tensor<TInWei>& wei_k_c_y_x,
+    OutDesc,
+    Tensor<TOut>& out_n_k_ho_wo,
+    ConvStrides,
+    ConvDilations,
+    InLeftPads,
+    InRightPads,
+    ck::index_t nrepeat)
 {
-    std::cout << "device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw"
-              << std::endl;
-
     using namespace ck;
 
-    using TDevice = typename conditional<is_same<half_float::half, T>::value, half_t, T>::type;
+    std::cout << "device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw"
+              << std::endl;
 
-    std::size_t data_sz = sizeof(T);
-    DeviceMem in_nchw_device_buf(data_sz * in_nchw.mDesc.GetElementSpace());
-    DeviceMem wei_kcyx_device_buf(data_sz * wei_kcyx.mDesc.GetElementSpace());
-    DeviceMem out_nkhw_device_buf(data_sz * out_nkhw.mDesc.GetElementSpace());
+    DeviceMem in_n_c_hi_wi_device_buf(sizeof(TInWei) * in_n_c_hi_wi.mDesc.GetElementSpace());
+    DeviceMem wei_k_c_y_x_device_buf(sizeof(TInWei) * wei_k_c_y_x.mDesc.GetElementSpace());
+    DeviceMem out_n_k_ho_wo_device_buf(sizeof(TOut) * out_n_k_ho_wo.mDesc.GetElementSpace());
 
-    in_nchw_device_buf.ToDevice(in_nchw.mData.data());
-    wei_kcyx_device_buf.ToDevice(wei_kcyx.mData.data());
-    out_nkhw_device_buf.ToDevice(out_nkhw.mData.data());
+    in_n_c_hi_wi_device_buf.ToDevice(in_n_c_hi_wi.mData.data());
+    wei_k_c_y_x_device_buf.ToDevice(wei_k_c_y_x.mData.data());
+    out_n_k_ho_wo_device_buf.ToDevice(out_n_k_ho_wo.mData.data());
 
 #if 0
     // run-time variables
@@ -70,18 +71,18 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
     // cdata = 16, BlockSize = 64, 16x64x4
     constexpr index_t BlockSize = 64;
 
-    constexpr index_t KPerBlock  = 16;
+    constexpr index_t KPerBlock  = 4;
     constexpr index_t HoPerBlock = 16;
     constexpr index_t WoPerBlock = 16;
-    constexpr index_t EPerBlock  = 4;
+    constexpr index_t EPerBlock  = 1;
 
-    constexpr index_t KPerThread  = 16;
+    constexpr index_t KPerThread  = 4;
     constexpr index_t HoPerThread = 2;
     constexpr index_t WoPerThread = 2;
-    constexpr index_t EPerThread  = 4;
+    constexpr index_t EPerThread  = 1;
 
-    using ABlockTransferThreadSliceLengths_E_K   = Sequence<9, 1>;
-    using ABlockTransferThreadClusterLengths_E_K = Sequence<4, 16>;
+    using ABlockTransferThreadSliceLengths_E_K   = Sequence<1, 1>;
+    using ABlockTransferThreadClusterLengths_E_K = Sequence<9, 4>;
 
     constexpr index_t ABlockTransferSrcScalarPerVector_E = 1;
     constexpr index_t ABlockTransferDstScalarPerVector_K = 1;
@@ -93,8 +94,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
     constexpr auto conv_driver =
         DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad<
             BlockSize,
-            TDevice,
-            TDevice,
+            typename vector_type<TInWei, InWeiVectorSize>::type,
+            TAcc,
+            TOut,
             KPerBlock,
             HoPerBlock,
             WoPerBlock,
@@ -117,9 +119,11 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(InDesc
                     conv_dilations,
                     in_left_pads,
                     in_right_pads,
-                    static_cast<TDevice*>(wei_kcyx_device_buf.GetDeviceBuffer()),
-                    static_cast<TDevice*>(in_nchw_device_buf.GetDeviceBuffer()),
-                    static_cast<TDevice*>(out_nkhw_device_buf.GetDeviceBuffer()));
+                    static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
+                        wei_k_c_y_x_device_buf.GetDeviceBuffer()),
+                    static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
+                        in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
+                    static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()));
 
-    out_nkhw_device_buf.FromDevice(out_nkhw.mData.data());
+    out_n_k_ho_wo_device_buf.FromDevice(out_n_k_ho_wo.mData.data());
 }

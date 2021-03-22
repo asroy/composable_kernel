@@ -10,8 +10,9 @@
 namespace ck {
 
 template <index_t BlockSize,
-          typename Float,
-          typename AccFloat,
+          typename FloatAB,
+          typename FloatAcc,
+          typename FloatC,
           index_t KPerBlock,
           index_t HoPerBlock,
           index_t WoPerBlock,
@@ -42,9 +43,9 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                       const ConvDilations& conv_dilations,
                       const InLeftPads& in_left_pads,
                       const InRightPads& in_right_pads,
-                      const Float* __restrict__ p_wei_global,
-                      const Float* __restrict__ p_in_global,
-                      Float* __restrict__ p_out_global) const
+                      const FloatAB* __restrict__ p_wei_global,
+                      const FloatAB* __restrict__ p_in_global,
+                      FloatC* __restrict__ p_out_global) const
     {
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
@@ -166,8 +167,9 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
         // GEMM
         using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v3<
             BlockSize,
-            Float,
-            AccFloat,
+            FloatAB,
+            FloatAcc,
+            FloatC,
             InMemoryDataOperation::Set,
             decltype(wei_gemmk_gemmm_global_desc),
             decltype(in_gemmk_n_ho_wo_global_desc),
@@ -227,11 +229,11 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                     const auto kernel =
                         run_gridwise_operation<gridwise_gemm,
                                                decltype(wei_gemmk_gemmm_global_desc),
-                                               const Float*,
+                                               const FloatAB*,
                                                decltype(in_gemmk_n_ho_wo_global_desc),
-                                               const Float*,
+                                               const FloatAB*,
                                                decltype(out_gemmm_n_ho_wo_global_desc),
-                                               Float*,
+                                               FloatC*,
                                                integral_constant<bool, true>,
                                                integral_constant<bool, true>>;
 
@@ -254,11 +256,11 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                     const auto kernel =
                         run_gridwise_operation<gridwise_gemm,
                                                decltype(wei_gemmk_gemmm_global_desc),
-                                               const Float*,
+                                               const FloatAB*,
                                                decltype(in_gemmk_n_ho_wo_global_desc),
-                                               const Float*,
+                                               const FloatAB*,
                                                decltype(out_gemmm_n_ho_wo_global_desc),
-                                               Float*,
+                                               FloatC*,
                                                integral_constant<bool, true>,
                                                integral_constant<bool, false>>;
 
@@ -281,11 +283,11 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                     const auto kernel =
                         run_gridwise_operation<gridwise_gemm,
                                                decltype(wei_gemmk_gemmm_global_desc),
-                                               const Float*,
+                                               const FloatAB*,
                                                decltype(in_gemmk_n_ho_wo_global_desc),
-                                               const Float*,
+                                               const FloatAB*,
                                                decltype(out_gemmm_n_ho_wo_global_desc),
-                                               Float*,
+                                               FloatC*,
                                                integral_constant<bool, false>,
                                                integral_constant<bool, true>>;
 
@@ -308,11 +310,11 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                     const auto kernel =
                         run_gridwise_operation<gridwise_gemm,
                                                decltype(wei_gemmk_gemmm_global_desc),
-                                               const Float*,
+                                               const FloatAB*,
                                                decltype(in_gemmk_n_ho_wo_global_desc),
-                                               const Float*,
+                                               const FloatAB*,
                                                decltype(out_gemmm_n_ho_wo_global_desc),
-                                               Float*,
+                                               FloatC*,
                                                integral_constant<bool, false>,
                                                integral_constant<bool, false>>;
 
