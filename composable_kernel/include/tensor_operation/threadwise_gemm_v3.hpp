@@ -54,8 +54,10 @@ struct ThreadwiseGemm_km_kn_mn_v3
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
 
-        constexpr auto H = BDesc{}.GetLength(I2);
-        constexpr auto W = BDesc{}.GetLength(I3);
+        // constexpr auto H = BDesc{}.GetLength(I2);
+        // constexpr auto W = BDesc{}.GetLength(I3);
+        constexpr auto H = 2;
+        constexpr auto W = 2;
 
         constexpr auto E = ADesc{}.GetLength(I0);
         constexpr auto K = ADesc{}.GetLength(I1);

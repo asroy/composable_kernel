@@ -135,6 +135,8 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         constexpr auto KPerThreadSubC = 4;
 
         static_assert(KPerThread % KPerThreadSubC == 0, "");
+        static_assert(HPerThread % 2 == 0, "");
+        static_assert(WPerThread % 2 == 0, "");
 
         // thread A, B for GEMM
         constexpr auto a_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
@@ -164,16 +166,23 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
 #pragma unroll
             for(index_t k_begin = 0; k_begin < KPerThread; k_begin += KPerThreadSubC)
             {
-
                 a_thread_copy.Run(p_a_block +
                                       a_block_mtx.CalculateOffset(make_tuple(e_begin, k_begin)) +
                                       mMyThreadOffsetA,
                                   p_a_thread);
 
-                threadwise_gemm.Run(
-                    p_a_thread,
-                    p_b_thread + b_thread_mtx.CalculateOffset(make_tuple(e_begin, 0, 0, 0)),
-                    p_c_thread + c_thread_mtx.CalculateOffset(make_tuple(k_begin, 0, 0, 0)));
+                for(index_t h_begin = 0; h_begin < HPerThread; h_begin += 2)
+                {
+
+                    for(index_t w_begin = 0; w_begin < WPerThread; w_begin += 2)
+                    {
+                        threadwise_gemm.Run(p_a_thread,
+                                            p_b_thread + b_thread_mtx.CalculateOffset(make_tuple(
+                                                             e_begin, 0, h_begin, w_begin)),
+                                            p_c_thread + c_thread_mtx.CalculateOffset(make_tuple(
+                                                             k_begin, 0, h_begin, w_begin)));
+                    }
+                }
             }
         }
     }
