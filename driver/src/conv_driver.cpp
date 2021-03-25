@@ -642,7 +642,7 @@ int main(int argc, char* argv[])
     using out_data_t                 = int8_t;
 #elif 1
     using in_data_t                  = int8_t;
-    constexpr index_t in_vector_size = 4;
+    constexpr index_t in_vector_size = 8;
     using acc_data_t                 = int32_t;
     using out_data_t                 = int8_t;
 #endif

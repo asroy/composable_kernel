@@ -113,7 +113,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     constexpr index_t KPerBlock  = 16;
     constexpr index_t HoPerBlock = 8;
     constexpr index_t WoPerBlock = 32;
-    constexpr index_t EPerBlock  = 4;
+    constexpr index_t EPerBlock  = 2;
 
     constexpr index_t KPerThread  = 16;
     constexpr index_t HoPerThread = 2;

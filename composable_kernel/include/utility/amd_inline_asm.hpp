@@ -215,5 +215,36 @@ __device__ void amd_assembly_outer_product_1x4(int8x4_t a,
 #endif
 }
 
+__device__ void amd_assembly_outer_product_1x4(int8x8_t a,
+                                               int8x8_t b0,
+                                               int8x8_t b1,
+                                               int8x8_t b2,
+                                               int8x8_t b3,
+                                               int32_t& c0,
+                                               int32_t& c1,
+                                               int32_t& c2,
+                                               int32_t& c3)
+{
+    amd_assembly_outer_product_1x4(a.Vectors(Number<4>{})[Number<0>{}],
+                                   b0.Vectors(Number<4>{})[Number<0>{}],
+                                   b1.Vectors(Number<4>{})[Number<0>{}],
+                                   b2.Vectors(Number<4>{})[Number<0>{}],
+                                   b3.Vectors(Number<4>{})[Number<0>{}],
+                                   c0,
+                                   c1,
+                                   c2,
+                                   c3);
+
+    amd_assembly_outer_product_1x4(a.Vectors(Number<4>{})[Number<1>{}],
+                                   b0.Vectors(Number<4>{})[Number<1>{}],
+                                   b1.Vectors(Number<4>{})[Number<1>{}],
+                                   b2.Vectors(Number<4>{})[Number<1>{}],
+                                   b3.Vectors(Number<4>{})[Number<1>{}],
+                                   c0,
+                                   c1,
+                                   c2,
+                                   c3);
+}
+
 } // namespace ck
 #endif

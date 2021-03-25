@@ -142,7 +142,8 @@ amd_buffer_load_impl_v2(int32x4_t src_wave_buffer_resource,
                         index_t src_wave_addr_offset)
 {
     static_assert((is_same<T, float>::value && (N == 1 || N == 2 || N == 4 || N == 8)) ||
-                      (is_same<T, int32_t>::value && (N == 1 || N == 2 || N == 4 || N == 8)),
+                      (is_same<T, int32_t>::value && (N == 1 || N == 2 || N == 4 || N == 8)) ||
+                      (is_same<T, int32x2_t>::value && (N == 1)),
                   "wrong! not implemented");
 
     if constexpr(is_same<T, float>::value)
@@ -203,6 +204,14 @@ amd_buffer_load_impl_v2(int32x4_t src_wave_buffer_resource,
                 src_wave_buffer_resource, src_thread_addr_offset, 4 * sizeof(int32_t), 0);
 
             return tmp.Vector();
+        }
+    }
+    else if constexpr(is_same<T, int32x2_t>::value)
+    {
+        if constexpr(N == 1)
+        {
+            return __llvm_amdgcn_raw_buffer_load_i32x2(
+                src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
         }
     }
 }
