@@ -51,7 +51,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 {
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
-        const auto E = 4 * 3 * 3;
+        constexpr auto E = EPerBlock * 3 * 3;
 
         constexpr auto max_lds_align =
             math::lcm(Number<ABlockTransferDstScalarPerVector_K>{}, Number<KPerBlock>{});
@@ -84,7 +84,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
 
-        const auto E = a_e_k_global_desc.GetLength(I0);
+        constexpr auto E = EPerBlock * 3 * 3;
+
+        // const auto E = a_e_k_global_desc.GetLength(I0);
         const auto K = a_e_k_global_desc.GetLength(I1);
 
         const auto N  = b_e_n_ho_wo_global_desc.GetLength(I1);
