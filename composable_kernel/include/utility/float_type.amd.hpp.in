@@ -321,11 +321,68 @@ struct vector_type<int8_t, 8>
     __host__ __device__ constexpr auto& Vectors(Number<8>) { return data_.d8x1_; }
 };
 
+template <>
+struct vector_type<int8_t, 16>
+{
+    using d1_t = int8_t;
+    typedef int16_t d2_t;
+    typedef int32_t d4_t;
+    typedef int32x2_t d8_t;
+    typedef int32x4_t d16_t;
+
+    using type = d16_t;
+
+    union
+    {
+        d16_t d16_;
+        StaticallyIndexedArray<d1_t, 16> d1x16_;
+        StaticallyIndexedArray<d2_t, 8> d2x8_;
+        StaticallyIndexedArray<d4_t, 4> d4x4_;
+        StaticallyIndexedArray<d8_t, 2> d8x2_;
+        StaticallyIndexedArray<d8_t, 1> d16x1_;
+    } data_;
+
+    __host__ __device__ constexpr vector_type() : data_{type{0}} {}
+
+    __host__ __device__ constexpr vector_type(type v) : data_{v} {}
+
+    __host__ __device__ static constexpr index_t Size() { return 16; }
+
+    __host__ __device__ constexpr const auto& Vector() const { return data_.d16_; }
+
+    __host__ __device__ constexpr auto& Vector() { return data_.d16_; }
+
+    __host__ __device__ constexpr const auto& Scalars() const { return data_.d1x16_; }
+
+    __host__ __device__ constexpr auto& Scalars() { return data_.d1x16_; }
+
+    __host__ __device__ constexpr const auto& Vectors(Number<1>) const { return data_.d1x16_; }
+
+    __host__ __device__ constexpr const auto& Vectors(Number<2>) const { return data_.d2x8_; }
+
+    __host__ __device__ constexpr const auto& Vectors(Number<4>) const { return data_.d4x4_; }
+
+    __host__ __device__ constexpr const auto& Vectors(Number<8>) const { return data_.d8x2_; }
+
+    __host__ __device__ constexpr const auto& Vectors(Number<16>) const { return data_.d16x1_; }
+
+    __host__ __device__ constexpr auto& Vectors(Number<1>) { return data_.d1x16_; }
+
+    __host__ __device__ constexpr auto& Vectors(Number<2>) { return data_.d2x8_; }
+
+    __host__ __device__ constexpr auto& Vectors(Number<4>) { return data_.d4x4_; }
+
+    __host__ __device__ constexpr auto& Vectors(Number<8>) { return data_.d8x2_; }
+
+    __host__ __device__ constexpr auto& Vectors(Number<16>) { return data_.d16x1_; }
+};
+
 // i8
 // hack for int8x4_t, because compiler does not have native support for int8x4_t
 // int8x4_t is defined as int32_t
-using int8x4_t = typename vector_type<int8_t, 4>::type;
-using int8x8_t = vector_type<int8_t, 8>;
+using int8x4_t  = typename vector_type<int8_t, 4>::type;
+using int8x8_t  = vector_type<int8_t, 8>;
+using int8x16_t = vector_type<int8_t, 16>;
 
 // data type conversion
 template <typename T>
@@ -399,6 +456,20 @@ struct inner_product_with_conversion
         T acc = 0;
 
         static_for<0, 8, 1>{}([&](auto i) {
+            acc += convert(a_vector.Scalars()[i]) * convert(b_vector.Scalars()[i]);
+        });
+
+        return acc;
+    }
+
+    __device__ T operator()(int8x16_t a, int8x16_t b) const
+    {
+        const vector_type<int8_t, 16> a_vector{a};
+        const vector_type<int8_t, 16> b_vector{b};
+
+        T acc = 0;
+
+        static_for<0, 16, 1>{}([&](auto i) {
             acc += convert(a_vector.Scalars()[i]) * convert(b_vector.Scalars()[i]);
         });
 
