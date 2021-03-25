@@ -105,9 +105,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
 
     in_n_c_hi_wi_device_buf.ToDevice(in_n_c0_hi_wi_c1.mData.data());
     wei_k_c_y_x_device_buf.ToDevice(wei_k_c0_y_x_c1.mData.data());
-    // out_n_k_ho_wo_device_buf.ToDevice(out_n_k_ho_wo.mData.data());
 
-    // cdata = 16, BlockSize = 64, 16x64x4
+    // cdata = 64, BlockSize = 64, 16x8x32x4
     constexpr index_t BlockSize = 64;
 
     constexpr index_t KPerBlock  = 16;
