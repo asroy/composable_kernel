@@ -200,7 +200,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             false, // don't move back src coordinate after threadwise copy, which will be fused with
                    // MoveSrcSliceWindow() to save addr computation
             Sequence<0, 2, 3, 1>,
-            1,
+            0,
             CThreadTransferDstScalarPerVector_W,
             decltype(a_k_m_global_iterator_hacks),
             decltype(b_k_n_global_iterator_hacks),
