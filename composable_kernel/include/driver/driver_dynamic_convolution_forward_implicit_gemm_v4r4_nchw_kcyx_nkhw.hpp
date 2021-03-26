@@ -272,6 +272,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, true>{});
                 }
+#if 0 // debug
                 else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
                 {
                     const auto kernel =
@@ -356,6 +357,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, false>{});
                 }
+#endif
             }
 
             timer.End();
