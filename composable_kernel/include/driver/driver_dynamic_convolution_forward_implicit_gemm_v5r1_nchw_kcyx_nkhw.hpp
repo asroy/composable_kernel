@@ -38,7 +38,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
               typename InRightPads>
     __host__ void Run(const DynamicTensorDescriptor<Wei...>& wei_k_c_y_x_global_desc,
                       const DynamicTensorDescriptor<In...>& in_n_c_hi_wi_global_desc,
-                      const DynamicTensorDescriptor<Out...>& out_n_k_ho_wo_global_desc,
+                      const DynamicTensorDescriptor<Out...>& out_n_k0_ho_wo_k1_global_desc,
                       const ConvStrides& conv_strides,
                       const ConvDilations& conv_dilations,
                       const InLeftPads& in_left_pads,
@@ -51,17 +51,21 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
         constexpr auto I1 = Number<1>{};
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
+        constexpr auto I4 = Number<4>{};
 
-        const auto N = in_n_c_hi_wi_global_desc.GetLength(I0);
-        const auto C = in_n_c_hi_wi_global_desc.GetLength(I1);
-        const auto K = out_n_k_ho_wo_global_desc.GetLength(I1);
+        const auto N  = in_n_c_hi_wi_global_desc.GetLength(I0);
+        const auto C  = in_n_c_hi_wi_global_desc.GetLength(I1);
+        const auto K0 = out_n_k0_ho_wo_k1_global_desc.GetLength(I1);
 
         const auto Hi = in_n_c_hi_wi_global_desc.GetLength(I2);
         const auto Wi = in_n_c_hi_wi_global_desc.GetLength(I3);
 
-        const auto Ho = out_n_k_ho_wo_global_desc.GetLength(I2);
-        const auto Wo = out_n_k_ho_wo_global_desc.GetLength(I3);
+        const auto Ho = out_n_k0_ho_wo_k1_global_desc.GetLength(I2);
+        const auto Wo = out_n_k0_ho_wo_k1_global_desc.GetLength(I3);
 
+        const auto K1 = out_n_k0_ho_wo_k1_global_desc.GetLength(I4);
+
+        const auto K = wei_k_c_y_x_global_desc.GetLength(I0);
         const auto Y = wei_k_c_y_x_global_desc.GetLength(I2);
         const auto X = wei_k_c_y_x_global_desc.GetLength(I3);
 
@@ -115,12 +119,12 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
 
         // output tensor
         const auto out_gemmm_n_ho_wo_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K, Ho, Wo)),
-            make_tuple(make_pass_through_transform(K),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Ho, Wo, K1)),
+            make_tuple(make_merge_transform(make_tuple(K0, K1)),
                        make_pass_through_transform(N),
                        make_pass_through_transform(Ho),
                        make_pass_through_transform(Wo)),
-            make_tuple(Sequence<1>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
+            make_tuple(Sequence<1, 4>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 
         const auto E = C * Y * X;
@@ -154,11 +158,11 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
         // hack to control index calculation when iterating over c_m0_m1_n0_n1_global tensor
         // hack for NKHW format
         constexpr auto c_k_n_h_w_global_tensor_iterator_hacks =
-            make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
+            make_tuple(make_tuple(Sequence<0, 1, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{}),
-                       make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                       make_tuple(Sequence<0, 2, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{}));
@@ -196,7 +200,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             false, // don't move back src coordinate after threadwise copy, which will be fused with
                    // MoveSrcSliceWindow() to save addr computation
             Sequence<0, 2, 3, 1>,
-            3,
+            1,
             CThreadTransferDstScalarPerVector_W,
             decltype(a_k_m_global_iterator_hacks),
             decltype(b_k_n_global_iterator_hacks),
@@ -340,7 +344,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
 
             float perf = (float)calculate_convolution_flops(in_n_c_hi_wi_global_desc,
                                                             wei_k_c_y_x_global_desc,
-                                                            out_n_k_ho_wo_global_desc) /
+                                                            out_n_k0_ho_wo_k1_global_desc) /
                          (std::size_t(1000) * 1000 * 1000) / ave_time;
 
             std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s"
