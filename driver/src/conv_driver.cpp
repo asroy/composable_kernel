@@ -36,10 +36,11 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
+#elif 1
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
-    constexpr index_t HI = 540;
+    //constexpr index_t HI = 540;
+    constexpr index_t HI = 544;
     constexpr index_t WI = 960;
     constexpr index_t K  = 16;
     constexpr index_t Y  = 1;
@@ -83,7 +84,7 @@ int main(int argc, char* argv[])
     constexpr index_t C  = 16;
     constexpr index_t HI = 1080;
     constexpr index_t WI = 1920;
-    constexpr index_t K  = 16;
+    constexpr index_t K  = 4;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -106,11 +107,25 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<1, 1>;
     using RightPads = Sequence<1, 1>;
-#elif 1
+#elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
     constexpr index_t HI = 540;
     constexpr index_t WI = 960;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<1, 1>;
+    using RightPads = Sequence<1, 1>;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 16;
+    constexpr index_t HI = 135;
+    constexpr index_t WI = 240;
     constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;

@@ -1,5 +1,5 @@
-#ifndef CK_DRIVER_DYNAMIC_CONVOLUTION_FORWARD_IMPLICIT_GEMM_V5R1_NCHW_KCYX_NKHW_HPP
-#define CK_DRIVER_DYNAMIC_CONVOLUTION_FORWARD_IMPLICIT_GEMM_V5R1_NCHW_KCYX_NKHW_HPP
+#ifndef CK_DRIVER_DYNAMIC_CONVOLUTION_FORWARD_IMPLICIT_GEMM_V5R1_NCHW_KCYX_NKHW_OUTPAD_HPP
+#define CK_DRIVER_DYNAMIC_CONVOLUTION_FORWARD_IMPLICIT_GEMM_V5R1_NCHW_KCYX_NKHW_OUTPAD_HPP
 
 #include "common_header.hpp"
 #include "dynamic_tensor_descriptor.hpp"
@@ -27,7 +27,7 @@ template <index_t BlockSize,
           index_t ABlockTransferDstScalarPerVector_K,
           index_t BThreadTransferSrcScalarPerVector_W,
           index_t CThreadTransferDstScalarPerVector_W>
-struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
+struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 {
     template <typename... Wei,
               typename... In,
@@ -75,11 +75,19 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
         const auto ConvDilationH = conv_dilations[I0];
         const auto ConvDilationW = conv_dilations[I1];
 
+        const auto OutRightPadH = (Ho + HoPerBlock - 1) / HoPerBlock * HoPerBlock - Ho;
+        const auto OutRightPadW = (Wo + WoPerBlock - 1) / WoPerBlock * WoPerBlock - Wo;
+
         const auto InLeftPadH = in_left_pads[I0];
         const auto InLeftPadW = in_left_pads[I1];
 
-        const auto InRightPadH = in_right_pads[I0];
-        const auto InRightPadW = in_right_pads[I1];
+        const auto InRightPadH = in_right_pads[I0] + OutRightPadH * ConvStrideH;
+        const auto InRightPadW = in_right_pads[I1] + OutRightPadW * ConvStrideW;
+
+        std::cerr << "OutRightPadH = " << OutRightPadH << " OutRightPadW = " << OutRightPadW
+                  << std::endl;
+        std::cerr << "InRightPadH = " << InRightPadH << " InRightPadW = " << InRightPadW
+                  << std::endl;
 
         // weight tensor
         const auto wei_e_k_global_desc = transform_dynamic_tensor_descriptor(
@@ -122,14 +130,19 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Ho, Wo, K1)),
             make_tuple(make_merge_transform(make_tuple(K0, K1)),
                        make_pass_through_transform(N),
-                       make_pass_through_transform(Ho),
-                       make_pass_through_transform(Wo)),
+                       make_pad_transform(Ho, 0, OutRightPadH),
+                       make_pad_transform(Wo, 0, OutRightPadW)),
             make_tuple(Sequence<1, 4>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 
         const auto E = C * Y * X;
 
-        if(!((K % KPerBlock) == 0 && (Ho % HoPerBlock) == 0 && (Wo % WoPerBlock) == 0 &&
+        const int Ho_new = out_k_n_ho_wo_global_desc.GetLength(I2);
+        const int Wo_new = out_k_n_ho_wo_global_desc.GetLength(I3);
+
+        std::cerr << "Ho_new = " << Ho_new << " Wo_new = " << Wo_new << std::endl;
+
+        if(!((K % KPerBlock) == 0 && (Ho_new % HoPerBlock) == 0 && (Wo_new % WoPerBlock) == 0 &&
              (E % EPerBlock) == 0))
         {
             throw std::runtime_error("wrong! GEMM size no divisible");
