@@ -467,6 +467,27 @@ struct DynamicEmbed
     }
 };
 
+#if 1
+template <typename LowLengths>
+struct lambda_merge_generate_magic_division_calculate_magic_multiplier
+{
+    template <index_t I>
+    __host__ __device__ constexpr auto operator()(Number<I> i) const
+    {
+        return magic_division::CalculateMagicMultiplier(LowLengths{}[i]);
+    }
+};
+
+template <typename LowLengths>
+struct lambda_merge_generate_magic_division_calculate_magic_shift
+{
+    template <index_t I>
+    __host__ __device__ constexpr auto operator()(Number<I> i) const
+    {
+        return magic_division::CalculateMagicShift(LowLengths{}[i]);
+    }
+};
+
 template <typename LowLengths>
 struct DynamicMerge
 {
@@ -478,11 +499,21 @@ struct DynamicMerge
     using LowLengthsScan = decltype(
         container_reverse_exclusive_scan(LowLengths{}, math::multiplies_v2{}, Number<1>{}));
 
+    using LowLengthsMagicDivisorMultipiler = decltype(generate_tuple(
+        lambda_merge_generate_magic_division_calculate_magic_multiplier<LowLengths>{},
+        Number<NDimLow>{}));
+
+    using LowLengthsMagicDivisorShift = decltype(
+        generate_tuple(lambda_merge_generate_magic_division_calculate_magic_shift<LowLengths>{},
+                       Number<NDimLow>{}));
+
     using UpLengths =
         decltype(make_tuple(container_reduce(LowLengths{}, math::multiplies_v2{}, Number<1>{})));
 
     LowLengths low_lengths_;
     LowLengthsScan low_lengths_scan_;
+    LowLengthsMagicDivisorMultipiler low_lengths_magic_divisor_multiplier_;
+    LowLengthsMagicDivisorShift low_lengths_magic_divisor_shift_;
     UpLengths up_lengths_;
 
     __host__ __device__ constexpr DynamicMerge() = default;
@@ -491,6 +522,12 @@ struct DynamicMerge
         : low_lengths_{low_lengths},
           low_lengths_scan_{
               container_reverse_exclusive_scan(low_lengths, math::multiplies_v2{}, Number<1>{})},
+          low_lengths_magic_divisor_multiplier_{generate_tuple(
+              [&](auto i) { return magic_division::CalculateMagicMultiplier(low_lengths[i]); },
+              Number<NDimLow>{})},
+          low_lengths_magic_divisor_shift_{generate_tuple(
+              [&](auto i) { return magic_division::CalculateMagicShift(low_lengths[i]); },
+              Number<NDimLow>{})},
           up_lengths_{make_tuple(container_reduce(low_lengths, math::multiplies_v2{}, Number<1>{}))}
     {
         static_assert(LowerIndex::Size() == NDimLow, "wrong!");
@@ -511,12 +548,27 @@ struct DynamicMerge
 
         index_t tmp = idx_up[Number<0>{}];
 
-        static_for<0, NDimLow - 1, 1>{}([&idx_low, &tmp, this](auto i) {
+#if 0 
+        // normal division
+        static_for<0, NDimLow - 1, 1>{}([&](auto i) {
             idx_low(i) = tmp / this->low_lengths_scan_[i];
             tmp -= idx_low[i] * this->low_lengths_scan_[i];
         });
 
         idx_low(Number<NDimLow - 1>{}) = tmp;
+#else
+        // magic division
+        static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+            index_t tmp2 =
+                magic_division::DoMagicDivision(tmp,
+                                                this->low_lengths_magic_divisor_multiplier_[i],
+                                                this->low_lengths_magic_divisor_shift_[i]);
+            idx_low(i) = tmp - tmp2 * this->low_lengths_[i];
+            tmp        = tmp2;
+        });
+
+        idx_low(Number<0>{}) = tmp;
+#endif
     }
 
     template <typename LowIdxDiff,
@@ -555,12 +607,27 @@ struct DynamicMerge
 #if !CK_HACK_DYNAMIC_MERGE_CALCULATE_IDX_DIFF_LOW_CONST_USE_AMD_GCN_READ_FIRST_LANE
         index_t tmp = idx_diff_up[Number<0>{}];
 
+#if 1
+        // normal division
         static_for<0, NDimLow - 1, 1>{}([&](auto i) {
             idx_diff_low_const(i) = tmp / low_lengths_scan_[i];
             tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
         });
 
         idx_diff_low_const(Number<NDimLow - 1>{}) = tmp;
+#else
+        // magic division
+        static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+            index_t tmp2 =
+                magic_division::DoMagicDivision(tmp,
+                                                this->low_lengths_magic_divisor_multiplier_[i],
+                                                this->low_lengths_magic_divisor_shift_[i]);
+            idx_diff_low_const(i) = tmp - tmp2 * this->low_lengths_[i];
+            tmp                   = tmp2;
+        });
+
+        idx_diff_low_const(Number<0>{}) = tmp;
+#endif
 
         static_for<0, NDimLow, 1>{}([&](auto i) {
             idx_low_length_minus_idx_diff_low_const(i) = low_lengths_[i] - idx_diff_low_const[i];
@@ -571,10 +638,25 @@ struct DynamicMerge
         // Hack: this force result into SGPR. Need to make sure the result is thread invariant
         index_t tmp = idx_diff_up[Number<0>{}];
 
+#if 1
+        // normal division
         static_for<0, NDimLow - 1, 1>{}([&](auto i) {
             idx_diff_low_const(i) = __builtin_amdgcn_readfirstlane(tmp / low_lengths_scan_[i]);
             tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
         });
+#else
+        // magic division
+        static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
+            index_t tmp2 =
+                magic_division::DoMagicDivision(tmp,
+                                                this->low_lengths_magic_divisor_multiplier_[i],
+                                                this->low_lengths_magic_divisor_shift_[i]);
+
+            idx_diff_low_const(i) =
+                __builtin_amdgcn_readfirstlane(tmp - tmp2 * this->low_lengths_[i]);
+            tmp = tmp2;
+        });
+#endif
 
         idx_diff_low_const(Number<NDimLow - 1>{}) = __builtin_amdgcn_readfirstlane(tmp);
 
@@ -988,6 +1070,152 @@ struct DynamicMerge
         printf("}");
     }
 };
+#else
+template <typename LowLengths>
+struct lambda_generate_magic_division_calculate_magic_multiplier
+{
+    template <index_t I>
+    __host__ __device__ constexpr auto operator()(Number<I> i) const
+    {
+        return magic_division::CalculateMagicMultiplier(LowLengths{}[i]);
+    }
+};
+
+template <typename LowLengths>
+struct lambda_generate_magic_division_calculate_magic_shift
+{
+    template <index_t I>
+    __host__ __device__ constexpr auto operator()(Number<I> i) const
+    {
+        return magic_division::CalculateMagicShift(LowLengths{}[i]);
+    }
+};
+
+template <typename LowLengths>
+struct DynamicMerge
+{
+    static constexpr index_t NDimLow = LowLengths::Size();
+
+    using LowerIndex = MultiIndex<NDimLow>;
+    using UpperIndex = MultiIndex<1>;
+
+    using UpLengths =
+        decltype(make_tuple(container_reduce(LowLengths{}, math::multiplies_v2{}, Number<1>{})));
+
+    using LowLengthsMagicDivisorMultipiler = decltype(
+        generate_tuple(lambda_generate_magic_division_calculate_magic_multiplier<LowLengths>{},
+                       Number<NDimLow>{}));
+
+    using LowLengthsMagicDivisorShift = decltype(generate_tuple(
+        lambda_generate_magic_division_calculate_magic_shift<LowLengths>{}, Number<NDimLow>{}));
+
+    LowLengths low_lengths_;
+    LowLengthsMagicDivisorMultipiler low_lengths_magic_divisor_multiplier_;
+    LowLengthsMagicDivisorShift low_lengths_magic_divisor_shift_;
+    UpLengths up_lengths_;
+
+    __host__ __device__ constexpr DynamicMerge() = default;
+
+    __host__ __device__ constexpr DynamicMerge(const LowLengths& low_lengths)
+        : low_lengths_{low_lengths},
+          low_lengths_magic_divisor_multiplier_{generate_tuple(
+              [&](auto i) { return magic_division::CalculateMagicMultiplier(low_lengths[i]); },
+              Number<NDimLow>{})},
+          low_lengths_magic_divisor_shift_{generate_tuple(
+              [&](auto i) { return magic_division::CalculateMagicShift(low_lengths[i]); },
+              Number<NDimLow>{})},
+          up_lengths_{make_tuple(container_reduce(low_lengths, math::multiplies_v2{}, Number<1>{}))}
+    {
+        static_assert(LowerIndex::Size() == NDimLow, "wrong!");
+    }
+
+    __host__ __device__ static constexpr index_t GetNumOfLowerDimension() { return NDimLow; }
+
+    __host__ __device__ static constexpr index_t GetNumOfUpperDimension() { return 1; }
+
+    __host__ __device__ constexpr const auto& GetUpperLengths() const { return up_lengths_; }
+
+    template <typename LowIdx, typename UpIdx>
+    __host__ __device__ constexpr void CalculateLowerIndex(LowIdx& idx_low,
+                                                           const UpIdx& idx_up) const
+    {
+        static_assert(LowIdx::Size() == NDimLow && UpIdx::Size() == 1,
+                      "wrong! inconsistent # of dimension");
+
+        index_t tmp = idx_up[Number<0>{}];
+
+        static_for<NDimLow - 1, 0, -1>{}([&idx_low, &tmp, this](auto i) {
+            index_t tmp2 =
+                magic_division::DoMagicDivision(tmp,
+                                                this->low_lengths_magic_divisor_multiplier_[i],
+                                                this->low_lengths_magic_divisor_shift_[i]);
+            idx_low(i) = tmp - tmp2 * this->low_lengths_[i];
+            tmp        = tmp2;
+        });
+
+        idx_low(Number<0>{}) = tmp;
+    }
+
+    template <typename LowIdxDiff,
+              typename UpIdxDiff,
+              typename LowIdx,
+              typename UpIdx,
+              index_t Hack>
+    __host__ __device__ void UpdateLowerIndex(LowIdxDiff& idx_diff_low,
+                                              const UpIdxDiff& idx_diff_up,
+                                              LowIdx& idx_low,
+                                              const UpIdx& idx_up_new,
+                                              Number<Hack>) const
+    {
+        static_assert(LowIdxDiff::Size() == NDimLow && UpIdxDiff::Size() == 1 &&
+                          LowIdx::Size() == NDimLow && UpIdx::Size() == 1,
+                      "wrong! inconsistent # of dimension");
+
+        auto idx_low_old = idx_low;
+
+        CalculateLowerIndex(idx_low, idx_up_new);
+
+        idx_diff_low = idx_low - idx_low_old;
+    }
+
+    __host__ __device__ static constexpr bool IsLinearTransform() { return false; }
+
+    __host__ __device__ static constexpr bool IsValidUpperIndexAlwaysMappedToValidLowerIndex()
+    {
+        return true;
+    }
+
+    __host__ __device__ static constexpr bool IsKnownAtCompileTime()
+    {
+        return is_known_at_compile_time<LowLengths>::value &&
+               is_known_at_compile_time<LowLengthsMagicDivisorMultipiler>::value &&
+               is_known_at_compile_time<LowLengthsMagicDivisorShift>::value &&
+               is_known_at_compile_time<UpLengths>::value;
+    }
+
+    template <typename UpIdx>
+    __host__ __device__ static constexpr bool
+    IsValidUpperIndexMappedToValidLowerIndex(const UpIdx& /* idx_up */)
+    {
+        return true;
+    }
+
+    __host__ __device__ void Print() const
+    {
+        printf("{");
+        printf("DynamicMerge, ");
+        printf("low_lengths_ ");
+        print_multi_index(low_lengths_);
+        printf("low_lengths_magic_divisor_multiplier_ ");
+        print_multi_index(low_lengths_magic_divisor_multiplier_);
+        printf("low_lengths_magic_divisor_shift_ ");
+        print_multi_index(low_lengths_magic_divisor_shift_);
+        printf("up_lengths_ ");
+        print_multi_index(up_lengths_);
+        printf("}");
+    }
+};
+#endif
 
 template <typename UpLengths, bool Use24BitIntegerCalculation>
 struct DynamicUnMerge
