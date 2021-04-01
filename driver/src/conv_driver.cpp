@@ -76,14 +76,14 @@ int main(int argc, char* argv[])
     using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;
 
-    using LeftPads  = Sequence<1, 1>;
-    using RightPads = Sequence<1, 1>;
-#elif 0
+    using LeftPads                   = Sequence<1, 1>;
+    using RightPads                  = Sequence<1, 1>;
+#elif 1
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
     constexpr index_t HI = 1080;
     constexpr index_t WI = 1920;
-    constexpr index_t K  = 4;
+    constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<1, 1>;
     using RightPads = Sequence<1, 1>;
-#elif 1
+#elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
     constexpr index_t HI = 540;
@@ -663,12 +663,17 @@ int main(int argc, char* argv[])
     constexpr index_t in_vector_size = 1;
     using acc_data_t                 = float;
     using out_data_t                 = float;
+#elif 1
+    using in_data_t                  = half_t;
+    constexpr index_t in_vector_size = 8;
+    using acc_data_t                 = float;
+    using out_data_t                 = half_t;
 #elif 0
     using in_data_t                  = float;
     constexpr index_t in_vector_size = 1;
     using acc_data_t                 = float;
     using out_data_t                 = int8_t;
-#elif 1
+#elif 0
     using in_data_t                  = int8_t;
     constexpr index_t in_vector_size = 16;
     using acc_data_t                 = int32_t;
@@ -816,6 +821,7 @@ int main(int argc, char* argv[])
 
         check_error(out_nkhw_host, out_nkhw_device);
 
+#if 0
         if(do_log)
         {
             LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
@@ -823,5 +829,6 @@ int main(int argc, char* argv[])
             LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
             LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
         }
+#endif
     }
 }

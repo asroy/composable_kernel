@@ -166,6 +166,30 @@ __device__ void amd_assembly_outer_product_1x4(half4_t a,
                    "3"(c3));
 }
 
+__device__ void amd_assembly_outer_product_1x4(half8_t a,
+                                               half8_t b0,
+                                               half8_t b1,
+                                               half8_t b2,
+                                               half8_t b3,
+                                               float& c0,
+                                               float& c1,
+                                               float& c2,
+                                               float& c3)
+{
+
+    const half4_t* p_a_half4  = reinterpret_cast<const half4_t*>(&a);
+    const half4_t* p_b0_half4 = reinterpret_cast<const half4_t*>(&b0);
+    const half4_t* p_b1_half4 = reinterpret_cast<const half4_t*>(&b1);
+    const half4_t* p_b2_half4 = reinterpret_cast<const half4_t*>(&b2);
+    const half4_t* p_b3_half4 = reinterpret_cast<const half4_t*>(&b3);
+
+    amd_assembly_outer_product_1x4(
+        p_a_half4[0], p_b0_half4[0], p_b1_half4[0], p_b2_half4[0], p_b3_half4[0], c0, c1, c2, c3);
+
+    amd_assembly_outer_product_1x4(
+        p_a_half4[1], p_b0_half4[1], p_b1_half4[1], p_b2_half4[1], p_b3_half4[1], c0, c1, c2, c3);
+}
+
 // c0 += inner_product(a, b0)
 // c1 += inner_product(a, b1)
 __device__ void
