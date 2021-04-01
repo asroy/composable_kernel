@@ -548,7 +548,7 @@ struct DynamicMerge
 
         index_t tmp = idx_up[Number<0>{}];
 
-#if 0 
+#if 1
         // normal division
         static_for<0, NDimLow - 1, 1>{}([&](auto i) {
             idx_low(i) = tmp / this->low_lengths_scan_[i];
