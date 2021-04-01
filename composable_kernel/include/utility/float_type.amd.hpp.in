@@ -274,6 +274,7 @@ using int32x8_t = typename vector_type<int32_t, 8>::type;
 // i8
 // hack for int8x4_t, because compiler does not have native support for int8x4_t
 // int8x4_t is defined as int32_t
+using int8x2_t = typename vector_type<int8_t, 2>::type;
 using int8x4_t = typename vector_type<int8_t, 4>::type;
 
 // data type conversion
