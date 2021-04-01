@@ -607,27 +607,12 @@ struct DynamicMerge
 #if !CK_HACK_DYNAMIC_MERGE_CALCULATE_IDX_DIFF_LOW_CONST_USE_AMD_GCN_READ_FIRST_LANE
         index_t tmp = idx_diff_up[Number<0>{}];
 
-#if 1
-        // normal division
         static_for<0, NDimLow - 1, 1>{}([&](auto i) {
             idx_diff_low_const(i) = tmp / low_lengths_scan_[i];
             tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
         });
 
         idx_diff_low_const(Number<NDimLow - 1>{}) = tmp;
-#else
-        // magic division
-        static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
-            index_t tmp2 =
-                magic_division::DoMagicDivision(tmp,
-                                                this->low_lengths_magic_divisor_multiplier_[i],
-                                                this->low_lengths_magic_divisor_shift_[i]);
-            idx_diff_low_const(i) = tmp - tmp2 * this->low_lengths_[i];
-            tmp                   = tmp2;
-        });
-
-        idx_diff_low_const(Number<0>{}) = tmp;
-#endif
 
         static_for<0, NDimLow, 1>{}([&](auto i) {
             idx_low_length_minus_idx_diff_low_const(i) = low_lengths_[i] - idx_diff_low_const[i];
@@ -638,25 +623,10 @@ struct DynamicMerge
         // Hack: this force result into SGPR. Need to make sure the result is thread invariant
         index_t tmp = idx_diff_up[Number<0>{}];
 
-#if 1
-        // normal division
         static_for<0, NDimLow - 1, 1>{}([&](auto i) {
             idx_diff_low_const(i) = __builtin_amdgcn_readfirstlane(tmp / low_lengths_scan_[i]);
             tmp -= idx_diff_low_const[i] * low_lengths_scan_[i];
         });
-#else
-        // magic division
-        static_for<NDimLow - 1, 0, -1>{}([&](auto i) {
-            index_t tmp2 =
-                magic_division::DoMagicDivision(tmp,
-                                                this->low_lengths_magic_divisor_multiplier_[i],
-                                                this->low_lengths_magic_divisor_shift_[i]);
-
-            idx_diff_low_const(i) =
-                __builtin_amdgcn_readfirstlane(tmp - tmp2 * this->low_lengths_[i]);
-            tmp = tmp2;
-        });
-#endif
 
         idx_diff_low_const(Number<NDimLow - 1>{}) = __builtin_amdgcn_readfirstlane(tmp);
 
@@ -1072,7 +1042,7 @@ struct DynamicMerge
 };
 #else
 template <typename LowLengths>
-struct lambda_generate_magic_division_calculate_magic_multiplier
+struct lambda_merge_generate_magic_division_calculate_magic_multiplier
 {
     template <index_t I>
     __host__ __device__ constexpr auto operator()(Number<I> i) const
@@ -1082,7 +1052,7 @@ struct lambda_generate_magic_division_calculate_magic_multiplier
 };
 
 template <typename LowLengths>
-struct lambda_generate_magic_division_calculate_magic_shift
+struct lambda_merge_generate_magic_division_calculate_magic_shift
 {
     template <index_t I>
     __host__ __device__ constexpr auto operator()(Number<I> i) const
@@ -1102,12 +1072,13 @@ struct DynamicMerge
     using UpLengths =
         decltype(make_tuple(container_reduce(LowLengths{}, math::multiplies_v2{}, Number<1>{})));
 
-    using LowLengthsMagicDivisorMultipiler = decltype(
-        generate_tuple(lambda_generate_magic_division_calculate_magic_multiplier<LowLengths>{},
-                       Number<NDimLow>{}));
+    using LowLengthsMagicDivisorMultipiler = decltype(generate_tuple(
+        lambda_merge_generate_magic_division_calculate_magic_multiplier<LowLengths>{},
+        Number<NDimLow>{}));
 
-    using LowLengthsMagicDivisorShift = decltype(generate_tuple(
-        lambda_generate_magic_division_calculate_magic_shift<LowLengths>{}, Number<NDimLow>{}));
+    using LowLengthsMagicDivisorShift = decltype(
+        generate_tuple(lambda_merge_generate_magic_division_calculate_magic_shift<LowLengths>{},
+                       Number<NDimLow>{}));
 
     LowLengths low_lengths_;
     LowLengthsMagicDivisorMultipiler low_lengths_magic_divisor_multiplier_;
