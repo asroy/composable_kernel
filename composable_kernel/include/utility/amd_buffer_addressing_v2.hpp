@@ -216,8 +216,11 @@ amd_buffer_load_impl_v2(int32x4_t src_wave_buffer_resource,
             tmp.Vectors(Number<4>{})(Number<0>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
                 src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
 
-            tmp.Vectors(Number<4>{})(Number<1>{}) = __llvm_amdgcn_raw_buffer_load_fp32x4(
-                src_wave_buffer_resource, src_thread_addr_offset, 4 * sizeof(float), 0);
+            tmp.Vectors(Number<4>{})(Number<1>{}) =
+                __llvm_amdgcn_raw_buffer_load_fp32x4(src_wave_buffer_resource,
+                                                     src_thread_addr_offset,
+                                                     src_wave_addr_offset + 4 * sizeof(float),
+                                                     0);
 
             return tmp.Vector();
         }
@@ -265,8 +268,11 @@ amd_buffer_load_impl_v2(int32x4_t src_wave_buffer_resource,
             tmp.Vectors(Number<4>{})(Number<0>{}) = __llvm_amdgcn_raw_buffer_load_fp16x4(
                 src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
 
-            tmp.Vectors(Number<4>{})(Number<1>{}) = __llvm_amdgcn_raw_buffer_load_fp16x4(
-                src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
+            tmp.Vectors(Number<4>{})(Number<1>{}) =
+                __llvm_amdgcn_raw_buffer_load_fp16x4(src_wave_buffer_resource,
+                                                     src_thread_addr_offset,
+                                                     src_wave_addr_offset + 4 * sizeof(half_t),
+                                                     0);
 
             return tmp.Vector();
         }
@@ -295,8 +301,11 @@ amd_buffer_load_impl_v2(int32x4_t src_wave_buffer_resource,
             tmp.Vectors(Number<4>{})(Number<0>{}) = __llvm_amdgcn_raw_buffer_load_i32x4(
                 src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
 
-            tmp.Vectors(Number<4>{})(Number<1>{}) = __llvm_amdgcn_raw_buffer_load_i32x4(
-                src_wave_buffer_resource, src_thread_addr_offset, 4 * sizeof(int32_t), 0);
+            tmp.Vectors(Number<4>{})(Number<1>{}) =
+                __llvm_amdgcn_raw_buffer_load_i32x4(src_wave_buffer_resource,
+                                                    src_thread_addr_offset,
+                                                    src_wave_addr_offset + 4 * sizeof(int32_t),
+                                                    0);
 
             return tmp.Vector();
         }
@@ -457,19 +466,18 @@ __device__ void amd_buffer_store_impl_v2(const typename vector_type<T, N>::type 
         }
         else if constexpr(N == 8)
         {
-            vector_type<half_t, 8> tmp;
-
-            tmp.Vector() = src_thread_data;
+            vector_type<half_t, 8> tmp{src_thread_data};
 
             __llvm_amdgcn_raw_buffer_store_fp16x4(tmp.Vectors(Number<4>{})[Number<0>{}],
                                                   dst_wave_buffer_resource,
                                                   dst_thread_addr_offset,
                                                   dst_wave_addr_offset,
                                                   0);
+
             __llvm_amdgcn_raw_buffer_store_fp16x4(tmp.Vectors(Number<4>{})[Number<1>{}],
                                                   dst_wave_buffer_resource,
                                                   dst_thread_addr_offset,
-                                                  dst_wave_addr_offset,
+                                                  dst_wave_addr_offset + 4 * sizeof(half_t),
                                                   0);
         }
     }
