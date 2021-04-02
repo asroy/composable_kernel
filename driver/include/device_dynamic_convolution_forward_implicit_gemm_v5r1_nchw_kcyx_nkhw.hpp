@@ -116,18 +116,18 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     // cdata = 64, BlockSize = 64, 16x8x32x4
     constexpr index_t BlockSize = 64;
 
-    constexpr index_t KPerBlock  = 16;
+    constexpr index_t KPerBlock  = K;
     constexpr index_t HoPerBlock = 8;
     constexpr index_t WoPerBlock = 32;
-    constexpr index_t EPerBlock  = 2;
+    constexpr index_t EPerBlock  = C0;
 
     constexpr index_t KPerThread  = KPerBlock;
     constexpr index_t HoPerThread = 2;
     constexpr index_t WoPerThread = 2;
     constexpr index_t EPerThread  = EPerBlock;
 
-    using ABlockTransferThreadSliceLengths_E_K   = Sequence<9, 1>;
-    using ABlockTransferThreadClusterLengths_E_K = Sequence<EPerBlock, KPerBlock>;
+    using ABlockTransferThreadSliceLengths_E_K   = Sequence<3, 1>;
+    using ABlockTransferThreadClusterLengths_E_K = Sequence<3 * EPerBlock, KPerBlock>;
 
     constexpr index_t ABlockTransferSrcScalarPerVector_E = 1;
     constexpr index_t ABlockTransferDstScalarPerVector_K = 1;
@@ -164,7 +164,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
 #endif
 
     constexpr auto conv_driver =
-        // DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad<
+        //DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad<
         DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad<
             BlockSize,
             typename vector_type<TInWei, InWeiVectorSize>::type,
