@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 
     using LeftPads                   = Sequence<0, 0>;
     using RightPads                  = Sequence<0, 0>;
-#elif 1
+#elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
     constexpr index_t HI = 1080;
@@ -76,13 +76,13 @@ int main(int argc, char* argv[])
     using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;
 
-    using LeftPads  = Sequence<1, 1>;
-    using RightPads = Sequence<1, 1>;
-#elif 0
+    using LeftPads                   = Sequence<1, 1>;
+    using RightPads                  = Sequence<1, 1>;
+#elif 1
     constexpr index_t N  = 1;
-    constexpr index_t C  = 1;
-    constexpr index_t HI = 1024;
-    constexpr index_t WI = 2048;
+    constexpr index_t C  = 4;
+    constexpr index_t HI = 64;
+    constexpr index_t WI = 64;
     constexpr index_t K  = 4;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
@@ -630,11 +630,16 @@ int main(int argc, char* argv[])
     print_array("ConvStrides", to_multi_index(ConvStrides{}));
     print_array("ConvDilations", to_multi_index(ConvDilations{}));
 
-#if 0
+#if 1
     using in_data_t                  = float;
     constexpr index_t in_vector_size = 1;
     using acc_data_t                 = float;
     using out_data_t                 = float;
+#elif 0
+    using in_data_t                  = half_t;
+    constexpr index_t in_vector_size = 16;
+    using acc_data_t                 = float;
+    using out_data_t                 = half_t;
 #elif 0
     using in_data_t                  = float;
     constexpr index_t in_vector_size = 1;
@@ -650,6 +655,8 @@ int main(int argc, char* argv[])
     Tensor<in_data_t> in_nchw(make_HostTensorDescriptor(in_nchw_desc));
     Tensor<in_data_t> wei_kcyx(make_HostTensorDescriptor(wei_kcyx_desc));
     Tensor<out_data_t> out_nkhw_host(make_HostTensorDescriptor(out_nkhw_desc));
+
+    Tensor<out_data_t> add_nkhw_device(make_HostTensorDescriptor(out_nkhw_desc));
     Tensor<out_data_t> out_nkhw_device(make_HostTensorDescriptor(out_nkhw_desc));
 
     std::size_t num_thread = std::thread::hardware_concurrency();
@@ -686,6 +693,9 @@ int main(int argc, char* argv[])
         };
         wei_kcyx.GenerateTensorValue(gen_wei, num_thread);
 #endif
+
+        out_nkhw_host.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        add_nkhw_device.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
     }
 
 #if 0
@@ -768,6 +778,7 @@ int main(int argc, char* argv[])
         wei_kcyx_desc,
         wei_kcyx,
         out_nkhw_desc,
+        add_nkhw_device,
         out_nkhw_device,
         ConvStrides{},
         ConvDilations{},
@@ -788,6 +799,7 @@ int main(int argc, char* argv[])
 
         check_error(out_nkhw_host, out_nkhw_device);
 
+#if 1
         if(do_log)
         {
             LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
@@ -795,5 +807,6 @@ int main(int argc, char* argv[])
             LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
             LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
         }
+#endif
     }
 }

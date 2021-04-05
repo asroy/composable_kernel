@@ -40,7 +40,7 @@ void host_direct_convolution(const Tensor<TIn>& in_nchw,
                 }
             }
         }
-        out_nkhw(n, k, ho, wo) = v;
+        out_nkhw(n, k, ho, wo) += v;
     };
 
     auto f_par = make_ParallelTensorFunctor(f,

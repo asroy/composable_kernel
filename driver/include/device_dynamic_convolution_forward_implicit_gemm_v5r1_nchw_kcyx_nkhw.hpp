@@ -21,6 +21,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     WeiDesc,
     const Tensor<TInWei>& wei_k_c_y_x,
     OutDesc,
+    Tensor<TOut>& add_n_k_ho_wo,
     Tensor<TOut>& out_n_k_ho_wo,
     ConvStrides,
     ConvDilations,
@@ -35,6 +36,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
 
     DeviceMem in_n_c_hi_wi_device_buf(sizeof(TInWei) * in_n_c_hi_wi.mDesc.GetElementSpace());
     DeviceMem wei_k_c_y_x_device_buf(sizeof(TInWei) * wei_k_c_y_x.mDesc.GetElementSpace());
+    DeviceMem add_n_k_ho_wo_device_buf(sizeof(TOut) * add_n_k_ho_wo.mDesc.GetElementSpace());
     DeviceMem out_n_k_ho_wo_device_buf(sizeof(TOut) * out_n_k_ho_wo.mDesc.GetElementSpace());
 
     constexpr auto I0 = Number<0>{};
@@ -93,6 +95,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
         make_native_tensor_descriptor_packed(Sequence<N, C0, Hi, Wi, C1>{})));
     Tensor<TInWei> wei_k_c0_y_x_c1(make_HostTensorDescriptor(
         make_native_tensor_descriptor_packed(Sequence<K, C0, Y, X, C1>{})));
+    Tensor<TOut> add_n_k0_ho_wo_k1(make_HostTensorDescriptor(
+        make_native_tensor_descriptor_packed(Sequence<N, K0, Ho, Wo, K1>{})));
     Tensor<TOut> out_n_k0_ho_wo_k1(make_HostTensorDescriptor(
         make_native_tensor_descriptor_packed(Sequence<N, K0, Ho, Wo, K1>{})));
 
@@ -106,11 +110,18 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
             wei_k_c_y_x(k, c, y, x);
     };
 
+    auto f_nkhw_to_nk0hwk1 = [&](auto n, auto k, auto ho, auto wo) {
+        add_n_k0_ho_wo_k1(n, k / InWeiVectorSize, ho, wo, k % InWeiVectorSize) =
+            add_n_k_ho_wo(n, k, ho, wo);
+    };
+
     make_ParallelTensorFunctor(f_nchw2nc0hwc1, N, Hi, Wi, C)();
     make_ParallelTensorFunctor(f_kcyx2kc0yxc1, K, Y, X, C)();
+    make_ParallelTensorFunctor(f_nkhw_to_nk0hwk1, N, K, Ho, Wo)();
 
     in_n_c_hi_wi_device_buf.ToDevice(in_n_c0_hi_wi_c1.mData.data());
     wei_k_c_y_x_device_buf.ToDevice(wei_k_c0_y_x_c1.mData.data());
+    add_n_k_ho_wo_device_buf.ToDevice(add_n_k0_ho_wo_k1.mData.data());
 
 #if 1
     // cdata = 64, BlockSize = 64, 16x8x32x4
@@ -126,15 +137,15 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     constexpr index_t WoPerThread = 2;
     constexpr index_t EPerThread  = EPerBlock;
 
-    using ABlockTransferThreadSliceLengths_E_K   = Sequence<3, 1>;
-    using ABlockTransferThreadClusterLengths_E_K = Sequence<3 * EPerBlock, KPerBlock>;
+    using ABlockTransferThreadSliceLengths_E_K   = Sequence<9, 1>;
+    using ABlockTransferThreadClusterLengths_E_K = Sequence<EPerBlock, KPerBlock>;
 
     constexpr index_t ABlockTransferSrcScalarPerVector_E = 1;
     constexpr index_t ABlockTransferDstScalarPerVector_K = 1;
 
     constexpr index_t BThreadTransferSrcScalarPerVector_W = 1;
 
-    constexpr index_t CThreadTransferDstScalarPerVector_W = K1;
+    constexpr index_t CThreadTransferDstScalarPerVector_W = 1;
 
     static_assert(KPerThread % CThreadTransferDstScalarPerVector_W == 0, "");
 #else
@@ -196,6 +207,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
                         wei_k_c_y_x_device_buf.GetDeviceBuffer()),
                     static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
                         in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
+                    static_cast<TOut*>(add_n_k_ho_wo_device_buf.GetDeviceBuffer()),
                     static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()));
 
     out_n_k_ho_wo_device_buf.FromDevice(out_n_k0_ho_wo_k1.mData.data());

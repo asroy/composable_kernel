@@ -74,6 +74,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                         const BGlobalDesc& b_e_n_ho_wo_global_desc,
                         const FloatAB* __restrict__ p_b_global,
                         const CGlobalDesc& c_k_n_ho_wo_global_desc,
+                        const FloatC* __restrict__ p_d_global,
                         FloatC* __restrict__ p_c_global,
                         FloatAB* __restrict__ p_shared_block,
                         integral_constant<bool, HasMainKBlockLoop>,
@@ -352,6 +353,48 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         }
 #endif
 
+        FloatC p_d_thread[c_k_n_ho_wo_thread_desc.GetElementSpaceSize()];
+        threadwise_matrix_set_zero_v3(c_k_n_ho_wo_thread_desc, p_d_thread);
+
+#if 1
+        {
+
+            constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
+
+            const index_t k_thread_data_on_global =
+                k_block_data_on_global + k_thread_id * KPerThread;
+
+            ThreadwiseDynamicTensorSliceTransfer_v2<
+                FloatC,
+                FloatC,
+                decltype(c_k_n_ho_wo_global_desc),
+                decltype(c_k_n_ho_wo_thread_desc),
+                Sequence<KPerThread, 1, HoPerThread, WoPerThread>,
+                CThreadTransferSrcDstAccessOrder,
+                CThreadTransferSrcDstVectorDim,
+                CThreadTransferDstScalarPerVector,
+                AddressSpace::Global,
+                AddressSpace::Vgpr,
+                InMemoryDataOperation::Set,
+                1,
+                true>(
+                c_k_n_ho_wo_global_desc,
+                make_multi_index(
+                    k_thread_data_on_global, 0, ho_thread_data_on_global, wo_thread_data_on_global))
+                .Run(c_k_n_ho_wo_global_desc,
+                     p_d_global,
+                     c_k_n_ho_wo_thread_desc,
+                     make_tuple(I0, I0, I0, I0),
+                     p_d_thread,
+                     c_k_n_ho_wo_global_tensor_iterator_hacks);
+        }
+#endif
+
+        for(index_t i = 0; i < c_k_n_ho_wo_thread_desc.GetElementSpaceSize(); i++)
+        {
+            p_d_thread[i] += p_c_thread[i];
+        }
+
 #if 1
         // output: register to global memory
         {
@@ -362,7 +405,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                 k_block_data_on_global + k_thread_id * KPerThread;
 
             ThreadwiseDynamicTensorSliceTransfer_v1r3<
-                FloatAcc,
+                FloatC,
                 FloatC,
                 decltype(c_k_n_ho_wo_thread_desc),
                 decltype(c_k_n_ho_wo_global_desc),
@@ -380,7 +423,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                     k_thread_data_on_global, 0, ho_thread_data_on_global, wo_thread_data_on_global))
                 .Run(c_k_n_ho_wo_thread_desc,
                      make_tuple(I0, I0, I0, I0),
-                     p_c_thread,
+                     p_d_thread,
                      c_k_n_ho_wo_global_desc,
                      p_c_global,
                      c_k_n_ho_wo_global_tensor_iterator_hacks);
@@ -395,6 +438,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                         const BGlobalDesc& b_e_n_ho_wo_global_desc,
                         const FloatAB* __restrict__ p_b_global,
                         const CGlobalDesc& c_k_n_ho_wo_global_desc,
+                        const FloatC* __restrict__ p_d_global,
                         FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
@@ -408,6 +452,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             b_e_n_ho_wo_global_desc,
             p_b_global,
             c_k_n_ho_wo_global_desc,
+            p_d_global,
             p_c_global,
             p_shared_block,
             integral_constant<bool, HasMainKBlockLoop>{},
@@ -421,6 +466,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                         const BGlobalDesc* p_b_e_n_ho_wo_global_desc,
                         const FloatAB* __restrict__ p_b_global,
                         const CGlobalDesc* p_c_k_n_ho_wo_global_desc,
+                        const FloatC* __restrict__ p_d_global,
                         FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
@@ -434,6 +480,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             b_e_n_ho_wo_global_desc,
             p_b_global,
             c_k_n_ho_wo_global_desc,
+            p_d_global,
             p_c_global,
             integral_constant<bool, HasMainKBlockLoop>{},
             integral_constant<bool, HasDoubleTailKBlockLoop>{});
@@ -446,6 +493,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                         const void* p_b_e_n_ho_wo_global_desc,
                         const FloatAB* __restrict__ p_b_global,
                         const void* p_c_k_n_ho_wo_global_desc,
+                        const FloatC* __restrict__ p_d_global,
                         FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
@@ -461,6 +509,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             b_e_n_ho_wo_global_desc,
             p_b_global,
             c_k_n_ho_wo_global_desc,
+            p_d_global,
             p_c_global,
             integral_constant<bool, HasMainKBlockLoop>{},
             integral_constant<bool, HasDoubleTailKBlockLoop>{});
