@@ -68,7 +68,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
     const auto in_right_pads  = sequence_to_tuple_of_number(InRightPads{});
 #endif
 
-#if 0
+#if 1
     // cdata = 16, BlockSize = 64, 16x64x4
     constexpr index_t BlockSize = 64;
 
