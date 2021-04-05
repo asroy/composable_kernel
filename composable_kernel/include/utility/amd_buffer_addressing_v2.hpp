@@ -182,15 +182,16 @@ amd_buffer_load_impl_v2(int32x4_t src_wave_buffer_resource,
                         index_t src_thread_addr_offset,
                         index_t src_wave_addr_offset)
 {
-    static_assert((is_same<T, float>::value && (N == 1 || N == 2 || N == 4 || N == 8)) ||
-                      (is_same<T, half_t>::value && (N == 1 || N == 2 || N == 4)) ||
-                      (is_same<T, half2_t>::value && (N == 1)) ||
-                      (is_same<T, half4_t>::value && (N == 1)) ||
-                      (is_same<T, half8_t>::value && (N == 1)) ||
-                      (is_same<T, int32_t>::value && (N == 1 || N == 2 || N == 4 || N == 8)) ||
-                      (is_same<T, int32x2_t>::value && (N == 1)) ||
-                      (is_same<T, int32x4_t>::value && (N == 1)),
-                  "wrong! not implemented");
+    static_assert(
+        (is_same<T, float>::value && (N == 1 || N == 2 || N == 4 || N == 8)) ||
+            (is_same<T, half_t>::value && (N == 1 || N == 2 || N == 4)) ||
+            (is_same<T, half2_t>::value && (N == 1)) || (is_same<T, half4_t>::value && (N == 1)) ||
+            (is_same<T, half8_t>::value && (N == 1)) ||
+            (is_same<T, int8_t>::value && (N == 1 || N == 2 || N == 4 || N == 8 || N == 16)) ||
+            (is_same<T, int32_t>::value && (N == 1 || N == 2 || N == 4 || N == 8)) ||
+            (is_same<T, int32x2_t>::value && (N == 1)) ||
+            (is_same<T, int32x4_t>::value && (N == 1)),
+        "wrong! not implemented");
 
     if constexpr(is_same<T, float>::value)
     {
@@ -275,6 +276,34 @@ amd_buffer_load_impl_v2(int32x4_t src_wave_buffer_resource,
                                                      0);
 
             return tmp.Vector();
+        }
+    }
+    else if constexpr(is_same<T, int8_t>::value)
+    {
+        if constexpr(N == 1)
+        {
+            return __llvm_amdgcn_raw_buffer_load_i8(
+                src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
+        }
+        else if constexpr(N == 2)
+        {
+            return __llvm_amdgcn_raw_buffer_load_i16(
+                src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
+        }
+        else if constexpr(N == 4)
+        {
+            return __llvm_amdgcn_raw_buffer_load_i32(
+                src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
+        }
+        else if constexpr(N == 8)
+        {
+            return __llvm_amdgcn_raw_buffer_load_i32x2(
+                src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
+        }
+        else if constexpr(N == 16)
+        {
+            return __llvm_amdgcn_raw_buffer_load_i32x4(
+                src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
         }
     }
     else if constexpr(is_same<T, int32_t>::value)

@@ -145,7 +145,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
 
     constexpr index_t BThreadTransferSrcScalarPerVector_W = 1;
 
-    constexpr index_t CThreadTransferDstScalarPerVector_W = 1;
+    constexpr index_t CThreadTransferDstScalarPerVector_W = K1;
 
     static_assert(KPerThread % CThreadTransferDstScalarPerVector_W == 0, "");
 #else
