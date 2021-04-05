@@ -235,6 +235,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
 #if CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VALUE
         index_t nrepeat = 100;
 
+        std::cerr << "has_main_k_block_loop = " << has_main_k_block_loop << " has_double_tail_k_block_loop = " << has_double_tail_k_block_loop << std::endl;
+
         for(index_t i = 0; i < 5; ++i)
         {
             std::cout << "Start running " << nrepeat << " times..." << std::endl;
@@ -272,6 +274,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, true>{});
                 }
+#if 0
                 else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
                 {
                     const auto kernel =
@@ -356,6 +359,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nchw_kcyx_nkhw_pad
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, false>{});
                 }
+#endif
             }
 
             timer.End();
