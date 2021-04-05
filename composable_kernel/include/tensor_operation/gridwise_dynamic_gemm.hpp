@@ -489,10 +489,21 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
+#if 0
         const auto a_k_m_global_desc = *reinterpret_cast<const AGlobalDesc*>(p_a_k_m_global_desc);
         const auto b_k_n_global_desc = *reinterpret_cast<const BGlobalDesc*>(p_b_k_n_global_desc);
         const auto c_m0_m1_n0_n1_global_desc =
             *reinterpret_cast<const CGlobalDesc*>(p_c_m0_m1_n0_n1_global_desc);
+#else 
+        // cast to address_space(4)
+        auto *p_a_k_m_global_desc_const = (AGlobalDesc __attribute__ ((address_space(4)))*) p_a_k_m_global_desc;
+        auto *p_b_k_n_global_desc_const = (BGlobalDesc __attribute__ ((address_space(4)))*) p_b_k_n_global_desc;
+        auto *p_c_m0_m1_n0_n1_global_desc_const = (CGlobalDesc __attribute__ ((address_space(4)))*) p_c_m0_m1_n0_n1_global_desc;
+
+        auto a_k_m_global_desc = *(AGlobalDesc*) p_a_k_m_global_desc_const;
+        auto b_k_n_global_desc = *(BGlobalDesc*) p_b_k_n_global_desc_const;
+        auto c_m0_m1_n0_n1_global_desc = *(CGlobalDesc*) p_c_m0_m1_n0_n1_global_desc_const;
+#endif
 
         Run(a_k_m_global_desc,
             p_a_global,
