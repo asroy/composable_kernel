@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
-    using ConvStrides = Sequence<1, 1>;
+    using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;
 
     using LeftPads                   = Sequence<1, 1>;
@@ -656,7 +656,7 @@ int main(int argc, char* argv[])
     Tensor<in_data_t> wei_kcyx(make_HostTensorDescriptor(wei_kcyx_desc));
     Tensor<out_data_t> out_nkhw_host(make_HostTensorDescriptor(out_nkhw_desc));
 
-    Tensor<out_data_t> add_nkhw_device(make_HostTensorDescriptor(out_nkhw_desc));
+    Tensor<out_data_t> add_nkhw(make_HostTensorDescriptor(out_nkhw_desc));
     Tensor<out_data_t> out_nkhw_device(make_HostTensorDescriptor(out_nkhw_desc));
 
     std::size_t num_thread = std::thread::hardware_concurrency();
@@ -693,9 +693,7 @@ int main(int argc, char* argv[])
         };
         wei_kcyx.GenerateTensorValue(gen_wei, num_thread);
 #endif
-
-        out_nkhw_host.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-        add_nkhw_device.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        add_nkhw.GenerateTensorValue(GeneratorTensor_2{-1, 1}, num_thread);
     }
 
 #if 0
@@ -778,7 +776,7 @@ int main(int argc, char* argv[])
         wei_kcyx_desc,
         wei_kcyx,
         out_nkhw_desc,
-        add_nkhw_device,
+        add_nkhw,
         out_nkhw_device,
         ConvStrides{},
         ConvDilations{},
@@ -791,6 +789,7 @@ int main(int argc, char* argv[])
     {
         host_direct_convolution(in_nchw,
                                 wei_kcyx,
+                                add_nkhw,
                                 out_nkhw_host,
                                 ConvStrides{},
                                 ConvDilations{},

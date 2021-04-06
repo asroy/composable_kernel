@@ -10,6 +10,7 @@ template <class TIn,
           class UpperPads>
 void host_direct_convolution(const Tensor<TIn>& in_nchw,
                              const Tensor<TWei>& wei_kcyx,
+                             const Tensor<TOut>& add_nkhw,
                              Tensor<TOut>& out_nkhw,
                              ConvStrides,
                              ConvDilations,
@@ -40,7 +41,7 @@ void host_direct_convolution(const Tensor<TIn>& in_nchw,
                 }
             }
         }
-        out_nkhw(n, k, ho, wo) += v;
+        out_nkhw(n, k, ho, wo) = v + add_nkhw(n, k, ho, wo);
     };
 
     auto f_par = make_ParallelTensorFunctor(f,
