@@ -353,10 +353,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         }
 #endif
 
+#if 1
         FloatC p_d_thread[c_k_n_ho_wo_thread_desc.GetElementSpaceSize()];
         threadwise_matrix_set_zero_v3(c_k_n_ho_wo_thread_desc, p_d_thread);
 
-#if 1
         {
 
             constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
@@ -388,12 +388,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                      p_d_thread,
                      c_k_n_ho_wo_global_tensor_iterator_hacks);
         }
-#endif
 
         for(index_t i = 0; i < c_k_n_ho_wo_thread_desc.GetElementSpaceSize(); i++)
         {
             p_d_thread[i] += p_c_thread[i];
         }
+#endif
 
 #if 1
         // output: register to global memory

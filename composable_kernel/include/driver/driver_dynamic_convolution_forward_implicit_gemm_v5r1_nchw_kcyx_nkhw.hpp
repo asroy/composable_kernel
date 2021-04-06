@@ -45,6 +45,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                       const InRightPads& in_right_pads,
                       const FloatAB* __restrict__ p_wei_global,
                       const FloatAB* __restrict__ p_in_global,
+                      const FloatC* __restrict__ p_d_global,
                       FloatC* __restrict__ p_out_global) const
     {
         constexpr auto I0 = Number<0>{};
@@ -236,6 +237,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                                                decltype(in_e_n_ho_wo_global_desc),
                                                                const FloatAB*,
                                                                decltype(out_k_n_ho_wo_global_desc),
+                                                               const FloatC*,
                                                                FloatC*,
                                                                integral_constant<bool, true>,
                                                                integral_constant<bool, true>>;
@@ -250,6 +252,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                   in_e_n_ho_wo_global_desc,
                                   p_in_global,
                                   out_k_n_ho_wo_global_desc,
+                                  p_d_global,
                                   p_out_global,
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, true>{});
@@ -262,6 +265,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                                                decltype(in_e_n_ho_wo_global_desc),
                                                                const FloatAB*,
                                                                decltype(out_k_n_ho_wo_global_desc),
+                                                               const FloatC*,
                                                                FloatC*,
                                                                integral_constant<bool, true>,
                                                                integral_constant<bool, false>>;
@@ -276,6 +280,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                   in_e_n_ho_wo_global_desc,
                                   p_in_global,
                                   out_k_n_ho_wo_global_desc,
+                                  p_d_global,
                                   p_out_global,
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, false>{});
@@ -288,6 +293,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                                                decltype(in_e_n_ho_wo_global_desc),
                                                                const FloatAB*,
                                                                decltype(out_k_n_ho_wo_global_desc),
+                                                               const FloatC*,
                                                                FloatC*,
                                                                integral_constant<bool, false>,
                                                                integral_constant<bool, true>>;
@@ -302,6 +308,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                   in_e_n_ho_wo_global_desc,
                                   p_in_global,
                                   out_k_n_ho_wo_global_desc,
+                                  p_d_global,
                                   p_out_global,
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, true>{});
@@ -314,6 +321,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                                                decltype(in_e_n_ho_wo_global_desc),
                                                                const FloatAB*,
                                                                decltype(out_k_n_ho_wo_global_desc),
+                                                               const FloatC*,
                                                                FloatC*,
                                                                integral_constant<bool, false>,
                                                                integral_constant<bool, false>>;
@@ -328,6 +336,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                   in_e_n_ho_wo_global_desc,
                                   p_in_global,
                                   out_k_n_ho_wo_global_desc,
+                                  p_d_global,
                                   p_out_global,
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, false>{});
