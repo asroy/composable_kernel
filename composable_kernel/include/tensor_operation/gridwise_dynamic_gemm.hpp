@@ -11,70 +11,7 @@
 
 namespace ck {
 
-#if CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VALUE
-// pass tensor descriptor by value
-template <typename GridwiseGemm,
-          typename AGlobalDesc,
-          typename FloatA,
-          typename BGlobalDesc,
-          typename FloatB,
-          typename CGlobalDesc,
-          typename FloatC,
-          bool HasMainKBlockLoop,
-          bool HasDoubleTailKBlockLoop>
-__global__ void run_gridwise_dynamic_gemm_v1(const AGlobalDesc a_k_m_global_desc,
-                                             const FloatA* __restrict__ p_a_global,
-                                             const BGlobalDesc b_k_n_global_desc,
-                                             const FloatB* __restrict__ p_b_global,
-                                             const CGlobalDesc c_m0_m1_n0_n1_global_desc,
-                                             FloatC* __restrict__ p_c_global)
-{
-    GridwiseGemm{}.Run(a_k_m_global_desc,
-                       p_a_global,
-                       b_k_n_global_desc,
-                       p_b_global,
-                       c_m0_m1_n0_n1_global_desc,
-                       p_c_global,
-                       integral_constant<bool, HasMainKBlockLoop>{},
-                       integral_constant<bool, HasDoubleTailKBlockLoop>{});
-}
-#elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_POINTER
-// pass tensor descriptor by __CONSTANT__ pointer
-// __CONSTANT__ is needed to inform compiler pointers in the kernel signature are pointing to
-// non-modifiable parameter address space, so compiler can enable corresponding optimization
-template <typename GridwiseGemm,
-          typename AGlobalDesc,
-          typename FloatA,
-          typename BGlobalDesc,
-          typename FloatB,
-          typename CGlobalDesc,
-          typename FloatC,
-          bool HasMainKBlockLoop,
-          bool HasDoubleTailKBlockLoop>
-__global__ void
-run_gridwise_dynamic_gemm_v1(const AGlobalDesc __CONSTANT__* p_a_k_m_global_desc,
-                             const FloatA* __restrict__ p_a_global,
-                             const BGlobalDesc __CONSTANT__* p_b_k_n_global_desc,
-                             const FloatB* __restrict__ p_b_global,
-                             const CGlobalDesc __CONSTANT__* p_c_m0_m1_n0_n1_global_desc,
-                             FloatC* __restrict__ p_c_global)
-{
-    // cast pointer to address_space(1), because the copy constructor of tensor descriptor is for
-    // address_space(1)
-    const auto a_k_m_global_desc         = *(const AGlobalDesc*)p_a_k_m_global_desc;
-    const auto b_k_n_global_desc         = *(const BGlobalDesc*)p_b_k_n_global_desc;
-    const auto c_m0_m1_n0_n1_global_desc = *(const CGlobalDesc*)p_c_m0_m1_n0_n1_global_desc;
-
-    GridwiseGemm{}.Run(a_k_m_global_desc,
-                       p_a_global,
-                       b_k_n_global_desc,
-                       p_b_global,
-                       c_m0_m1_n0_n1_global_desc,
-                       p_c_global,
-                       integral_constant<bool, HasMainKBlockLoop>{},
-                       integral_constant<bool, HasDoubleTailKBlockLoop>{});
-}
-#elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER
+#if CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER
 // pass tensor descriptor by __CONSTANT__ void pointer
 // __CONSTANT__ is needed to inform compiler void pointers in the kernel signature are pointing to
 // non-modifiable parameter address space, so compiler can enable corresponding optimization
