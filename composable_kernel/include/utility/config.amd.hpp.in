@@ -11,9 +11,9 @@
 #define CK_DEVICE_BACKEND_AMD 1
 
 // GPU ID
-#define CK_AMD_GPU_GFX906 1
+#define CK_AMD_GPU_GFX906 0
 #define CK_AMD_GPU_GFX908 0
-#define CK_AMD_GPU_GFX1030 0
+#define CK_AMD_GPU_GFX1030 1
 
 // HIP version
 #ifndef CK_HIP_VERSION_FLAT
@@ -29,9 +29,9 @@
 #endif
 
 // buffer resourse
-#if defined(CK_AMD_GPU_GFX906) || defined(CK_AMD_GPU_GFX908)
+#if CK_AMD_GPU_GFX906 || CK_AMD_GPU_GFX908
 #define CK_BUFFER_RESOURCE_3RD_DWORD 0x00020000
-#elif defined(CK_AMD_GPU_GFX1030)
+#elif CK_AMD_GPU_GFX1030
 #define CK_BUFFER_RESOURCE_3RD_DWORD 0x31014000
 #endif
 
@@ -53,7 +53,7 @@
 
 // AMD buffer addressing
 #ifndef CK_USE_AMD_BUFFER_ADDRESSING
-#define CK_USE_AMD_BUFFER_ADDRESSING 0
+#define CK_USE_AMD_BUFFER_ADDRESSING 1
 #endif
 
 // only gfx908 support native floating point atomic add
