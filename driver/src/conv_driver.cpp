@@ -74,8 +74,7 @@ int main(int argc, char* argv[])
     constexpr index_t X  = 3;
 
     using ConvStrides = Sequence<1, 1>;
-    // using ConvDilations = Sequence<1, 1>;
-    using ConvDilations = Sequence<2, 2>;
+    using ConvDilations = Sequence<1, 1>;
 
     using LeftPads                   = Sequence<1, 1>;
     using RightPads                  = Sequence<1, 1>;
