@@ -133,12 +133,13 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         constexpr auto EPerBlock = a_block_mtx.GetLength(I0);
 
         constexpr auto KPerThreadSubC = 4;
-        constexpr auto HPerThreadSubC = 2;
-        constexpr auto WPerThreadSubC = 2;
+
+        constexpr auto HoPerThreadSubC = 2;
+        constexpr auto WoPerThreadSubC = 2;
 
         static_assert(KPerThread % KPerThreadSubC == 0, "");
-        static_assert(HPerThread % HPerThreadSubC == 0, "");
-        static_assert(WPerThread % WPerThreadSubC == 0, "");
+        static_assert(HPerThread % HoPerThreadSubC == 0, "");
+        static_assert(WPerThread % WoPerThreadSubC == 0, "");
 
         // thread A, B for GEMM
         constexpr auto a_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
@@ -161,8 +162,8 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v3<decltype(a_thread_mtx),
                                                                     decltype(b_thread_mtx),
                                                                     decltype(c_thread_mtx),
-                                                                    HPerThreadSubC,
-                                                                    WPerThreadSubC>{};
+                                                                    HoPerThreadSubC,
+                                                                    WoPerThreadSubC>{};
         // loop over k
 #pragma unroll
         for(index_t e_begin = 0; e_begin < EPerBlock; e_begin += EPerThreadLoop)
@@ -176,10 +177,10 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
                                   p_a_thread);
 
 #pragma unroll
-                for(index_t h_begin = 0; h_begin < HPerThread; h_begin += HPerThreadSubC)
+                for(index_t h_begin = 0; h_begin < HPerThread; h_begin += HoPerThreadSubC)
                 {
 #pragma unroll
-                    for(index_t w_begin = 0; w_begin < WPerThread; w_begin += WPerThreadSubC)
+                    for(index_t w_begin = 0; w_begin < WPerThread; w_begin += WoPerThreadSubC)
                     {
                         threadwise_gemm.Run(p_a_thread,
                                             p_b_thread + b_thread_mtx.CalculateOffset(make_tuple(

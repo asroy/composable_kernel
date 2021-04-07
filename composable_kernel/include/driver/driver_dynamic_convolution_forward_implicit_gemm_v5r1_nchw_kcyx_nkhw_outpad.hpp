@@ -180,7 +180,6 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{}));
 
-#if 1
         // GEMM
         using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v3<
             BlockSize,
@@ -363,7 +362,6 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s"
                       << std::endl;
         }
-#endif
     }
 };
 } // namespace ck

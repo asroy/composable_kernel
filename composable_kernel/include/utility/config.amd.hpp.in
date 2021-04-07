@@ -36,9 +36,9 @@
 #endif
 
 // buffer resourse
-#if CK_AMD_GPU_GFX906 || CK_AMD_GPU_GFX908
+#if defined(CK_AMD_GPU_GFX906) || defined(CK_AMD_GPU_GFX908)
 #define CK_BUFFER_RESOURCE_3RD_DWORD 0x00020000
-#elif CK_AMD_GPU_GFX1030
+#elif defined(CK_AMD_GPU_GFX1030)
 #define CK_BUFFER_RESOURCE_3RD_DWORD 0x31014000
 #endif
 
