@@ -272,21 +272,28 @@ __device__ void amd_assembly_outer_product_1x4(int8x8_t a,
                                                int32_t& c2,
                                                int32_t& c3)
 {
-    amd_assembly_outer_product_1x4(a.Vectors(Number<4>{})[Number<0>{}],
-                                   b0.Vectors(Number<4>{})[Number<0>{}],
-                                   b1.Vectors(Number<4>{})[Number<0>{}],
-                                   b2.Vectors(Number<4>{})[Number<0>{}],
-                                   b3.Vectors(Number<4>{})[Number<0>{}],
+
+    const int8x4_t* p_a_int8x4_t  = reinterpret_cast<const int8x4_t*>(&a);
+    const int8x4_t* p_b0_int8x4_t = reinterpret_cast<const int8x4_t*>(&b0);
+    const int8x4_t* p_b1_int8x4_t = reinterpret_cast<const int8x4_t*>(&b1);
+    const int8x4_t* p_b2_int8x4_t = reinterpret_cast<const int8x4_t*>(&b2);
+    const int8x4_t* p_b3_int8x4_t = reinterpret_cast<const int8x4_t*>(&b3);
+
+    amd_assembly_outer_product_1x4(p_a_int8x4_t[0],
+                                   p_b0_int8x4_t[0],
+                                   p_b1_int8x4_t[0],
+                                   p_b2_int8x4_t[0],
+                                   p_b3_int8x4_t[0],
                                    c0,
                                    c1,
                                    c2,
                                    c3);
 
-    amd_assembly_outer_product_1x4(a.Vectors(Number<4>{})[Number<1>{}],
-                                   b0.Vectors(Number<4>{})[Number<1>{}],
-                                   b1.Vectors(Number<4>{})[Number<1>{}],
-                                   b2.Vectors(Number<4>{})[Number<1>{}],
-                                   b3.Vectors(Number<4>{})[Number<1>{}],
+    amd_assembly_outer_product_1x4(p_a_int8x4_t[1],
+                                   p_b0_int8x4_t[1],
+                                   p_b1_int8x4_t[1],
+                                   p_b2_int8x4_t[1],
+                                   p_b3_int8x4_t[1],
                                    c0,
                                    c1,
                                    c2,
@@ -302,22 +309,30 @@ __device__ void amd_assembly_outer_product_1x4(int8x16_t a,
                                                int32_t& c1,
                                                int32_t& c2,
                                                int32_t& c3)
+
 {
-    amd_assembly_outer_product_1x4(a.Vectors(Number<8>{})[Number<0>{}],
-                                   b0.Vectors(Number<8>{})[Number<0>{}],
-                                   b1.Vectors(Number<8>{})[Number<0>{}],
-                                   b2.Vectors(Number<8>{})[Number<0>{}],
-                                   b3.Vectors(Number<8>{})[Number<0>{}],
+
+    const int8x8_t* p_a_int8x8_t  = reinterpret_cast<const int8x8_t*>(&a);
+    const int8x8_t* p_b0_int8x8_t = reinterpret_cast<const int8x8_t*>(&b0);
+    const int8x8_t* p_b1_int8x8_t = reinterpret_cast<const int8x8_t*>(&b1);
+    const int8x8_t* p_b2_int8x8_t = reinterpret_cast<const int8x8_t*>(&b2);
+    const int8x8_t* p_b3_int8x8_t = reinterpret_cast<const int8x8_t*>(&b3);
+
+    amd_assembly_outer_product_1x4(p_a_int8x8_t[0],
+                                   p_b0_int8x8_t[0],
+                                   p_b1_int8x8_t[0],
+                                   p_b2_int8x8_t[0],
+                                   p_b3_int8x8_t[0],
                                    c0,
                                    c1,
                                    c2,
                                    c3);
 
-    amd_assembly_outer_product_1x4(a.Vectors(Number<8>{})[Number<1>{}],
-                                   b0.Vectors(Number<8>{})[Number<1>{}],
-                                   b1.Vectors(Number<8>{})[Number<1>{}],
-                                   b2.Vectors(Number<8>{})[Number<1>{}],
-                                   b3.Vectors(Number<8>{})[Number<1>{}],
+    amd_assembly_outer_product_1x4(p_a_int8x8_t[1],
+                                   p_b0_int8x8_t[1],
+                                   p_b1_int8x8_t[1],
+                                   p_b2_int8x8_t[1],
+                                   p_b3_int8x8_t[1],
                                    c0,
                                    c1,
                                    c2,
