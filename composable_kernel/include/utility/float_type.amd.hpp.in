@@ -224,17 +224,16 @@ struct vector_type<T, 16>
     __host__ __device__ constexpr auto& Vectors(Number<16>) { return data_.d16x1_; }
 };
 
-
 // fp32
 using float2_t = typename vector_type<float, 2>::type;
 using float4_t = typename vector_type<float, 4>::type;
 using float8_t = typename vector_type<float, 8>::type;
 
 // fp16
-using half_t  = _Float16;
-using half2_t = typename vector_type<half_t, 2>::type;
-using half4_t = typename vector_type<half_t, 4>::type;
-using half8_t = typename vector_type<half_t, 8>::type;
+using half_t   = _Float16;
+using half2_t  = typename vector_type<half_t, 2>::type;
+using half4_t  = typename vector_type<half_t, 4>::type;
+using half8_t  = typename vector_type<half_t, 8>::type;
 using half16_t = typename vector_type<half_t, 16>::type;
 
 // bfp16
@@ -439,8 +438,8 @@ struct vector_type<int8_t, 16>
 // hack for int8x4_t, because compiler does not have native support for int8x4_t
 // int8x4_t is defined as int32_t
 using int8x4_t  = typename vector_type<int8_t, 4>::type;
-using int8x8_t  = vector_type<int8_t, 8>;
-using int8x16_t = vector_type<int8_t, 16>;
+using int8x8_t  = typename vector_type<int8_t, 8>::type;
+using int8x16_t = typename vector_type<int8_t, 16>::type;
 
 // data type conversion
 template <typename T>
