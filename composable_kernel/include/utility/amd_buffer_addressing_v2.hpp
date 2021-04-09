@@ -6,27 +6,27 @@
 namespace ck {
 
 template <typename T>
-union BufferResource_v2
+union BufferResource
 {
     // 128 bit SGPRs to supply buffer resource in buffer instructions
     // https://rocm-documentation.readthedocs.io/en/latest/GCN_ISA_Manuals/testdocbook.html#vector-memory-buffer-instructions
     int32x4_t data;
-    StaticallyIndexedArray<T*, 2> address;
-    StaticallyIndexedArray<int32_t, 4> range;
-    StaticallyIndexedArray<int32_t, 4> config;
+    T* address[2];
+    int32_t range[4];
+    int32_t config[4];
 };
 
 template <typename T>
 __device__ int32x4_t make_wave_buffer_resource(T* p_wave, index_t data_space_size)
 {
-    BufferResource_v2<T> wave_buffer_resource;
+    BufferResource<T> wave_buffer_resource;
 
     // wavewise base address (64 bit)
-    wave_buffer_resource.address(Number<0>{}) = const_cast<remove_cv_t<T>*>(p_wave);
+    wave_buffer_resource.address[0] = const_cast<remove_cv_t<T>*>(p_wave);
     // wavewise range (32 bit)
-    wave_buffer_resource.range(Number<2>{}) = data_space_size * sizeof(T);
+    wave_buffer_resource.range[2] = data_space_size * sizeof(T);
     // wavewise setting (32 bit)
-    wave_buffer_resource.config(Number<3>{}) = CK_BUFFER_RESOURCE_3RD_DWORD;
+    wave_buffer_resource.config[3] = CK_BUFFER_RESOURCE_3RD_DWORD;
 
     return wave_buffer_resource.data;
 }
@@ -37,19 +37,6 @@ __llvm_amdgcn_raw_buffer_load_i8(int32x4_t srsrc,
                                  index_t voffset,
                                  index_t soffset,
                                  index_t glc_slc) __asm("llvm.amdgcn.raw.buffer.load.i8");
-
-__device__ int8x2_t
-__llvm_amdgcn_raw_buffer_load_i8x2(int32x4_t srsrc,
-                                   index_t voffset,
-                                   index_t soffset,
-                                   index_t glc_slc) __asm("llvm.amdgcn.raw.buffer.load.v2i8");
-
-__device__ int8x4_t
-__llvm_amdgcn_raw_buffer_load_i8x4(int32x4_t srsrc,
-                                   index_t voffset,
-                                   index_t soffset,
-                                   index_t glc_slc) __asm("llvm.amdgcn.raw.buffer.load.v4i8");
-
 __device__ int16_t
 __llvm_amdgcn_raw_buffer_load_i16(int32x4_t srsrc,
                                   index_t voffset,
@@ -117,20 +104,6 @@ __llvm_amdgcn_raw_buffer_store_i8(int8_t vdata,
                                   index_t voffset,
                                   index_t soffset,
                                   index_t glc_slc) __asm("llvm.amdgcn.raw.buffer.store.i8");
-
-__device__ void
-__llvm_amdgcn_raw_buffer_store_i8x2(int8x2_t vdata,
-                                    int32x4_t rsrc,
-                                    index_t voffset,
-                                    index_t soffset,
-                                    index_t glc_slc) __asm("llvm.amdgcn.raw.buffer.store.v2i8");
-
-__device__ void
-__llvm_amdgcn_raw_buffer_store_i8x4(int8x4_t vdata,
-                                    int32x4_t rsrc,
-                                    index_t voffset,
-                                    index_t soffset,
-                                    index_t glc_slc) __asm("llvm.amdgcn.raw.buffer.store.v4i8");
 
 __device__ void
 __llvm_amdgcn_raw_buffer_store_i16(int16_t vdata,
@@ -210,7 +183,6 @@ amd_buffer_load_impl_v2(int32x4_t src_wave_buffer_resource,
                         index_t src_wave_addr_offset)
 {
     static_assert((is_same<T, float>::value && (N == 1 || N == 2 || N == 4 || N == 8)) ||
-                      (is_same<T, int8_t>::value && (N == 1 || N == 2 || N == 4 || N == 8)) ||
                       (is_same<T, half_t>::value && (N == 1 || N == 2 || N == 4)) ||
                       (is_same<T, half2_t>::value && (N == 1)) ||
                       (is_same<T, half4_t>::value && (N == 1)) ||
@@ -334,38 +306,6 @@ amd_buffer_load_impl_v2(int32x4_t src_wave_buffer_resource,
                                                     src_thread_addr_offset,
                                                     src_wave_addr_offset + 4 * sizeof(int32_t),
                                                     0);
-            return tmp.Vector();
-        }
-    }
-    else if constexpr(is_same<T, int8_t>::value)
-    {
-        if constexpr(N == 1)
-        {
-            return __llvm_amdgcn_raw_buffer_load_i8(
-                src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
-        }
-        else if constexpr(N == 2)
-        {
-            return __llvm_amdgcn_raw_buffer_load_i8x2(
-                src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
-        }
-        else if constexpr(N == 4)
-        {
-            return __llvm_amdgcn_raw_buffer_load_i8x4(
-                src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
-        }
-        else if constexpr(N == 8)
-        {
-            vector_type<int8_t, 8> tmp;
-
-            tmp.Vectors(Number<4>{})(Number<0>{}) = __llvm_amdgcn_raw_buffer_load_i8x4(
-                src_wave_buffer_resource, src_thread_addr_offset, src_wave_addr_offset, 0);
-
-            tmp.Vectors(Number<4>{})(Number<1>{}) =
-                __llvm_amdgcn_raw_buffer_load_i8x4(src_wave_buffer_resource,
-                                                   src_thread_addr_offset,
-                                                   src_wave_addr_offset + 4 * sizeof(int8_t),
-                                                   0);
 
             return tmp.Vector();
         }
