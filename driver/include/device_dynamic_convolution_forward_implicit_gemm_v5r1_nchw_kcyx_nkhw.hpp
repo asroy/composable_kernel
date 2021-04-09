@@ -10,6 +10,7 @@ template <class TInWei,
           class TOut,
           class InDesc,
           class WeiDesc,
+          class AddDesc,
           class OutDesc,
           class ConvStrides,
           class ConvDilations,
@@ -20,8 +21,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     const Tensor<TInWei>& in_n_c_hi_wi,
     WeiDesc,
     const Tensor<TInWei>& wei_k_c_y_x,
+    AddDesc,
+    const Tensor<TOut>& add_n_k_2ho_2wo,
     OutDesc,
-    Tensor<TOut>& add_n_k_ho_wo,
     Tensor<TOut>& out_n_k_ho_wo,
     ConvStrides,
     ConvDilations,
@@ -36,8 +38,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
 
     DeviceMem in_n_c_hi_wi_device_buf(sizeof(TInWei) * in_n_c_hi_wi.mDesc.GetElementSpace());
     DeviceMem wei_k_c_y_x_device_buf(sizeof(TInWei) * wei_k_c_y_x.mDesc.GetElementSpace());
-    DeviceMem add_n_k_ho_wo_device_buf(sizeof(TOut) * add_n_k_ho_wo.mDesc.GetElementSpace());
-    DeviceMem out_n_k_ho_wo_device_buf(sizeof(TOut) * out_n_k_ho_wo.mDesc.GetElementSpace());
+    DeviceMem add_n_k_2ho_2wo_device_buf(sizeof(TOut) * add_n_k_2ho_2wo.mDesc.GetElementSpace());
+    DeviceMem out_n_k_ho_wo_device_buf(sizeof(TOut) * add_n_k_2ho_2wo.mDesc.GetElementSpace());
 
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -84,6 +86,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, C0, Y, X));
     const auto out_n_k0_ho_wo_k1_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Ho, Wo, K1));
+    const auto add_n_k0_2ho_2wo_k1_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, 2 * Ho, 2 * Wo, K1));
 
     const auto conv_strides     = sequence_to_tuple_of_number(ConvStrides{});
     const auto conv_dilations   = sequence_to_tuple_of_number(ConvDilations{});
@@ -95,10 +99,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
         make_native_tensor_descriptor_packed(Sequence<N, C0, Hi, Wi, C1>{})));
     Tensor<TInWei> wei_k_c0_y_x_c1(make_HostTensorDescriptor(
         make_native_tensor_descriptor_packed(Sequence<K, C0, Y, X, C1>{})));
-    Tensor<TOut> add_n_k0_ho_wo_k1(make_HostTensorDescriptor(
-        make_native_tensor_descriptor_packed(Sequence<N, K0, Ho, Wo, K1>{})));
+    Tensor<TOut> add_n_k0_2ho_2wo_k1(make_HostTensorDescriptor(
+        make_native_tensor_descriptor_packed(Sequence<N, K0, 2 * Ho, 2 * Wo, K1>{})));
     Tensor<TOut> out_n_k0_ho_wo_k1(make_HostTensorDescriptor(
-        make_native_tensor_descriptor_packed(Sequence<N, K0, Ho, Wo, K1>{})));
+        make_native_tensor_descriptor_packed(Sequence<N, K0, 2 * Ho, 2 * Wo, K1>{})));
 
     auto f_nchw2nc0hwc1 = [&](auto n, auto hi, auto wi, auto c) {
         in_n_c0_hi_wi_c1(n, c / InWeiVectorSize, hi, wi, c % InWeiVectorSize) =
@@ -111,8 +115,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     };
 
     auto f_nkhw_to_nk0hwk1 = [&](auto n, auto k, auto ho, auto wo) {
-        add_n_k0_ho_wo_k1(n, k / InWeiVectorSize, ho, wo, k % InWeiVectorSize) =
-            add_n_k_ho_wo(n, k, ho, wo);
+        add_n_k0_2ho_2wo_k1(n, k / InWeiVectorSize, ho, wo, k % InWeiVectorSize) =
+            add_n_k_2ho_2wo(n, k, ho, wo);
     };
 
     make_ParallelTensorFunctor(f_nchw2nc0hwc1, N, Hi, Wi, C)();
@@ -121,7 +125,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
 
     in_n_c_hi_wi_device_buf.ToDevice(in_n_c0_hi_wi_c1.mData.data());
     wei_k_c_y_x_device_buf.ToDevice(wei_k_c0_y_x_c1.mData.data());
-    add_n_k_ho_wo_device_buf.ToDevice(add_n_k0_ho_wo_k1.mData.data());
+    add_n_k_2ho_2wo_device_buf.ToDevice(add_n_k0_2ho_2wo_k1.mData.data());
 
 #if 1
     // cdata = 64, BlockSize = 64, 16x8x32x4
@@ -176,20 +180,32 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
 
     constexpr auto conv_driver =
 #if 0
-        DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad<
+        DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
 #else
-        DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad<
+        DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 #endif
-                       BlockSize,
-                   typename vector_type<TInWei, InWeiVectorSize>::type, TAcc, TOut, KPerBlock,
-                   HoPerBlock, WoPerBlock, EPerBlock, KPerThread, HoPerThread, WoPerThread,
-                   EPerThread, ABlockTransferThreadSliceLengths_E_K,
-                   ABlockTransferThreadClusterLengths_E_K, ABlockTransferSrcScalarPerVector_E,
-                   ABlockTransferDstScalarPerVector_K, BThreadTransferSrcScalarPerVector_W,
-                   CThreadTransferDstScalarPerVector_W > {};
+        <BlockSize,
+         typename vector_type<TInWei, InWeiVectorSize>::type,
+         TAcc,
+         TOut,
+         KPerBlock,
+         HoPerBlock,
+         WoPerBlock,
+         EPerBlock,
+         KPerThread,
+         HoPerThread,
+         WoPerThread,
+         EPerThread,
+         ABlockTransferThreadSliceLengths_E_K,
+         ABlockTransferThreadClusterLengths_E_K,
+         ABlockTransferSrcScalarPerVector_E,
+         ABlockTransferDstScalarPerVector_K,
+         BThreadTransferSrcScalarPerVector_W,
+         CThreadTransferDstScalarPerVector_W>{};
 
     conv_driver.Run(wei_k_c0_y_x_desc,
                     in_n_c0_hi_wi_desc,
+                    add_n_k0_2ho_2wo_k1_desc,
                     out_n_k0_ho_wo_k1_desc,
                     conv_strides,
                     conv_dilations,
@@ -199,15 +215,18 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
                         wei_k_c_y_x_device_buf.GetDeviceBuffer()),
                     static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
                         in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
-                    static_cast<TOut*>(add_n_k_ho_wo_device_buf.GetDeviceBuffer()),
+                    static_cast<TOut*>(add_n_k_2ho_2wo_device_buf.GetDeviceBuffer()),
                     static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()));
+
 
     out_n_k_ho_wo_device_buf.FromDevice(out_n_k0_ho_wo_k1.mData.data());
 
+#if 0
     auto f_nk0hwk1_to_nkhw = [&](auto n, auto k, auto ho, auto wo) {
         out_n_k_ho_wo(n, k, ho, wo) =
             out_n_k0_ho_wo_k1(n, k / InWeiVectorSize, ho, wo, k % InWeiVectorSize);
     };
 
     make_ParallelTensorFunctor(f_nk0hwk1_to_nkhw, N, K, Ho, Wo)();
+#endif
 }

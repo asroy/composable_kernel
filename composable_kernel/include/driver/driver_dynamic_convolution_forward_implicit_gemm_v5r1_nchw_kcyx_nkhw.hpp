@@ -168,7 +168,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{}));
 
-#if 1
+#if 0
         // GEMM
         using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v3<
             BlockSize,

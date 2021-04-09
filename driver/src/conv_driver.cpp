@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 
     using LeftPads                   = Sequence<0, 0>;
     using RightPads                  = Sequence<0, 0>;
-#elif 1
+#elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
     constexpr index_t HI = 1080;
@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<1, 1>;
     using RightPads = Sequence<1, 1>;
-#elif 0
+#elif 1
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
     constexpr index_t HI = 540;
@@ -622,9 +622,16 @@ int main(int argc, char* argv[])
     auto out_nkhw_desc = get_convolution_output_default_4d_tensor_descriptor(
         in_nchw_desc, wei_kcyx_desc, ConvStrides{}, ConvDilations{}, LeftPads{}, RightPads{});
 
+    constexpr auto Ho = out_nkhw_desc.GetLength(Number<2>{});
+    constexpr auto Wo = out_nkhw_desc.GetLength(Number<3>{});
+
+    auto add_nkhw_desc = make_native_tensor_descriptor_packed(Sequence<N, K, Ho * 2, Wo * 2>{});
+
     ostream_tensor_descriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
     ostream_tensor_descriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
     ostream_tensor_descriptor(out_nkhw_desc, std::cout << "out_nkhw_desc: ");
+    ostream_tensor_descriptor(add_nkhw_desc, std::cout << "add_nkhw_desc: ");
+
     print_array("LeftPads", to_multi_index(LeftPads{}));
     print_array("RightPads", to_multi_index(RightPads{}));
     print_array("ConvStrides", to_multi_index(ConvStrides{}));
@@ -654,10 +661,10 @@ int main(int argc, char* argv[])
 
     Tensor<in_data_t> in_nchw(make_HostTensorDescriptor(in_nchw_desc));
     Tensor<in_data_t> wei_kcyx(make_HostTensorDescriptor(wei_kcyx_desc));
-    Tensor<out_data_t> out_nkhw_host(make_HostTensorDescriptor(out_nkhw_desc));
+    Tensor<out_data_t> add_nkhw(make_HostTensorDescriptor(add_nkhw_desc));
 
-    Tensor<out_data_t> add_nkhw(make_HostTensorDescriptor(out_nkhw_desc));
-    Tensor<out_data_t> out_nkhw_device(make_HostTensorDescriptor(out_nkhw_desc));
+    Tensor<out_data_t> out_nkhw_host(make_HostTensorDescriptor(add_nkhw_desc));
+    Tensor<out_data_t> out_nkhw_device(make_HostTensorDescriptor(add_nkhw_desc));
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
@@ -775,8 +782,9 @@ int main(int argc, char* argv[])
         in_nchw,
         wei_kcyx_desc,
         wei_kcyx,
-        out_nkhw_desc,
+        add_nkhw_desc,
         add_nkhw,
+        out_nkhw_desc,
         out_nkhw_device,
         ConvStrides{},
         ConvDilations{},
