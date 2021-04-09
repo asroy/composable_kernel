@@ -437,6 +437,7 @@ struct vector_type<int8_t, 16>
 // i8
 // hack for int8x4_t, because compiler does not have native support for int8x4_t
 // int8x4_t is defined as int32_t
+using int8x2_t  = typename vector_type<int8_t, 2>::type;
 using int8x4_t  = typename vector_type<int8_t, 4>::type;
 using int8x8_t  = typename vector_type<int8_t, 8>::type;
 using int8x16_t = typename vector_type<int8_t, 16>::type;
