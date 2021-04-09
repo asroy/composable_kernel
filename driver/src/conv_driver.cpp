@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
     constexpr index_t X  = 3;
 
     using ConvStrides   = Sequence<1, 1>;
-    using ConvDilations = Sequence<2, 2>;
+    using ConvDilations = Sequence<1, 1>;
 
     using LeftPads  = Sequence<1, 1>;
     using RightPads = Sequence<1, 1>;
@@ -700,7 +700,8 @@ int main(int argc, char* argv[])
         };
         wei_kcyx.GenerateTensorValue(gen_wei, num_thread);
 #endif
-        add_nkhw.GenerateTensorValue(GeneratorTensor_2{-1, 1}, num_thread);
+        // add_nkhw.GenerateTensorValue(GeneratorTensor_2{-1, 1}, num_thread);
+        add_nkhw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
     }
 
 #if 0
@@ -806,7 +807,7 @@ int main(int argc, char* argv[])
 
         check_error(out_nkhw_host, out_nkhw_device);
 
-#if 0
+#if 1
         if(do_log)
         {
             LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;

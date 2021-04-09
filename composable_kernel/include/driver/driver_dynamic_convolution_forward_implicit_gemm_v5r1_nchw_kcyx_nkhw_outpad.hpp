@@ -39,7 +39,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
               typename InRightPads>
     __host__ void Run(const DynamicTensorDescriptor<Wei...>& wei_k_c_y_x_global_desc,
                       const DynamicTensorDescriptor<In...>& in_n_c_hi_wi_global_desc,
-                      const DynamicTensorDescriptor<Add...>& add_n_k0_2ho_2wo_k1_global_desc,
+                      const DynamicTensorDescriptor<Add...>& add_n_k0_hox2_wox2_k1_global_desc,
                       const DynamicTensorDescriptor<Out...>& out_n_k0_ho_wo_k1_global_desc,
                       const ConvStrides& conv_strides,
                       const ConvDilations& conv_dilations,
@@ -65,6 +65,9 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
         const auto Ho = out_n_k0_ho_wo_k1_global_desc.GetLength(I2);
         const auto Wo = out_n_k0_ho_wo_k1_global_desc.GetLength(I3);
+
+        const auto Hox2 = Ho * 2;
+        const auto Wox2 = Wo * 2;
 
         const auto K1 = out_n_k0_ho_wo_k1_global_desc.GetLength(I4);
 
@@ -146,17 +149,15 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             make_tuple(Sequence<1, 4>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 
-
         // add tensor
-        const auto add_k_n_2hop_2wop_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, 2 * Ho, 2 * Wo, K1)),
+        const auto add_k_n_hopx2_wopx2_global_desc = transform_dynamic_tensor_descriptor(
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Hox2, Wox2, K1)),
             make_tuple(make_merge_transform(make_tuple(K0, K1)),
                        make_pass_through_transform(N),
-                       make_pad_transform(2 * Ho, 0, AddRightPadH),
-                       make_pad_transform(2 * Wo, 0, AddRightPadW)),
+                       make_pad_transform(Hox2, 0, AddRightPadH),
+                       make_pad_transform(Wox2, 0, AddRightPadW)),
             make_tuple(Sequence<1, 4>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
-
 
         const auto E = C * Y * X;
 
@@ -209,7 +210,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             InMemoryDataOperation::Set,
             decltype(wei_e_k_global_desc),
             decltype(in_e_n_ho_wo_global_desc),
-            decltype(add_k_n_2hop_2wop_global_desc),
+            decltype(add_k_n_hopx2_wopx2_global_desc),
             decltype(out_k_n_hop_wop_global_desc),
             KPerBlock,
             HoPerBlock,
@@ -269,7 +270,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                                const FloatAB*,
                                                decltype(in_e_n_ho_wo_global_desc),
                                                const FloatAB*,
-                                               decltype(add_k_n_2hop_2wop_global_desc),
+                                               decltype(add_k_n_hopx2_wopx2_global_desc),
                                                const FloatC*,
                                                decltype(out_k_n_hop_wop_global_desc),
                                                FloatC*,
@@ -285,7 +286,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   p_wei_global,
                                   in_e_n_ho_wo_global_desc,
                                   p_in_global,
-                                  add_k_n_2hop_2wop_global_desc,
+                                  add_k_n_hopx2_wopx2_global_desc,
                                   p_d_global,
                                   out_k_n_hop_wop_global_desc,
                                   p_out_global,
@@ -300,7 +301,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                                const FloatAB*,
                                                decltype(in_e_n_ho_wo_global_desc),
                                                const FloatAB*,
-                                               decltype(add_k_n_2hop_2wop_global_desc),
+                                               decltype(add_k_n_hopx2_wopx2_global_desc),
                                                const FloatC*,
                                                decltype(out_k_n_hop_wop_global_desc),
                                                FloatC*,
@@ -316,7 +317,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   p_wei_global,
                                   in_e_n_ho_wo_global_desc,
                                   p_in_global,
-                                  add_k_n_2hop_2wop_global_desc,
+                                  add_k_n_hopx2_wopx2_global_desc,
                                   p_d_global,
                                   out_k_n_hop_wop_global_desc,
                                   p_out_global,
@@ -331,7 +332,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                                const FloatAB*,
                                                decltype(in_e_n_ho_wo_global_desc),
                                                const FloatAB*,
-                                               decltype(add_k_n_2hop_2wop_global_desc),
+                                               decltype(add_k_n_hopx2_wopx2_global_desc),
                                                const FloatC*,
                                                decltype(out_k_n_hop_wop_global_desc),
                                                FloatC*,
@@ -347,7 +348,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   p_wei_global,
                                   in_e_n_ho_wo_global_desc,
                                   p_in_global,
-                                  add_k_n_2hop_2wop_global_desc,
+                                  add_k_n_hopx2_wopx2_global_desc,
                                   p_d_global,
                                   out_k_n_hop_wop_global_desc,
                                   p_out_global,
@@ -362,7 +363,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                                const FloatAB*,
                                                decltype(in_e_n_ho_wo_global_desc),
                                                const FloatAB*,
-                                               decltype(add_k_n_2hop_2wop_global_desc),
+                                               decltype(add_k_n_hopx2_wopx2_global_desc),
                                                const FloatC*,
                                                decltype(out_k_n_hop_wop_global_desc),
                                                FloatC*,
@@ -378,7 +379,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   p_wei_global,
                                   in_e_n_ho_wo_global_desc,
                                   p_in_global,
-                                  add_k_n_2hop_2wop_global_desc,
+                                  add_k_n_hopx2_wopx2_global_desc,
                                   p_d_global,
                                   out_k_n_hop_wop_global_desc,
                                   p_out_global,
