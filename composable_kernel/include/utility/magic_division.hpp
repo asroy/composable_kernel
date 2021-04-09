@@ -10,7 +10,17 @@
 namespace ck {
 
 // magic number division
-struct magic_division
+// Caution:
+//   1. For uint32_t as dividend: magic number division implementation being used would produce
+//   correct result if the dividend is uint32_t and its value is within 31-bit value range.
+//   2. For int32_t as dividendd: magic number division for int32_t dividened has not been
+//   implemented, the int32_t dividend would be bit-wise interpreted as uint32_t and magic number
+//   division implementation for uint32_t is then used. Therefore, dividend value need to be
+//   non-negative.
+// TODO:
+//   1. Implement magic number divison for int32_t
+//   2. Implement magic number divison for unit32_t with 32-bit value range
+struct MagicDivision
 {
     // uint32_t
     __host__ __device__ static constexpr auto CalculateMagicNumbers(uint32_t divisor)
@@ -100,12 +110,24 @@ struct magic_division
         return CalculateMagicShift(integral_constant<uint32_t, Divisor>{});
     }
 
-    // magic division
+    // magic division for uint32_t
     __host__ __device__ static constexpr uint32_t
     DoMagicDivision(uint32_t dividend, uint32_t multiplier, uint32_t shift)
     {
         uint32_t tmp = (uint64_t(dividend) * uint64_t(multiplier)) >> 32;
         return (tmp + dividend) >> shift;
+    }
+
+    // HACK: magic division for int32_t
+    // HACK: use dividend_i32 as if it's uint32_t, dividend_i32 need to be
+    // non-negative for result to be correct
+    // TODO: figure out how to do magic number divison for int32_t as dividended
+    __host__ __device__ static constexpr int32_t
+    DoMagicDivision(int32_t dividend_i32, uint32_t multiplier, uint32_t shift)
+    {
+        uint32_t dividend_u32 = as_type<uint32_t>(dividend_i32);
+        uint32_t tmp          = ((uint64_t)dividend_u32 * (uint64_t)multiplier) >> 32;
+        return (tmp + dividend_i32) >> shift;
     }
 };
 
