@@ -142,6 +142,11 @@
 #define CK_WORKAROUND_SWDEV_275126 1
 #endif
 
+// workaround for compiler crash when using buffer load/store for i8
+#ifndef CK_WORKAROUND_SWDEV_XXXXXX
+#define CK_WORKAROUND_SWDEV_XXXXXX 1
+#endif
+
 namespace ck {
 
 enum AddressSpace
