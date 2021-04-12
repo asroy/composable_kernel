@@ -366,10 +366,11 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             const index_t wox2_thread_data_on_global =
                 wox2_block_data_on_global + wo_thread_id * WoPerThreadx2;
 
-            static_assert(KPerThread % 16 == 0, "");
-            constexpr auto KPerThreadAdd = KPerThread / 16;
+            static_assert(KPerThread % CThreadTransferDstScalarPerVector == 0, "");
+            constexpr auto KPerThreadAdd = KPerThread / CThreadTransferDstScalarPerVector;
 
-            const index_t k_block_data_on_global_add  = k_block_work_id * KPerBlock / 16;
+            const index_t k_block_data_on_global_add =
+                k_block_work_id * KPerBlock / CThreadTransferDstScalarPerVector;
             const index_t k_thread_data_on_global_add =
                 k_block_data_on_global_add + k_thread_id * KPerThreadAdd;
 
@@ -382,11 +383,11 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             FloatAB p_d_thread[d_k_n_hox2_wox2_thread_desc.GetElementSpaceSize()];
 
             constexpr auto vector_len = sizeof(FloatAB) / sizeof(FloatC);
-            static_assert(vector_len == 16);
+            static_assert(vector_len == CThreadTransferDstScalarPerVector);
 
             constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
 
-#if 1
+#if 0
             ThreadwiseDynamicTensorSliceTransfer_v2<
                 FloatAB,
                 FloatAB,
@@ -415,17 +416,26 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
 #endif
 
-#if 0
+#if 1
             for(index_t k_i = 0; k_i < KPerThreadAdd; ++k_i)
             {
                 for(index_t h_i = 0; h_i < HoPerThreadx2; ++h_i)
                 {
                     for(index_t w_i = 0; w_i < WoPerThreadx2; ++w_i)
                     {
+                        vector_type<FloatC, vector_len> d_vec;
+
+                        d_vec.Vector() = p_d_thread[d_k_n_hox2_wox2_thread_desc.CalculateOffset(
+                                make_tuple(k_i, 0, h_i, w_i))];
+
+                        static_for<0, vector_len, 1>{}([&](auto i) {
+                                d_vec.Scalars()(i) = 0;
+                                //p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(
+                                        //make_tuple(k_i * vector_len + i, 0, h_i / 2, w_i / 2))];
+                                });
+
                         p_d_thread[d_k_n_hox2_wox2_thread_desc.CalculateOffset(
-                            make_tuple(k_i, 0, h_i, w_i))] += 1; 
-                            //p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(
-                                    //make_tuple(k_i, 0, h_i / 2, w_i / 2))];
+                            make_tuple(k_i, 0, h_i, w_i))] = d_vec.Vector();
                     }
                 }
             }

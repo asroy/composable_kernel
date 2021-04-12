@@ -151,8 +151,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
         // add tensor
         const auto add_k_n_hopx2_wopx2_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Hox2, Wox2, K1)),
-            make_tuple(make_merge_transform(make_tuple(K0, K1)),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Hox2, Wox2, 1)),
+            make_tuple(make_merge_transform(make_tuple(K0, 1)),
                        make_pass_through_transform(N),
                        make_pad_transform(Hox2, 0, AddRightPadH),
                        make_pad_transform(Wox2, 0, AddRightPadW)),
