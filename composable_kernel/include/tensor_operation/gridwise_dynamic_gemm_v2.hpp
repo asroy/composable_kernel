@@ -75,7 +75,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                         const BGlobalDesc& b_e_n_ho_wo_global_desc,
                         const FloatAB* __restrict__ p_b_global,
                         const DGlobalDesc& d_k_n_hox2_wox2_global_desc,
-                        const FloatC* __restrict__ p_d_global,
+                        FloatAB* __restrict__ p_d_global,
                         const CGlobalDesc& c_k_n_ho_wo_global_desc,
                         FloatC* __restrict__ p_c_global,
                         FloatAB* __restrict__ p_shared_block,
@@ -174,6 +174,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         const index_t wo_thread_data_on_global =
             wo_block_data_on_global + wo_thread_id * WoPerThread;
 
+#if 0
         // A matrix blockwise copy
         auto a_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
@@ -267,7 +268,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
         index_t b_block_data_begin = 0;
 
-#if 1
         if constexpr(HasMainKBlockLoop)
         {
             FloatAB* p_b_thread_even = p_b_thread_double;
@@ -365,35 +365,44 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                 hox2_block_data_on_global + ho_thread_id * HoPerThreadx2;
             const index_t wox2_thread_data_on_global =
                 wox2_block_data_on_global + wo_thread_id * WoPerThreadx2;
-            const index_t k_thread_data_on_global =
-                k_block_data_on_global + k_thread_id * KPerThread;
+
+            static_assert(KPerThread % 16 == 0, "");
+            constexpr auto KPerThreadAdd = KPerThread / 16;
+
+            const index_t k_block_data_on_global_add  = k_block_work_id * KPerBlock / 16;
+            const index_t k_thread_data_on_global_add =
+                k_block_data_on_global_add + k_thread_id * KPerThreadAdd;
 
             constexpr auto d_k_n_hox2_wox2_thread_desc =
-                make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(Number<KPerThread>{},
+                make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(Number<KPerThreadAdd>{},
                                                                           Number<1>{},
                                                                           Number<HoPerThreadx2>{},
                                                                           Number<WoPerThreadx2>{}));
 
-            FloatC p_d_thread[d_k_n_hox2_wox2_thread_desc.GetElementSpaceSize()];
+            FloatAB p_d_thread[d_k_n_hox2_wox2_thread_desc.GetElementSpaceSize()];
+
+            constexpr auto vector_len = sizeof(FloatAB) / sizeof(FloatC);
+            static_assert(vector_len == 16);
 
             constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
 
 #if 1
             ThreadwiseDynamicTensorSliceTransfer_v2<
-                FloatC,
-                FloatC,
+                FloatAB,
+                FloatAB,
                 decltype(d_k_n_hox2_wox2_global_desc),
                 decltype(d_k_n_hox2_wox2_thread_desc),
-                Sequence<KPerThread, 1, HoPerThreadx2, WoPerThreadx2>,
+                Sequence<KPerThreadAdd, 1, HoPerThreadx2, WoPerThreadx2>,
                 CThreadTransferSrcDstAccessOrder,
                 CThreadTransferSrcDstVectorDim,
-                CThreadTransferDstScalarPerVector,
+                // CThreadTransferDstScalarPerVector,
+                1,
                 AddressSpace::Global,
                 AddressSpace::Vgpr,
                 InMemoryDataOperation::Set,
                 1,
                 true>(d_k_n_hox2_wox2_global_desc,
-                      make_multi_index(k_thread_data_on_global,
+                      make_multi_index(k_thread_data_on_global_add,
                                        0,
                                        hox2_thread_data_on_global,
                                        wox2_thread_data_on_global))
@@ -406,17 +415,17 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
 #endif
 
-#if 1
-            for(index_t k_i = 0; k_i < KPerThread; ++k_i)
+#if 0
+            for(index_t k_i = 0; k_i < KPerThreadAdd; ++k_i)
             {
                 for(index_t h_i = 0; h_i < HoPerThreadx2; ++h_i)
                 {
                     for(index_t w_i = 0; w_i < WoPerThreadx2; ++w_i)
                     {
                         p_d_thread[d_k_n_hox2_wox2_thread_desc.CalculateOffset(
-                            make_tuple(k_i, 0, h_i, w_i))] +=
-                            p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(
-                                make_tuple(k_i, 0, h_i / 2, w_i / 2))];
+                            make_tuple(k_i, 0, h_i, w_i))] += 1; 
+                            //p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(
+                                    //make_tuple(k_i, 0, h_i / 2, w_i / 2))];
                     }
                 }
             }
@@ -424,20 +433,21 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
 #if 1
             ThreadwiseDynamicTensorSliceTransfer_v1r3<
-                FloatC,
-                FloatC,
+                FloatAB,
+                FloatAB,
                 decltype(d_k_n_hox2_wox2_thread_desc),
                 decltype(d_k_n_hox2_wox2_global_desc),
-                Sequence<KPerThread, 1, HoPerThreadx2, WoPerThreadx2>,
+                Sequence<KPerThreadAdd, 1, HoPerThreadx2, WoPerThreadx2>,
                 CThreadTransferSrcDstAccessOrder,
                 CThreadTransferSrcDstVectorDim,
-                CThreadTransferDstScalarPerVector,
+                // CThreadTransferDstScalarPerVector,
+                1,
                 AddressSpace::Vgpr,
                 AddressSpace::Global,
                 CGlobalMemoryDataOperation,
                 1,
                 true>(d_k_n_hox2_wox2_global_desc,
-                      make_multi_index(k_thread_data_on_global,
+                      make_multi_index(k_thread_data_on_global_add,
                                        0,
                                        hox2_thread_data_on_global,
                                        wox2_thread_data_on_global))
@@ -445,7 +455,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                      make_tuple(I0, I0, I0, I0),
                      p_d_thread,
                      d_k_n_hox2_wox2_global_desc,
-                     p_c_global,
+                     p_d_global,
                      c_k_n_ho_wo_global_tensor_iterator_hacks);
 #endif
         }
@@ -458,7 +468,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                         const BGlobalDesc& b_e_n_ho_wo_global_desc,
                         const FloatAB* __restrict__ p_b_global,
                         const DGlobalDesc& d_k_n_hox2_wox2_global_desc,
-                        const FloatC* __restrict__ p_d_global,
+                        FloatAB* __restrict__ p_d_global,
                         const CGlobalDesc& c_k_n_ho_wo_global_desc,
                         FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
@@ -488,7 +498,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                         const BGlobalDesc* p_b_e_n_ho_wo_global_desc,
                         const FloatAB* __restrict__ p_b_global,
                         const DGlobalDesc& d_k_n_hox2_wox2_global_desc,
-                        const FloatC* __restrict__ p_d_global,
+                        FloatAB* __restrict__ p_d_global,
                         const CGlobalDesc* p_c_k_n_ho_wo_global_desc,
                         FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
@@ -517,7 +527,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                         const void* p_b_e_n_ho_wo_global_desc,
                         const FloatAB* __restrict__ p_b_global,
                         const DGlobalDesc& d_k_n_hox2_wox2_global_desc,
-                        const FloatC* __restrict__ p_d_global,
+                        FloatAB* __restrict__ p_d_global,
                         const void* p_c_k_n_ho_wo_global_desc,
                         FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,

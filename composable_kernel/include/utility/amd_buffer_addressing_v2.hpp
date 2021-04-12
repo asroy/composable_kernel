@@ -367,6 +367,7 @@ __device__ void amd_buffer_store_impl_v2(const typename vector_type<T, N>::type 
         (is_same<T, float>::value && (N == 1 || N == 2 || N == 4)) ||
             (is_same<T, int32_t>::value && (N == 1 || N == 2 || N == 4)) ||
             (is_same<T, int8_t>::value && (N == 1 || N == 2 || N == 4 || N == 8 || N == 16)) ||
+            (is_same<T, int32x4_t>::value && (N == 1)) ||
             (is_same<T, half_t>::value && (N == 1 || N == 2 || N == 4 || N == 8)),
         "wrong! not implemented");
 
@@ -466,6 +467,14 @@ __device__ void amd_buffer_store_impl_v2(const typename vector_type<T, N>::type 
                                                  dst_wave_addr_offset,
                                                  0);
         }
+    }
+    else if constexpr(is_same<T, int32x4_t>::value)
+    {
+        __llvm_amdgcn_raw_buffer_store_i32x4(src_thread_data,
+                                             dst_wave_buffer_resource,
+                                             dst_thread_addr_offset,
+                                             dst_wave_addr_offset,
+                                             0);
     }
     else if constexpr(is_same<T, half_t>::value)
     {

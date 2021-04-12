@@ -92,7 +92,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     const auto out_n_k0_ho_wo_k1_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Ho, Wo, K1));
     const auto add_n_k0_hox2_wox2_k1_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Hox2, Wox2, K1));
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Hox2, Wox2, 1));
 
     const auto conv_strides     = sequence_to_tuple_of_number(ConvStrides{});
     const auto conv_dilations   = sequence_to_tuple_of_number(ConvDilations{});
@@ -220,7 +220,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
                         wei_k_c_y_x_device_buf.GetDeviceBuffer()),
                     static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
                         in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
-                    static_cast<TOut*>(add_n_k_hox2_wox2_device_buf.GetDeviceBuffer()),
+                    static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
+                        add_n_k_hox2_wox2_device_buf.GetDeviceBuffer()),
                     static_cast<TOut*>(out_n_k_hox2_wox2_device_buf.GetDeviceBuffer()));
 
     out_n_k_hox2_wox2_device_buf.FromDevice(out_n_k0_hox2_wox2_k1.mData.data());
