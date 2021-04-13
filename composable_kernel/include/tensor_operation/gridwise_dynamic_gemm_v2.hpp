@@ -174,7 +174,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         const index_t wo_thread_data_on_global =
             wo_block_data_on_global + wo_thread_id * WoPerThread;
 
-#if 1
+#if 0
         // A matrix blockwise copy
         auto a_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
@@ -353,6 +353,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                 p_c_thread);
         }
 #endif
+
+#if 0
         // output: register to global memory
         {
             constexpr auto HoPerThreadx2 = HoPerThread * 2;
@@ -381,7 +383,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             constexpr auto vector_len = CThreadTransferDstScalarPerVector;
 
             constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
-#if 1
             vector_type<int8_t, vector_len> d_vec;
 
             for(index_t k_i = 0; k_i < KPerThreadAdd; ++k_i)
@@ -390,10 +391,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                 {
                     for(index_t w_i = 0; w_i < WoPerThreadx2; ++w_i)
                     {
-#if 1
                         ThreadwiseDynamicTensorSliceTransfer_v2<
                             FloatAB,
-                            decltype(d_vec),
+                            FloatAB,
                             decltype(d_k_n_hox2_wox2_global_desc),
                             decltype(d_k_n_hox2_wox2_thread_desc),
                             Sequence<1, 1, 1, 1>,
@@ -414,16 +414,16 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                  p_d_global,
                                  d_k_n_hox2_wox2_thread_desc,
                                  make_tuple(I0, I0, I0, I0),
-                                 d_vec,
+                                 &(d_vec.Vector()),
                                  c_k_n_ho_wo_global_tensor_iterator_hacks);
 
-#endif
                         static_for<0, vector_len, 1>{}([&](auto i) {
-                            d_vec.Scalars()(i) +=
-                                p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(
-                                    make_tuple(k_i * vector_len + i, 0, h_i / 2, w_i / 2))];
+                            // d_vec.Scalars()(i) +=
+                            // p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(
+                            // make_tuple(k_i * vector_len + i, 0, h_i / 2, w_i / 2))];
+                            d_vec.Vector() += 1;
                         });
-#if 1
+
                         ThreadwiseDynamicTensorSliceTransfer_v1r3<
                             FloatAB,
                             FloatAB,
@@ -449,12 +449,11 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                  d_k_n_hox2_wox2_global_desc,
                                  p_c_global,
                                  c_k_n_ho_wo_global_tensor_iterator_hacks);
-#endif
                     }
                 }
             }
-#endif
         }
+#endif
     }
 
     // pass tensor descriptor by reference
