@@ -400,6 +400,195 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
                         const SrcData* p_src,
                         const DstDesc&,
                         const DstSliceOriginIdx&,
+                        DstData& p_dst,
+                        const SrcIteratorHacks& src_iterator_hacks)
+    {
+        static_assert(DstDesc::IsKnownAtCompileTime(),
+                      "wrong! DstDesc need to known at compile-time");
+
+        static_assert(
+            is_known_at_compile_time<remove_cv_t<remove_reference_t<DstSliceOriginIdx>>>::value,
+            "wrong! DstSliceOrigin need to known at compile-time");
+
+        // DstDesc and dst_slice_origin_idx are known at compile-time
+        constexpr auto dst_desc             = remove_cv_t<remove_reference_t<DstDesc>>{};
+        constexpr auto dst_slice_origin_idx = DstSliceOriginIdx{};
+
+        constexpr auto I0 = Number<0>{};
+        constexpr auto I1 = Number<1>{};
+
+        // scalar per access on each dim
+        // TODO: don't use lambda_scalar_per_access
+        constexpr auto src_scalar_per_access = generate_sequence(
+            lambda_scalar_per_access<SrcVectorDim, SrcScalarPerVector>{}, Number<nDim>{});
+
+        constexpr auto src_scalar_step_in_vector =
+            generate_sequence(lambda_scalar_step_in_vector<SrcVectorDim>{}, Number<nDim>{});
+
+        constexpr auto access_lengths = SliceLengths{} / src_scalar_per_access;
+
+        constexpr auto dim_access_order = DimAccessOrder{};
+
+        constexpr auto ordered_access_lengths =
+            container_reorder_given_new2old(access_lengths, dim_access_order);
+
+        // make forward iterators
+        const auto src_forward_iterators = generate_tuple(
+            [&](auto i) {
+                Index forward_step;
+
+                static_for<0, nDim, 1>{}([&](auto j) {
+                    forward_step(j) = (i.value == j.value) ? src_scalar_per_access[i] : 0;
+                });
+
+                return make_dynamic_tensor_coordinate_iterator(
+                    src_desc, forward_step, src_iterator_hacks[I0][i]);
+            },
+            Number<nDim>{});
+
+        // make backward iterators
+        const auto src_backward_iterators = generate_tuple(
+            [&](auto i) {
+                Index backward_step;
+
+                static_for<0, nDim, 1>{}([&](auto j) {
+                    backward_step(j) = (i.value == j.value) ? -src_scalar_per_access[i] : 0;
+                });
+
+                return make_dynamic_tensor_coordinate_iterator(
+                    src_desc, backward_step, src_iterator_hacks[I1][i]);
+            },
+            Number<nDim>{});
+
+        // loop over tensor and copy
+        static_ford<decltype(ordered_access_lengths)>{}([&](auto ordered_access_idx) {
+            // judge move forward or move backward
+            constexpr auto forward_sweep = [&]() {
+                StaticallyIndexedArray<bool, nDim> forward_sweep;
+
+                forward_sweep(I0) = true;
+
+                static_for<1, nDim, 1>{}([&](auto i) {
+                    index_t tmp = ordered_access_idx[I0];
+
+                    static_for<0, i, 1>{}([&](auto j) {
+                        tmp = tmp * ordered_access_lengths[j] + ordered_access_idx[j];
+                    });
+
+                    forward_sweep(i) = tmp % 2 == 0;
+                });
+
+                return forward_sweep;
+            }();
+
+            // calculate src data index
+            constexpr auto src_data_idx = [&]() {
+                Index ordered_idx;
+
+                static_for<0, nDim, 1>{}([&](auto i) {
+                    ordered_idx(i) = forward_sweep[i]
+                                         ? ordered_access_idx[i]
+                                         : ordered_access_lengths[i] - 1 - ordered_access_idx[i];
+                });
+
+                auto src_data_idx = container_reorder_given_old2new(ordered_idx, dim_access_order) *
+                                    src_scalar_per_access;
+
+                return src_data_idx;
+            }();
+
+            // copy data
+            static_assert(DstAddressSpace == AddressSpace::Vgpr, "wrong! hardcode for vgpr dst");
+
+            vector_type<SrcData, SrcScalarPerVector> src_vector;
+
+            using src_vector_t = typename vector_type<SrcData, SrcScalarPerVector>::type;
+
+            const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                src_desc, src_slice_origin_coord_);
+
+            if constexpr(SrcAddressSpace == AddressSpace::Global)
+            {
+#if CK_USE_AMD_BUFFER_ADDRESSING
+                src_vector.Vector() = amd_buffer_load_v2<SrcData, SrcScalarPerVector>(
+                    p_src,
+                    src_slice_origin_coord_.GetOffset(),
+                    is_src_valid,
+                    src_desc.GetElementSpaceSize());
+#else
+                src_vector.Vector() = is_src_valid
+                                          ? *reinterpret_cast<const src_vector_t*>(
+                                                &p_src[src_slice_origin_coord_.GetOffset()])
+                                          : src_vector_t{0};
+#endif
+            }
+            else
+            {
+                src_vector.Vector() = is_src_valid
+                                          ? *reinterpret_cast<const src_vector_t*>(
+                                                &p_src[src_slice_origin_coord_.GetOffset()])
+                                          : src_vector_t{0};
+            }
+
+            static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
+                constexpr index_t dst_offset =
+                    dst_desc.CalculateOffset(to_multi_index(dst_slice_origin_idx) + src_data_idx +
+                                             i * src_scalar_step_in_vector);
+
+                p_dst.Vectors(Number<SrcScalarPerVector>{})(Number<dst_offset>{}) = src_vector.Scalars()[i];
+            });
+
+            constexpr auto move_on_dim = [&]() constexpr
+            {
+                StaticallyIndexedArray<bool, nDim> move_on_dim;
+
+                static_for<0, nDim, 1>{}([&](auto i) {
+                    move_on_dim(i) = ordered_access_idx[i] < ordered_access_lengths[i] - 1;
+
+                    static_for<i + 1, nDim, 1>{}([&](auto j) {
+                        move_on_dim(i) &= ordered_access_idx[j] == ordered_access_lengths[j] - 1;
+                    });
+                });
+
+                return move_on_dim;
+            }
+            ();
+
+            // move
+            static_for<0, nDim, 1>{}([&](auto i) {
+                if constexpr(move_on_dim[i])
+                {
+                    if constexpr(forward_sweep[i])
+                    {
+                        move_dynamic_tensor_coordinate(src_desc,
+                                                       src_slice_origin_coord_,
+                                                       src_forward_iterators[dim_access_order[i]]);
+                    }
+                    else
+                    {
+                        move_dynamic_tensor_coordinate(src_desc,
+                                                       src_slice_origin_coord_,
+                                                       src_backward_iterators[dim_access_order[i]]);
+                    }
+                }
+            });
+        });
+
+        // move src coordinate back to slice origin (or not)
+        if constexpr(SrcResetCoordinateAfterRun)
+        {
+            const auto src_reset_iterator =
+                make_dynamic_tensor_coordinate_iterator(src_desc, GetSrcCoordinateResetStep());
+
+            move_dynamic_tensor_coordinate(src_desc, src_slice_origin_coord_, src_reset_iterator);
+        }
+    }
+
+    template <typename DstSliceOriginIdx, typename SrcIteratorHacks>
+    __device__ void Run(const SrcDesc& src_desc,
+                        const SrcData* p_src,
+                        const DstDesc&,
+                        const DstSliceOriginIdx&,
                         DstData* p_dst,
                         const SrcIteratorHacks& src_iterator_hacks)
     {

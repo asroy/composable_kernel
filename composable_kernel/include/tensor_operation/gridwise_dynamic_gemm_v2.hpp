@@ -174,7 +174,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         const index_t wo_thread_data_on_global =
             wo_block_data_on_global + wo_thread_id * WoPerThread;
 
-#if 0
+#if 1
         // A matrix blockwise copy
         auto a_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
@@ -375,98 +375,84 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                 k_block_data_on_global_add + k_thread_id * KPerThreadAdd;
 
             constexpr auto d_k_n_hox2_wox2_thread_desc =
-                make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(Number<KPerThreadAdd>{},
-                                                                          Number<1>{},
-                                                                          Number<HoPerThreadx2>{},
-                                                                          Number<WoPerThreadx2>{}));
-
-            FloatAB p_d_thread[d_k_n_hox2_wox2_thread_desc.GetElementSpaceSize()];
+                make_dynamic_naive_tensor_descriptor_packed_v2(
+                    make_tuple(Number<1>{}, Number<1>{}, Number<1>{}, Number<1>{}));
 
             constexpr auto vector_len = CThreadTransferDstScalarPerVector;
-            static_assert(vector_len == 16);
 
             constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
-
 #if 1
-            ThreadwiseDynamicTensorSliceTransfer_v2<
-                FloatAB,
-                FloatAB,
-                decltype(d_k_n_hox2_wox2_global_desc),
-                decltype(d_k_n_hox2_wox2_thread_desc),
-                Sequence<KPerThreadAdd, 1, HoPerThreadx2, WoPerThreadx2>,
-                CThreadTransferSrcDstAccessOrder,
-                CThreadTransferSrcDstVectorDim,
-                // CThreadTransferDstScalarPerVector,
-                1,
-                AddressSpace::Global,
-                AddressSpace::Vgpr,
-                InMemoryDataOperation::Set,
-                1,
-                true>(d_k_n_hox2_wox2_global_desc,
-                      make_multi_index(k_thread_data_on_global_add,
-                                       0,
-                                       hox2_thread_data_on_global,
-                                       wox2_thread_data_on_global))
-                .Run(d_k_n_hox2_wox2_global_desc,
-                     p_d_global,
-                     d_k_n_hox2_wox2_thread_desc,
-                     make_tuple(I0, I0, I0, I0),
-                     p_d_thread,
-                     c_k_n_ho_wo_global_tensor_iterator_hacks);
+            vector_type<int8_t, vector_len> d_vec;
 
-#endif
-
-#if 1
             for(index_t k_i = 0; k_i < KPerThreadAdd; ++k_i)
             {
                 for(index_t h_i = 0; h_i < HoPerThreadx2; ++h_i)
                 {
                     for(index_t w_i = 0; w_i < WoPerThreadx2; ++w_i)
                     {
-                        vector_type<int8_t, vector_len> d_vec;
+#if 1
+                        ThreadwiseDynamicTensorSliceTransfer_v2<
+                            FloatAB,
+                            decltype(d_vec),
+                            decltype(d_k_n_hox2_wox2_global_desc),
+                            decltype(d_k_n_hox2_wox2_thread_desc),
+                            Sequence<1, 1, 1, 1>,
+                            CThreadTransferSrcDstAccessOrder,
+                            CThreadTransferSrcDstVectorDim,
+                            // CThreadTransferDstScalarPerVector,
+                            1,
+                            AddressSpace::Global,
+                            AddressSpace::Vgpr,
+                            InMemoryDataOperation::Set,
+                            1,
+                            true>(d_k_n_hox2_wox2_global_desc,
+                                  make_multi_index(k_thread_data_on_global_add + k_i,
+                                                   0,
+                                                   hox2_thread_data_on_global + h_i,
+                                                   wox2_thread_data_on_global + w_i))
+                            .Run(d_k_n_hox2_wox2_global_desc,
+                                 p_d_global,
+                                 d_k_n_hox2_wox2_thread_desc,
+                                 make_tuple(I0, I0, I0, I0),
+                                 d_vec,
+                                 c_k_n_ho_wo_global_tensor_iterator_hacks);
 
-                        d_vec.Vector() = p_d_thread[d_k_n_hox2_wox2_thread_desc.CalculateOffset(
-                            make_tuple(k_i, 0, h_i, w_i))];
-
+#endif
                         static_for<0, vector_len, 1>{}([&](auto i) {
-                            d_vec.Scalars()(i) += 1;
-                            // p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(
-                            // make_tuple(k_i * vector_len + i, 0, h_i / 2, w_i / 2))];
+                            d_vec.Scalars()(i) +=
+                                p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(
+                                    make_tuple(k_i * vector_len + i, 0, h_i / 2, w_i / 2))];
                         });
-
-                        p_d_thread[d_k_n_hox2_wox2_thread_desc.CalculateOffset(
-                            make_tuple(k_i, 0, h_i, w_i))] = d_vec.Vector();
+#if 1
+                        ThreadwiseDynamicTensorSliceTransfer_v1r3<
+                            FloatAB,
+                            FloatAB,
+                            decltype(d_k_n_hox2_wox2_thread_desc),
+                            decltype(d_k_n_hox2_wox2_global_desc),
+                            Sequence<1, 1, 1, 1>,
+                            CThreadTransferSrcDstAccessOrder,
+                            CThreadTransferSrcDstVectorDim,
+                            // CThreadTransferDstScalarPerVector,
+                            1,
+                            AddressSpace::Vgpr,
+                            AddressSpace::Global,
+                            CGlobalMemoryDataOperation,
+                            1,
+                            true>(d_k_n_hox2_wox2_global_desc,
+                                  make_multi_index(k_thread_data_on_global_add + k_i,
+                                                   0,
+                                                   hox2_thread_data_on_global + h_i,
+                                                   wox2_thread_data_on_global + w_i))
+                            .Run(d_k_n_hox2_wox2_thread_desc,
+                                 make_tuple(I0, I0, I0, I0),
+                                 &(d_vec.Vector()),
+                                 d_k_n_hox2_wox2_global_desc,
+                                 p_c_global,
+                                 c_k_n_ho_wo_global_tensor_iterator_hacks);
+#endif
                     }
                 }
             }
-#endif
-
-#if 1
-            ThreadwiseDynamicTensorSliceTransfer_v1r3<
-                FloatAB,
-                FloatAB,
-                decltype(d_k_n_hox2_wox2_thread_desc),
-                decltype(d_k_n_hox2_wox2_global_desc),
-                Sequence<KPerThreadAdd, 1, HoPerThreadx2, WoPerThreadx2>,
-                CThreadTransferSrcDstAccessOrder,
-                CThreadTransferSrcDstVectorDim,
-                // CThreadTransferDstScalarPerVector,
-                1,
-                AddressSpace::Vgpr,
-                AddressSpace::Global,
-                CGlobalMemoryDataOperation,
-                1,
-                true>(d_k_n_hox2_wox2_global_desc,
-                      make_multi_index(k_thread_data_on_global_add,
-                                       0,
-                                       hox2_thread_data_on_global,
-                                       wox2_thread_data_on_global))
-                .Run(d_k_n_hox2_wox2_thread_desc,
-                     make_tuple(I0, I0, I0, I0),
-                     p_d_thread,
-                     d_k_n_hox2_wox2_global_desc,
-                     p_c_global,
-                     c_k_n_ho_wo_global_tensor_iterator_hacks);
 #endif
         }
     }
