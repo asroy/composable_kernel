@@ -91,8 +91,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, C0, Y, X));
     const auto out_n_k0_ho_wo_k1_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Ho, Wo, K1));
-    const auto add_n_k0_hox2_wox2_k1_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Hox2, Wox2, 1));
+    const auto add_n_k0_hox2_wox2_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Hox2, Wox2));
 
     const auto conv_strides     = sequence_to_tuple_of_number(ConvStrides{});
     const auto conv_dilations   = sequence_to_tuple_of_number(ConvDilations{});
@@ -156,7 +156,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
 
     constexpr index_t CThreadTransferDstScalarPerVector_W = K1;
 
-    static_assert(KPerThread % CThreadTransferDstScalarPerVector_W == 0, "");
+    // static_assert(KPerThread % CThreadTransferDstScalarPerVector_W == 0, "");
 #else
     constexpr index_t BlockSize = 64;
 
@@ -192,7 +192,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
         <BlockSize,
          typename vector_type<TInWei, InWeiVectorSize>::type,
          TAcc,
-         TOut,
+         typename vector_type<TOut, InWeiVectorSize>::type,
          KPerBlock,
          HoPerBlock,
          WoPerBlock,
@@ -210,7 +210,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
 
     conv_driver.Run(wei_k_c0_y_x_desc,
                     in_n_c0_hi_wi_desc,
-                    add_n_k0_hox2_wox2_k1_desc,
+                    add_n_k0_hox2_wox2_desc,
                     out_n_k0_ho_wo_k1_desc,
                     conv_strides,
                     conv_dilations,
@@ -220,9 +220,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
                         wei_k_c_y_x_device_buf.GetDeviceBuffer()),
                     static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
                         in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
-                    static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
+                    static_cast<typename vector_type<TOut, InWeiVectorSize>::type*>(
                         add_n_k_hox2_wox2_device_buf.GetDeviceBuffer()),
-                    static_cast<TOut*>(out_n_k_hox2_wox2_device_buf.GetDeviceBuffer()));
+                    static_cast<typename vector_type<TOut, InWeiVectorSize>::type*>(
+                        out_n_k_hox2_wox2_device_buf.GetDeviceBuffer()));
 
     out_n_k_hox2_wox2_device_buf.FromDevice(out_n_k0_hox2_wox2_k1.mData.data());
 

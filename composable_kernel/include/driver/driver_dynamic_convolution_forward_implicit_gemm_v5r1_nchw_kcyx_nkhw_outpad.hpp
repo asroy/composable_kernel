@@ -47,7 +47,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                       const InRightPads& in_right_pads,
                       const FloatAB* __restrict__ p_wei_global,
                       const FloatAB* __restrict__ p_in_global,
-                      FloatAB* __restrict__ p_d_global,
+                      FloatC* __restrict__ p_d_global,
                       FloatC* __restrict__ p_out_global) const
     {
         constexpr auto I0 = Number<0>{};
@@ -151,12 +151,12 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
         // add tensor
         const auto add_k_n_hopx2_wopx2_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Hox2, Wox2, 1)),
-            make_tuple(make_merge_transform(make_tuple(K0, 1)),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Hox2, Wox2)),
+            make_tuple(make_pass_through_transform(K0),
                        make_pass_through_transform(N),
                        make_pad_transform(Hox2, 0, AddRightPadH),
                        make_pad_transform(Wox2, 0, AddRightPadW)),
-            make_tuple(Sequence<1, 4>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
+            make_tuple(Sequence<1>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 
         const auto E = C * Y * X;

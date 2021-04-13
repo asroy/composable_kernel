@@ -382,12 +382,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
             FloatAB p_d_thread[d_k_n_hox2_wox2_thread_desc.GetElementSpaceSize()];
 
-            constexpr auto vector_len = sizeof(FloatAB) / sizeof(FloatC);
-            static_assert(vector_len == CThreadTransferDstScalarPerVector);
+            constexpr auto vector_len = CThreadTransferDstScalarPerVector;
+            static_assert(vector_len == 16);
 
             constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
 
-#if 0
+#if 1
             ThreadwiseDynamicTensorSliceTransfer_v2<
                 FloatAB,
                 FloatAB,
@@ -423,16 +423,16 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                 {
                     for(index_t w_i = 0; w_i < WoPerThreadx2; ++w_i)
                     {
-                        vector_type<FloatC, vector_len> d_vec;
+                        vector_type<int8_t, vector_len> d_vec;
 
                         d_vec.Vector() = p_d_thread[d_k_n_hox2_wox2_thread_desc.CalculateOffset(
-                                make_tuple(k_i, 0, h_i, w_i))];
+                            make_tuple(k_i, 0, h_i, w_i))];
 
                         static_for<0, vector_len, 1>{}([&](auto i) {
-                                d_vec.Scalars()(i) = 0;
-                                //p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(
-                                        //make_tuple(k_i * vector_len + i, 0, h_i / 2, w_i / 2))];
-                                });
+                            d_vec.Scalars()(i) += 1;
+                            // p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(
+                            // make_tuple(k_i * vector_len + i, 0, h_i / 2, w_i / 2))];
+                        });
 
                         p_d_thread[d_k_n_hox2_wox2_thread_desc.CalculateOffset(
                             make_tuple(k_i, 0, h_i, w_i))] = d_vec.Vector();
@@ -465,7 +465,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                      make_tuple(I0, I0, I0, I0),
                      p_d_thread,
                      d_k_n_hox2_wox2_global_desc,
-                     p_d_global,
+                     p_c_global,
                      c_k_n_ho_wo_global_tensor_iterator_hacks);
 #endif
         }
