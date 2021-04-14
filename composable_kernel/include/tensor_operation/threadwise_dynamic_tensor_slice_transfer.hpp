@@ -264,6 +264,201 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
         }
     }
 
+    template <typename SrcSliceOriginIdx, typename DstIteratorHacks>
+    __device__ void Run2(const SrcDesc&,
+                         const SrcSliceOriginIdx&,
+                         const SrcData& p_src,
+                         const DstDesc& dst_desc,
+                         DstData* p_dst,
+                         const DstIteratorHacks& dst_iterator_hacks)
+    {
+        static_assert(SrcDesc::IsKnownAtCompileTime(),
+                      "wrong! SrcDesc need to known at compile-time");
+
+        static_assert(
+            is_known_at_compile_time<remove_cv_t<remove_reference_t<SrcSliceOriginIdx>>>::value,
+            "wrong! SrcSliceOrigin need to known at compile-time");
+
+        // SrcDesc and src_slice_origin_idx are known at compile-time
+        constexpr auto src_desc             = remove_cv_t<remove_reference_t<SrcDesc>>{};
+        constexpr auto src_slice_origin_idx = SrcSliceOriginIdx{};
+
+        constexpr auto I0 = Number<0>{};
+        constexpr auto I1 = Number<1>{};
+
+        // scalar per access on each dim
+        // TODO: don't use lambda_scalar_per_access
+        constexpr auto dst_scalar_per_access = generate_sequence(
+            lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
+
+        constexpr auto dst_scalar_step_in_vector =
+            generate_sequence(lambda_scalar_step_in_vector<DstVectorDim>{}, Number<nDim>{});
+
+        constexpr auto access_lengths = SliceLengths{} / dst_scalar_per_access;
+
+        constexpr auto dim_access_order = DimAccessOrder{};
+
+        constexpr auto ordered_access_lengths =
+            container_reorder_given_new2old(access_lengths, dim_access_order);
+
+        // make forward iterators
+        const auto dst_forward_iterators = generate_tuple(
+            [&](auto i) {
+                Index forward_step;
+
+                static_for<0, nDim, 1>{}([&](auto j) {
+                    forward_step(j) = (i.value == j.value) ? dst_scalar_per_access[i] : 0;
+                });
+
+                return make_dynamic_tensor_coordinate_iterator(
+                    dst_desc, forward_step, dst_iterator_hacks[I0][i]);
+            },
+            Number<nDim>{});
+
+        // make backward iterators
+        const auto dst_backward_iterators = generate_tuple(
+            [&](auto i) {
+                Index backward_step;
+
+                static_for<0, nDim, 1>{}([&](auto j) {
+                    backward_step(j) = (i.value == j.value) ? -dst_scalar_per_access[i] : 0;
+                });
+
+                return make_dynamic_tensor_coordinate_iterator(
+                    dst_desc, backward_step, dst_iterator_hacks[I1][i]);
+            },
+            Number<nDim>{});
+
+        // loop over tensor and copy
+        static_ford<decltype(ordered_access_lengths)>{}([&](auto ordered_access_idx) {
+            // judge move forward or move backward
+            constexpr auto forward_sweep = [&]() {
+                StaticallyIndexedArray<bool, nDim> forward_sweep;
+
+                forward_sweep(I0) = true;
+
+                static_for<1, nDim, 1>{}([&](auto i) {
+                    index_t tmp = ordered_access_idx[I0];
+
+                    static_for<0, i, 1>{}([&](auto j) {
+                        tmp = tmp * ordered_access_lengths[j] + ordered_access_idx[j];
+                    });
+
+                    forward_sweep(i) = tmp % 2 == 0;
+                });
+
+                return forward_sweep;
+            }();
+
+            // calculate dst data index
+            constexpr auto dst_data_idx = [&]() {
+                Index ordered_idx;
+
+                static_for<0, nDim, 1>{}([&](auto i) {
+                    ordered_idx(i) = forward_sweep[i]
+                                         ? ordered_access_idx[i]
+                                         : ordered_access_lengths[i] - 1 - ordered_access_idx[i];
+                });
+
+                auto dst_data_idx = container_reorder_given_old2new(ordered_idx, dim_access_order) *
+                                    dst_scalar_per_access;
+
+                return dst_data_idx;
+            }();
+
+            // copy data
+            typename vector_type_maker<DstData, DstScalarPerVector>::type dst_vector;
+
+            using dst_vector_t =
+                typename vector_type_maker<DstData, DstScalarPerVector>::type::type;
+
+            static_for<0, DstScalarPerVector, 1>{}([&](auto i) {
+                constexpr index_t src_offset =
+                    src_desc.CalculateOffset(to_multi_index(src_slice_origin_idx) + dst_data_idx +
+                                             i * dst_scalar_step_in_vector);
+
+                dst_vector.template AsType<DstData>()(i) =
+                    type_convert<DstData>{}(p_src.template AsType<DstData>()[i]);
+            });
+
+            const bool is_dst_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                dst_desc, dst_slice_origin_coord_);
+
+            if constexpr(SrcAddressSpace == AddressSpace::Vgpr &&
+                         DstAddressSpace == AddressSpace::Global)
+            {
+#if CK_USE_AMD_BUFFER_ADDRESSING
+                amd_buffer_store_v2<DstData, DstScalarPerVector>(
+                    dst_vector.template AsType<dst_vector_t>()(Number<0>{}),
+                    p_dst,
+                    dst_slice_origin_coord_.GetOffset(),
+                    is_dst_valid,
+                    dst_desc.GetElementSpaceSize());
+#else
+                if(is_dst_valid)
+                {
+                    *reinterpret_cast<dst_vector_t*>(
+                        &(p_dst[dst_slice_origin_coord_.GetOffset()])) =
+                        dst_vector.template AsType<dst_vector_t>()[Number<0>{}];
+                }
+#endif
+            }
+            else
+            {
+                if(is_dst_valid)
+                {
+                    *reinterpret_cast<dst_vector_t*>(
+                        &(p_dst[dst_slice_origin_coord_.GetOffset()])) =
+                        dst_vector.template AsType<dst_vector_t>()[Number<0>{}];
+                }
+            }
+
+            constexpr auto move_on_dim = [&]() constexpr
+            {
+                StaticallyIndexedArray<bool, nDim> move_on_dim;
+
+                static_for<0, nDim, 1>{}([&](auto i) {
+                    move_on_dim(i) = ordered_access_idx[i] < ordered_access_lengths[i] - 1;
+
+                    static_for<i + 1, nDim, 1>{}([&](auto j) {
+                        move_on_dim(i) &= ordered_access_idx[j] == ordered_access_lengths[j] - 1;
+                    });
+                });
+
+                return move_on_dim;
+            }
+            ();
+
+            // move
+            static_for<0, nDim, 1>{}([&](auto i) {
+                if constexpr(move_on_dim[i])
+                {
+                    if constexpr(forward_sweep[i])
+                    {
+                        move_dynamic_tensor_coordinate(dst_desc,
+                                                       dst_slice_origin_coord_,
+                                                       dst_forward_iterators[dim_access_order[i]]);
+                    }
+                    else
+                    {
+                        move_dynamic_tensor_coordinate(dst_desc,
+                                                       dst_slice_origin_coord_,
+                                                       dst_backward_iterators[dim_access_order[i]]);
+                    }
+                }
+            });
+        });
+
+        // move dst coordinate back to slice origin (or not)
+        if constexpr(DstResetCoordinateAfterRun)
+        {
+            const auto dst_reset_iterator =
+                make_dynamic_tensor_coordinate_iterator(dst_desc, GetDstCoordinateResetStep());
+
+            move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_coord_, dst_reset_iterator);
+        }
+    }
+
     __device__ void Run(const SrcData* p_src, const DstDesc& dst_desc, DstData* p_dst)
     {
         constexpr index_t ntransform_dst = DstDesc::GetNumOfTransform();
@@ -542,6 +737,197 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
                                              i * src_scalar_step_in_vector);
 
                 p_dst[Number<dst_offset>{}] = src_vector.template AsType<SrcData>()[i];
+            });
+
+            constexpr auto move_on_dim = [&]() constexpr
+            {
+                StaticallyIndexedArray<bool, nDim> move_on_dim;
+
+                static_for<0, nDim, 1>{}([&](auto i) {
+                    move_on_dim(i) = ordered_access_idx[i] < ordered_access_lengths[i] - 1;
+
+                    static_for<i + 1, nDim, 1>{}([&](auto j) {
+                        move_on_dim(i) &= ordered_access_idx[j] == ordered_access_lengths[j] - 1;
+                    });
+                });
+
+                return move_on_dim;
+            }
+            ();
+
+            // move
+            static_for<0, nDim, 1>{}([&](auto i) {
+                if constexpr(move_on_dim[i])
+                {
+                    if constexpr(forward_sweep[i])
+                    {
+                        move_dynamic_tensor_coordinate(src_desc,
+                                                       src_slice_origin_coord_,
+                                                       src_forward_iterators[dim_access_order[i]]);
+                    }
+                    else
+                    {
+                        move_dynamic_tensor_coordinate(src_desc,
+                                                       src_slice_origin_coord_,
+                                                       src_backward_iterators[dim_access_order[i]]);
+                    }
+                }
+            });
+        });
+
+        // move src coordinate back to slice origin (or not)
+        if constexpr(SrcResetCoordinateAfterRun)
+        {
+            const auto src_reset_iterator =
+                make_dynamic_tensor_coordinate_iterator(src_desc, GetSrcCoordinateResetStep());
+
+            move_dynamic_tensor_coordinate(src_desc, src_slice_origin_coord_, src_reset_iterator);
+        }
+    }
+
+    template <typename DstSliceOriginIdx, typename SrcIteratorHacks>
+    __device__ void Run2(const SrcDesc& src_desc,
+                         const SrcData* p_src,
+                         const DstDesc&,
+                         const DstSliceOriginIdx&,
+                         DstData& p_dst,
+                         const SrcIteratorHacks& src_iterator_hacks)
+    {
+        static_assert(DstDesc::IsKnownAtCompileTime(),
+                      "wrong! DstDesc need to known at compile-time");
+
+        static_assert(
+            is_known_at_compile_time<remove_cv_t<remove_reference_t<DstSliceOriginIdx>>>::value,
+            "wrong! DstSliceOrigin need to known at compile-time");
+
+        // DstDesc and dst_slice_origin_idx are known at compile-time
+        constexpr auto dst_desc             = remove_cv_t<remove_reference_t<DstDesc>>{};
+        constexpr auto dst_slice_origin_idx = DstSliceOriginIdx{};
+
+        constexpr auto I0 = Number<0>{};
+        constexpr auto I1 = Number<1>{};
+
+        // scalar per access on each dim
+        // TODO: don't use lambda_scalar_per_access
+        constexpr auto src_scalar_per_access = generate_sequence(
+            lambda_scalar_per_access<SrcVectorDim, SrcScalarPerVector>{}, Number<nDim>{});
+
+        constexpr auto src_scalar_step_in_vector =
+            generate_sequence(lambda_scalar_step_in_vector<SrcVectorDim>{}, Number<nDim>{});
+
+        constexpr auto access_lengths = SliceLengths{} / src_scalar_per_access;
+
+        constexpr auto dim_access_order = DimAccessOrder{};
+
+        constexpr auto ordered_access_lengths =
+            container_reorder_given_new2old(access_lengths, dim_access_order);
+
+        // make forward iterators
+        const auto src_forward_iterators = generate_tuple(
+            [&](auto i) {
+                Index forward_step;
+
+                static_for<0, nDim, 1>{}([&](auto j) {
+                    forward_step(j) = (i.value == j.value) ? src_scalar_per_access[i] : 0;
+                });
+
+                return make_dynamic_tensor_coordinate_iterator(
+                    src_desc, forward_step, src_iterator_hacks[I0][i]);
+            },
+            Number<nDim>{});
+
+        // make backward iterators
+        const auto src_backward_iterators = generate_tuple(
+            [&](auto i) {
+                Index backward_step;
+
+                static_for<0, nDim, 1>{}([&](auto j) {
+                    backward_step(j) = (i.value == j.value) ? -src_scalar_per_access[i] : 0;
+                });
+
+                return make_dynamic_tensor_coordinate_iterator(
+                    src_desc, backward_step, src_iterator_hacks[I1][i]);
+            },
+            Number<nDim>{});
+
+        // loop over tensor and copy
+        static_ford<decltype(ordered_access_lengths)>{}([&](auto ordered_access_idx) {
+            // judge move forward or move backward
+            constexpr auto forward_sweep = [&]() {
+                StaticallyIndexedArray<bool, nDim> forward_sweep;
+
+                forward_sweep(I0) = true;
+
+                static_for<1, nDim, 1>{}([&](auto i) {
+                    index_t tmp = ordered_access_idx[I0];
+
+                    static_for<0, i, 1>{}([&](auto j) {
+                        tmp = tmp * ordered_access_lengths[j] + ordered_access_idx[j];
+                    });
+
+                    forward_sweep(i) = tmp % 2 == 0;
+                });
+
+                return forward_sweep;
+            }();
+
+            // calculate src data index
+            constexpr auto src_data_idx = [&]() {
+                Index ordered_idx;
+
+                static_for<0, nDim, 1>{}([&](auto i) {
+                    ordered_idx(i) = forward_sweep[i]
+                                         ? ordered_access_idx[i]
+                                         : ordered_access_lengths[i] - 1 - ordered_access_idx[i];
+                });
+
+                auto src_data_idx = container_reorder_given_old2new(ordered_idx, dim_access_order) *
+                                    src_scalar_per_access;
+
+                return src_data_idx;
+            }();
+
+            // copy data
+            static_assert(DstAddressSpace == AddressSpace::Vgpr, "wrong! hardcode for vgpr dst");
+
+            typename vector_type_maker<SrcData, SrcScalarPerVector>::type src_vector;
+
+            using src_vector_t =
+                typename vector_type_maker<SrcData, SrcScalarPerVector>::type::type;
+
+            const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                src_desc, src_slice_origin_coord_);
+
+            if constexpr(SrcAddressSpace == AddressSpace::Global)
+            {
+#if CK_USE_AMD_BUFFER_ADDRESSING
+                src_vector.template AsType<src_vector_t>()(Number<0>{}) =
+                    amd_buffer_load_v2<SrcData, SrcScalarPerVector>(
+                        p_src,
+                        src_slice_origin_coord_.GetOffset(),
+                        is_src_valid,
+                        src_desc.GetElementSpaceSize());
+#else
+                src_vector.template AsType<src_vector_t>()(Number<0>{}) =
+                    is_src_valid ? *reinterpret_cast<const src_vector_t*>(
+                                       &p_src[src_slice_origin_coord_.GetOffset()])
+                                 : src_vector_t{0};
+#endif
+            }
+            else
+            {
+                src_vector.template AsType<src_vector_t>()(Number<0>{}) =
+                    is_src_valid ? *reinterpret_cast<const src_vector_t*>(
+                                       &p_src[src_slice_origin_coord_.GetOffset()])
+                                 : src_vector_t{0};
+            }
+
+            static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
+                constexpr index_t dst_offset =
+                    dst_desc.CalculateOffset(to_multi_index(dst_slice_origin_idx) + src_data_idx +
+                                             i * src_scalar_step_in_vector);
+
+                p_dst.template AsType<SrcData>()(i) = src_vector.template AsType<SrcData>()[i];
             });
 
             constexpr auto move_on_dim = [&]() constexpr

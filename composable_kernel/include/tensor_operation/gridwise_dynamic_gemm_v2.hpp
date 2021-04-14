@@ -393,7 +393,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                     {
                         ThreadwiseDynamicTensorSliceTransfer_v2<
                             FloatC,
-                            FloatC,
+                            decltype(d_vec),
                             decltype(d_k_n_hox2_wox2_global_desc),
                             decltype(d_k_n_hox2_wox2_thread_desc),
                             Sequence<1, 1, 1, 1>,
@@ -410,12 +410,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                                    0,
                                                    hox2_thread_data_on_global + h_i,
                                                    wox2_thread_data_on_global + w_i))
-                            .Run(d_k_n_hox2_wox2_global_desc,
-                                 p_d_global,
-                                 d_k_n_hox2_wox2_thread_desc,
-                                 make_tuple(I0, I0, I0, I0),
-                                 &(d_vec.template AsType<FloatC>()(Number<0>{})),
-                                 c_k_n_ho_wo_global_tensor_iterator_hacks);
+                            .Run2(d_k_n_hox2_wox2_global_desc,
+                                  p_d_global,
+                                  d_k_n_hox2_wox2_thread_desc,
+                                  make_tuple(I0, I0, I0, I0),
+                                  d_vec,
+                                  c_k_n_ho_wo_global_tensor_iterator_hacks);
 
                         static_for<0, vector_len, 1>{}([&](auto i) {
                             d_vec.template AsType<int8_t>()(i) +=
@@ -424,7 +424,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                         });
 
                         ThreadwiseDynamicTensorSliceTransfer_v1r3<
-                            FloatC,
+                            decltype(d_vec),
                             FloatC,
                             decltype(d_k_n_hox2_wox2_thread_desc),
                             decltype(d_k_n_hox2_wox2_global_desc),
@@ -442,12 +442,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                                    0,
                                                    hox2_thread_data_on_global + h_i,
                                                    wox2_thread_data_on_global + w_i))
-                            .Run(d_k_n_hox2_wox2_thread_desc,
-                                 make_tuple(I0, I0, I0, I0),
-                                 &(d_vec.template AsType<FloatC>()[Number<0>{}]),
-                                 d_k_n_hox2_wox2_global_desc,
-                                 p_c_global,
-                                 c_k_n_ho_wo_global_tensor_iterator_hacks);
+                            .Run2(d_k_n_hox2_wox2_thread_desc,
+                                  make_tuple(I0, I0, I0, I0),
+                                  d_vec,
+                                  d_k_n_hox2_wox2_global_desc,
+                                  p_c_global,
+                                  c_k_n_ho_wo_global_tensor_iterator_hacks);
                     }
                 }
             }
