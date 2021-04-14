@@ -88,7 +88,7 @@
 
 // experimental implementation
 #ifndef CK_EXPERIMENTAL_USE_BUFFER_LOAD_OOB_CHECK_OFFSET_TRICK
-#define CK_EXPERIMENTAL_USE_BUFFER_LOAD_OOB_CHECK_OFFSET_TRICK 1
+#define CK_EXPERIMENTAL_USE_BUFFER_LOAD_OOB_CHECK_OFFSET_TRICK 0
 #endif
 
 #ifndef CK_EXPERIMENTAL_USE_BUFFER_STORE_OOB_CHECK_OFFSET_TRICK
@@ -115,6 +115,9 @@
 #define CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VALUE 1
 #define CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER 0
 
+// merge transformation use magic number division
+#define CK_EXPERIMENTAL_MERGE_USE_MAGIC_DIVISION 0
+
 // hack: have underlying assumption that need to be satsified, otherwise it's a bug
 // hack for forcing register to keep idx_diff_low_const in SGPR. idx_diff_low_const must be
 // thread-invariant, otherwise it's a bug
@@ -137,6 +140,11 @@
 // workaround for compiler crash when compiling recursive lambda
 #ifndef CK_WORKAROUND_SWDEV_275126
 #define CK_WORKAROUND_SWDEV_275126 1
+#endif
+
+// workaround for compiler crash when using buffer load/store for i8
+#ifndef CK_WORKAROUND_SWDEV_XXXXXX
+#define CK_WORKAROUND_SWDEV_XXXXXX 1
 #endif
 
 namespace ck {
