@@ -416,7 +416,7 @@ struct vector_type<T, 256>
     {
         d256_t d256_;
         StaticallyIndexedArray<d1_t, 256> d1x256_;
-        StaticallyIndexedArray<d16_t, 1> d16x16_;
+        StaticallyIndexedArray<d16_t, 16> d16x16_;
         StaticallyIndexedArray<d256_t, 1> d16x1_;
     } data_;
 
