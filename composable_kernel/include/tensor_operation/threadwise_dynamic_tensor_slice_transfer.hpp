@@ -265,12 +265,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
     }
 
     template <typename SrcSliceOriginIdx, typename DstIteratorHacks>
-    __device__ void Run2(const SrcDesc&,
-                         const SrcSliceOriginIdx&,
-                         const SrcData& p_src,
-                         const DstDesc& dst_desc,
-                         DstData* p_dst,
-                         const DstIteratorHacks& dst_iterator_hacks)
+    __device__ void Run(const SrcDesc&,
+                        const SrcSliceOriginIdx&,
+                        const SrcData& p_src,
+                        const DstDesc& dst_desc,
+                        DstData* p_dst,
+                        const DstIteratorHacks& dst_iterator_hacks)
     {
         static_assert(SrcDesc::IsKnownAtCompileTime(),
                       "wrong! SrcDesc need to known at compile-time");
@@ -785,12 +785,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
     }
 
     template <typename DstSliceOriginIdx, typename SrcIteratorHacks>
-    __device__ void Run2(const SrcDesc& src_desc,
-                         const SrcData* p_src,
-                         const DstDesc&,
-                         const DstSliceOriginIdx&,
-                         DstData& p_dst,
-                         const SrcIteratorHacks& src_iterator_hacks)
+    __device__ void Run(const SrcDesc& src_desc,
+                        const SrcData* p_src,
+                        const DstDesc&,
+                        const DstSliceOriginIdx&,
+                        DstData& p_dst,
+                        const SrcIteratorHacks& src_iterator_hacks)
     {
         static_assert(DstDesc::IsKnownAtCompileTime(),
                       "wrong! DstDesc need to known at compile-time");
