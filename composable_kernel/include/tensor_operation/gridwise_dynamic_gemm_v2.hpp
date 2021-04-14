@@ -355,7 +355,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 #endif
 
         // output: register to global memory
-#if 1
+#if 0
         {
             constexpr auto HoPerThreadx2 = HoPerThread * 2;
             constexpr auto WoPerThreadx2 = WoPerThread * 2;
@@ -480,12 +480,14 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                                                           Number<HoPerThreadx2>{},
                                                                           Number<WoPerThreadx2>{}));
 
-            constexpr auto vector_len = KPerThread * HoPerThreadx2 * WoPerThreadx2;
+            constexpr auto vector_len = d_k_n_hox2_wox2_thread_desc.GetElementSpaceSize() *
+                                        CThreadTransferDstScalarPerVector;
 
-            constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
             vector_type<int8_t, vector_len> d_vec;
 
-            auto d_threadwise_transfer = ThreadwiseDynamicTensorSliceTransfer_v2<
+            constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
+
+            ThreadwiseDynamicTensorSliceTransfer_v2<
                 FloatC,
                 decltype(d_vec),
                 decltype(d_k_n_hox2_wox2_global_desc),
@@ -503,9 +505,30 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                       make_multi_index(k_thread_data_on_global_add,
                                        0,
                                        hox2_thread_data_on_global,
-                                       wox2_thread_data_on_global));
+                                       wox2_thread_data_on_global))
+                .Run2(d_k_n_hox2_wox2_global_desc,
+                      p_d_global,
+                      d_k_n_hox2_wox2_thread_desc,
+                      make_tuple(I0, I0, I0, I0),
+                      d_vec,
+                      c_k_n_ho_wo_global_tensor_iterator_hacks);
 
-            auto c_threadwise_transfer = ThreadwiseDynamicTensorSliceTransfer_v1r3<
+            static_assert(vector_len == 256, "");
+
+            static_for<0, vector_len, 1>{}([&](auto i) {
+                constexpr auto kpack_i = i % (CThreadTransferDstScalarPerVector);
+                constexpr auto khw_i   = i / (CThreadTransferDstScalarPerVector);
+                constexpr auto k_i     = khw_i / (HoPerThreadx2 * WoPerThreadx2);
+                constexpr auto hw_i    = khw_i % (HoPerThreadx2 * WoPerThreadx2);
+                constexpr auto h_i     = hw_i / WoPerThreadx2;
+                constexpr auto w_i     = hw_i % WoPerThreadx2;
+
+                d_vec.template AsType<int8_t>()(i) =
+                    p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(make_tuple(
+                        k_i * CThreadTransferDstScalarPerVector + kpack_i, 0, h_i / 2, w_i / 2))];
+            });
+
+            ThreadwiseDynamicTensorSliceTransfer_v1r3<
                 decltype(d_vec),
                 FloatC,
                 decltype(d_k_n_hox2_wox2_thread_desc),
@@ -523,34 +546,13 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                       make_multi_index(k_thread_data_on_global_add,
                                        0,
                                        hox2_thread_data_on_global,
-                                       wox2_thread_data_on_global));
-
-            d_threadwise_transfer.Run2(d_k_n_hox2_wox2_global_desc,
-                                       p_d_global,
-                                       d_k_n_hox2_wox2_thread_desc,
-                                       make_tuple(I0, I0, I0, I0),
-                                       d_vec,
-                                       c_k_n_ho_wo_global_tensor_iterator_hacks);
-
-            static_for<0, vector_len, 1>{}([&](auto i) {
-                constexpr auto kpack_i = i % (CThreadTransferDstScalarPerVector);
-                constexpr auto khw_i   = i / (CThreadTransferDstScalarPerVector);
-                constexpr auto k_i     = khw_i / (HoPerThreadx2 * WoPerThreadx2);
-                constexpr auto hw_i    = khw_i % (HoPerThreadx2 * WoPerThreadx2);
-                constexpr auto h_i     = hw_i / WoPerThreadx2;
-                constexpr auto w_i     = hw_i % WoPerThreadx2;
-
-                d_vec.template AsType<int8_t>()(i) =
-                    p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(make_tuple(
-                        k_i * CThreadTransferDstScalarPerVector + kpack_i, 0, h_i / 2, w_i / 2))];
-            });
-
-            c_threadwise_transfer.Run2(d_k_n_hox2_wox2_thread_desc,
-                                       make_tuple(I0, I0, I0, I0),
-                                       d_vec,
-                                       d_k_n_hox2_wox2_global_desc,
-                                       p_c_global,
-                                       c_k_n_ho_wo_global_tensor_iterator_hacks);
+                                       wox2_thread_data_on_global))
+                .Run2(d_k_n_hox2_wox2_thread_desc,
+                      make_tuple(I0, I0, I0, I0),
+                      d_vec,
+                      d_k_n_hox2_wox2_global_desc,
+                      p_c_global,
+                      c_k_n_ho_wo_global_tensor_iterator_hacks);
         }
 #endif
     }
