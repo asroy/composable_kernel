@@ -174,7 +174,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         const index_t wo_thread_data_on_global =
             wo_block_data_on_global + wo_thread_id * WoPerThread;
 
-#if 0
+#if 1
         // A matrix blockwise copy
         auto a_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
@@ -354,7 +354,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         }
 #endif
 
-#if 0
+#if 1
         // output: register to global memory
         {
             constexpr auto HoPerThreadx2 = HoPerThread * 2;
@@ -418,10 +418,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                  c_k_n_ho_wo_global_tensor_iterator_hacks);
 
                         static_for<0, vector_len, 1>{}([&](auto i) {
-                            // d_vec.Scalars()(i) +=
-                            // p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(
-                            // make_tuple(k_i * vector_len + i, 0, h_i / 2, w_i / 2))];
-                            d_vec.Vector() += 1;
+                            d_vec.Scalars()(i) +=
+                                p_c_thread[c_k_n_ho_wo_thread_desc.CalculateOffset(
+                                    make_tuple(k_i * vector_len + i, 0, h_i / 2, w_i / 2))];
                         });
 
                         ThreadwiseDynamicTensorSliceTransfer_v1r3<
