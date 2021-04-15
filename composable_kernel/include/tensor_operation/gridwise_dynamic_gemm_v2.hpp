@@ -367,7 +367,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
             static_assert(c_k_n_ho_wo_thread_desc_vec.GetElementSpaceSize() == 4, "");
 
-            FloatC d_vec[c_k_n_ho_wo_thread_desc_vec.GetElementSpaceSize()];
+            const index_t vec_len = c_k_n_ho_wo_thread_desc_vec.GetElementSpaceSize() *
+                                    CThreadTransferDstScalarPerVector;
+
+            vector_type<int8_t, vec_len> d_vec;
+
+            // FloatC d_vec[c_k_n_ho_wo_thread_desc_vec.GetElementSpaceSize()];
 
             constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
 
@@ -376,13 +381,13 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                     static_for<0, WoPerThread, 1>{}([&](auto w_i) {
                         vector_type<int8_t, CThreadTransferDstScalarPerVector> t;
 
-                        // t.template AsType<FloatC>()(Number<0>{}) = d_vec.template AsType<
-                        // FloatC>()[Number<c_k_n_ho_wo_thread_desc_vec.CalculateOffset(
-                        // make_tuple(k_i, 0, h_i, w_i))>{}];
+                        t.template AsType<FloatC>()(Number<0>{}) = d_vec.template AsType<
+                            FloatC>()[Number<c_k_n_ho_wo_thread_desc_vec.CalculateOffset(
+                            make_tuple(k_i, 0, h_i, w_i))>{}];
 
-                        t.template AsType<FloatC>()(Number<0>{}) =
-                            d_vec[Number<c_k_n_ho_wo_thread_desc_vec.CalculateOffset(
-                                make_tuple(k_i, 0, h_i, w_i))>{}];
+                        // t.template AsType<FloatC>()(Number<0>{}) =
+                        // d_vec[Number<c_k_n_ho_wo_thread_desc_vec.CalculateOffset(
+                        // make_tuple(k_i, 0, h_i, w_i))>{}];
 
                         static_for<0, CThreadTransferDstScalarPerVector, 1>{}([&](auto i) {
                             t.template AsType<int8_t>()(i) =
@@ -390,18 +395,19 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                                     k_i * CThreadTransferDstScalarPerVector + i, 0, h_i, w_i))];
                         });
 
-                        // d_vec.template AsType<FloatC>()(
-                        // Number<c_k_n_ho_wo_thread_desc_vec.CalculateOffset(make_tuple(
-                        // k_i, 0, h_i, w_i))>{}) = t.template AsType<FloatC>()[Number<0>{}];
+                        d_vec.template AsType<FloatC>()(
+                            Number<c_k_n_ho_wo_thread_desc_vec.CalculateOffset(make_tuple(
+                                k_i, 0, h_i, w_i))>{}) = t.template AsType<FloatC>()[Number<0>{}];
 
-                        d_vec[Number<c_k_n_ho_wo_thread_desc_vec.CalculateOffset(make_tuple(
-                            k_i, 0, h_i, w_i))>{}] = t.template AsType<FloatC>()[Number<0>{}];
+                        // d_vec[Number<c_k_n_ho_wo_thread_desc_vec.CalculateOffset(make_tuple(
+                        // k_i, 0, h_i, w_i))>{}] = t.template AsType<FloatC>()[Number<0>{}];
                     });
                 });
             });
 
             ThreadwiseDynamicTensorSliceTransfer_v1r3<
-                FloatC,
+                // FloatC,
+                decltype(d_vec),
                 FloatC,
                 decltype(c_k_n_ho_wo_thread_desc_vec),
                 decltype(c_k_n_ho_wo_global_desc),
