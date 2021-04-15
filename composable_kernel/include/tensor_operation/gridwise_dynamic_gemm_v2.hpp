@@ -156,12 +156,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                                             ABlockTransferSrcScalarPerVector,
                                             ABlockTransferDstScalarPerVector_K>{};
 
-        // register allocation for output
-        FloatAcc p_c_thread[c_k_n_ho_wo_thread_desc.GetElementSpaceSize()];
-
-        // zero out threadwise output
-        threadwise_matrix_set_zero_v3(c_k_n_ho_wo_thread_desc, p_c_thread);
-
         auto c_thread_mtx_index = blockwise_gemm.GetBeginOfThreadMatrixC(get_thread_local_1d_id());
 
         const auto k_thread_id  = c_thread_mtx_index.k;
@@ -228,6 +222,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                   make_multi_index(0, 0, ho_thread_data_on_global, wo_thread_data_on_global));
 
         FloatAB* p_a_block = p_shared_block;
+
+        // register allocation for output
+        FloatAcc p_c_thread[c_k_n_ho_wo_thread_desc.GetElementSpaceSize()];
+
+        // zero out threadwise output
+        threadwise_matrix_set_zero_v3(c_k_n_ho_wo_thread_desc, p_c_thread);
 
         constexpr auto b_thread_slice_copy_step = make_multi_index(EPerBlock, 0, 0, 0);
 
@@ -351,9 +351,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         // output: register to global memory
         {
+            // hack to control index calculation when iterating over c_k_n_ho_wo_global tensor
             constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
 
-            static_assert(CThreadTransferDstScalarPerVector == 16 && KPerBlock == 16, "");
             const index_t k_block_data_on_global_vec =
                 k_block_work_id * (KPerBlock / CThreadTransferDstScalarPerVector);
             const index_t KPerThreadVec = KPerThread / CThreadTransferDstScalarPerVector;
