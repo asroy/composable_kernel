@@ -625,12 +625,12 @@ int main(int argc, char* argv[])
     constexpr auto Ho = out_nkhw_desc.GetLength(Number<2>{});
     constexpr auto Wo = out_nkhw_desc.GetLength(Number<3>{});
 
-    auto add_nkhw_desc = make_native_tensor_descriptor_packed(Sequence<N, K, Ho * 2, Wo * 2>{});
+    // auto add_nkhw_desc = make_native_tensor_descriptor_packed(Sequence<N, K, Ho * 2, Wo * 2>{});
 
     ostream_tensor_descriptor(in_nchw_desc, std::cout << "in_nchw_desc: ");
     ostream_tensor_descriptor(wei_kcyx_desc, std::cout << "wei_kcyx_desc: ");
     ostream_tensor_descriptor(out_nkhw_desc, std::cout << "out_nkhw_desc: ");
-    ostream_tensor_descriptor(add_nkhw_desc, std::cout << "add_nkhw_desc: ");
+    // ostream_tensor_descriptor(add_nkhw_desc, std::cout << "add_nkhw_desc: ");
 
     print_array("LeftPads", to_multi_index(LeftPads{}));
     print_array("RightPads", to_multi_index(RightPads{}));
@@ -661,10 +661,9 @@ int main(int argc, char* argv[])
 
     Tensor<in_data_t> in_nchw(make_HostTensorDescriptor(in_nchw_desc));
     Tensor<in_data_t> wei_kcyx(make_HostTensorDescriptor(wei_kcyx_desc));
-    Tensor<out_data_t> add_nkhw(make_HostTensorDescriptor(add_nkhw_desc));
 
-    Tensor<out_data_t> out_nkhw_host(make_HostTensorDescriptor(add_nkhw_desc));
-    Tensor<out_data_t> out_nkhw_device(make_HostTensorDescriptor(add_nkhw_desc));
+    Tensor<out_data_t> out_nkhw_host(make_HostTensorDescriptor(out_nkhw_desc));
+    Tensor<out_data_t> out_nkhw_device(make_HostTensorDescriptor(out_nkhw_desc));
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
@@ -700,8 +699,6 @@ int main(int argc, char* argv[])
         };
         wei_kcyx.GenerateTensorValue(gen_wei, num_thread);
 #endif
-        // add_nkhw.GenerateTensorValue(GeneratorTensor_2{-1, 1}, num_thread);
-        add_nkhw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
     }
 
 #if 0
@@ -783,8 +780,6 @@ int main(int argc, char* argv[])
         in_nchw,
         wei_kcyx_desc,
         wei_kcyx,
-        add_nkhw_desc,
-        add_nkhw,
         out_nkhw_desc,
         out_nkhw_device,
         ConvStrides{},
@@ -798,7 +793,6 @@ int main(int argc, char* argv[])
     {
         host_direct_convolution(in_nchw,
                                 wei_kcyx,
-                                add_nkhw,
                                 out_nkhw_host,
                                 ConvStrides{},
                                 ConvDilations{},

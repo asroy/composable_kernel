@@ -10,7 +10,6 @@ template <class TIn,
           class UpperPads>
 void host_direct_convolution(const Tensor<TIn>& in_nchw,
                              const Tensor<TWei>& wei_kcyx,
-                             const Tensor<TOut>& add_nkhw,
                              Tensor<TOut>& out_nkhw,
                              ConvStrides,
                              ConvDilations,
@@ -41,21 +40,14 @@ void host_direct_convolution(const Tensor<TIn>& in_nchw,
                 }
             }
         }
-
-        index_t hox2 = ho * 2;
-        index_t wox2 = wo * 2;
-
-        out_nkhw(n, k, hox2, wox2)         = v + add_nkhw(n, k, hox2, wox2);
-        out_nkhw(n, k, hox2, wox2 + 1)     = v + add_nkhw(n, k, hox2, wox2 + 1);
-        out_nkhw(n, k, hox2 + 1, wox2)     = v + add_nkhw(n, k, hox2 + 1, wox2);
-        out_nkhw(n, k, hox2 + 1, wox2 + 1) = v + add_nkhw(n, k, hox2 + 1, wox2 + 1);
+        out_nkhw(n, k, ho, wo) = v;
     };
 
     auto f_par = make_ParallelTensorFunctor(f,
                                             out_nkhw.mDesc.GetLengths()[0],
                                             out_nkhw.mDesc.GetLengths()[1],
-                                            out_nkhw.mDesc.GetLengths()[2] / 2,
-                                            out_nkhw.mDesc.GetLengths()[3] / 2);
+                                            out_nkhw.mDesc.GetLengths()[2],
+                                            out_nkhw.mDesc.GetLengths()[3]);
 
     f_par(std::thread::hardware_concurrency());
 }
