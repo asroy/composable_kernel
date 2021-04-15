@@ -377,7 +377,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
                     src_desc.CalculateOffset(to_multi_index(src_slice_origin_idx) + dst_data_idx +
                                              i * dst_scalar_step_in_vector);
 
-                dst_vector.template AsType<DstData>()(i) = p_src.template AsType<DstData>()[i];
+                dst_vector.template AsType<DstData>()(i) =
+                    p_src.template AsType<DstData>()[Number<src_offset>{}];
             });
 
             const bool is_dst_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
@@ -926,7 +927,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
                     dst_desc.CalculateOffset(to_multi_index(dst_slice_origin_idx) + src_data_idx +
                                              i * src_scalar_step_in_vector);
 
-                p_dst.template AsType<SrcData>()(i) = src_vector.template AsType<SrcData>()[i];
+                p_dst.template AsType<SrcData>()(Number<dst_offset>{}) =
+                    src_vector.template AsType<SrcData>()[i];
             });
 
             constexpr auto move_on_dim = [&]() constexpr
