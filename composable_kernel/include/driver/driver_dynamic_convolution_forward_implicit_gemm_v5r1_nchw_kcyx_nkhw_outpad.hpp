@@ -31,7 +31,6 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 {
     template <typename... Wei,
               typename... In,
-              typename... Add,
               typename... Out,
               typename ConvStrides,
               typename ConvDilations,
@@ -80,9 +79,6 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         const auto OutRightPadH = Hop - Ho;
         const auto OutRightPadW = Wop - Wo;
 
-        const auto AddRightPadH = 2 * OutRightPadH;
-        const auto AddRightPadW = 2 * OutRightPadW;
-
         const auto InLeftPadH = in_left_pads[I0];
         const auto InLeftPadW = in_left_pads[I1];
 
@@ -92,8 +88,6 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         std::cerr << "OutRightPadH = " << OutRightPadH << " OutRightPadW = " << OutRightPadW
                   << std::endl;
         std::cerr << "InRightPadH = " << InRightPadH << " InRightPadW = " << InRightPadW
-                  << std::endl;
-        std::cerr << "AddRightPadH = " << AddRightPadH << " AddRightPadW = " << AddRightPadW
                   << std::endl;
 
         // weight tensor
