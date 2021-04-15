@@ -366,8 +366,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                                                                           Number<HoPerThread>{},
                                                                           Number<WoPerThread>{}));
 
-            static_assert(c_k_n_ho_wo_thread_desc_vec.GetElementSpaceSize() == 4, "");
-
             const index_t vec_len = c_k_n_ho_wo_thread_desc_vec.GetElementSpaceSize() *
                                     CThreadTransferDstScalarPerVector;
 
