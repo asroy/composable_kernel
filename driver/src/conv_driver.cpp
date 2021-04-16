@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
 #elif 1
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
-    constexpr index_t HI = 540;
+    constexpr index_t HI = 544;
     constexpr index_t WI = 960;
     constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
@@ -111,6 +111,20 @@ int main(int argc, char* argv[])
     constexpr index_t C  = 16;
     constexpr index_t HI = 270;
     constexpr index_t WI = 480;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+
+    using ConvStrides   = Sequence<1, 1>;
+    using ConvDilations = Sequence<1, 1>;
+
+    using LeftPads  = Sequence<1, 1>;
+    using RightPads = Sequence<1, 1>;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 16;
+    constexpr index_t HI = 135;
+    constexpr index_t WI = 240;
     constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;

@@ -192,11 +192,11 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         // hack to control index calculation when iterating over c_m0_m1_n0_n1_global tensor
         // hack for NKHW format
         constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks =
-            make_tuple(make_tuple(Sequence<0, 1, 0, 0, 0>{},
+            make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{}),
-                       make_tuple(Sequence<0, 2, 0, 0, 0>{},
+                       make_tuple(Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{}));
@@ -262,7 +262,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
             for(index_t j = 0; j < nrepeat; ++j)
             {
-                if(has_main_k_block_loop && has_double_tail_k_block_loop)
+#if 0
+                //if(has_main_k_block_loop && has_double_tail_k_block_loop)
                 {
                     const auto kernel =
                         run_gridwise_operation<gridwise_gemm,
@@ -293,7 +294,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, true>{});
                 }
-                else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
+#elif 1
+                // else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
                 {
                     const auto kernel =
                         run_gridwise_operation<gridwise_gemm,
@@ -324,7 +326,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, false>{});
                 }
-                else if(!has_main_k_block_loop && has_double_tail_k_block_loop)
+#elif 1
+                // else if(!has_main_k_block_loop && has_double_tail_k_block_loop)
                 {
                     const auto kernel =
                         run_gridwise_operation<gridwise_gemm,
@@ -355,7 +358,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, true>{});
                 }
-                else
+#elif 1
+                // else
                 {
                     const auto kernel =
                         run_gridwise_operation<gridwise_gemm,
@@ -386,6 +390,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, false>{});
                 }
+#endif
             }
 
             timer.End();

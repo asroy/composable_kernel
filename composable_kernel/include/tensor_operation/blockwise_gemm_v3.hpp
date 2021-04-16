@@ -134,8 +134,8 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
 
         constexpr auto KPerThreadSubC = 4;
 
-        constexpr auto HoPerThreadSubC = 2;
-        constexpr auto WoPerThreadSubC = 2;
+        constexpr auto HoPerThreadSubC = HPerThread;
+        constexpr auto WoPerThreadSubC = WPerThread;
 
         static_assert(KPerThread % KPerThreadSubC == 0, "");
         static_assert(HPerThread % HoPerThreadSubC == 0, "");

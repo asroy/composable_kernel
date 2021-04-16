@@ -31,6 +31,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
 {
     template <typename... Wei,
               typename... In,
+              typename... Add,
               typename... Out,
               typename ConvStrides,
               typename ConvDilations,
@@ -38,6 +39,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
               typename InRightPads>
     __host__ void Run(const DynamicTensorDescriptor<Wei...>& wei_k_c_y_x_global_desc,
                       const DynamicTensorDescriptor<In...>& in_n_c_hi_wi_global_desc,
+                      const DynamicTensorDescriptor<Add...>& add_n_k0_hox2_wox2_k1_global_desc,
                       const DynamicTensorDescriptor<Out...>& out_n_k0_ho_wo_k1_global_desc,
                       const ConvStrides& conv_strides,
                       const ConvDilations& conv_dilations,
@@ -45,6 +47,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                       const InRightPads& in_right_pads,
                       const FloatAB* __restrict__ p_wei_global,
                       const FloatAB* __restrict__ p_in_global,
+                      const FloatC* __restrict__ p_d_global,
                       FloatC* __restrict__ p_out_global) const
     {
         constexpr auto I0 = Number<0>{};
@@ -62,6 +65,9 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
 
         const auto Ho = out_n_k0_ho_wo_k1_global_desc.GetLength(I2);
         const auto Wo = out_n_k0_ho_wo_k1_global_desc.GetLength(I3);
+
+        const auto Hox2 = Ho * 2;
+        const auto Wox2 = Wo * 2;
 
         const auto K1 = out_n_k0_ho_wo_k1_global_desc.GetLength(I4);
 
@@ -127,6 +133,16 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             make_tuple(Sequence<1, 4>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 
+        // add tensor
+        const auto add_k_n_hopx2_wopx2_global_desc = transform_dynamic_tensor_descriptor(
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Hox2, Wox2)),
+            make_tuple(make_pass_through_transform(K0),
+                       make_pass_through_transform(N),
+                       make_pass_through_transform(Hox2),
+                       make_pass_through_transform(Wox2)),
+            make_tuple(Sequence<1>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
+
         const auto E = C * Y * X;
 
         if(!((K % KPerBlock) == 0 && (Ho % HoPerBlock) == 0 && (Wo % WoPerBlock) == 0 &&
@@ -158,16 +174,15 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
         // hack to control index calculation when iterating over c_m0_m1_n0_n1_global tensor
         // hack for NKHW format
         constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks =
-            make_tuple(make_tuple(Sequence<0, 1, 0, 0, 0>{},
+            make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{}),
-                       make_tuple(Sequence<0, 2, 0, 0, 0>{},
+                       make_tuple(Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{}));
 
-#if 0
         // GEMM
         using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v3<
             BlockSize,
@@ -177,6 +192,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             InMemoryDataOperation::Set,
             decltype(wei_e_k_global_desc),
             decltype(in_e_n_ho_wo_global_desc),
+            decltype(add_k_n_hopx2_wopx2_global_desc),
             decltype(out_k_n_ho_wo_global_desc),
             KPerBlock,
             HoPerBlock,
@@ -228,13 +244,16 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
 
             for(index_t j = 0; j < nrepeat; ++j)
             {
-                if(has_main_k_block_loop && has_double_tail_k_block_loop)
+#if 0
+                //if(has_main_k_block_loop && has_double_tail_k_block_loop)
                 {
                     const auto kernel = run_gridwise_operation<gridwise_gemm,
                                                                decltype(wei_e_k_global_desc),
                                                                const FloatAB*,
                                                                decltype(in_e_n_ho_wo_global_desc),
                                                                const FloatAB*,
+                                                               decltype(add_k_n_hopx2_wopx2_global_desc),
+                                                               const FloatC*,
                                                                decltype(out_k_n_ho_wo_global_desc),
                                                                FloatC*,
                                                                integral_constant<bool, true>,
@@ -249,22 +268,28 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                   p_wei_global,
                                   in_e_n_ho_wo_global_desc,
                                   p_in_global,
+                                  add_k_n_hopx2_wopx2_global_desc,
+                                  p_d_global,
                                   out_k_n_ho_wo_global_desc,
                                   p_out_global,
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, true>{});
                 }
-                else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
+#elif 1
+                // else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
                 {
-                    const auto kernel = run_gridwise_operation<gridwise_gemm,
-                                                               decltype(wei_e_k_global_desc),
-                                                               const FloatAB*,
-                                                               decltype(in_e_n_ho_wo_global_desc),
-                                                               const FloatAB*,
-                                                               decltype(out_k_n_ho_wo_global_desc),
-                                                               FloatC*,
-                                                               integral_constant<bool, true>,
-                                                               integral_constant<bool, false>>;
+                    const auto kernel =
+                        run_gridwise_operation<gridwise_gemm,
+                                               decltype(wei_e_k_global_desc),
+                                               const FloatAB*,
+                                               decltype(in_e_n_ho_wo_global_desc),
+                                               const FloatAB*,
+                                               decltype(add_k_n_hopx2_wopx2_global_desc),
+                                               const FloatC*,
+                                               decltype(out_k_n_ho_wo_global_desc),
+                                               FloatC*,
+                                               integral_constant<bool, true>,
+                                               integral_constant<bool, false>>;
 
                     launch_kernel(kernel,
                                   dim3(GridSize),
@@ -275,22 +300,28 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                   p_wei_global,
                                   in_e_n_ho_wo_global_desc,
                                   p_in_global,
+                                  add_k_n_hopx2_wopx2_global_desc,
+                                  p_d_global,
                                   out_k_n_ho_wo_global_desc,
                                   p_out_global,
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, false>{});
                 }
-                else if(!has_main_k_block_loop && has_double_tail_k_block_loop)
+#elif 1
+                // else if(!has_main_k_block_loop && has_double_tail_k_block_loop)
                 {
-                    const auto kernel = run_gridwise_operation<gridwise_gemm,
-                                                               decltype(wei_e_k_global_desc),
-                                                               const FloatAB*,
-                                                               decltype(in_e_n_ho_wo_global_desc),
-                                                               const FloatAB*,
-                                                               decltype(out_k_n_ho_wo_global_desc),
-                                                               FloatC*,
-                                                               integral_constant<bool, false>,
-                                                               integral_constant<bool, true>>;
+                    const auto kernel =
+                        run_gridwise_operation<gridwise_gemm,
+                                               decltype(wei_e_k_global_desc),
+                                               const FloatAB*,
+                                               decltype(in_e_n_ho_wo_global_desc),
+                                               const FloatAB*,
+                                               decltype(add_k_n_hopx2_wopx2_global_desc),
+                                               const FloatC*,
+                                               decltype(out_k_n_ho_wo_global_desc),
+                                               FloatC*,
+                                               integral_constant<bool, false>,
+                                               integral_constant<bool, true>>;
 
                     launch_kernel(kernel,
                                   dim3(GridSize),
@@ -301,22 +332,28 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                   p_wei_global,
                                   in_e_n_ho_wo_global_desc,
                                   p_in_global,
+                                  add_k_n_hopx2_wopx2_global_desc,
+                                  p_d_global,
                                   out_k_n_ho_wo_global_desc,
                                   p_out_global,
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, true>{});
                 }
-                else
+#elif 1
+                // else
                 {
-                    const auto kernel = run_gridwise_operation<gridwise_gemm,
-                                                               decltype(wei_e_k_global_desc),
-                                                               const FloatAB*,
-                                                               decltype(in_e_n_ho_wo_global_desc),
-                                                               const FloatAB*,
-                                                               decltype(out_k_n_ho_wo_global_desc),
-                                                               FloatC*,
-                                                               integral_constant<bool, false>,
-                                                               integral_constant<bool, false>>;
+                    const auto kernel =
+                        run_gridwise_operation<gridwise_gemm,
+                                               decltype(wei_e_k_global_desc),
+                                               const FloatAB*,
+                                               decltype(in_e_n_ho_wo_global_desc),
+                                               const FloatAB*,
+                                               decltype(add_k_n_hopx2_wopx2_global_desc),
+                                               const FloatC*,
+                                               decltype(out_k_n_ho_wo_global_desc),
+                                               FloatC*,
+                                               integral_constant<bool, false>,
+                                               integral_constant<bool, false>>;
 
                     launch_kernel(kernel,
                                   dim3(GridSize),
@@ -327,11 +364,14 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
                                   p_wei_global,
                                   in_e_n_ho_wo_global_desc,
                                   p_in_global,
+                                  add_k_n_hopx2_wopx2_global_desc,
+                                  p_d_global,
                                   out_k_n_ho_wo_global_desc,
                                   p_out_global,
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, false>{});
                 }
+#endif
             }
 
             timer.End();
@@ -346,7 +386,6 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
             std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s"
                       << std::endl;
         }
-#endif
     }
 };
 } // namespace ck
