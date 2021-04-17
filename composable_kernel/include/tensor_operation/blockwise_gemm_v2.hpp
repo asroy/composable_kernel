@@ -130,13 +130,13 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1
 
         // thread A, B for GEMM
         constexpr auto a_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
-            Number<KPerThreadLoop>{}, Number<MPerThread>{});
+            make_tuple(Number<KPerThreadLoop>{}, Number<MPerThread>{}));
 
         constexpr auto b_thread_mtx = make_dynamic_naive_tensor_descriptor_packed_v2(
-            Number<KPerThreadLoop>{}, Number<NPerThread>{});
+            make_tuple(Number<KPerThreadLoop>{}, Number<NPerThread>{}));
 
-        FloatA p_a_thread[a_thread_mtx.GetElementSpace()];
-        FloatB p_b_thread[b_thread_mtx.GetElementSpace()];
+        FloatA p_a_thread[a_thread_mtx.GetElementSpaceSize()];
+        FloatB p_b_thread[b_thread_mtx.GetElementSpaceSize()];
 
         constexpr auto a_thread_copy = ThreadwiseMatrixSliceCopy_v2<BlockMatrixA,
                                                                     decltype(a_thread_mtx),
@@ -153,37 +153,31 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1
         constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v1<decltype(a_thread_mtx),
                                                                     decltype(b_thread_mtx),
                                                                     decltype(c_thread_mtx)>{};
-#pragma unroll
         // loop over k
-        for(index_t k_begin = 0; k_begin < K; k_begin += KPerThreadLoop)
-        {
-#pragma unroll
+        static_for<0, K, KPerThreadLoop>{}([&](auto k_begin) {
             // read A
-            for(index_t m_repeat = 0; m_repeat < MRepeat; ++m_repeat)
-            {
+            static_for<0, MRepeat, 1>{}([&](auto m_repeat) {
                 a_thread_copy.Run(p_a_block +
                                       a_block_mtx.CalculateOffset(
                                           make_tuple(k_begin, m_repeat * MPerLevel1Cluster)) +
                                       mMyThreadOffsetA,
                                   p_a_thread + a_thread_mtx.CalculateOffset(
                                                    make_tuple(0, m_repeat * MPerThreadSubC)));
-            }
+            });
 
-#pragma unroll
             // read B
-            for(index_t n_repeat = 0; n_repeat < NRepeat; ++n_repeat)
-            {
+            static_for<0, NRepeat, 1>{}([&](auto n_repeat) {
                 b_thread_copy.Run(p_b_block +
                                       b_block_mtx.CalculateOffset(
                                           make_tuple(k_begin, n_repeat * NPerLevel1Cluster)) +
                                       mMyThreadOffsetB,
                                   p_b_thread + b_thread_mtx.CalculateOffset(
                                                    make_tuple(0, n_repeat * NPerThreadSubC)));
-            }
+            });
 
             // C += A * B
             threadwise_gemm.Run(p_a_thread, p_b_thread, p_c_thread);
-        }
+        });
     }
 
     template <typename FloatA, typename FloatB, typename FloatC>

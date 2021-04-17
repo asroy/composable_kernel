@@ -27,10 +27,14 @@ struct lambda_scalar_step_in_vector
     }
 };
 
+// Assume:
+//   1. src_desc is known at compile-time
+//   2. dst_desc is not known at compile-time
+//   3. src_slice_origin_idx is known at compile-time and it's 0
+//   4. dst_slice_origin_idx is not-known at compile time
 // this version is less likely to have scratch memory issue, due to:
 //   1. It does not keep reference to tensor descriptor
 //   2. It does not construct new tensor coordinate for this->Run()
-// Assume src_slice_origin_idx is 0
 // TODO: support non-zero src_slice_oring_idx
 template <typename SrcData,
           typename DstData,
@@ -359,10 +363,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
     DstCoord dst_slice_origin_coord_;
 }; // namespace ck
 
+// Assume:
+//   1. src_desc is not known at compile-time
+//   2. dst_desc is known at compile-time
+//   3. src_slice_origin_idx is not known at compile-time
+//   4. dst_slice_origin_idx is known at compile-time and it's 0
 // this version is less likely to have scratch memory issue, due to:
 //   1. It does not keep reference to tensor descriptor
 //   2. It does not construct new tensor coordinate for this->Run()
-// Assume dst_slice_origin_idx is 0
 template <typename SrcData,
           typename DstData,
           typename SrcDesc,
@@ -590,7 +598,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
         }
     }
 
-    __device__ void Run(const SrcDesc& src_desc, const SrcData* p_src, DstData* p_dst)
+    template <typename DstSliceOriginIdx>
+    __device__ void Run(const SrcDesc& src_desc,
+                        const SrcData* p_src,
+                        const DstDesc&,
+                        const DstSliceOriginIdx&,
+                        DstData* p_dst)
     {
         constexpr index_t ntransform_src = SrcDesc::GetNumOfTransform();
 
@@ -600,7 +613,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
             make_tuple(generate_tuple([&](auto) { return zeros; }, Number<nDim>{}),
                        generate_tuple([&](auto) { return zeros; }, Number<nDim>{}));
 
-        Run(src_desc, p_src, p_dst, src_iterator_hacks);
+        Run(src_desc, p_src, DstDesc{}, DstSliceOriginIdx{}, p_dst, src_iterator_hacks);
     }
 
     __device__ static constexpr auto GetSrcCoordinateResetStep()
@@ -685,12 +698,16 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
     SrcCoord src_slice_origin_coord_;
 }; // namespace ck
 
+// Assume:
+//   1. src_desc and dst_desc are not known at compile-time
+//   2. src_slice_origin and dst_slice_origin are not known at compile-time,
+//   3. Use thread buffer
 // this version does following things to avoid "alloca" in LLVM-IR, which would cause scratch memory
 // and sometimes useless instructions
-// 1. It does not keep reference to tensor descriptor
-// 2. It does not construct new tensor coordinate for this->Run()
-// 3. It does not use pointer for VGPR thread buffer
-// 4. It calculate offset for thread buffer directly, instead of moving the coordinate
+//   1. It does not keep reference to tensor descriptor
+//   2. It does not construct new tensor coordinate for this->Run()
+//   3. It does not use pointer for VGPR thread buffer
+//   4. It calculate offset for thread buffer directly, instead of moving the coordinate
 template <typename SliceLengths,
           InMemoryDataOperation DstInMemOp,
           typename SrcData,
