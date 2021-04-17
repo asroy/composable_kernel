@@ -12,6 +12,7 @@ struct DynamicTensorCoordinate;
 template <index_t NTransform, index_t NDimVisible, typename UpdateLowerIndexHack>
 struct DynamicTensorCoordinateIterator;
 
+#if 0
 template <typename LowerDimensionIdss, typename UpperDimensionIdss>
 __host__ __device__ constexpr index_t GetNumOfHiddenDimension(LowerDimensionIdss,
                                                               UpperDimensionIdss)
@@ -30,6 +31,7 @@ __host__ __device__ constexpr index_t GetNumOfHiddenDimension(LowerDimensionIdss
 
     return unique_sort_all_dim_ids::Size();
 }
+#endif
 
 // Transforms: Tuple<transforms...>
 // LowerDimensionIdss : Tuple<Sequence<...>, ...>
