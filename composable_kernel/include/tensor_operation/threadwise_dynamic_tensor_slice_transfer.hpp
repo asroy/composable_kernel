@@ -875,7 +875,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 constexpr index_t buffer_offset =
                     buffer_desc_.CalculateOffset(src_data_idx + i * src_scalar_step_in_vector);
 
-                buffer_(Number<buffer_offset>{}) = src_vector.template AsType<SrcData>()[i];
+                buffer_.template AsType<SrcData>()(Number<buffer_offset>{}) =
+                    src_vector.template AsType<SrcData>()[i];
             });
 
             constexpr auto move_on_dim = [&]() constexpr
@@ -1032,7 +1033,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 constexpr index_t buffer_offset =
                     buffer_desc_.CalculateOffset(dst_data_idx + i * dst_scalar_step_in_vector);
 
-                dst_vector.template AsType<DstData>()(i) = buffer_[Number<buffer_offset>{}];
+                dst_vector.template AsType<DstData>()(i) =
+                    buffer_.template AsType<DstData>()[Number<buffer_offset>{}];
             });
 
             using DstVectorType =
@@ -1297,7 +1299,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
     static constexpr auto buffer_size_ = buffer_desc_.GetElementSpaceSize();
 
-    StaticallyIndexedArray<SrcData, buffer_size_> buffer_;
+    StaticBuffer<SrcData, buffer_size_> buffer_;
 
     SrcCoord src_slice_origin_coord_;
     DstCoord dst_slice_origin_coord_;

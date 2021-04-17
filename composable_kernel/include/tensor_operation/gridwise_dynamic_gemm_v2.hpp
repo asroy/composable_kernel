@@ -265,7 +265,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
         index_t b_block_data_begin = 0;
 
-#if 1
         if constexpr(HasMainKBlockLoop)
         {
             FloatAB* p_b_thread_even = p_b_thread_double;
@@ -350,9 +349,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                 p_b_thread_double,
                 p_c_thread);
         }
-#endif
 
-#if 1
         // output: register to global memory
         {
             // hack to control index calculation when iterating over c_k_n_ho_wo_global tensor
@@ -385,7 +382,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                      p_c_global,
                      c_k_n_ho_wo_global_tensor_iterator_hacks);
         }
-#endif
     }
 
     // pass tensor descriptor by reference

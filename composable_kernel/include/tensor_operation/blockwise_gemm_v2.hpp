@@ -281,10 +281,8 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1
             p_b_thread + b_thread_mtx.CalculateOffset(make_tuple(0, NPerThreadSubC)),
             p_c_thread + c_thread_mtx.CalculateOffset(make_tuple(0, NPerThreadSubC)));
 
-#pragma unroll
         // loop over rest of k
-        for(index_t k = KPerThreadLoop; k < K; k += KPerThreadLoop)
-        {
+        static_for<KPerThreadLoop, K, KPerThreadLoop>{}([&](auto k) {
             // read A_sub_0
             a_thread_copy.Run(p_a_block_off + a_block_mtx.CalculateOffset(make_tuple(k, 0)),
                               p_a_thread);
@@ -324,7 +322,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1
                 p_a_thread,
                 p_b_thread + b_thread_mtx.CalculateOffset(make_tuple(0, NPerThreadSubC)),
                 p_c_thread + c_thread_mtx.CalculateOffset(make_tuple(0, NPerThreadSubC)));
-        }
+        });
 
         // C_sub_10 += transpose(A_sub_1) * B_sub_0
         threadwise_gemm.Run(
