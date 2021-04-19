@@ -7,6 +7,15 @@
 
 namespace ck {
 
+// Do following things to avoid "alloca" in LLVM-IR, which would cause scratch memory
+// and sometimes useless instructions:
+//   1. Don't save a reference to tensor descriptor in class, pass in tensor descriptor as argument
+//   instead
+//   2. Don't construct a new tensor coordinate everytime when using it, update and reuse the same
+//   tensor coordinate instead
+//   3. Don't use a pointer to VGPR buffer, use vector instead
+
+namespace detail {
 // TODO: How to fix this? It uses an struct instead of lambda because lambda
 // doesn't have constructor
 template <index_t VectorDim, index_t ScalarPerVector>
@@ -26,15 +35,13 @@ struct lambda_scalar_step_in_vector
         return (i == VectorDim) ? 1 : 0;
     }
 };
+} // namespace detail
 
 // Assume:
 //   1. src_desc is known at compile-time
 //   2. dst_desc is not known at compile-time
 //   3. src_slice_origin_idx is known at compile-time and it's 0
 //   4. dst_slice_origin_idx is not-known at compile time
-// this version is less likely to have scratch memory issue, due to:
-//   1. It does not keep reference to tensor descriptor
-//   2. It does not construct new tensor coordinate for this->Run()
 // TODO: support non-zero src_slice_oring_idx
 template <typename SrcData,
           typename DstData,
@@ -98,10 +105,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
         // scalar per access on each dim
         // TODO: don't use lambda_scalar_per_access
         constexpr auto dst_scalar_per_access = generate_sequence(
-            lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
+            detail::lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
 
         constexpr auto dst_scalar_step_in_vector =
-            generate_sequence(lambda_scalar_step_in_vector<DstVectorDim>{}, Number<nDim>{});
+            generate_sequence(detail::lambda_scalar_step_in_vector<DstVectorDim>{}, Number<nDim>{});
 
         constexpr auto access_lengths = SliceLengths{} / dst_scalar_per_access;
 
@@ -288,7 +295,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
         // scalar per access on each dim
         // TODO: don't use lambda_scalar_per_access
         constexpr auto dst_scalar_per_access = generate_sequence(
-            lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
+            detail::lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
 
         constexpr auto access_lengths = SliceLengths{} / dst_scalar_per_access;
 
@@ -368,9 +375,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
 //   2. dst_desc is known at compile-time
 //   3. src_slice_origin_idx is not known at compile-time
 //   4. dst_slice_origin_idx is known at compile-time and it's 0
-// this version is less likely to have scratch memory issue, due to:
-//   1. It does not keep reference to tensor descriptor
-//   2. It does not construct new tensor coordinate for this->Run()
 template <typename SrcData,
           typename DstData,
           typename SrcDesc,
@@ -432,10 +436,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
         // scalar per access on each dim
         // TODO: don't use lambda_scalar_per_access
         constexpr auto src_scalar_per_access = generate_sequence(
-            lambda_scalar_per_access<SrcVectorDim, SrcScalarPerVector>{}, Number<nDim>{});
+            detail::lambda_scalar_per_access<SrcVectorDim, SrcScalarPerVector>{}, Number<nDim>{});
 
         constexpr auto src_scalar_step_in_vector =
-            generate_sequence(lambda_scalar_step_in_vector<SrcVectorDim>{}, Number<nDim>{});
+            generate_sequence(detail::lambda_scalar_step_in_vector<SrcVectorDim>{}, Number<nDim>{});
 
         constexpr auto access_lengths = SliceLengths{} / src_scalar_per_access;
 
@@ -623,7 +627,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
         // scalar per access on each dim
         // TODO: don't use lambda_scalar_per_access
         constexpr auto src_scalar_per_access = generate_sequence(
-            lambda_scalar_per_access<SrcVectorDim, SrcScalarPerVector>{}, Number<nDim>{});
+            detail::lambda_scalar_per_access<SrcVectorDim, SrcScalarPerVector>{}, Number<nDim>{});
 
         constexpr auto access_lengths = SliceLengths{} / src_scalar_per_access;
 
@@ -702,12 +706,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
 //   1. src_desc and dst_desc are not known at compile-time
 //   2. src_slice_origin and dst_slice_origin are not known at compile-time,
 //   3. Use thread buffer
-// this version does following things to avoid "alloca" in LLVM-IR, which would cause scratch memory
-// and sometimes useless instructions
-//   1. It does not keep reference to tensor descriptor
-//   2. It does not construct new tensor coordinate for this->Run()
-//   3. It does not use pointer for VGPR thread buffer
-//   4. It calculate offset for thread buffer directly, instead of moving the coordinate
 template <typename SliceLengths,
           InMemoryDataOperation DstInMemOp,
           typename SrcData,
@@ -777,10 +775,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         // scalar per access on each dim
         // TODO: don't use lambda_scalar_per_access
         constexpr auto src_scalar_per_access = generate_sequence(
-            lambda_scalar_per_access<SrcVectorDim, SrcScalarPerVector>{}, Number<nDim>{});
+            detail::lambda_scalar_per_access<SrcVectorDim, SrcScalarPerVector>{}, Number<nDim>{});
 
         constexpr auto src_scalar_step_in_vector =
-            generate_sequence(lambda_scalar_step_in_vector<SrcVectorDim>{}, Number<nDim>{});
+            generate_sequence(detail::lambda_scalar_step_in_vector<SrcVectorDim>{}, Number<nDim>{});
 
         constexpr auto src_access_lengths = SliceLengths{} / src_scalar_per_access;
 
@@ -955,10 +953,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         // src scalar per access on each dim
         // TODO: don't use this
         constexpr auto dst_scalar_per_access = generate_sequence(
-            lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
+            detail::lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
 
         constexpr auto dst_scalar_step_in_vector =
-            generate_sequence(lambda_scalar_step_in_vector<DstVectorDim>{}, Number<nDim>{});
+            generate_sequence(detail::lambda_scalar_step_in_vector<DstVectorDim>{}, Number<nDim>{});
 
         constexpr auto dst_access_lengths = SliceLengths{} / dst_scalar_per_access;
 
@@ -1142,7 +1140,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         // scalar per access on each dim
         // TODO: don't use lambda_scalar_per_access
         constexpr auto src_scalar_per_access = generate_sequence(
-            lambda_scalar_per_access<SrcVectorDim, SrcScalarPerVector>{}, Number<nDim>{});
+            detail::lambda_scalar_per_access<SrcVectorDim, SrcScalarPerVector>{}, Number<nDim>{});
 
         constexpr auto src_access_lengths = SliceLengths{} / src_scalar_per_access;
 
@@ -1204,7 +1202,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         // scalar per access on each dim
         // TODO: don't use lambda_scalar_per_access
         constexpr auto dst_scalar_per_access = generate_sequence(
-            lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
+            detail::lambda_scalar_per_access<DstVectorDim, DstScalarPerVector>{}, Number<nDim>{});
 
         constexpr auto dst_access_lengths = SliceLengths{} / dst_scalar_per_access;
 
@@ -1293,7 +1291,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
         move_dynamic_tensor_coordinate(src_desc, src_slice_origin_coord_, adjusted_step);
     }
-
     // dst_slice_origin_step_idx need to be known at compile-time, for performance reason
     __device__ void MoveDstSliceWindow(const DstDesc& dst_desc,
                                        const Index& dst_slice_origin_step_idx)
@@ -1320,6 +1317,103 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
     SrcCoord src_slice_origin_coord_;
     DstCoord dst_slice_origin_coord_;
+};
+
+// Assume:
+//   1. src:
+//     1. src_desc is known at compile-time
+//     2. a reference src_reference_idx is given at run-time, src_slice_origin_idx has a
+//        compile-time distance to src_reference_idx
+//     3. use #-iterator
+//   2. dst:
+//     1. dst_desc is known at compile-time
+//     2. a reference dst_reference_idx is given at compile-time, dst_slice_origin_idx has a
+//        compile-time distance to dst_reference_idx
+//     3. use direct address calculation (lower of coordinate)
+template <
+    typename SrcData,
+    typename DstData,
+    typename SrcDesc,
+    typename DstDesc,
+    typename SliceLengths,
+    typename DimAccessOrder,
+    index_t SrcVectorDim,
+    index_t SrcScalarPerVector,
+    AddressSpace SrcAddressSpace,
+    AddressSpace DstAddressSpace,
+    index_t SrcScalarStrideInVector,
+    typename std::enable_if<SrcDesc::IsKnownAtCompileTime() && DstDesc::IsKnownAtCompileTime(),
+                            bool>::type = false>
+struct ThreadwiseDynamicTensorSliceTransfer_v4
+{
+    static constexpr index_t nDim = SliceLengths::Size();
+
+    using Index = MultiIndex<nDim>;
+
+    using SrcCoord = decltype(make_dynamic_tensor_coordinate(SrcDesc{}, Index{}));
+
+    using SrcCoordIterator = decltype(make_dynamic_tensor_coordinate_iterator(SrcDesc{}, Index{}));
+
+    __device__ constexpr ThreadwiseDynamicTensorSliceTransfer_v4(const Index& src_ref_idx)
+        : src_ref_idx_(make_dynamic_tensor_coordinate(SrcDesc{}, src_ref_idx))
+    {
+        static_assert(SrcDesc::IsKnownAtCompileTime && DstDesc::IsKnownAtCompileTime(),
+                      "wrong! SrcDesc need to known at compile-time");
+    }
+
+    template <typename SrcOriginToRefDistance, typename DstOriginToRefDistance>
+    __device__ void Run(const SrcDesc& const SrcOriginToRefDistance& const SrcData* p_src,
+                        const DstDesc&,
+                        const DstOriginToRefDistance& DstData* p_dst)
+    {
+        static_ford<decltype(ordered_access_lengths)>{}([&](auto ordered_access_idx) {
+            // position in slice window
+            constexpr auto data_to_origin_dist_idx =
+                container_reorder_given_old2new(ordered_access_idx, dim_access_order) *
+                src_scalar_per_access;
+
+            // src coordinate
+            constexpr auto src_data_to_ref_dist_idx =
+                SrcOriginToRefDistance{} + data_to_origin_dist_idx;
+
+            constexpr auto src_data_to_ref_dist_coord_iterator =
+                make_dynamic_tensor_coordinate_iterator(SrcDesc{}, src_data_to_ref_dist);
+
+            auto src_data_coord = src_ref_coord_;
+
+            move_dynamic_tensor_coordinate(
+                src_data_coord, src_data_coord, src_data_to_ref_coord_iterator);
+
+            // copy data from src into buffer
+            StaticBuffer<SrcData, SrcScalarPerVector> src_buf;
+
+            using src_vector_t =
+                typename vector_type_maker<SrcData, SrcScalarPerVector>::type::type;
+
+            const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                src_desc, src_slice_origin_coord_);
+
+            src_buf.template AsType<src_vector_t>()(Number<0>{}) =
+                is_src_valid ? *reinterpret_cast<const src_vector_t*>(
+                                   &p_src[src_slice_origin_coord_.GetOffset()])
+                             : src_vector_t{0};
+
+            // copy data from buffer into dst
+            static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
+                constexpr auto src_scalar_step_in_vector = generate_sequence(
+                    detail::lambda_scalar_step_in_vector<SrcVectorDim>{}, Number<nDim>{});
+
+                constexpr index_t dst_offset = dst_desc.CalculateOffset(
+                    to_multi_index(DstOriginToRefDistance{}) + data_to_origin_dist_idx +
+                    i * src_scalar_step_in_vector);
+
+                p_dst[Number<dst_offset>{}] = src_buf.template AsType<SrcData>()[i];
+            });
+        });
+    }
+
+    private:
+    SrcCoord src_ref_idx_;
 };
 
 } // namespace ck
