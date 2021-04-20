@@ -1330,6 +1330,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 //     2. a reference dst_reference_idx is given at compile-time, dst_slice_origin_idx has a
 //        compile-time distance to dst_reference_idx
 //     3. use direct address calculation (lower of coordinate)
+//   3. vector access on src
 template <
     typename SrcData,
     typename DstData,
@@ -1355,34 +1356,98 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
     using SrcCoordIterator = decltype(make_dynamic_tensor_coordinate_iterator(SrcDesc{}, Index{}));
 
     __device__ constexpr ThreadwiseDynamicTensorSliceTransfer_v4(const Index& src_ref_idx)
-        : src_ref_idx_(make_dynamic_tensor_coordinate(SrcDesc{}, src_ref_idx))
+        : src_ref_coord_(make_dynamic_tensor_coordinate(SrcDesc{}, src_ref_idx))
     {
-        static_assert(SrcDesc::IsKnownAtCompileTime && DstDesc::IsKnownAtCompileTime(),
-                      "wrong! SrcDesc need to known at compile-time");
+        static_assert(SrcDesc::IsKnownAtCompileTime() && DstDesc::IsKnownAtCompileTime(),
+                      "wrong! SrcDesc and DstDesc need to known at compile-time");
     }
 
-    template <typename SrcOriginToRefDistance, typename DstOriginToRefDistance>
-    __device__ void Run(const SrcDesc& const SrcOriginToRefDistance& const SrcData* p_src,
+    template <typename SrcRefToOriginDisplacement, typename DstRefToOriginDisplacement>
+    __device__ void Run(const SrcDesc&,
+                        const SrcRefToOriginDisplacement&,
+                        const SrcData* p_src,
                         const DstDesc&,
-                        const DstOriginToRefDistance& DstData* p_dst)
+                        const DstRefToOriginDisplacement&,
+                        DstData* p_dst) const
     {
+        static_assert(SrcDesc::IsKnownAtCompileTime() && DstDesc::IsKnownAtCompileTime(),
+                      "wrong! SrcDesc and DstDesc need to known at compile-time");
+
+        static_assert(is_known_at_compile_time<
+                          remove_cv_t<remove_reference_t<SrcRefToOriginDisplacement>>>::value &&
+                          is_known_at_compile_time<
+                              remove_cv_t<remove_reference_t<DstRefToOriginDisplacement>>>::value,
+                      "wrong! SrcOriginToRefDistance and DstOriginToRefDistance need to be known "
+                      "at compile-time");
+
+        // SrcDesc and DstDesc are known at compile-time
+        constexpr auto src_desc = remove_cv_t<remove_reference_t<SrcDesc>>{};
+        constexpr auto dst_desc = remove_cv_t<remove_reference_t<DstDesc>>{};
+
+        // SrcOriginToRefDisttance and DstOriginToRefDistance are known at compile-time
+        constexpr auto src_ref_to_origin_disp_idx = SrcRefToOriginDisplacement{};
+        constexpr auto dst_ref_to_origin_disp_idx = DstRefToOriginDisplacement{};
+
+        constexpr auto I0 = Number<0>{};
+        constexpr auto I1 = Number<1>{};
+
+        // scalar per access of each dim
+        constexpr auto src_scalar_per_access = generate_sequence_v2(
+            [&](auto i) constexpr {
+                if constexpr(i == SrcVectorDim)
+                {
+                    return Number<SrcScalarPerVector>{};
+                }
+                else
+                {
+                    return Number<1>{};
+                }
+            },
+            Number<nDim>{});
+
+        // scalar step (if steping on SrcVectorDim) of each dim
+        constexpr auto src_scalar_step_in_vector = generate_sequence_v2(
+            [&](auto i) constexpr {
+                if constexpr(i == SrcVectorDim)
+                {
+                    return Number<1>{};
+                }
+                else
+                {
+                    return Number<0>{};
+                }
+            },
+            Number<nDim>{});
+
+        constexpr auto access_lengths = SliceLengths{} / src_scalar_per_access;
+
+        constexpr auto dim_access_order = DimAccessOrder{};
+
+        constexpr auto ordered_access_lengths =
+            container_reorder_given_new2old(access_lengths, dim_access_order);
+
         static_ford<decltype(ordered_access_lengths)>{}([&](auto ordered_access_idx) {
-            // position in slice window
-            constexpr auto data_to_origin_dist_idx =
+        // position in slice window
+#if 0 // debug
+            constexpr auto data_to_origin_disp_idx =
                 container_reorder_given_old2new(ordered_access_idx, dim_access_order) *
                 src_scalar_per_access;
+#else
+            constexpr auto data_to_origin_disp_idx =
+                ordered_access_idx.ReorderGivenOld2New(dim_access_order) * src_scalar_per_access;
+#endif
 
             // src coordinate
-            constexpr auto src_data_to_ref_dist_idx =
-                SrcOriginToRefDistance{} + data_to_origin_dist_idx;
+            constexpr auto src_ref_to_data_disp_idx =
+                to_multi_index(src_ref_to_origin_disp_idx + data_to_origin_disp_idx);
 
-            constexpr auto src_data_to_ref_dist_coord_iterator =
-                make_dynamic_tensor_coordinate_iterator(SrcDesc{}, src_data_to_ref_dist);
+            constexpr auto src_ref_to_data_disp_coord_iterator =
+                make_dynamic_tensor_coordinate_iterator(src_desc, src_ref_to_data_disp_idx);
 
             auto src_data_coord = src_ref_coord_;
 
             move_dynamic_tensor_coordinate(
-                src_data_coord, src_data_coord, src_data_to_ref_coord_iterator);
+                src_desc, src_data_coord, src_ref_to_data_disp_coord_iterator);
 
             // copy data from src into buffer
             StaticBuffer<SrcData, SrcScalarPerVector> src_buf;
@@ -1391,20 +1456,17 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
                 typename vector_type_maker<SrcData, SrcScalarPerVector>::type::type;
 
             const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                src_desc, src_slice_origin_coord_);
+                src_desc, src_data_coord);
 
             src_buf.template AsType<src_vector_t>()(Number<0>{}) =
-                is_src_valid ? *reinterpret_cast<const src_vector_t*>(
-                                   &p_src[src_slice_origin_coord_.GetOffset()])
-                             : src_vector_t{0};
+                is_src_valid
+                    ? *reinterpret_cast<const src_vector_t*>(&p_src[src_data_coord.GetOffset()])
+                    : src_vector_t{0};
 
             // copy data from buffer into dst
             static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
-                constexpr auto src_scalar_step_in_vector = generate_sequence(
-                    detail::lambda_scalar_step_in_vector<SrcVectorDim>{}, Number<nDim>{});
-
                 constexpr index_t dst_offset = dst_desc.CalculateOffset(
-                    to_multi_index(DstOriginToRefDistance{}) + data_to_origin_dist_idx +
+                    to_multi_index(dst_ref_to_origin_disp_idx) + data_to_origin_disp_idx +
                     i * src_scalar_step_in_vector);
 
                 p_dst[Number<dst_offset>{}] = src_buf.template AsType<SrcData>()[i];
@@ -1413,7 +1475,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
     }
 
     private:
-    SrcCoord src_ref_idx_;
+    SrcCoord src_ref_coord_;
 };
 
 } // namespace ck

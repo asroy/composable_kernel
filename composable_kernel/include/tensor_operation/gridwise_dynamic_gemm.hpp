@@ -255,6 +255,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
         constexpr auto c_m0m1_n0n1_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
             make_tuple(Number<MRepeat * MPerThread>{}, Number<NRepeat * NPerThread>{}));
 
+#if 1 // debug
         const auto blockwise_gemm =
             BlockwiseGemm_km_kn_m0m1n0n1_v1<BlockSize,
                                             decltype(a_k_m_block_desc),
@@ -269,6 +270,26 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
                                             NLevel1Cluster,
                                             MPerThread,
                                             NPerThread>{};
+#else
+        const auto blockwise_gemm =
+            BlockwiseGemm_km_kn_m0m1n0n1_v1r1<BlockSize,
+                                              FloatAB,
+                                              FloatAB,
+                                              FloatAcc,
+                                              decltype(a_k_m_block_desc),
+                                              decltype(b_k_n_block_desc),
+                                              decltype(c_m0m1_n0n1_thread_desc),
+                                              MPerThread,
+                                              NPerThread,
+                                              KPerThread,
+                                              MLevel0Cluster,
+                                              NLevel0Cluster,
+                                              MLevel1Cluster,
+                                              NLevel1Cluster,
+                                              MPerThread,
+                                              NPerThread>{};
+
+#endif
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
