@@ -57,7 +57,10 @@ struct ThreadwiseMatrixSliceCopy_v2
 
 // C[M, N] += transpose(A[K, M]) * B[K, N]
 //   Element of matrix can be vectorized data
-template <typename ADesc,
+template <typename FloatA,
+          typename FloatB,
+          typename FloatC,
+          typename ADesc,
           typename BDesc,
           typename CDesc,
           typename std::enable_if<ADesc::IsKnownAtCompileTime() && BDesc::IsKnownAtCompileTime() &&
@@ -65,7 +68,6 @@ template <typename ADesc,
                                   bool>::type = false>
 struct ThreadwiseGemm_km_kn_mn_v1
 {
-    template <typename FloatA, typename FloatB, typename FloatC>
     __device__ static void Run_source(const FloatA* p_a, const FloatB* p_b, FloatC* p_c)
     {
         static_assert(ADesc::IsKnownAtCompileTime() && BDesc::IsKnownAtCompileTime() &&
@@ -94,7 +96,6 @@ struct ThreadwiseGemm_km_kn_mn_v1
     }
 
 #if CK_THREADWISE_GEMM_USE_AMD_INLINE_ASM
-    template <typename FloatA, typename FloatB, typename FloatC>
     __device__ static void Run_amd_asm(const FloatA* p_a, const FloatB* p_b, FloatC* p_c)
     {
         static_assert(ADesc::IsKnownAtCompileTime() && BDesc::IsKnownAtCompileTime() &&
@@ -157,7 +158,6 @@ struct ThreadwiseGemm_km_kn_mn_v1
     }
 #endif
 
-    template <typename FloatA, typename FloatB, typename FloatC>
     __device__ static void Run(const FloatA* p_a, const FloatB* p_b, FloatC* p_c)
     {
 #if CK_THREADWISE_GEMM_USE_AMD_INLINE_ASM

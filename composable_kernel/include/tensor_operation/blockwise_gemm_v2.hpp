@@ -12,6 +12,9 @@ namespace ck {
 //    MPerThreadSubC, NPerThreadSubC, MLevel0ThreadCluster, NLevel0ThreadCluster,
 //    MLevel1ThreadCluster, NLevel1ThreadCluster
 template <index_t BlockSize,
+          typename FloatA,
+          typename FloatB,
+          typename FloatC,
           typename BlockMatrixA,
           typename BlockMatrixB,
           typename ThreadMatrixC,
@@ -104,7 +107,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1
                            level1_n_id * NPerLevel0Cluster + level0_n_id * NPerThreadSubC};
     }
 
-    template <typename FloatA, typename FloatB, typename FloatC>
     __device__ void
     Run_naive(const FloatA* p_a_block, const FloatB* p_b_block, FloatC* p_c_thread) const
     {
@@ -150,7 +152,10 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1
                                                                     NPerThreadSubC,
                                                                     ThreadGemmBDataPerRead_N>{};
 
-        constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v1<decltype(a_thread_mtx),
+        constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v1<FloatA,
+                                                                    FloatB,
+                                                                    FloatC,
+                                                                    decltype(a_thread_mtx),
                                                                     decltype(b_thread_mtx),
                                                                     decltype(c_thread_mtx)>{};
         // loop over k
@@ -180,7 +185,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1
         });
     }
 
-    template <typename FloatA, typename FloatB, typename FloatC>
     __device__ void
     Run_pipelined_2x2(const FloatA* p_a_block, const FloatB* p_b_block, FloatC* p_c_thread) const
     {
@@ -243,7 +247,10 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1
                                                                     NPerThreadSubC,
                                                                     ThreadGemmBDataPerRead_N>{};
 
-        constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v1<decltype(a_thread_sub_mtx),
+        constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v1<FloatA,
+                                                                    FloatB,
+                                                                    FloatC,
+                                                                    decltype(a_thread_sub_mtx),
                                                                     decltype(b_thread_sub_mtx),
                                                                     decltype(c_thread_sub_mtx)>{};
 
@@ -331,7 +338,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1
             p_c_thread + c_thread_mtx.CalculateOffset(make_tuple(MPerThreadSubC, NPerThreadSubC)));
     }
 
-    template <typename FloatA, typename FloatB, typename FloatC>
     __device__ void Run(const FloatA* p_a_block, const FloatB* p_b_block, FloatC* p_c_thread) const
     {
 #if CK_EXPERIMENTAL_BLOCKWISE_GEMM_USE_PIPELINE
@@ -540,7 +546,10 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
         FloatA p_a_thread[a_thread_mtx_desc_.GetElementSpaceSize()];
         FloatB p_b_thread[b_thread_mtx_desc_.GetElementSpaceSize()];
 
-        constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v1<decltype(a_thread_sub_mtx),
+        constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v1<FloatA,
+                                                                    FloatB,
+                                                                    FloatC,
+                                                                    decltype(a_thread_sub_mtx),
                                                                     decltype(b_thread_sub_mtx),
                                                                     decltype(c_thread_sub_mtx)>{};
 

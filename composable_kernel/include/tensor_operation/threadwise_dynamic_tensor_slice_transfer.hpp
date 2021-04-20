@@ -1429,6 +1429,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
         static_ford<decltype(ordered_access_lengths)>{}([&](auto ordered_access_idx) {
         // position in slice window
 #if 0 // debug
+      // TODO: unable to compile
             constexpr auto data_to_origin_disp_idx =
                 container_reorder_given_old2new(ordered_access_idx, dim_access_order) *
                 src_scalar_per_access;
