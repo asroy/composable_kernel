@@ -5,6 +5,24 @@
 
 namespace ck {
 
+// c += inner_product(a, b)
+__device__ void amd_assembly_inner_product(const float& a, const float& b, float& c)
+{
+#if CK_USE_AMD_V_FMAC_F32
+    asm volatile("\n \
+            v_fmac_f32 %0, %1, %2 \n \
+            "
+                 : "=v"(c)
+                 : "v"(a), "v"(b), "0"(c));
+#else
+    asm volatile("\n \
+            v_mac_f32 %0, %1, %2 \n \
+            "
+                 : "=v"(c)
+                 : "v"(a), "v"(b), "0"(c));
+#endif
+}
+
 // c0 += inner_product(a, b0)
 // c1 += inner_product(a, b1)
 __device__ void amd_assembly_outer_product_1x2(float a, float b0, float b1, float& c0, float& c1)

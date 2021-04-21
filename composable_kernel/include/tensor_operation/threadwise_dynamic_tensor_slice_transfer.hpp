@@ -1379,9 +1379,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
         static_assert(SrcDesc::IsKnownAtCompileTime() && DstDesc::IsKnownAtCompileTime(),
                       "wrong! SrcDesc and DstDesc need to known at compile-time");
 
-#if 0 // debug
         static_assert(DstBuffer::IsStaticBuffer(), "wrong! DstBuffer need to be StaticBuffer");
-#endif
 
         static_assert(is_known_at_compile_time<
                           remove_cv_t<remove_reference_t<SrcRefToOriginDisplacement>>>::value &&
@@ -1437,13 +1435,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
             container_reorder_given_new2old(access_lengths, dim_access_order);
 
         static_ford<decltype(ordered_access_lengths)>{}([&](auto ordered_access_idx) {
-        // position in slice window
-#if 0 // debug
-      // TODO: unable to compile
+#if 0
+            // TODO: unable to compile
+            // position in slice window
             constexpr auto data_to_origin_disp_idx =
                 container_reorder_given_old2new(ordered_access_idx, dim_access_order) *
                 src_scalar_per_access;
 #else
+            // position in slice window
             constexpr auto data_to_origin_disp_idx =
                 ordered_access_idx.ReorderGivenOld2New(dim_access_order) * src_scalar_per_access;
 #endif
@@ -1470,13 +1469,13 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
                 src_desc, src_data_coord);
 
 #if 0
-            // TODO: this is slooooooooow!
+            // TODO: this is slooooooooow due to VGPR over-allocation
             src_tmp_buf.template AsType<src_vector_t>()(Number<0>{}) =
                 is_src_valid ? src_buf.template AsType<src_vector_t>()[src_data_coord.GetOffset() /
                                                                        SrcScalarPerVector]
                              : src_vector_t{0};
 #else
-            // this has normal performance but it's hacky
+            // TODO: this is workaround. this has normal performance but it's hacky
             src_tmp_buf.template AsType<src_vector_t>()(Number<0>{}) =
                 is_src_valid
                     ? *reinterpret_cast<const src_vector_t*>(&(reinterpret_cast<const SrcData*>(

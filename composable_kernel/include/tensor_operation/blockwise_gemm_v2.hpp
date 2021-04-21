@@ -545,11 +545,8 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
             make_tuple(Number<MPerThreadSubC>{}, Number<NPerThreadSubC>{}),
             make_tuple(Number<NPerThread>{}, Number<1>{}));
 
-        FloatA p_a_thread[a_thread_mtx_desc_.GetElementSpaceSize()];
-        FloatB p_b_thread[b_thread_mtx_desc_.GetElementSpaceSize()];
-
-        auto a_thread_buf = make_dynamic_buffer(p_a_thread);
-        auto b_thread_buf = make_dynamic_buffer(p_b_thread);
+        auto a_thread_buf = make_static_buffer<FloatA>(a_thread_mtx_desc_.GetElementSpaceSize());
+        auto b_thread_buf = make_static_buffer<FloatB>(b_thread_mtx_desc_.GetElementSpaceSize());
 
         constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v1r1<FloatA,
                                                                       FloatB,

@@ -191,60 +191,12 @@ struct ThreadwiseGemm_km_kn_mn_v1r1
               typename BOriginIdx,
               typename CBuffer,
               typename COriginIdx>
-    __device__ static void Run_source(const ABuffer& a_buf,
-                                      AOriginIdx,
-                                      const BBuffer& b_buf,
-                                      BOriginIdx,
-                                      CBuffer& c_buf,
-                                      COriginIdx)
-    {
-        static_assert(ADesc::IsKnownAtCompileTime() && BDesc::IsKnownAtCompileTime() &&
-                          CDesc::IsKnownAtCompileTime(),
-                      "wrong! Desc should be known at compile-time");
-
-        constexpr auto I0 = Number<0>{};
-        constexpr auto I1 = Number<1>{};
-
-        constexpr auto M = CDesc{}.GetLength(I0);
-        constexpr auto N = CDesc{}.GetLength(I1);
-        constexpr auto K = ADesc{}.GetLength(I0);
-
-        constexpr auto a_origin_idx = AOriginIdx{};
-        constexpr auto b_origin_idx = BOriginIdx{};
-        constexpr auto c_origin_idx = COriginIdx{};
-
-        static_for<0, K, 1>{}([&](auto k) {
-            static_for<0, M, 1>{}([&](auto m) {
-                static_for<0, N, 1>{}([&](auto n) {
-                    constexpr auto a_offset =
-                        ADesc{}.CalculateOffset(a_origin_idx + make_tuple(k, m));
-                    constexpr auto b_offset =
-                        BDesc{}.CalculateOffset(b_origin_idx + make_tuple(k, n));
-                    constexpr auto c_offset =
-                        CDesc{}.CalculateOffset(c_origin_idx + make_tuple(m, n));
-
-                    c_buf.template AsType<FloatC>()(c_offset) +=
-                        inner_product_with_conversion<FloatC>{}(
-                            a_buf.template AsType<FloatA>()[a_offset],
-                            b_buf.template AsType<FloatB>()[b_offset]);
-                });
-            });
-        });
-    }
-
-#if CK_THREADWISE_GEMM_USE_AMD_INLINE_ASM
-    template <typename ABuffer,
-              typename AOriginIdx,
-              typename BBuffer,
-              typename BOriginIdx,
-              typename CBuffer,
-              typename COriginIdx>
-    __device__ static void Run_amd_asm(const ABuffer& a_buf,
-                                       AOriginIdx,
-                                       const BBuffer& b_buf,
-                                       BOriginIdx,
-                                       CBuffer& c_buf,
-                                       COriginIdx)
+    __device__ static void Run(const ABuffer& a_buf,
+                               AOriginIdx,
+                               const BBuffer& b_buf,
+                               BOriginIdx,
+                               CBuffer& c_buf,
+                               COriginIdx)
     {
         static_assert(ADesc::IsKnownAtCompileTime() && BDesc::IsKnownAtCompileTime() &&
                           CDesc::IsKnownAtCompileTime(),
@@ -258,8 +210,6 @@ struct ThreadwiseGemm_km_kn_mn_v1r1
 
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
-        constexpr auto I2 = Number<2>{};
-        constexpr auto I3 = Number<3>{};
 
         constexpr auto M = CDesc{}.GetLength(I0);
         constexpr auto N = CDesc{}.GetLength(I1);
@@ -269,83 +219,30 @@ struct ThreadwiseGemm_km_kn_mn_v1r1
         constexpr auto b_origin_idx = to_multi_index(BOriginIdx{});
         constexpr auto c_origin_idx = to_multi_index(COriginIdx{});
 
-        static_assert(N == 4 || N == 2, "wrong! this config not supported by asm yet");
-
         static_for<0, K, 1>{}([&](auto k) {
             static_for<0, M, 1>{}([&](auto m) {
-                constexpr auto a_offset = ADesc{}.CalculateOffset(a_origin_idx + make_tuple(k, m));
+                static_for<0, N, 1>{}([&](auto n) {
 
-                if constexpr(N == 2)
-                {
-                    constexpr auto b_offset_0 =
-                        BDesc{}.CalculateOffset(b_origin_idx + make_tuple(k, I0));
-                    constexpr auto b_offset_1 =
-                        BDesc{}.CalculateOffset(b_origin_idx + make_tuple(k, I1));
+                    constexpr index_t a_offset =
+                        ADesc{}.CalculateOffset(a_origin_idx + make_tuple(k, m));
+                    constexpr index_t b_offset =
+                        BDesc{}.CalculateOffset(b_origin_idx + make_tuple(k, n));
+                    constexpr index_t c_offset =
+                        CDesc{}.CalculateOffset(c_origin_idx + make_tuple(m, n));
 
-                    constexpr auto c_offset_0 =
-                        CDesc{}.CalculateOffset(c_origin_idx + make_tuple(m, I0));
-                    constexpr auto c_offset_1 =
-                        CDesc{}.CalculateOffset(c_origin_idx + make_tuple(m, I1));
-
-                    amd_assembly_outer_product_1x2(a_buf.template AsType<FloatA>()[a_offset],
-                                                   b_buf.template AsType<FloatB>()[b_offset_0],
-                                                   b_buf.template AsType<FloatB>()[b_offset_1],
-                                                   c_buf.template AsType<FloatC>()(c_offset_0),
-                                                   c_buf.template AsType<FloatC>()(c_offset_1));
-                }
-                else if constexpr(N == 4)
-                {
-                    constexpr auto b_offset_0 =
-                        BDesc{}.CalculateOffset(b_origin_idx + make_tuple(k, I0));
-                    constexpr auto b_offset_1 =
-                        BDesc{}.CalculateOffset(b_origin_idx + make_tuple(k, I1));
-                    constexpr auto b_offset_2 =
-                        BDesc{}.CalculateOffset(b_origin_idx + make_tuple(k, I2));
-                    constexpr auto b_offset_3 =
-                        BDesc{}.CalculateOffset(b_origin_idx + make_tuple(k, I3));
-
-                    constexpr auto c_offset_0 =
-                        CDesc{}.CalculateOffset(c_origin_idx + make_tuple(m, I0));
-                    constexpr auto c_offset_1 =
-                        CDesc{}.CalculateOffset(c_origin_idx + make_tuple(m, I1));
-                    constexpr auto c_offset_2 =
-                        CDesc{}.CalculateOffset(c_origin_idx + make_tuple(m, I2));
-                    constexpr auto c_offset_3 =
-                        CDesc{}.CalculateOffset(c_origin_idx + make_tuple(m, I3));
-
-                    amd_assembly_outer_product_1x4(a_buf.template AsType<FloatA>()[a_offset],
-                                                   b_buf.template AsType<FloatB>()[b_offset_0],
-                                                   b_buf.template AsType<FloatB>()[b_offset_1],
-                                                   b_buf.template AsType<FloatB>()[b_offset_2],
-                                                   b_buf.template AsType<FloatB>()[b_offset_3],
-                                                   c_buf.template AsType<FloatC>()(c_offset_0),
-                                                   c_buf.template AsType<FloatC>()(c_offset_1),
-                                                   c_buf.template AsType<FloatC>()(c_offset_2),
-                                                   c_buf.template AsType<FloatC>()(c_offset_3));
-                }
+#if CK_THREADWISE_GEMM_USE_AMD_INLINE_ASM
+                    amd_assembly_inner_product(a_buf.template AsType<FloatA>()[Number<a_offset>{}],
+                                               b_buf.template AsType<FloatB>()[Number<b_offset>{}],
+                                               c_buf.template AsType<FloatC>()(Number<c_offset>{}));
+#else
+                    c_buf.template AsType<FloatC>()(Number<c_offset>{}) +=
+                        inner_product_with_conversion<FloatC>{}(
+                            a_buf.template AsType<FloatA>()[Number<a_offset>{}],
+                            b_buf.template AsType<FloatB>()[Number<b_offset>{}]);
+#endif
+                });
             });
         });
-    }
-#endif
-
-    template <typename ABuffer,
-              typename AOriginIdx,
-              typename BBuffer,
-              typename BOriginIdx,
-              typename CBuffer,
-              typename COriginIdx>
-    __device__ static void Run(const ABuffer& a_buf,
-                               AOriginIdx,
-                               const BBuffer& b_buf,
-                               BOriginIdx,
-                               CBuffer& c_buf,
-                               COriginIdx)
-    {
-#if CK_THREADWISE_GEMM_USE_AMD_INLINE_ASM
-        Run_amd_asm(a_buf, AOriginIdx{}, b_buf, BOriginIdx{}, c_buf, COriginIdx{});
-#else
-        Run_source(a_buf, AOriginIdx{}, b_buf, BOriginIdx{}, c_buf, COriginIdx{});
-#endif
     }
 };
 
