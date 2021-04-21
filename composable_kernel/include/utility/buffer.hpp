@@ -20,7 +20,7 @@ struct StaticBuffer : public vector_type<ScalarType, N>
 template <typename T, index_t N>
 __host__ __device__ constexpr auto make_static_buffer(Number<N>)
 {
-    using scalar_t                      = scalar_type<T>;
+    using scalar_t                      = typename scalar_type<T>::type;
     constexpr index_t scalar_per_vector = scalar_type<T>::vector_size;
 
     return StaticBuffer<scalar_t, N * scalar_per_vector>{};
@@ -51,7 +51,7 @@ struct DynamicBuffer
                   is_same<typename scalar_type<remove_cv_t<remove_reference_t<X>>>::type,
                           ScalarType>::value,
                   bool>::type = false>
-    __host__ __device__ constexpr const auto& AsType() const
+    __host__ __device__ constexpr const auto AsType() const
     {
         return PointerWrapper<X>{reinterpret_cast<X*>(p_scalar_)};
     }
@@ -61,7 +61,7 @@ struct DynamicBuffer
                   is_same<typename scalar_type<remove_cv_t<remove_reference_t<X>>>::type,
                           ScalarType>::value,
                   bool>::type = false>
-    __host__ __device__ constexpr auto& AsType()
+    __host__ __device__ constexpr auto AsType()
     {
         return PointerWrapper<X>{reinterpret_cast<X*>(p_scalar_)};
     }
@@ -70,7 +70,7 @@ struct DynamicBuffer
 template <typename T>
 __host__ __device__ constexpr auto make_dynamic_buffer(T* p)
 {
-    using scalar_t                      = scalar_type<T>;
+    using scalar_t                      = typename scalar_type<T>::type;
     constexpr index_t scalar_per_vector = scalar_type<T>::vector_size;
 
     return DynamicBuffer<scalar_t>{p};

@@ -1362,13 +1362,15 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
                       "wrong! SrcDesc and DstDesc need to known at compile-time");
     }
 
-    template <typename SrcRefToOriginDisplacement, typename DstRefToOriginDisplacement>
+    template <typename SrcRefToOriginDisplacement,
+              typename DstRefToOriginDisplacement,
+              typename DstBuffer>
     __device__ void Run(const SrcDesc&,
                         const SrcRefToOriginDisplacement&,
                         const SrcData* p_src,
                         const DstDesc&,
                         const DstRefToOriginDisplacement&,
-                        DstData* p_dst) const
+                        DstBuffer dst_buf) const
     {
         static_assert(SrcDesc::IsKnownAtCompileTime() && DstDesc::IsKnownAtCompileTime(),
                       "wrong! SrcDesc and DstDesc need to known at compile-time");
@@ -1450,8 +1452,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
             move_dynamic_tensor_coordinate(
                 src_desc, src_data_coord, src_ref_to_data_disp_coord_iterator);
 
-            // copy data from src into buffer
-            StaticBuffer<SrcData, SrcScalarPerVector> src_buf;
+            // copy data from src_buf into src_tmp_buffer
+            auto src_tmp_buf = make_static_buffer<SrcData>(Number<SrcScalarPerVector>{});
 
             using src_vector_t =
                 typename vector_type_maker<SrcData, SrcScalarPerVector>::type::type;
@@ -1459,18 +1461,28 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
             const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
                 src_desc, src_data_coord);
 
-            src_buf.template AsType<src_vector_t>()(Number<0>{}) =
+            src_tmp_buf.template AsType<src_vector_t>()(Number<0>{}) =
                 is_src_valid
                     ? *reinterpret_cast<const src_vector_t*>(&p_src[src_data_coord.GetOffset()])
                     : src_vector_t{0};
 
-            // copy data from buffer into dst
+            // copy data from src_tmp_buf to dst_tmp_buf (data cast data from SrcData to DstData)
+            auto dst_tmp_buf = make_static_buffer<DstData>(Number<SrcScalarPerVector>{});
+
+            // TODO: if SrcData and DstData are vetor type, then static_cast may not compile
+            static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
+                dst_tmp_buf.template AsType<DstData>()(i) =
+                    static_cast<DstData>(src_tmp_buf.template AsType<SrcData>()[i]);
+            });
+
+            // copy data from dst_tmp_buf into dst_buf
             static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
                 constexpr index_t dst_offset = dst_desc.CalculateOffset(
                     to_multi_index(dst_ref_to_origin_disp_idx) + data_to_origin_disp_idx +
                     i * src_scalar_step_in_vector);
 
-                p_dst[Number<dst_offset>{}] = src_buf.template AsType<SrcData>()[i];
+                dst_buf.template AsType<DstData>()(Number<dst_offset>{}) =
+                    dst_tmp_buf.template AsType<DstData>()[i];
             });
         });
     }

@@ -546,6 +546,9 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
         FloatA p_a_thread[a_thread_mtx_desc_.GetElementSpaceSize()];
         FloatB p_b_thread[b_thread_mtx_desc_.GetElementSpaceSize()];
 
+        auto a_thread_buf = make_dynamic_buffer<FloatA>(p_a_thread);
+        auto b_thread_buf = make_dynamic_buffer<FloatB>(p_b_thread);
+
         constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v1<FloatA,
                                                                     FloatB,
                                                                     FloatC,
@@ -559,7 +562,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                            p_a_block,
                            a_thread_mtx_desc_,
                            make_tuple(Number<0>{}, Number<0>{}),
-                           p_a_thread);
+                           a_thread_buf);
 
         // read B_sub_0
         b_thread_copy_.Run(BlockMatrixB{},
@@ -567,7 +570,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                            p_b_block,
                            b_thread_mtx_desc_,
                            make_tuple(Number<0>{}, Number<0>{}),
-                           p_b_thread);
+                           b_thread_buf);
 
         // read B_sub_1
         b_thread_copy_.Run(BlockMatrixB{},
@@ -575,7 +578,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                            p_b_block,
                            b_thread_mtx_desc_,
                            make_tuple(Number<0>{}, Number<NPerThreadSubC>{}),
-                           p_b_thread);
+                           b_thread_buf);
 
         // read A_sub_1
         a_thread_copy_.Run(BlockMatrixA{},
@@ -583,7 +586,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                            p_a_block,
                            a_thread_mtx_desc_,
                            make_tuple(Number<0>{}, Number<MPerThreadSubC>{}),
-                           p_a_thread);
+                           a_thread_buf);
 
         // C_sub_00 += transpose(A_sub_0) * B_sub_0
         threadwise_gemm.Run(p_a_thread, p_b_thread, p_c_thread);
@@ -602,7 +605,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                                p_a_block,
                                a_thread_mtx_desc_,
                                make_tuple(Number<0>{}, Number<0>{}),
-                               p_a_thread);
+                               a_thread_buf);
 
             // C_sub_10 += transpose(A_sub_1) * B_sub_0
             threadwise_gemm.Run(
@@ -616,7 +619,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                                p_b_block,
                                b_thread_mtx_desc_,
                                make_tuple(Number<0>{}, Number<0>{}),
-                               p_b_thread);
+                               b_thread_buf);
 
             // C_sub_11 += transpose(A_sub_1) * B_sub_1
             threadwise_gemm.Run(
@@ -631,7 +634,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                                p_b_block,
                                b_thread_mtx_desc_,
                                make_tuple(Number<0>{}, Number<NPerThreadSubC>{}),
-                               p_b_thread);
+                               b_thread_buf);
 
             // read A_sub_1
             a_thread_copy_.Run(BlockMatrixA{},
@@ -639,7 +642,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                                p_a_block,
                                a_thread_mtx_desc_,
                                make_tuple(Number<0>{}, Number<MPerThreadSubC>{}),
-                               p_a_thread);
+                               a_thread_buf);
 
             // C_sub_00 += transpose(A_sub_0) * B_sub_0
             threadwise_gemm.Run(p_a_thread, p_b_thread, p_c_thread);

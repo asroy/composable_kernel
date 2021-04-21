@@ -52,7 +52,7 @@ __global__ void run_gridwise_dynamic_gemm_v1(const void __CONSTANT__* p_a_k_m_gl
 }
 #endif
 
-#if 1
+#if 0
 template <index_t BlockSize,
           typename FloatAB,
           typename FloatAcc,
