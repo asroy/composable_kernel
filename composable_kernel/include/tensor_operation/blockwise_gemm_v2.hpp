@@ -503,10 +503,10 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                            level1_n_id * NPerLevel0Cluster + level0_n_id * NPerThreadSubC};
     }
 
-    template <typename CThreadBuffer>
-    __device__ void Run_pipelined_2x2(const FloatA* p_a_block,
-                                      const FloatB* p_b_block,
-                                      CThreadBuffer c_thread_buf) const
+    template <typename ABlockBuffer, typename BBlockBuffer, typename CThreadBuffer>
+    __device__ void Run_pipelined_2x2(const ABlockBuffer& a_block_buf,
+                                      const BBlockBuffer& b_block_buf,
+                                      CThreadBuffer& c_thread_buf) const
     {
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
@@ -548,8 +548,8 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
         FloatA p_a_thread[a_thread_mtx_desc_.GetElementSpaceSize()];
         FloatB p_b_thread[b_thread_mtx_desc_.GetElementSpaceSize()];
 
-        auto a_thread_buf = make_dynamic_buffer<FloatA>(p_a_thread);
-        auto b_thread_buf = make_dynamic_buffer<FloatB>(p_b_thread);
+        auto a_thread_buf = make_dynamic_buffer(p_a_thread);
+        auto b_thread_buf = make_dynamic_buffer(p_b_thread);
 
         constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v1r1<FloatA,
                                                                       FloatB,
@@ -561,7 +561,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
         // read A_sub_0
         a_thread_copy_.Run(BlockMatrixA{},
                            make_tuple(Number<0>{}, Number<0>{}),
-                           p_a_block,
+                           a_block_buf,
                            a_thread_mtx_desc_,
                            make_tuple(Number<0>{}, Number<0>{}),
                            a_thread_buf);
@@ -569,7 +569,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
         // read B_sub_0
         b_thread_copy_.Run(BlockMatrixB{},
                            make_tuple(Number<0>{}, Number<0>{}),
-                           p_b_block,
+                           b_block_buf,
                            b_thread_mtx_desc_,
                            make_tuple(Number<0>{}, Number<0>{}),
                            b_thread_buf);
@@ -577,7 +577,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
         // read B_sub_1
         b_thread_copy_.Run(BlockMatrixB{},
                            make_tuple(Number<0>{}, Number<NPerLevel1Cluster>{}),
-                           p_b_block,
+                           b_block_buf,
                            b_thread_mtx_desc_,
                            make_tuple(Number<0>{}, Number<NPerThreadSubC>{}),
                            b_thread_buf);
@@ -585,7 +585,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
         // read A_sub_1
         a_thread_copy_.Run(BlockMatrixA{},
                            make_tuple(Number<0>{}, Number<MPerLevel1Cluster>{}),
-                           p_a_block,
+                           a_block_buf,
                            a_thread_mtx_desc_,
                            make_tuple(Number<0>{}, Number<MPerThreadSubC>{}),
                            a_thread_buf);
@@ -611,7 +611,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
             // read A_sub_0
             a_thread_copy_.Run(BlockMatrixA{},
                                make_tuple(k, Number<0>{}),
-                               p_a_block,
+                               a_block_buf,
                                a_thread_mtx_desc_,
                                make_tuple(Number<0>{}, Number<0>{}),
                                a_thread_buf);
@@ -627,7 +627,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
             // read B_sub_0
             b_thread_copy_.Run(BlockMatrixB{},
                                make_tuple(k, Number<0>{}),
-                               p_b_block,
+                               b_block_buf,
                                b_thread_mtx_desc_,
                                make_tuple(Number<0>{}, Number<0>{}),
                                b_thread_buf);
@@ -643,7 +643,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
             // read B_sub_1
             b_thread_copy_.Run(BlockMatrixB{},
                                make_tuple(k, Number<NPerLevel1Cluster>{}),
-                               p_b_block,
+                               b_block_buf,
                                b_thread_mtx_desc_,
                                make_tuple(Number<0>{}, Number<NPerThreadSubC>{}),
                                b_thread_buf);
@@ -651,7 +651,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
             // read A_sub_1
             a_thread_copy_.Run(BlockMatrixA{},
                                make_tuple(k, Number<MPerLevel1Cluster>{}),
-                               p_a_block,
+                               a_block_buf,
                                a_thread_mtx_desc_,
                                make_tuple(Number<0>{}, Number<MPerThreadSubC>{}),
                                a_thread_buf);
@@ -690,9 +690,10 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                             make_tuple(Number<MPerThreadSubC>{}, Number<NPerThreadSubC>{}));
     }
 
-    template <typename CThreadBuffer>
-    __device__ void
-    Run(const FloatA* p_a_block, const FloatB* p_b_block, CThreadBuffer c_thread_buf) const
+    template <typename ABlockBuffer, typename BBlockBuffer, typename CThreadBuffer>
+    __device__ void Run(const ABlockBuffer& a_block_buf,
+                        const BBlockBuffer& b_block_buf,
+                        CThreadBuffer& c_thread_buf) const
     {
 #if CK_EXPERIMENTAL_BLOCKWISE_GEMM_USE_PIPELINE
         constexpr auto I0 = Number<0>{};
@@ -706,14 +707,14 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
 
         if constexpr(MRepeat == 2 && NRepeat == 2)
         {
-            Run_pipelined_2x2(p_a_block, p_b_block, c_thread_buf);
+            Run_pipelined_2x2(a_block_buf, b_block_buf, c_thread_buf);
         }
         else
         {
-            Run_naive(p_a_block, p_b_block, c_thread_buf);
+            Run_naive(a_block_buf, b_block_buf, c_thread_buf);
         }
 #else
-        Run_naive(p_a_block, p_b_block, c_thread_buf);
+        Run_naive(a_block_buf, b_block_buf, c_thread_buf);
 #endif
     }
 };

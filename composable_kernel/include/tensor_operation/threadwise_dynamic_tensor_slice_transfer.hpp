@@ -1321,12 +1321,15 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
 // Assume:
 //   1. src:
-//     1. src_desc is known at compile-time
-//     2. a reference src_reference_idx is given at run-time, src_slice_origin_idx has a
+//     1. SrcDesc is known at compile-time
+//     2. SrcBuffer is DynamicBuffer
+//     3. a reference src_reference_idx is given at run-time, src_slice_origin_idx has a
 //        compile-time distance to src_reference_idx
-//     3. use #-iterator
+//     4. use #-iterator
 //   2. dst:
-//     1. dst_desc is known at compile-time
+//     1. DstDesc is known at compile-time
+//     2. DstBuffer is StaticBuffer
+//     3. a reference src_reference_idx is given at run-time, src_slice_origin_idx has a
 //     2. a reference dst_reference_idx is given at compile-time, dst_slice_origin_idx has a
 //        compile-time distance to dst_reference_idx
 //     3. use direct address calculation (lower of coordinate)
@@ -1364,16 +1367,21 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
 
     template <typename SrcRefToOriginDisplacement,
               typename DstRefToOriginDisplacement,
+              typename SrcBuffer,
               typename DstBuffer>
     __device__ void Run(const SrcDesc&,
                         const SrcRefToOriginDisplacement&,
-                        const SrcData* p_src,
+                        const SrcBuffer& src_buf,
                         const DstDesc&,
                         const DstRefToOriginDisplacement&,
                         DstBuffer& dst_buf) const
     {
         static_assert(SrcDesc::IsKnownAtCompileTime() && DstDesc::IsKnownAtCompileTime(),
                       "wrong! SrcDesc and DstDesc need to known at compile-time");
+
+#if 0 // debug
+        static_assert(DstBuffer::IsStaticBuffer(), "wrong! DstBuffer need to be StaticBuffer");
+#endif
 
         static_assert(is_known_at_compile_time<
                           remove_cv_t<remove_reference_t<SrcRefToOriginDisplacement>>>::value &&
@@ -1462,9 +1470,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
                 src_desc, src_data_coord);
 
             src_tmp_buf.template AsType<src_vector_t>()(Number<0>{}) =
-                is_src_valid
-                    ? *reinterpret_cast<const src_vector_t*>(&p_src[src_data_coord.GetOffset()])
-                    : src_vector_t{0};
+                is_src_valid ? src_buf.template AsType<src_vector_t>()[src_data_coord.GetOffset()]
+                             : src_vector_t{0};
 
             // copy data from src_tmp_buf to dst_tmp_buf (data cast data from SrcData to DstData)
             auto dst_tmp_buf = make_static_buffer<DstData>(Number<SrcScalarPerVector>{});

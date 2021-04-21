@@ -15,6 +15,10 @@ struct StaticBuffer : public vector_type<ScalarType, N>
     using base = vector_type<ScalarType, N>;
 
     __host__ __device__ constexpr StaticBuffer() : base{} {}
+
+    __host__ __device__ static constexpr bool IsStaticBuffer() { return true; }
+
+    __host__ __device__ static constexpr bool IsDynamicBuffer() { return false; }
 };
 
 template <typename T, index_t N>
@@ -65,6 +69,10 @@ struct DynamicBuffer
     {
         return PointerWrapper<X>{reinterpret_cast<X*>(p_scalar_)};
     }
+
+    __host__ __device__ static constexpr bool IsStaticBuffer() { return false; }
+
+    __host__ __device__ static constexpr bool IsDynamicBuffer() { return true; }
 };
 
 template <typename T>
