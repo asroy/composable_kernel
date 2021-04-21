@@ -732,6 +732,8 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
         // register allocation for output
         FloatAcc p_c_thread[c_m0m1_n0n1_thread_desc.GetElementSpaceSize()];
 
+        auto c_thread_buf = make_dynamic_buffer<FloatAcc>(p_c_thread);
+
         // zero out threadwise output
         threadwise_matrix_set_zero_v2(c_m0m1_n0n1_thread_desc, p_c_thread);
 
@@ -789,7 +791,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
                     b_k_n_global_desc, p_b_global, b_k_n_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(p_a_block_even, p_b_block_even, p_c_thread);
+                blockwise_gemm.Run(p_a_block_even, p_b_block_even, c_thread_buf);
 
                 // LDS double buffer: store next data to LDS
                 a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_odd);
@@ -812,7 +814,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
                     b_k_n_global_desc, p_b_global, b_k_n_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(p_a_block_odd, p_b_block_odd, p_c_thread);
+                blockwise_gemm.Run(p_a_block_odd, p_b_block_odd, c_thread_buf);
 
                 // LDS double buffer: store next data to LDS
                 a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_even);
@@ -839,7 +841,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
             b_blockwise_copy.RunRead(b_k_n_global_desc, p_b_global, b_k_n_global_iterator_hacks);
 
             // LDS double buffer: GEMM on 2nd-last data
-            blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
+            blockwise_gemm.Run(p_a_block_double, p_b_block_double, c_thread_buf);
 
             // LDS double buffer: store last data to LDS
             a_blockwise_copy.RunWrite(a_k_m_block_desc, p_a_block_double + a_block_space_size);
@@ -850,14 +852,14 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
             // LDS double buffer: GEMM on last data
             blockwise_gemm.Run(p_a_block_double + a_block_space_size,
                                p_b_block_double + b_block_space_size,
-                               p_c_thread);
+                               c_thread_buf);
         }
         else // if has 1 iteration left
         {
             __syncthreads();
 
             // LDS double buffer: GEMM on last data
-            blockwise_gemm.Run(p_a_block_double, p_b_block_double, p_c_thread);
+            blockwise_gemm.Run(p_a_block_double, p_b_block_double, c_thread_buf);
         }
 
         // output: register to global memory

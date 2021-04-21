@@ -1370,7 +1370,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
                         const SrcData* p_src,
                         const DstDesc&,
                         const DstRefToOriginDisplacement&,
-                        DstBuffer dst_buf) const
+                        DstBuffer& dst_buf) const
     {
         static_assert(SrcDesc::IsKnownAtCompileTime() && DstDesc::IsKnownAtCompileTime(),
                       "wrong! SrcDesc and DstDesc need to known at compile-time");

@@ -503,8 +503,10 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                            level1_n_id * NPerLevel0Cluster + level0_n_id * NPerThreadSubC};
     }
 
-    __device__ void
-    Run_pipelined_2x2(const FloatA* p_a_block, const FloatB* p_b_block, FloatC* p_c_thread) const
+    template <typename CThreadBuffer>
+    __device__ void Run_pipelined_2x2(const FloatA* p_a_block,
+                                      const FloatB* p_b_block,
+                                      CThreadBuffer c_thread_buf) const
     {
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
@@ -549,12 +551,12 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
         auto a_thread_buf = make_dynamic_buffer<FloatA>(p_a_thread);
         auto b_thread_buf = make_dynamic_buffer<FloatB>(p_b_thread);
 
-        constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v1<FloatA,
-                                                                    FloatB,
-                                                                    FloatC,
-                                                                    decltype(a_thread_sub_mtx),
-                                                                    decltype(b_thread_sub_mtx),
-                                                                    decltype(c_thread_sub_mtx)>{};
+        constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v1r1<FloatA,
+                                                                      FloatB,
+                                                                      FloatC,
+                                                                      decltype(a_thread_sub_mtx),
+                                                                      decltype(b_thread_sub_mtx),
+                                                                      decltype(c_thread_sub_mtx)>{};
 
         // read A_sub_0
         a_thread_copy_.Run(BlockMatrixA{},
@@ -589,13 +591,20 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                            a_thread_buf);
 
         // C_sub_00 += transpose(A_sub_0) * B_sub_0
-        threadwise_gemm.Run(p_a_thread, p_b_thread, p_c_thread);
+        threadwise_gemm.Run(a_thread_buf,
+                            make_tuple(Number<0>{}, Number<0>{}),
+                            b_thread_buf,
+                            make_tuple(Number<0>{}, Number<0>{}),
+                            c_thread_buf,
+                            make_tuple(Number<0>{}, Number<0>{}));
 
         // C_sub_01 += transpose(A_sub_0) * B_sub_1
-        threadwise_gemm.Run(
-            p_a_thread,
-            p_b_thread + b_thread_mtx_desc_.CalculateOffset(make_tuple(0, NPerThreadSubC)),
-            p_c_thread + c_thread_mtx_desc.CalculateOffset(make_tuple(0, NPerThreadSubC)));
+        threadwise_gemm.Run(a_thread_buf,
+                            make_tuple(Number<0>{}, Number<0>{}),
+                            b_thread_buf,
+                            make_tuple(Number<0>{}, Number<NPerThreadSubC>{}),
+                            c_thread_buf,
+                            make_tuple(Number<0>{}, Number<NPerThreadSubC>{}));
 
         // loop over rest of k
         static_for<KPerThreadLoop, K, KPerThreadLoop>{}([&](auto k) {
@@ -608,10 +617,12 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                                a_thread_buf);
 
             // C_sub_10 += transpose(A_sub_1) * B_sub_0
-            threadwise_gemm.Run(
-                p_a_thread + a_thread_mtx_desc_.CalculateOffset(make_tuple(0, MPerThreadSubC)),
-                p_b_thread,
-                p_c_thread + c_thread_mtx_desc.CalculateOffset(make_tuple(MPerThreadSubC, 0)));
+            threadwise_gemm.Run(a_thread_buf,
+                                make_tuple(Number<0>{}, Number<MPerThreadSubC>{}),
+                                b_thread_buf,
+                                make_tuple(Number<0>{}, Number<0>{}),
+                                c_thread_buf,
+                                make_tuple(Number<MPerThreadSubC>{}, Number<0>{}));
 
             // read B_sub_0
             b_thread_copy_.Run(BlockMatrixB{},
@@ -622,11 +633,12 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                                b_thread_buf);
 
             // C_sub_11 += transpose(A_sub_1) * B_sub_1
-            threadwise_gemm.Run(
-                p_a_thread + a_thread_mtx_desc_.CalculateOffset(make_tuple(0, MPerThreadSubC)),
-                p_b_thread + b_thread_mtx_desc_.CalculateOffset(make_tuple(0, NPerThreadSubC)),
-                p_c_thread +
-                    c_thread_mtx_desc.CalculateOffset(make_tuple(MPerThreadSubC, NPerThreadSubC)));
+            threadwise_gemm.Run(a_thread_buf,
+                                make_tuple(Number<0>{}, Number<MPerThreadSubC>{}),
+                                b_thread_buf,
+                                make_tuple(Number<0>{}, Number<NPerThreadSubC>{}),
+                                c_thread_buf,
+                                make_tuple(Number<MPerThreadSubC>{}, Number<NPerThreadSubC>{}));
 
             // read B_sub_1
             b_thread_copy_.Run(BlockMatrixB{},
@@ -645,30 +657,42 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
                                a_thread_buf);
 
             // C_sub_00 += transpose(A_sub_0) * B_sub_0
-            threadwise_gemm.Run(p_a_thread, p_b_thread, p_c_thread);
+            threadwise_gemm.Run(a_thread_buf,
+                                make_tuple(Number<0>{}, Number<0>{}),
+                                b_thread_buf,
+                                make_tuple(Number<0>{}, Number<0>{}),
+                                c_thread_buf,
+                                make_tuple(Number<0>{}, Number<0>{}));
 
             // C_sub_01 += transpose(A_sub_0) * B_sub_1
-            threadwise_gemm.Run(
-                p_a_thread,
-                p_b_thread + b_thread_mtx_desc_.CalculateOffset(make_tuple(0, NPerThreadSubC)),
-                p_c_thread + c_thread_mtx_desc.CalculateOffset(make_tuple(0, NPerThreadSubC)));
+            threadwise_gemm.Run(a_thread_buf,
+                                make_tuple(Number<0>{}, Number<0>{}),
+                                b_thread_buf,
+                                make_tuple(Number<0>{}, Number<NPerThreadSubC>{}),
+                                c_thread_buf,
+                                make_tuple(Number<0>{}, Number<NPerThreadSubC>{}));
         });
 
         // C_sub_10 += transpose(A_sub_1) * B_sub_0
-        threadwise_gemm.Run(
-            p_a_thread + a_thread_mtx_desc_.CalculateOffset(make_tuple(0, MPerThreadSubC)),
-            p_b_thread,
-            p_c_thread + c_thread_mtx_desc.CalculateOffset(make_tuple(MPerThreadSubC, 0)));
+        threadwise_gemm.Run(a_thread_buf,
+                            make_tuple(Number<0>{}, Number<MPerThreadSubC>{}),
+                            b_thread_buf,
+                            make_tuple(Number<0>{}, Number<0>{}),
+                            c_thread_buf,
+                            make_tuple(Number<MPerThreadSubC>{}, Number<0>{}));
 
         // C_sub_11 += transpose(A_sub_1) * B_sub_1
-        threadwise_gemm.Run(
-            p_a_thread + a_thread_mtx_desc_.CalculateOffset(make_tuple(0, MPerThreadSubC)),
-            p_b_thread + b_thread_mtx_desc_.CalculateOffset(make_tuple(0, NPerThreadSubC)),
-            p_c_thread +
-                c_thread_mtx_desc.CalculateOffset(make_tuple(MPerThreadSubC, NPerThreadSubC)));
+        threadwise_gemm.Run(a_thread_buf,
+                            make_tuple(Number<0>{}, Number<MPerThreadSubC>{}),
+                            b_thread_buf,
+                            make_tuple(Number<0>{}, Number<NPerThreadSubC>{}),
+                            c_thread_buf,
+                            make_tuple(Number<MPerThreadSubC>{}, Number<NPerThreadSubC>{}));
     }
 
-    __device__ void Run(const FloatA* p_a_block, const FloatB* p_b_block, FloatC* p_c_thread) const
+    template <typename CThreadBuffer>
+    __device__ void
+    Run(const FloatA* p_a_block, const FloatB* p_b_block, CThreadBuffer c_thread_buf) const
     {
 #if CK_EXPERIMENTAL_BLOCKWISE_GEMM_USE_PIPELINE
         constexpr auto I0 = Number<0>{};
@@ -682,14 +706,14 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
 
         if constexpr(MRepeat == 2 && NRepeat == 2)
         {
-            Run_pipelined_2x2(p_a_block, p_b_block, p_c_thread);
+            Run_pipelined_2x2(p_a_block, p_b_block, c_thread_buf);
         }
         else
         {
-            Run_naive(p_a_block, p_b_block, p_c_thread);
+            Run_naive(p_a_block, p_b_block, c_thread_buf);
         }
 #else
-        Run_naive(p_a_block, p_b_block, p_c_thread);
+        Run_naive(p_a_block, p_b_block, c_thread_buf);
 #endif
     }
 };
