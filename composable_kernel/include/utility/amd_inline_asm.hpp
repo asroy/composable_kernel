@@ -36,6 +36,44 @@ __device__ void amd_assembly_inner_product(const int8x4_t& a, const int8x4_t& b,
 #endif
 }
 
+__device__ void amd_assembly_inner_product(const int8x8_t& a, const int8x8_t& b, int32_t& c)
+{
+    constexpr auto I0 = Number<0>{};
+    constexpr auto I1 = Number<1>{};
+
+    amd_assembly_inner_product(vector_type<int8_t, 8>{a}.AsType<int8x4_t>()[I0],
+                               vector_type<int8_t, 8>{b}.AsType<int8x4_t>()[I0],
+                               c);
+
+    amd_assembly_inner_product(vector_type<int8_t, 8>{a}.AsType<int8x4_t>()[I1],
+                               vector_type<int8_t, 8>{b}.AsType<int8x4_t>()[I1],
+                               c);
+}
+
+__device__ void amd_assembly_inner_product(const int8x16_t& a, const int8x16_t& b, int32_t& c)
+{
+    constexpr auto I0 = Number<0>{};
+    constexpr auto I1 = Number<1>{};
+    constexpr auto I2 = Number<2>{};
+    constexpr auto I3 = Number<3>{};
+
+    amd_assembly_inner_product(vector_type<int8_t, 16>{a}.AsType<int8x4_t>()[I0],
+                               vector_type<int8_t, 16>{b}.AsType<int8x4_t>()[I0],
+                               c);
+
+    amd_assembly_inner_product(vector_type<int8_t, 16>{a}.AsType<int8x4_t>()[I1],
+                               vector_type<int8_t, 16>{b}.AsType<int8x4_t>()[I1],
+                               c);
+
+    amd_assembly_inner_product(vector_type<int8_t, 16>{a}.AsType<int8x4_t>()[I2],
+                               vector_type<int8_t, 16>{b}.AsType<int8x4_t>()[I2],
+                               c);
+
+    amd_assembly_inner_product(vector_type<int8_t, 16>{a}.AsType<int8x4_t>()[I3],
+                               vector_type<int8_t, 16>{b}.AsType<int8x4_t>()[I3],
+                               c);
+}
+
 #if 0
 // c0 += inner_product(a, b0)
 // c1 += inner_product(a, b1)

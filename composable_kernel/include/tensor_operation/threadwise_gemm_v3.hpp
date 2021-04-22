@@ -61,6 +61,7 @@ struct ThreadwiseGemm_km_kn_mn_v3
 
         static_for<0, E, 1>{}([&](auto e) {
             static_for<0, K, 1>{}([&](auto k) {
+#if 0
                 constexpr auto a_offset = ADesc{}.CalculateOffset(make_tuple(e, k));
 
                 if constexpr(H == 2 && W == 2)
@@ -123,6 +124,22 @@ struct ThreadwiseGemm_km_kn_mn_v3
                         });
                     });
                 }
+#else
+                constexpr index_t a_offset = ADesc{}.CalculateOffset(make_tuple(e, k));
+
+                static_for<0, H, 1>{}([&](auto h) {
+                    static_for<0, W, 1>{}([&](auto w) {
+                        constexpr index_t b_offset =
+                            BDesc{}.CalculateOffset(make_tuple(e, 0, h, w));
+                        constexpr index_t c_offset =
+                            CDesc{}.CalculateOffset(make_tuple(k, 0, h, w));
+
+                        amd_assembly_inner_product(p_a[Number<a_offset>{}],
+                                                   p_b[Number<b_offset>{}],
+                                                   p_c[Number<c_offset>{}]);
+                    });
+                });
+#endif
             });
         });
     }

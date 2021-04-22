@@ -98,9 +98,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
             is_known_at_compile_time<remove_cv_t<remove_reference_t<SrcSliceOriginIdx>>>::value,
             "wrong! SrcSliceOrigin need to known at compile-time");
 
+#if 0 // debug
+      // TODO: turn this on, once v5r1 is updated to use StaticBuffer for holding C data
+        static_assert(SrcBuffer::IsStaticBuffer(), "wrong! SrcBuffer need to be StaticBuffer");
+
         static_assert(is_same<remove_cv_t<remove_reference_t<typename SrcBuffer::type>>,
                               remove_cv_t<remove_reference_t<SrcData>>>::value,
                       "wrong! SrcBuffer data type is wrong");
+#endif
 
         // SrcDesc and src_slice_origin_idx are known at compile-time
         constexpr auto src_desc             = remove_cv_t<remove_reference_t<SrcDesc>>{};
@@ -758,6 +763,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         static_assert(DstAddressSpace == AddressSpace::Global or
                           DstAddressSpace == AddressSpace::Lds,
                       "wrong!");
+
+        // TODO: fix this
+        static_assert(is_same<SrcData, DstData>::value,
+                      "wrong! current implementation assume SrcData and DstData are same type");
     }
 
     __device__ void SetSrcSliceOrigin(const SrcDesc& src_desc, const Index& src_slice_origin_idx)
@@ -859,11 +868,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                 return src_data_idx;
             }();
 
-            // copy data
-            typename vector_type_maker<SrcData, SrcScalarPerVector>::type src_vector;
+            // copy data from src_buf to src_tmp_vector
+            vector_type_maker_t<SrcData, SrcScalarPerVector> src_tmp_vector;
 
-            using src_vector_t =
-                typename vector_type_maker<SrcData, SrcScalarPerVector>::type::type;
+            using src_vector_t = typename decltype(src_tmp_vector)::type;
 
             const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
                 src_desc, src_slice_origin_coord_);
@@ -871,14 +879,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             if constexpr(SrcAddressSpace == AddressSpace::Global)
             {
 #if CK_USE_AMD_BUFFER_ADDRESSING
-                src_vector.template AsType<src_vector_t>()(Number<0>{}) =
+                src_tmp_vector.template AsType<src_vector_t>()(Number<0>{}) =
                     amd_buffer_load_v2<SrcData, SrcScalarPerVector>(
                         p_src,
                         src_slice_origin_coord_.GetOffset(),
                         is_src_valid,
                         src_desc.GetElementSpaceSize());
 #else
-                src_vector.template AsType<src_vector_t>()(Number<0>{}) =
+                src_tmp_vector.template AsType<src_vector_t>()(Number<0>{}) =
                     is_src_valid ? *reinterpret_cast<const src_vector_t*>(
                                        &p_src[src_slice_origin_coord_.GetOffset()])
                                  : src_vector_t{0};
@@ -886,18 +894,18 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             }
             else
             {
-                src_vector.template AsType<src_vector_t>()(Number<0>{}) =
+                src_tmp_vector.template AsType<src_vector_t>()(Number<0>{}) =
                     is_src_valid ? *reinterpret_cast<const src_vector_t*>(
                                        &p_src[src_slice_origin_coord_.GetOffset()])
                                  : src_vector_t{0};
             }
 
+            // copy data from src_tmp_vector to buffer_
             static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
                 constexpr index_t buffer_offset =
                     buffer_desc_.CalculateOffset(src_data_idx + i * src_scalar_step_in_vector);
 
-                buffer_.template AsType<SrcData>()(Number<buffer_offset>{}) =
-                    src_vector.template AsType<SrcData>()[i];
+                buffer_(Number<buffer_offset>{}) = src_tmp_vector.template AsType<SrcData>()[i];
             });
 
             constexpr auto move_on_dim = [&]() constexpr
@@ -1048,21 +1056,21 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                               DstInMemOp == InMemoryDataOperation::Set,
                           "wrong! hardcoded for ds_write");
 
-            typename vector_type_maker<DstData, DstScalarPerVector>::type dst_vector;
+            vector_type_maker_t<DstData, DstScalarPerVector> dst_tmp_vector;
 
+            // copy data from buffer_ to dst_tmp_vector
             static_for<0, DstScalarPerVector, 1>{}([&](auto i) {
                 constexpr index_t buffer_offset =
                     buffer_desc_.CalculateOffset(dst_data_idx + i * dst_scalar_step_in_vector);
 
-                dst_vector.template AsType<DstData>()(i) =
-                    buffer_.template AsType<DstData>()[Number<buffer_offset>{}];
+                dst_tmp_vector.template AsType<DstData>()(i) = buffer_[Number<buffer_offset>{}];
             });
 
-            using DstVectorType =
-                typename vector_type_maker<DstData, DstScalarPerVector>::type::type;
+            using dst_vector_t = typename decltype(dst_tmp_vector)::type;
 
-            *reinterpret_cast<DstVectorType*>(p_dst + dst_slice_origin_coord_.GetOffset()) =
-                dst_vector.template AsType<DstVectorType>()[Number<0>{}];
+            // copy data from dst_tmp_vector to dst_buf
+            *reinterpret_cast<dst_vector_t*>(p_dst + dst_slice_origin_coord_.GetOffset()) =
+                dst_tmp_vector.template AsType<dst_vector_t>()[Number<0>{}];
 
             constexpr auto move_on_dim = [&]() constexpr
             {
@@ -1319,7 +1327,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
     static constexpr auto buffer_size_ = buffer_desc_.GetElementSpaceSize();
 
-    typename vector_type_maker<SrcData, buffer_size_>::type buffer_;
+    StaticBuffer<SrcData, buffer_size_> buffer_;
 
     SrcCoord src_slice_origin_coord_;
     DstCoord dst_slice_origin_coord_;
