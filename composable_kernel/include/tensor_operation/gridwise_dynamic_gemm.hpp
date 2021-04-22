@@ -731,14 +731,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
         FloatAB* p_b_block_double = p_shared_block + 2 * a_block_space_size;
 
         // register allocation for output
-#if 0
-        FloatAcc p_c_thread[c_m0m1_n0n1_thread_desc.GetElementSpaceSize()];
-
-        auto c_thread_buf = make_dynamic_buffer<FloatAcc>(p_c_thread);
-
-        // zero out threadwise output
-        threadwise_matrix_set_zero_v2(c_m0m1_n0n1_thread_desc, p_c_thread);
-#else
         auto c_thread_buf =
             make_static_buffer<FloatAcc>(c_m0m1_n0n1_thread_desc.GetElementSpaceSize());
 
@@ -746,7 +738,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
                                            decltype(c_m0m1_n0n1_thread_desc),
                                            Sequence<MRepeat * MPerThread, NRepeat * NPerThread>>{}
             .Run(c_m0m1_n0n1_thread_desc, make_tuple(I0, I0), c_thread_buf, FloatAcc{0});
-#endif
 
         constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0);
         constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0);

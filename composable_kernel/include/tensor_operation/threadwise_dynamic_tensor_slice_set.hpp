@@ -49,7 +49,7 @@ struct ThreadwiseDynamicTensorSliceSet_v1
 
             if constexpr(is_valid)
             {
-                buf.template AsType<Data>()(Number<offset>{}) = initial_value;
+                buf(Number<offset>{}) = initial_value;
             }
         });
     }

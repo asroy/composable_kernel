@@ -23,6 +23,20 @@ __device__ void amd_assembly_inner_product(const float& a, const float& b, float
 #endif
 }
 
+__device__ void amd_assembly_inner_product(const int8x4_t& a, const int8x4_t& b, int32_t& c)
+{
+#if 1
+    asm volatile("\n \
+            v_dot4_i32_i8 %0, %1, %2, %0\n \
+            "
+                 : "=v"(c)
+                 : "v"(as_type<int32_t>(a)), "v"(as_type<int32_t>(b)), "0"(c));
+#else
+    c = __builtin_amdgcn_sdot4(as_type<int32_t>(a), as_type<int32_t>(b), c, false);
+#endif
+}
+
+#if 0
 // c0 += inner_product(a, b0)
 // c1 += inner_product(a, b1)
 __device__ void amd_assembly_outer_product_1x2(float a, float b0, float b1, float& c0, float& c1)
@@ -386,6 +400,7 @@ __device__ void amd_assembly_outer_product_1x4(int8x16_t a,
                                    c2,
                                    c3);
 }
+#endif
 
 } // namespace ck
 #endif

@@ -6,6 +6,7 @@
 
 namespace ck {
 
+#if 1
 template <typename Float, typename Desc>
 __device__ void threadwise_matrix_set_zero_v2(Desc, Float* __restrict__ p_thread)
 {
@@ -167,6 +168,7 @@ struct ThreadwiseGemm_km_kn_mn_v1
 #endif
     }
 };
+#endif
 
 // C[M, N] += transpose(A[K, M]) * B[K, N]
 //   Element of matrix can be vectorized data
@@ -231,14 +233,12 @@ struct ThreadwiseGemm_km_kn_mn_v1r1
                         CDesc{}.CalculateOffset(c_origin_idx + make_tuple(m, n));
 
 #if CK_THREADWISE_GEMM_USE_AMD_INLINE_ASM
-                    amd_assembly_inner_product(a_buf.template AsType<FloatA>()[Number<a_offset>{}],
-                                               b_buf.template AsType<FloatB>()[Number<b_offset>{}],
-                                               c_buf.template AsType<FloatC>()(Number<c_offset>{}));
+                    amd_assembly_inner_product(a_buf[Number<a_offset>{}],
+                                               b_buf[Number<b_offset>{}],
+                                               c_buf(Number<c_offset>{}));
 #else
-                    c_buf.template AsType<FloatC>()(Number<c_offset>{}) +=
-                        inner_product_with_conversion<FloatC>{}(
-                            a_buf.template AsType<FloatA>()[Number<a_offset>{}],
-                            b_buf.template AsType<FloatB>()[Number<b_offset>{}]);
+                    c_buf(Number<c_offset>{}) += inner_product_with_conversion<FloatC>{}(
+                        a_buf[Number<a_offset>{}], b_buf[Number<b_offset>{}]);
 #endif
                 });
             });

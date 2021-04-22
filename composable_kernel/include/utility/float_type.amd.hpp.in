@@ -1,6 +1,8 @@
 #ifndef CK_FLOAT_TYPE_AMD_HPP
 #define CK_FLOAT_TYPE_AMD_HPP
 
+#include "statically_indexed_array.hpp"
+
 namespace ck {
 
 using half_t = _Float16;
@@ -42,6 +44,15 @@ struct vector_type_maker<vector_type<T, N1>, N0>
 {
     using type = vector_type<T, N0 * N1>;
 };
+
+template <typename T, index_t N>
+using vector_type_maker_t = typename vector_type_maker<T, N>::type;
+
+template <typename T, index_t N>
+__host__ __device__ constexpr auto make_vector_type(Number<N>)
+{
+    return typename vector_type_maker<T, N>::type{};
+}
 
 // scalar_type
 template <typename TV>
