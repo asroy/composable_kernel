@@ -74,7 +74,6 @@ __device__ void amd_assembly_inner_product(const int8x16_t& a, const int8x16_t& 
                                c);
 }
 
-#if 0
 // c0 += inner_product(a, b0)
 // c1 += inner_product(a, b1)
 __device__ void amd_assembly_outer_product_1x2(float a, float b0, float b1, float& c0, float& c1)
@@ -438,7 +437,6 @@ __device__ void amd_assembly_outer_product_1x4(int8x16_t a,
                                    c2,
                                    c3);
 }
-#endif
 
 } // namespace ck
 #endif

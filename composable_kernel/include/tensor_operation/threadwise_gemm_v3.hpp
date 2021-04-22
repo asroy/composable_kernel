@@ -61,85 +61,74 @@ struct ThreadwiseGemm_km_kn_mn_v3
 
         static_for<0, E, 1>{}([&](auto e) {
             static_for<0, K, 1>{}([&](auto k) {
-#if 0
-                constexpr auto a_offset = ADesc{}.CalculateOffset(make_tuple(e, k));
+                constexpr index_t a_offset = ADesc{}.CalculateOffset(make_tuple(e, k));
 
                 if constexpr(H == 2 && W == 2)
                 {
 
-                    constexpr auto b_offset_0 = BDesc{}.CalculateOffset(make_tuple(e, 0, 0, 0));
-                    constexpr auto b_offset_1 = BDesc{}.CalculateOffset(make_tuple(e, 0, 0, 1));
-                    constexpr auto b_offset_2 = BDesc{}.CalculateOffset(make_tuple(e, 0, 1, 0));
-                    constexpr auto b_offset_3 = BDesc{}.CalculateOffset(make_tuple(e, 0, 1, 1));
+                    constexpr index_t b_offset_0 = BDesc{}.CalculateOffset(make_tuple(e, 0, 0, 0));
+                    constexpr index_t b_offset_1 = BDesc{}.CalculateOffset(make_tuple(e, 0, 0, 1));
+                    constexpr index_t b_offset_2 = BDesc{}.CalculateOffset(make_tuple(e, 0, 1, 0));
+                    constexpr index_t b_offset_3 = BDesc{}.CalculateOffset(make_tuple(e, 0, 1, 1));
 
-                    constexpr auto c_offset_0 = CDesc{}.CalculateOffset(make_tuple(k, 0, 0, 0));
-                    constexpr auto c_offset_1 = CDesc{}.CalculateOffset(make_tuple(k, 0, 0, 1));
-                    constexpr auto c_offset_2 = CDesc{}.CalculateOffset(make_tuple(k, 0, 1, 0));
-                    constexpr auto c_offset_3 = CDesc{}.CalculateOffset(make_tuple(k, 0, 1, 1));
+                    constexpr index_t c_offset_0 = CDesc{}.CalculateOffset(make_tuple(k, 0, 0, 0));
+                    constexpr index_t c_offset_1 = CDesc{}.CalculateOffset(make_tuple(k, 0, 0, 1));
+                    constexpr index_t c_offset_2 = CDesc{}.CalculateOffset(make_tuple(k, 0, 1, 0));
+                    constexpr index_t c_offset_3 = CDesc{}.CalculateOffset(make_tuple(k, 0, 1, 1));
 
-                    amd_assembly_outer_product_1x4(p_a[a_offset],
-                                                   p_b[b_offset_0],
-                                                   p_b[b_offset_1],
-                                                   p_b[b_offset_2],
-                                                   p_b[b_offset_3],
-                                                   p_c[c_offset_0],
-                                                   p_c[c_offset_1],
-                                                   p_c[c_offset_2],
-                                                   p_c[c_offset_3]);
+                    amd_assembly_outer_product_1x4(p_a[Number<a_offset>{}],
+                                                   p_b[Number<b_offset_0>{}],
+                                                   p_b[Number<b_offset_1>{}],
+                                                   p_b[Number<b_offset_2>{}],
+                                                   p_b[Number<b_offset_3>{}],
+                                                   p_c[Number<c_offset_0>{}],
+                                                   p_c[Number<c_offset_1>{}],
+                                                   p_c[Number<c_offset_2>{}],
+                                                   p_c[Number<c_offset_3>{}]);
                 }
                 else if constexpr(H == 4 && W == 1)
                 {
 
-                    constexpr auto b_offset_0 = BDesc{}.CalculateOffset(make_tuple(e, 0, 0, 0));
-                    constexpr auto b_offset_1 = BDesc{}.CalculateOffset(make_tuple(e, 0, 1, 0));
-                    constexpr auto b_offset_2 = BDesc{}.CalculateOffset(make_tuple(e, 0, 2, 0));
-                    constexpr auto b_offset_3 = BDesc{}.CalculateOffset(make_tuple(e, 0, 3, 0));
+                    constexpr index_t b_offset_0 = BDesc{}.CalculateOffset(make_tuple(e, 0, 0, 0));
+                    constexpr index_t b_offset_1 = BDesc{}.CalculateOffset(make_tuple(e, 0, 1, 0));
+                    constexpr index_t b_offset_2 = BDesc{}.CalculateOffset(make_tuple(e, 0, 2, 0));
+                    constexpr index_t b_offset_3 = BDesc{}.CalculateOffset(make_tuple(e, 0, 3, 0));
 
-                    constexpr auto c_offset_0 = CDesc{}.CalculateOffset(make_tuple(k, 0, 0, 0));
-                    constexpr auto c_offset_1 = CDesc{}.CalculateOffset(make_tuple(k, 0, 1, 0));
-                    constexpr auto c_offset_2 = CDesc{}.CalculateOffset(make_tuple(k, 0, 2, 0));
-                    constexpr auto c_offset_3 = CDesc{}.CalculateOffset(make_tuple(k, 0, 3, 0));
+                    constexpr index_t c_offset_0 = CDesc{}.CalculateOffset(make_tuple(k, 0, 0, 0));
+                    constexpr index_t c_offset_1 = CDesc{}.CalculateOffset(make_tuple(k, 0, 1, 0));
+                    constexpr index_t c_offset_2 = CDesc{}.CalculateOffset(make_tuple(k, 0, 2, 0));
+                    constexpr index_t c_offset_3 = CDesc{}.CalculateOffset(make_tuple(k, 0, 3, 0));
 
-                    amd_assembly_outer_product_1x4(p_a[a_offset],
-                                                   p_b[b_offset_0],
-                                                   p_b[b_offset_1],
-                                                   p_b[b_offset_2],
-                                                   p_b[b_offset_3],
-                                                   p_c[c_offset_0],
-                                                   p_c[c_offset_1],
-                                                   p_c[c_offset_2],
-                                                   p_c[c_offset_3]);
+                    amd_assembly_outer_product_1x4(p_a[Number<a_offset>{}],
+                                                   p_b[Number<b_offset_0>{}],
+                                                   p_b[Number<b_offset_1>{}],
+                                                   p_b[Number<b_offset_2>{}],
+                                                   p_b[Number<b_offset_3>{}],
+                                                   p_c[Number<c_offset_0>{}],
+                                                   p_c[Number<c_offset_1>{}],
+                                                   p_c[Number<c_offset_2>{}],
+                                                   p_c[Number<c_offset_3>{}]);
                 }
                 else
                 {
                     static_for<0, H, 1>{}([&](auto h) {
                         static_for<0, W, 1>{}([&](auto w) {
-                            constexpr auto b_offset =
+                            constexpr index_t b_offset =
                                 BDesc{}.CalculateOffset(make_tuple(e, 0, h, w));
-                            constexpr auto c_offset =
+                            constexpr index_t c_offset =
                                 CDesc{}.CalculateOffset(make_tuple(k, 0, h, w));
 
-                            p_c[c_offset] += inner_product_with_conversion<FloatC>{}(p_a[a_offset],
-                                                                                     p_b[b_offset]);
+#if 0
+                            p_c[Number<c_offset>{}] += inner_product_with_conversion<FloatC>{}(p_a[Number<a_offset>{}],
+                                                                                               p_b[Number<b_offset>{}]);
+#else
+                            amd_assembly_inner_product(p_a[Number<a_offset>{}],
+                                                       p_b[Number<b_offset>{}],
+                                                       p_c[Number<c_offset>{}]);
+#endif
                         });
                     });
                 }
-#else
-                constexpr index_t a_offset = ADesc{}.CalculateOffset(make_tuple(e, k));
-
-                static_for<0, H, 1>{}([&](auto h) {
-                    static_for<0, W, 1>{}([&](auto w) {
-                        constexpr index_t b_offset =
-                            BDesc{}.CalculateOffset(make_tuple(e, 0, h, w));
-                        constexpr index_t c_offset =
-                            CDesc{}.CalculateOffset(make_tuple(k, 0, h, w));
-
-                        amd_assembly_inner_product(p_a[Number<a_offset>{}],
-                                                   p_b[Number<b_offset>{}],
-                                                   p_c[Number<c_offset>{}]);
-                    });
-                });
-#endif
             });
         });
     }
