@@ -2,6 +2,7 @@
 #define CK_BLOCKWISE_GEMM_V2_HPP
 
 #include "common_header.hpp"
+#include "threadwise_dynamic_tensor_slice_transfer.hpp"
 #include "threadwise_gemm_v2.hpp"
 
 namespace ck {

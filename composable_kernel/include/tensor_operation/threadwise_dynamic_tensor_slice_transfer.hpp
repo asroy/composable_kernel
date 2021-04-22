@@ -38,11 +38,14 @@ struct lambda_scalar_step_in_vector
 } // namespace detail
 
 // Assume:
-//   1. src_desc is known at compile-time
-//   2. dst_desc is not known at compile-time
-//   3. src_slice_origin_idx is known at compile-time and it's 0
-//   4. dst_slice_origin_idx is not-known at compile time
-// TODO: support non-zero src_slice_oring_idx
+//   1. src:
+//     1. SrcDesc is known at compile-time
+//     2. SrcBuffer is StaticBuffer
+//     3. SrcSliceOrginIdx is known at compile-time
+//   2. dst:
+//     1. DstDesc is not known at compile-time
+//     2. DstBuffer is DynamicBuffer
+//     3. DstSliceOrginIdx is not known at compile time
 template <typename SrcData,
           typename DstData,
           typename SrcDesc,
@@ -80,10 +83,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
         dst_slice_origin_coord_ = make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_idx);
     }
 
-    template <typename SrcSliceOriginIdx, typename DstIteratorHacks>
+    template <typename SrcSliceOriginIdx, typename SrcBuffer, typename DstIteratorHacks>
     __device__ void Run(const SrcDesc&,
                         const SrcSliceOriginIdx&,
-                        const SrcData* p_src,
+                        const SrcBuffer& src_buf,
                         const DstDesc& dst_desc,
                         DstData* p_dst,
                         const DstIteratorHacks& dst_iterator_hacks)
@@ -97,7 +100,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
 
         // SrcDesc and src_slice_origin_idx are known at compile-time
         constexpr auto src_desc             = remove_cv_t<remove_reference_t<SrcDesc>>{};
-        constexpr auto src_slice_origin_idx = SrcSliceOriginIdx{};
+        constexpr auto src_slice_origin_idx = to_multi_index(SrcSliceOriginIdx{});
 
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
@@ -189,12 +192,11 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
                 typename vector_type_maker<DstData, DstScalarPerVector>::type::type;
 
             static_for<0, DstScalarPerVector, 1>{}([&](auto i) {
-                constexpr index_t src_offset =
-                    src_desc.CalculateOffset(to_multi_index(src_slice_origin_idx) + dst_data_idx +
-                                             i * dst_scalar_step_in_vector);
+                constexpr index_t src_offset = src_desc.CalculateOffset(
+                    src_slice_origin_idx + dst_data_idx + i * dst_scalar_step_in_vector);
 
-                dst_vector.template AsType<DstData>()(i) =
-                    type_convert<DstData>{}(p_src[Number<src_offset>{}]);
+                dst_vector.template AsType<DstData>()(i) = type_convert<DstData>{}(
+                    src_buf.template AsType<SrcData>()[Number<src_offset>{}]);
             });
 
             const bool is_dst_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
@@ -1489,7 +1491,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
             // TODO: if SrcData and DstData are vetor type, then static_cast may not compile
             static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
                 dst_tmp_buf.template AsType<DstData>()(i) =
-                    static_cast<DstData>(src_tmp_buf.template AsType<SrcData>()[i]);
+                    type_convert<DstData>{}(src_tmp_buf.template AsType<SrcData>()[i]);
             });
 
             // copy data from dst_tmp_buf into dst_buf
