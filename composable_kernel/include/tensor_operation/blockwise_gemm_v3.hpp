@@ -228,8 +228,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         index_t w;
     };
 
-    MatrixIndex c_thread_begin_mtx_idx_;
-
     // HACK: fix this @Jing Zhang
     static constexpr index_t KPerThreadSubC = 4;
 
@@ -254,6 +252,8 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
                                                 AddressSpace::Generic,
                                                 AddressSpace::Vgpr,
                                                 1>;
+
+    MatrixIndex c_thread_begin_mtx_idx_;
 
     AThreadCopy a_thread_copy_;
 
@@ -313,9 +313,18 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         return MatrixIndex{k_thread_id, h_thread_id, w_thread_id};
     }
 
-    __device__ void Run(const FloatA* p_a_block, const FloatB* p_b_thread, FloatC* p_c_thread) const
+    template <typename ABlockBuffer, typename BThreadBuffer, typename CThreadBuffer>
+    __device__ void Run(const ABlockBuffer& a_block_buf,
+                        const BThreadBuffer& b_thread_buf,
+                        CThreadBuffer& c_thread_buf) const
     {
-        auto a_block_buf = make_dynamic_buffer(p_a_block);
+        static_assert(is_same<remove_cv_t<remove_reference_t<typename ABlockBuffer::type>>,
+                              remove_cv_t<remove_reference_t<FloatA>>>::value &&
+                      is_same<remove_cv_t<remove_reference_t<typename BThreadBuffer::type>>,
+                              remove_cv_t<remove_reference_t<FloatB>>>::value &&
+                      is_same<remove_cv_t<remove_reference_t<typename CThreadBuffer::type>>,
+                              remove_cv_t<remove_reference_t<FloatC>>>::value &&
+                      "wrong! inconsistent type");
 
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
@@ -334,12 +343,8 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         static_assert(HPerThread % HoPerThreadSubC == 0, "");
         static_assert(WPerThread % WoPerThreadSubC == 0, "");
 
-        // thread A, B for GEMM
-        FloatA p_a_thread[a_thread_mtx_.GetElementSpaceSize()];
-
-        auto a_thread_buf = make_dynamic_buffer(p_a_thread);
-        auto b_thread_buf = make_dynamic_buffer(p_b_thread);
-        auto c_thread_buf = make_dynamic_buffer(p_c_thread);
+        // thread A buffer for GEMM
+        StaticBuffer<FloatA, a_thread_mtx_.GetElementSpaceSize()> a_thread_buf;
 
         constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v3<FloatA,
                                                                     FloatB,

@@ -685,7 +685,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
         // zero out threadwise output
         threadwise_matrix_set_zero_v3(c_k_n_ho_wo_thread_desc, p_c_thread);
-#else
+#elif 0
         // register allocation for output
         FloatAcc p_c_thread[c_k_n_ho_wo_thread_desc.GetElementSpaceSize()];
 
@@ -695,7 +695,14 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                            decltype(c_k_n_ho_wo_thread_desc),
                                            Sequence<KPerThread, 1, HoPerThread, WoPerThread>>{}
             .Run(c_k_n_ho_wo_thread_desc, make_tuple(I0, I0, I0, I0), c_thread_buf, FloatAcc{0});
+#elif 1
+        // register allocation for output
+        StaticBuffer<FloatAcc, c_k_n_ho_wo_thread_desc.GetElementSpaceSize()> c_thread_buf;
 
+        ThreadwiseDynamicTensorSliceSet_v1<FloatAcc,
+                                           decltype(c_k_n_ho_wo_thread_desc),
+                                           Sequence<KPerThread, 1, HoPerThread, WoPerThread>>{}
+            .Run(c_k_n_ho_wo_thread_desc, make_tuple(I0, I0, I0, I0), c_thread_buf, FloatAcc{0});
 #endif
 
         constexpr auto b_thread_slice_copy_step = make_multi_index(EPerBlock, 0, 0, 0);
@@ -735,7 +742,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                       p_b_global,
                                       b_e_n_ho_wo_thread_desc,
                                       make_tuple(I0, I0, I0, I0),
-                                      b_thread_even_buf.p_data_,
+                                      b_thread_even_buf,
                                       b_e_n_ho_wo_global_iterator_hacks);
 
             a_blockwise_copy.RunWrite(a_e_k_desc, p_a_block);
@@ -759,14 +766,15 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                           p_b_global,
                                           b_e_n_ho_wo_thread_desc,
                                           make_tuple(I0, I0, I0, I0),
-                                          b_thread_odd_buf.p_data_,
+                                          b_thread_odd_buf,
                                           b_e_n_ho_wo_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
                 blockwise_gemm.Run(
-                    p_a_block + a_e_k_block_desc.CalculateOffset(make_tuple(b_block_data_begin, 0)),
-                    b_thread_even_buf.p_data_,
-                    p_c_thread);
+                    make_dynamic_buffer(p_a_block + a_e_k_block_desc.CalculateOffset(
+                                                        make_tuple(b_block_data_begin, 0))),
+                    b_thread_even_buf,
+                    c_thread_buf);
 
                 b_block_data_begin += EPerBlock;
 
@@ -777,14 +785,15 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                           p_b_global,
                                           b_e_n_ho_wo_thread_desc,
                                           make_tuple(I0, I0, I0, I0),
-                                          b_thread_even_buf.p_data_,
+                                          b_thread_even_buf,
                                           b_e_n_ho_wo_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
                 blockwise_gemm.Run(
-                    p_a_block + a_e_k_block_desc.CalculateOffset(make_tuple(b_block_data_begin, 0)),
-                    b_thread_odd_buf.p_data_,
-                    p_c_thread);
+                    make_dynamic_buffer(p_a_block + a_e_k_block_desc.CalculateOffset(
+                                                        make_tuple(b_block_data_begin, 0))),
+                    b_thread_odd_buf,
+                    c_thread_buf);
 
                 b_block_data_begin += EPerBlock;
 
@@ -801,30 +810,33 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                       p_b_global,
                                       b_e_n_ho_wo_thread_desc,
                                       make_tuple(I0, I0, I0, I0),
-                                      b_thread_odd_buf.p_data_,
+                                      b_thread_odd_buf,
                                       b_e_n_ho_wo_global_iterator_hacks);
 
             // LDS double buffer: GEMM on 2nd-last data
             blockwise_gemm.Run(
-                p_a_block + a_e_k_block_desc.CalculateOffset(make_tuple(b_block_data_begin, 0)),
-                b_thread_even_buf.p_data_,
-                p_c_thread);
+                make_dynamic_buffer(p_a_block + a_e_k_block_desc.CalculateOffset(
+                                                    make_tuple(b_block_data_begin, 0))),
+                b_thread_even_buf,
+                c_thread_buf);
 
             b_block_data_begin += EPerBlock;
 
             // LDS double buffer: GEMM on last data
             blockwise_gemm.Run(
-                p_a_block + a_e_k_block_desc.CalculateOffset(make_tuple(b_block_data_begin, 0)),
-                b_thread_odd_buf.p_data_,
-                p_c_thread);
+                make_dynamic_buffer(p_a_block + a_e_k_block_desc.CalculateOffset(
+                                                    make_tuple(b_block_data_begin, 0))),
+                b_thread_odd_buf,
+                c_thread_buf);
         }
         else // if has 1 iteration left
         {
             // LDS double buffer: GEMM on last data
             blockwise_gemm.Run(
-                p_a_block + a_e_k_block_desc.CalculateOffset(make_tuple(b_block_data_begin, 0)),
-                b_thread_even_buf.p_data_,
-                p_c_thread);
+                make_dynamic_buffer(p_a_block + a_e_k_block_desc.CalculateOffset(
+                                                    make_tuple(b_block_data_begin, 0))),
+                b_thread_even_buf,
+                c_thread_buf);
         }
 
         // output: register to global memory
