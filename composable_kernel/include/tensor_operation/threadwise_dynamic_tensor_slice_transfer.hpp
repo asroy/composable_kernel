@@ -98,14 +98,11 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
             is_known_at_compile_time<remove_cv_t<remove_reference_t<SrcSliceOriginIdx>>>::value,
             "wrong! SrcSliceOrigin need to known at compile-time");
 
-#if 0 // debug
-      // TODO: turn this on, once v5r1 is updated to use StaticBuffer for holding C data
         static_assert(SrcBuffer::IsStaticBuffer(), "wrong! SrcBuffer need to be StaticBuffer");
 
         static_assert(is_same<remove_cv_t<remove_reference_t<typename SrcBuffer::type>>,
                               remove_cv_t<remove_reference_t<SrcData>>>::value,
                       "wrong! SrcBuffer data type is wrong");
-#endif
 
         // SrcDesc and src_slice_origin_idx are known at compile-time
         constexpr auto src_desc             = remove_cv_t<remove_reference_t<SrcDesc>>{};
@@ -1403,10 +1400,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
                                   remove_cv_t<remove_reference_t<DstData>>>::value,
                       "wrong! SrcBuffer or DstBuffer data type is wrong");
 
-#if 0
-        // turn this on after v5r1 is updated
         static_assert(DstBuffer::IsStaticBuffer(), "wrong! DstBuffer need to be StaticBuffer");
-#endif
 
         static_assert(is_known_at_compile_time<
                           remove_cv_t<remove_reference_t<SrcRefToOriginDisplacement>>>::value &&

@@ -28,10 +28,7 @@ struct ThreadwiseDynamicTensorSliceSet_v1
         static_assert(Desc::IsKnownAtCompileTime(),
                       "wrong! SrcDesc and DstDesc need to known at compile-time");
 
-#if 0
-        // TODO: turn this on when v5r1 is update to get rid of array
         static_assert(Buffer::IsStaticBuffer(), "wrong! DstBuffer need to be StaticBuffer");
-#endif
 
         static_assert(is_known_at_compile_time<remove_cv_t<remove_reference_t<OriginIdx>>>::value,
                       "wrong! OriginIdx need to be known at compile-time");

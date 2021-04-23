@@ -679,23 +679,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
         FloatAB* p_a_block = p_shared_block;
 
-#if 0
-        // register allocation for output
-        FloatAcc p_c_thread[c_k_n_ho_wo_thread_desc.GetElementSpaceSize()];
-
-        // zero out threadwise output
-        threadwise_matrix_set_zero_v3(c_k_n_ho_wo_thread_desc, p_c_thread);
-#elif 0
-        // register allocation for output
-        FloatAcc p_c_thread[c_k_n_ho_wo_thread_desc.GetElementSpaceSize()];
-
-        auto c_thread_buf = make_dynamic_buffer(p_c_thread);
-
-        ThreadwiseDynamicTensorSliceSet_v1<FloatAcc,
-                                           decltype(c_k_n_ho_wo_thread_desc),
-                                           Sequence<KPerThread, 1, HoPerThread, WoPerThread>>{}
-            .Run(c_k_n_ho_wo_thread_desc, make_tuple(I0, I0, I0, I0), c_thread_buf, FloatAcc{0});
-#elif 1
         // register allocation for output
         StaticBuffer<FloatAcc, c_k_n_ho_wo_thread_desc.GetElementSpaceSize()> c_thread_buf;
 
@@ -703,7 +686,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                            decltype(c_k_n_ho_wo_thread_desc),
                                            Sequence<KPerThread, 1, HoPerThread, WoPerThread>>{}
             .Run(c_k_n_ho_wo_thread_desc, make_tuple(I0, I0, I0, I0), c_thread_buf, FloatAcc{0});
-#endif
 
         constexpr auto b_thread_slice_copy_step = make_multi_index(EPerBlock, 0, 0, 0);
 
@@ -718,21 +700,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         constexpr auto b_e_n_ho_wo_global_move_slice_window_iterator_hack =
             BGlobalMoveSliceWindowIteratorHacks{};
 
-#if 0
-        constexpr auto b_thread_space_size = b_e_n_ho_wo_thread_desc.GetElementSpaceSize();
-        FloatAB p_b_thread[b_thread_space_size * 2];
-
-        FloatAB* p_b_thread_double = p_b_thread;
-#elif 1
-        constexpr auto b_thread_space_size = b_e_n_ho_wo_thread_desc.GetElementSpaceSize();
-        FloatAB p_b_thread[b_thread_space_size * 2];
-
-        auto b_thread_even_buf = make_dynamic_buffer(p_b_thread);
-        auto b_thread_odd_buf  = make_dynamic_buffer(p_b_thread + b_thread_space_size);
-#else
-        StaticBuffer<FloatAB, b_e_n_ho_wo_thread_desc.GetElementSpaceSize()> a_thread_even_buf,
-            a_thread_odd_buf;
-#endif
+        // double regsiter buffer for b
+        StaticBuffer<FloatAB, b_e_n_ho_wo_thread_desc.GetElementSpaceSize()> b_thread_even_buf,
+            b_thread_odd_buf;
 
         // LDS double buffer: preload data into LDS
         {
@@ -770,6 +740,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                           b_e_n_ho_wo_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
+                // TODO: @Zhang Jing: blockwise gemm should be able to move slice window
                 blockwise_gemm.Run(
                     make_dynamic_buffer(p_a_block + a_e_k_block_desc.CalculateOffset(
                                                         make_tuple(b_block_data_begin, 0))),
