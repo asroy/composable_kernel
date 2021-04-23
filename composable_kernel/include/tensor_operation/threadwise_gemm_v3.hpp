@@ -37,8 +37,6 @@ __device__ void threadwise_matrix_set_zero_v3(Desc, Float* __restrict__ p_thread
 template <typename ADesc,
           typename BDesc,
           typename CDesc,
-          index_t H,
-          index_t W,
           typename std::enable_if<ADesc::IsKnownAtCompileTime() && BDesc::IsKnownAtCompileTime() &&
                                       CDesc::IsKnownAtCompileTime(),
                                   bool>::type = false>
@@ -55,76 +53,46 @@ struct ThreadwiseGemm_km_kn_mn_v3
         constexpr auto I1 = Number<1>{};
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
+        constexpr auto I4 = Number<4>{};
 
         constexpr auto E = ADesc{}.GetLength(I0);
         constexpr auto K = ADesc{}.GetLength(I1);
 
+        constexpr auto N = BDesc{}.GetLength(I1);
+        constexpr auto H = BDesc{}.GetLength(I2);
+        constexpr auto W = BDesc{}.GetLength(I3);
+
+#if 0
         static_for<0, E, 1>{}([&](auto e) {
             static_for<0, K, 1>{}([&](auto k) {
-                constexpr auto a_offset = ADesc{}.CalculateOffset(make_tuple(e, k));
+                static_for<0, H, 1>{}([&](auto h) {
+                    static_for<0, W, 1>{}([&](auto w) {
+                        constexpr auto a_offset = ADesc{}.CalculateOffset(make_tuple(e, k));
+                        constexpr auto b_offset = BDesc{}.CalculateOffset(make_tuple(e, 0, h, w));
+                        constexpr auto c_offset = CDesc{}.CalculateOffset(make_tuple(k, 0, h, w));
 
-                if constexpr(H == 2 && W == 2)
-                {
-
-                    constexpr auto b_offset_0 = BDesc{}.CalculateOffset(make_tuple(e, 0, 0, 0));
-                    constexpr auto b_offset_1 = BDesc{}.CalculateOffset(make_tuple(e, 0, 0, 1));
-                    constexpr auto b_offset_2 = BDesc{}.CalculateOffset(make_tuple(e, 0, 1, 0));
-                    constexpr auto b_offset_3 = BDesc{}.CalculateOffset(make_tuple(e, 0, 1, 1));
-
-                    constexpr auto c_offset_0 = CDesc{}.CalculateOffset(make_tuple(k, 0, 0, 0));
-                    constexpr auto c_offset_1 = CDesc{}.CalculateOffset(make_tuple(k, 0, 0, 1));
-                    constexpr auto c_offset_2 = CDesc{}.CalculateOffset(make_tuple(k, 0, 1, 0));
-                    constexpr auto c_offset_3 = CDesc{}.CalculateOffset(make_tuple(k, 0, 1, 1));
-
-                    amd_assembly_outer_product_1x4(p_a[a_offset],
-                                                   p_b[b_offset_0],
-                                                   p_b[b_offset_1],
-                                                   p_b[b_offset_2],
-                                                   p_b[b_offset_3],
-                                                   p_c[c_offset_0],
-                                                   p_c[c_offset_1],
-                                                   p_c[c_offset_2],
-                                                   p_c[c_offset_3]);
-                }
-                else if constexpr(H == 4 && W == 1)
-                {
-
-                    constexpr auto b_offset_0 = BDesc{}.CalculateOffset(make_tuple(e, 0, 0, 0));
-                    constexpr auto b_offset_1 = BDesc{}.CalculateOffset(make_tuple(e, 0, 1, 0));
-                    constexpr auto b_offset_2 = BDesc{}.CalculateOffset(make_tuple(e, 0, 2, 0));
-                    constexpr auto b_offset_3 = BDesc{}.CalculateOffset(make_tuple(e, 0, 3, 0));
-
-                    constexpr auto c_offset_0 = CDesc{}.CalculateOffset(make_tuple(k, 0, 0, 0));
-                    constexpr auto c_offset_1 = CDesc{}.CalculateOffset(make_tuple(k, 0, 1, 0));
-                    constexpr auto c_offset_2 = CDesc{}.CalculateOffset(make_tuple(k, 0, 2, 0));
-                    constexpr auto c_offset_3 = CDesc{}.CalculateOffset(make_tuple(k, 0, 3, 0));
-
-                    amd_assembly_outer_product_1x4(p_a[a_offset],
-                                                   p_b[b_offset_0],
-                                                   p_b[b_offset_1],
-                                                   p_b[b_offset_2],
-                                                   p_b[b_offset_3],
-                                                   p_c[c_offset_0],
-                                                   p_c[c_offset_1],
-                                                   p_c[c_offset_2],
-                                                   p_c[c_offset_3]);
-                }
-                else
-                {
-                    static_for<0, H, 1>{}([&](auto h) {
-                        static_for<0, W, 1>{}([&](auto w) {
-                            constexpr auto b_offset =
-                                BDesc{}.CalculateOffset(make_tuple(e, 0, h, w));
-                            constexpr auto c_offset =
-                                CDesc{}.CalculateOffset(make_tuple(k, 0, h, w));
-
-                            p_c[c_offset] += inner_product_with_conversion<FloatC>{}(p_a[a_offset],
-                                                                                     p_b[b_offset]);
-                        });
+                        amd_assembly_outer_product_1x4(p_a[a_offset], p_b[b_offset], p_c[c_offset]);
                     });
-                }
+                });
             });
         });
+#else
+        constexpr auto access_lengths = Sequence<E, K, N, H, W>{};
+
+        static_ford<decltype(access_lengths)>{}([&](auto access_idx) {
+            constexpr auto e = access_idx[I0];
+            constexpr auto k = access_idx[I1];
+            constexpr auto n = access_idx[I2];
+            constexpr auto h = access_idx[I3];
+            constexpr auto w = access_idx[I4];
+
+            constexpr auto a_offset = ADesc{}.CalculateOffset(make_tuple(e, k));
+            constexpr auto b_offset = BDesc{}.CalculateOffset(make_tuple(e, n, h, w));
+            constexpr auto c_offset = CDesc{}.CalculateOffset(make_tuple(k, n, h, w));
+
+            amd_assembly_outer_product_1x4(p_a[a_offset], p_b[b_offset], p_c[c_offset]);
+        });
+#endif
     }
 
     template <typename FloatA, typename FloatB, typename FloatC>
