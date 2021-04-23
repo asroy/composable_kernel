@@ -29,28 +29,22 @@ struct DynamicBuffer
 {
     using type = T;
 
-    template <typename X>
-    struct PointerWrapper
-    {
-        X* p_;
-
-        __host__ __device__ constexpr const X& operator[](index_t i) const { return p_[i]; }
-
-        __host__ __device__ constexpr X& operator()(index_t i) { return p_[i]; }
-    };
-
     T* p_data_;
 
     __host__ __device__ constexpr DynamicBuffer(T* p_data) : p_data_{p_data} {}
+
+    __host__ __device__ constexpr const T& operator[](index_t i) const { return p_data_[i]; }
+
+    __host__ __device__ constexpr T& operator()(index_t i) { return p_data_[i]; }
 
     template <typename X,
               typename std::enable_if<
                   is_same<typename scalar_type<remove_cv_t<remove_reference_t<X>>>::type,
                           typename scalar_type<remove_cv_t<remove_reference_t<T>>>::type>::value,
                   bool>::type = false>
-    __host__ __device__ constexpr const auto AsType() const
+    __host__ __device__ constexpr const auto Get(index_t i) const
     {
-        return PointerWrapper<X>{reinterpret_cast<X*>(p_data_)};
+        return *reinterpret_cast<const X*>(&p_data_[i]);
     }
 
     template <typename X,
@@ -58,9 +52,9 @@ struct DynamicBuffer
                   is_same<typename scalar_type<remove_cv_t<remove_reference_t<X>>>::type,
                           typename scalar_type<remove_cv_t<remove_reference_t<T>>>::type>::value,
                   bool>::type = false>
-    __host__ __device__ constexpr auto AsType()
+    __host__ __device__ void Set(index_t i, const X& x)
     {
-        return PointerWrapper<X>{reinterpret_cast<X*>(p_data_)};
+        *reinterpret_cast<X*>(&p_data_[i]) = x;
     }
 
     __host__ __device__ static constexpr bool IsStaticBuffer() { return false; }

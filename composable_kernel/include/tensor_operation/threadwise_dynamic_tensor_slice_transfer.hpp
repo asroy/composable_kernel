@@ -1487,20 +1487,9 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
             const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
                 src_desc, src_data_coord);
 
-#if 0
-            // TODO: this is slooooooooow due to VGPR over-allocation
             src_tmp_vector.template AsType<src_vector_t>()(Number<0>{}) =
-                is_src_valid ? src_buf.template AsType<src_vector_t>()[src_data_coord.GetOffset() /
-                                                                       SrcScalarPerVector]
+                is_src_valid ? src_buf.template Get<src_vector_t>(src_data_coord.GetOffset())
                              : src_vector_t{0};
-#else
-            // TODO: this is workaround. this has normal performance but it's hacky
-            src_tmp_vector.template AsType<src_vector_t>()(Number<0>{}) =
-                is_src_valid
-                    ? *reinterpret_cast<const src_vector_t*>(&(reinterpret_cast<const SrcData*>(
-                          src_buf.p_data_)[src_data_coord.GetOffset()]))
-                    : src_vector_t{0};
-#endif
 
             // copy data from src_tmp_vector to dst_tmp_vector (data cast data from SrcData to
             // DstData)
