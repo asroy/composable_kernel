@@ -1399,7 +1399,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
                                   remove_cv_t<remove_reference_t<DstData>>>::value,
                       "wrong! SrcBuffer or DstBuffer data type is wrong");
 
+#if 0
+        // turn this on after v5r1 is updated
         static_assert(DstBuffer::IsStaticBuffer(), "wrong! DstBuffer need to be StaticBuffer");
+#endif
 
         static_assert(is_known_at_compile_time<
                           remove_cv_t<remove_reference_t<SrcRefToOriginDisplacement>>>::value &&
@@ -1413,8 +1416,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
         constexpr auto dst_desc = remove_cv_t<remove_reference_t<DstDesc>>{};
 
         // SrcOriginToRefDisttance and DstOriginToRefDistance are known at compile-time
-        constexpr auto src_ref_to_origin_disp_idx = SrcRefToOriginDisplacement{};
-        constexpr auto dst_ref_to_origin_disp_idx = DstRefToOriginDisplacement{};
+        constexpr auto src_ref_to_origin_disp_idx = to_multi_index(SrcRefToOriginDisplacement{});
+        constexpr auto dst_ref_to_origin_disp_idx = to_multi_index(DstRefToOriginDisplacement{});
 
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
@@ -1469,7 +1472,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
 
             // src coordinate
             constexpr auto src_ref_to_data_disp_idx =
-                to_multi_index(src_ref_to_origin_disp_idx + data_to_origin_disp_idx);
+                src_ref_to_origin_disp_idx + data_to_origin_disp_idx;
 
             constexpr auto src_ref_to_data_disp_coord_iterator =
                 make_dynamic_tensor_coordinate_iterator(src_desc, src_ref_to_data_disp_idx);

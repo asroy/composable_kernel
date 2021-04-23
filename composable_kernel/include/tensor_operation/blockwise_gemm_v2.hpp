@@ -7,6 +7,7 @@
 
 namespace ck {
 
+#if 0
 // blockwise GEMM: C[M, N] += transpose(A[K, M]) * B[K, N]
 // A and B are visable to the whole block, C is distributed among each thread
 // If following number are power of 2, index calculation shall be greatly reduced:
@@ -364,12 +365,20 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1
 #endif
     }
 };
+#endif
 
-// blockwise GEMM: C[M, N] += transpose(A[K, M]) * B[K, N]
+// C[M, N] += transpose(A[K, M]) * B[K, N]
 // A and B are visable to the whole block, C is distributed among each thread
-// If following number are power of 2, index calculation shall be greatly reduced:
-//    MPerThreadSubC, NPerThreadSubC, MLevel0ThreadCluster, NLevel0ThreadCluster,
-//    MLevel1ThreadCluster, NLevel1ThreadCluster
+// Assume:
+//   1. A:
+//     1. BlockMatrixA is known at compile-time
+//     2. ABlockBuffer is DynamicBuffer
+//   2. B:
+//     1. BlockMatrixA is known at compile-time
+//     2. BBlockBuffer is DynamicBuffer
+//   3. C:
+//     1. ThreadMatrixC is known at compile-time
+//     2. CThreadBuffer is StaticBuffer
 template <index_t BlockSize,
           typename FloatA,
           typename FloatB,

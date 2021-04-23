@@ -6,7 +6,7 @@
 
 namespace ck {
 
-#if 1
+#if 0
 template <typename Float, typename Desc>
 __device__ void threadwise_matrix_set_zero_v2(Desc, Float* __restrict__ p_thread)
 {
@@ -174,8 +174,7 @@ struct ThreadwiseGemm_km_kn_mn_v1
 //   Element of matrix can be vectorized data
 // Assume:
 //   1. ADesc, BDesc, CDesc are known at compile-time
-//   2. ABuffer, BBuffer, CBuffer are static buffer
-//   3. AOriginIdx, BOriginIdx, COriginIdx are known at compile-time
+//   2. AOriginIdx, BOriginIdx, COriginIdx are known at compile-time
 template <typename FloatA,
           typename FloatB,
           typename FloatC,
