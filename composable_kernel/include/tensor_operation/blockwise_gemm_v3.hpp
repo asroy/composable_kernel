@@ -6,11 +6,6 @@
 
 namespace ck {
 
-// blockwise GEMM: C[M, N] += transpose(A[K, M]) * B[K, N]
-// A and B are visable to the whole block, C is distributed among each thread
-// If following number are power of 2, index calculation shall be greatly reduced:
-//    KPerThread, HPerThread, MLevel0ThreadCluster, NLevel0ThreadCluster,
-//    MLevel1ThreadCluster, NLevel1ThreadCluster
 template <index_t BlockSize,
           typename FloatA,
           typename FloatB,
@@ -57,10 +52,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
                                                 AddressSpace::Generic,
                                                 AddressSpace::Vgpr,
                                                 1>;
-
-    MatrixIndex c_thread_begin_mtx_idx_;
-
-    AThreadCopy a_thread_copy_;
 
     __device__ BlockwiseGemm_km_kn_m0m1n0n1_v3()
         : c_thread_begin_mtx_idx_{GetBeginOfThreadMatrixC(get_thread_local_1d_id())},
@@ -183,6 +174,18 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
             });
         });
     }
+
+    template <typename ABlockSliceMoveStepIdx>
+    __device__ void MoveASliceWindow(const BlockMatrixA&,
+                                     const ABlockSliceMoveStepIdx& a_block_slice_move_step_idx)
+    {
+        a_thread_copy_.MoveSrcSliceWindow(BlockMatrixA{}, a_block_slice_move_step_idx);
+    }
+
+    private:
+    MatrixIndex c_thread_begin_mtx_idx_;
+
+    AThreadCopy a_thread_copy_;
 };
 
 } // namespace ck

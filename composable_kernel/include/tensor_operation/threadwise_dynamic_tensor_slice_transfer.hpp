@@ -1338,16 +1338,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 //   1. src:
 //     1. SrcDesc is known at compile-time
 //     2. SrcBuffer is DynamicBuffer
-//     3. a reference src_reference_idx is given at run-time, src_slice_origin_idx has a
-//        compile-time distance to src_reference_idx
-//     4. use #-iterator
+//     3. src_ref_idx is known at run-time
+//     4. SrcRefToOriginDisplacement is known at compile-time
+//     5. use #-iterator
 //   2. dst:
 //     1. DstDesc is known at compile-time
 //     2. DstBuffer is StaticBuffer
-//     3. a reference src_reference_idx is given at run-time, src_slice_origin_idx has a
-//     2. a reference dst_reference_idx is given at compile-time, dst_slice_origin_idx has a
-//        compile-time distance to dst_reference_idx
-//     3. use direct address calculation (lower of coordinate)
+//     3. DstOriginIdx is known at compile-time
+//     4. use direct address calculation
 //   3. vector access on src
 template <
     typename SrcData,
@@ -1381,14 +1379,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
     }
 
     template <typename SrcRefToOriginDisplacement,
-              typename DstRefToOriginDisplacement,
+              typename DstOriginIdx,
               typename SrcBuffer,
               typename DstBuffer>
     __device__ void Run(const SrcDesc&,
                         const SrcRefToOriginDisplacement&,
                         const SrcBuffer& src_buf,
                         const DstDesc&,
-                        const DstRefToOriginDisplacement&,
+                        const DstOriginIdx&,
                         DstBuffer& dst_buf) const
     {
         static_assert(SrcDesc::IsKnownAtCompileTime() && DstDesc::IsKnownAtCompileTime(),
@@ -1402,12 +1400,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
 
         static_assert(DstBuffer::IsStaticBuffer(), "wrong! DstBuffer need to be StaticBuffer");
 
-        static_assert(is_known_at_compile_time<
-                          remove_cv_t<remove_reference_t<SrcRefToOriginDisplacement>>>::value &&
-                          is_known_at_compile_time<
-                              remove_cv_t<remove_reference_t<DstRefToOriginDisplacement>>>::value,
-                      "wrong! SrcOriginToRefDistance and DstOriginToRefDistance need to be known "
-                      "at compile-time");
+        static_assert(
+            is_known_at_compile_time<
+                remove_cv_t<remove_reference_t<SrcRefToOriginDisplacement>>>::value &&
+                is_known_at_compile_time<remove_cv_t<remove_reference_t<DstOriginIdx>>>::value,
+            "wrong! SrcOriginToRefDistance and DstOriginToRefDistance need to be known "
+            "at compile-time");
 
         // SrcDesc and DstDesc are known at compile-time
         constexpr auto src_desc = remove_cv_t<remove_reference_t<SrcDesc>>{};
@@ -1415,7 +1413,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
 
         // SrcOriginToRefDisttance and DstOriginToRefDistance are known at compile-time
         constexpr auto src_ref_to_origin_disp_idx = to_multi_index(SrcRefToOriginDisplacement{});
-        constexpr auto dst_ref_to_origin_disp_idx = to_multi_index(DstRefToOriginDisplacement{});
+        constexpr auto dst_origin_idx             = to_multi_index(DstOriginIdx{});
 
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
@@ -1505,12 +1503,23 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
             // copy data from dst_tmp_vector into dst_buf
             static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
                 constexpr index_t dst_offset = dst_desc.CalculateOffset(
-                    to_multi_index(dst_ref_to_origin_disp_idx) + data_to_origin_disp_idx +
-                    i * src_scalar_step_in_vector);
+                    dst_origin_idx + data_to_origin_disp_idx + i * src_scalar_step_in_vector);
 
                 dst_buf(Number<dst_offset>{}) = dst_tmp_vector.template AsType<DstData>()[i];
             });
         });
+    }
+
+    template <typename SrcSliceMoveStepIdx>
+    __device__ void MoveSrcSliceWindow(const SrcDesc&,
+                                       const SrcSliceMoveStepIdx& src_slice_move_step_idx)
+    {
+        constexpr auto src_desc = SrcDesc{};
+
+        const auto src_slice_move_step_iter = make_dynamic_tensor_coordinate_iterator(
+            src_desc, to_multi_index(src_slice_move_step_idx));
+
+        move_dynamic_tensor_coordinate(SrcDesc{}, src_ref_coord_, src_slice_move_step_iter);
     }
 
     private:

@@ -145,20 +145,19 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
                 Number<KPerThread>{}, Number<1>{}, Number<HoPerThread>{}, Number<WoPerThread>{}));
 
-        const auto blockwise_gemm =
-            BlockwiseGemm_km_kn_m0m1n0n1_v3<BlockSize,
-                                            FloatAB,
-                                            FloatAB,
-                                            FloatAcc,
-                                            decltype(a_e_k_block_desc),
-                                            decltype(b_e_n_ho_wo_block_desc),
-                                            decltype(c_k_n_ho_wo_thread_desc),
-                                            KPerThread,
-                                            HoPerThread,
-                                            WoPerThread,
-                                            EPerThread,
-                                            ABlockTransferSrcScalarPerVector,
-                                            ABlockTransferDstScalarPerVector_K>{};
+        auto blockwise_gemm = BlockwiseGemm_km_kn_m0m1n0n1_v3<BlockSize,
+                                                              FloatAB,
+                                                              FloatAB,
+                                                              FloatAcc,
+                                                              decltype(a_e_k_block_desc),
+                                                              decltype(b_e_n_ho_wo_block_desc),
+                                                              decltype(c_k_n_ho_wo_thread_desc),
+                                                              KPerThread,
+                                                              HoPerThread,
+                                                              WoPerThread,
+                                                              EPerThread,
+                                                              ABlockTransferSrcScalarPerVector,
+                                                              ABlockTransferDstScalarPerVector_K>{};
 
         auto c_thread_mtx_index = blockwise_gemm.GetBeginOfThreadMatrixC(get_thread_local_1d_id());
 
@@ -226,6 +225,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
         FloatAB* p_a_block = p_shared_block;
 
+        auto a_block_buf = make_dynamic_buffer(p_a_block);
+
         // register allocation for output
         StaticBuffer<FloatAcc, c_k_n_ho_wo_thread_desc.GetElementSpaceSize()> c_thread_buf;
 
@@ -268,10 +269,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
         __syncthreads();
 
-        index_t b_block_data_begin = 0;
-
         if constexpr(HasMainKBlockLoop)
         {
+            index_t e_block_data_begin = 0;
+
             // LDS double buffer: main body
             // use Do-While loop instead of For loop to simplify control flow
             do
@@ -289,13 +290,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
                 // LDS double buffer: GEMM on current data
                 // TODO: @Zhang Jing: blockwise gemm should be able to move slice window
-                blockwise_gemm.Run(
-                    make_dynamic_buffer(p_a_block + a_e_k_block_desc.CalculateOffset(
-                                                        make_tuple(b_block_data_begin, 0))),
-                    b_thread_even_buf,
-                    c_thread_buf);
+                blockwise_gemm.Run(a_block_buf, b_thread_even_buf, c_thread_buf);
 
-                b_block_data_begin += EPerBlock;
+                blockwise_gemm.MoveASliceWindow(a_e_k_block_desc, make_tuple(EPerBlock, 0));
 
                 b_threadwise_transfer.MoveSrcSliceWindow(b_e_n_ho_wo_global_desc,
                                                          b_thread_slice_copy_step);
@@ -308,15 +305,13 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                           b_e_n_ho_wo_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(
-                    make_dynamic_buffer(p_a_block + a_e_k_block_desc.CalculateOffset(
-                                                        make_tuple(b_block_data_begin, 0))),
-                    b_thread_odd_buf,
-                    c_thread_buf);
+                blockwise_gemm.Run(a_block_buf, b_thread_odd_buf, c_thread_buf);
 
-                b_block_data_begin += EPerBlock;
+                blockwise_gemm.MoveASliceWindow(a_e_k_block_desc, make_tuple(EPerBlock, 0));
 
-            } while(b_block_data_begin < E - 2 * EPerBlock);
+                e_block_data_begin += 2 * EPerBlock;
+
+            } while(e_block_data_begin < E - 2 * EPerBlock);
         }
 
         // LDS double buffer: tail
@@ -333,29 +328,17 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                       b_e_n_ho_wo_global_iterator_hacks);
 
             // LDS double buffer: GEMM on 2nd-last data
-            blockwise_gemm.Run(
-                make_dynamic_buffer(p_a_block + a_e_k_block_desc.CalculateOffset(
-                                                    make_tuple(b_block_data_begin, 0))),
-                b_thread_even_buf,
-                c_thread_buf);
+            blockwise_gemm.Run(a_block_buf, b_thread_even_buf, c_thread_buf);
 
-            b_block_data_begin += EPerBlock;
+            blockwise_gemm.MoveASliceWindow(a_e_k_block_desc, make_tuple(EPerBlock, 0));
 
             // LDS double buffer: GEMM on last data
-            blockwise_gemm.Run(
-                make_dynamic_buffer(p_a_block + a_e_k_block_desc.CalculateOffset(
-                                                    make_tuple(b_block_data_begin, 0))),
-                b_thread_odd_buf,
-                c_thread_buf);
+            blockwise_gemm.Run(a_block_buf, b_thread_odd_buf, c_thread_buf);
         }
         else // if has 1 iteration left
         {
             // LDS double buffer: GEMM on last data
-            blockwise_gemm.Run(
-                make_dynamic_buffer(p_a_block + a_e_k_block_desc.CalculateOffset(
-                                                    make_tuple(b_block_data_begin, 0))),
-                b_thread_even_buf,
-                c_thread_buf);
+            blockwise_gemm.Run(a_block_buf, b_thread_even_buf, c_thread_buf);
         }
 
         // output: register to global memory
