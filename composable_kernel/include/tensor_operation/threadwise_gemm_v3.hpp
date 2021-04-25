@@ -151,12 +151,26 @@ struct ThreadwiseGemm_km_kn_mn_v3
             });
         });
 #else
-        constexpr auto a_lengths_ = Sequence<K>{};
-        constexpr auto b_lengths_ = Sequence<N, H, W>{};
+        constexpr auto a_lengths = Sequence<E, K>{};
+        constexpr auto b_lengths = Sequence<E, N, H, W>{};
+
+        constexpr index_t a_vec_dim = 1;
+        constexpr index_t b_vec_dim = 1;
+
+        constexpr index_t a_vec_size = 1;
+        constexpr index_t b_vec_size = 4;
+
+        constexpr auto a_lengths_sub =
+            generate_sequence_v2([a_lengths](auto i) { return Number<a_lengths[i + 1]>{}; },
+                                 Number<a_lengths.Size() - 1>{});
+
+        constexpr auto b_lengths_sub =
+            generate_sequence_v2([b_lengths](auto i) { return Number<b_lengths[i + 1]>{}; },
+                                 Number<b_lengths.Size() - 1>{});
 
         static_for<0, E, 1>{}([&](auto e) {
-            static_ford<decltype(a_lengths_)>{}([&](auto a_idx_) {
-                static_ford<decltype(b_lengths_)>{}([&](auto b_idx_) {
+            static_ford<decltype(a_lengths_sub)>{}([&](auto a_idx_sub) {
+                static_ford<decltype(b_lengths_sub)>{}([&](auto b_idx_sub) {
                     // lamda
                     // F =
                     //{
@@ -166,43 +180,43 @@ struct ThreadwiseGemm_km_kn_mn_v3
                     //}
 
                     constexpr auto a_idx = generate_tuple(
-                        [e, a_idx_](auto i) {
+                        [e, a_idx_sub](auto i) {
                             if constexpr(i == 0)
                             {
                                 return Number<e>{};
                             }
                             else
                             {
-                                return a_idx_[i - 1];
+                                return a_idx_sub[i - 1];
                             }
                         },
-                        Number<a_lengths_.Size() + 1>{});
+                        Number<a_lengths_sub.Size() + 1>{});
 
                     constexpr auto b_idx = generate_tuple(
-                        [e, b_idx_](auto i) {
+                        [e, b_idx_sub](auto i) {
                             if constexpr(i == 0)
                             {
                                 return Number<e>{};
                             }
                             else
                             {
-                                return b_idx_[i - 1];
+                                return b_idx_sub[i - 1];
                             }
                         },
-                        Number<b_lengths_.Size() + 1>{});
+                        Number<b_lengths_sub.Size() + 1>{});
 
                     constexpr auto c_idx = generate_tuple(
-                        [a_idx_, b_idx_](auto i) {
-                            if constexpr(i < a_idx_.Size())
+                        [a_idx_sub, b_idx_sub](auto i) {
+                            if constexpr(i < a_idx_sub.Size())
                             {
-                                return a_idx_[i];
+                                return a_idx_sub[i];
                             }
                             else
                             {
-                                return b_idx_[i - a_idx_.Size()];
+                                return b_idx_sub[i - a_idx_sub.Size()];
                             }
                         },
-                        Number<a_lengths_.Size() + b_lengths_.Size()>{});
+                        Number<a_lengths_sub.Size() + b_lengths_sub.Size()>{});
 
                     constexpr auto a_offset = ADesc{}.CalculateOffset(a_idx);
                     constexpr auto b_offset = BDesc{}.CalculateOffset(b_idx);
