@@ -369,10 +369,7 @@ __device__ void amd_assembly_outer_product_1x4(int8x16_t a,
                                    c3);
 }
 
-// c0 += inner_product(a, b0)
-// c1 += inner_product(a, b1)
-// c2 += inner_product(a, b2)
-// c3 += inner_product(a, b3)
+// c += inner_product(a, b)
 __device__ void amd_assembly_outer_product_1x1(int8x4_t a, int8x4_t b, int32_t& c)
 {
     asm volatile("\n \
@@ -382,7 +379,7 @@ __device__ void amd_assembly_outer_product_1x1(int8x4_t a, int8x4_t b, int32_t& 
                  : "v"(as_type<int32_t>(a)), "v"(as_type<int32_t>(b)), "0"(c));
 }
 
-__device__ void amd_assembly_outer_product_1x4(int8x8_t a, int8x8_t b, int32_t& c)
+__device__ void amd_assembly_outer_product_1x1(int8x8_t a, int8x8_t b, int32_t& c)
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -396,7 +393,7 @@ __device__ void amd_assembly_outer_product_1x4(int8x8_t a, int8x8_t b, int32_t& 
                                    c);
 }
 
-__device__ void amd_assembly_outer_product_1x4(int8x16_t a, int8x16_t b, int32_t& c)
+__device__ void amd_assembly_outer_product_1x1(int8x16_t a, int8x16_t b, int32_t& c)
 
 {
     constexpr auto I0 = Number<0>{};
