@@ -153,34 +153,40 @@ struct ThreadwiseGemm_km_kn_mn_v3
 #else
         constexpr auto a_lengths = Sequence<E, K>{};
         constexpr auto b_lengths = Sequence<E, N, H, W>{};
+        constexpr auto c_lengths = Sequence<K, N, H, W>{};
 
-        constexpr index_t a_vec_dim = 1;
-        constexpr index_t b_vec_dim = 1;
-
-        constexpr index_t a_vec_size = 1;
+        constexpr index_t b_vec_dim  = 2;
         constexpr index_t b_vec_size = 4;
 
-        constexpr auto a_lengths_sub =
-            generate_sequence_v2([a_lengths](auto i) { return Number<a_lengths[i + 1]>{}; },
-                                 Number<a_lengths.Size() - 1>{});
+        constexpr index_t c_vec_dim  = 2;
+        constexpr index_t c_vec_size = 4;
 
-        constexpr auto b_lengths_sub =
-            generate_sequence_v2([b_lengths](auto i) { return Number<b_lengths[i + 1]>{}; },
-                                 Number<b_lengths.Size() - 1>{});
+        constexpr auto a_lengths_sub = generate_sequence_v2(
+            [&](auto i) { return Number<a_lengths[i + 1]>{}; }, Number<a_lengths.Size() - 1>{});
+
+        static_assert(b_lengths[b_vec_dim] % b_vec_size == 0, "");
+
+        constexpr auto b_lengths_sub = generate_sequence_v2(
+            [&](auto i) {
+                if constexpr(i == b_vec_dim - 1)
+                {
+                    return Number<b_lengths[i + 1] / b_vec_size>{};
+                }
+                else
+                {
+
+                    return Number<b_lengths[i + 1]>{};
+                }
+            },
+            Number<b_lengths.Size() - 1>{});
 
         static_for<0, E, 1>{}([&](auto e) {
             static_ford<decltype(a_lengths_sub)>{}([&](auto a_idx_sub) {
                 static_ford<decltype(b_lengths_sub)>{}([&](auto b_idx_sub) {
-                    // lamda
-                    // F =
-                    //{
                     // auto a_index = to_multi_index(make_tuple(e, k))
-                    // a_index[vec_dim] *= vec_size;
-                    // return a_index;
-                    //}
 
                     constexpr auto a_idx = generate_tuple(
-                        [e, a_idx_sub](auto i) {
+                        [&](auto i) {
                             if constexpr(i == 0)
                             {
                                 return Number<e>{};
@@ -193,10 +199,14 @@ struct ThreadwiseGemm_km_kn_mn_v3
                         Number<a_lengths_sub.Size() + 1>{});
 
                     constexpr auto b_idx = generate_tuple(
-                        [e, b_idx_sub](auto i) {
+                        [&](auto i) {
                             if constexpr(i == 0)
                             {
                                 return Number<e>{};
+                            }
+                            else if constexpr(i == b_vec_dim)
+                            {
+                                return b_idx_sub[i - 1] * b_vec_size;
                             }
                             else
                             {
@@ -206,7 +216,7 @@ struct ThreadwiseGemm_km_kn_mn_v3
                         Number<b_lengths_sub.Size() + 1>{});
 
                     constexpr auto c_idx = generate_tuple(
-                        [a_idx_sub, b_idx_sub](auto i) {
+                        [&](auto i) {
                             if constexpr(i < a_idx_sub.Size())
                             {
                                 return a_idx_sub[i];
@@ -218,11 +228,60 @@ struct ThreadwiseGemm_km_kn_mn_v3
                         },
                         Number<a_lengths_sub.Size() + b_lengths_sub.Size()>{});
 
-                    constexpr auto a_offset = ADesc{}.CalculateOffset(a_idx);
-                    constexpr auto b_offset = BDesc{}.CalculateOffset(b_idx);
-                    constexpr auto c_offset = CDesc{}.CalculateOffset(c_idx);
+                    if constexpr(b_vec_size == 4)
+                    {
+                        constexpr auto a_offset = ADesc{}.CalculateOffset(a_idx);
 
-                    amd_assembly_outer_product_1x1(p_a[a_offset], p_b[b_offset], p_c[c_offset]);
+                        constexpr auto b_idx_off = [b_idx](index_t off) {
+                            return generate_tuple(
+                                [&](auto i) {
+                                    if constexpr(i == b_vec_dim)
+                                        return b_idx[i] + off;
+                                    else
+                                        return b_idx[i];
+                                },
+                                Number<b_idx.Size()>{});
+                        };
+
+                        constexpr auto b_offset_0 = BDesc{}.CalculateOffset(b_idx_off(0));
+                        constexpr auto b_offset_1 = BDesc{}.CalculateOffset(b_idx_off(1));
+                        constexpr auto b_offset_2 = BDesc{}.CalculateOffset(b_idx_off(2));
+                        constexpr auto b_offset_3 = BDesc{}.CalculateOffset(b_idx_off(3));
+
+                        constexpr auto c_idx_off = [c_idx](index_t off) {
+                            return generate_tuple(
+                                [&](auto i) {
+                                    if constexpr(i == c_vec_dim)
+                                        return c_idx[i] + off;
+                                    else
+                                        return c_idx[i];
+                                },
+                                Number<c_idx.Size()>{});
+                        };
+
+                        constexpr auto c_offset_0 = CDesc{}.CalculateOffset(c_idx_off(0));
+                        constexpr auto c_offset_1 = CDesc{}.CalculateOffset(c_idx_off(1));
+                        constexpr auto c_offset_2 = CDesc{}.CalculateOffset(c_idx_off(2));
+                        constexpr auto c_offset_3 = CDesc{}.CalculateOffset(c_idx_off(3));
+
+                        amd_assembly_outer_product_1x4(p_a[a_offset],
+                                                       p_b[b_offset_0],
+                                                       p_b[b_offset_1],
+                                                       p_b[b_offset_2],
+                                                       p_b[b_offset_3],
+                                                       p_c[c_offset_0],
+                                                       p_c[c_offset_1],
+                                                       p_c[c_offset_2],
+                                                       p_c[c_offset_3]);
+                    }
+                    else
+                    {
+                        constexpr auto a_offset = ADesc{}.CalculateOffset(a_idx);
+                        constexpr auto b_offset = BDesc{}.CalculateOffset(b_idx);
+                        constexpr auto c_offset = CDesc{}.CalculateOffset(c_idx);
+
+                        amd_assembly_outer_product_1x1(p_a[a_offset], p_b[b_offset], p_c[c_offset]);
+                    }
                 });
             });
         });
