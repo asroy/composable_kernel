@@ -154,9 +154,22 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
                                                              KPerThreadSubC,
                                                              ThreadGemmADataPerRead_K>{};
 
-        constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v3<decltype(a_thread_mtx),
-                                                                    decltype(b_thread_mtx),
-                                                                    decltype(c_thread_mtx)>{};
+        // constexpr index_t AVectorDim = 1, AVectorSize = 1, BVectorDim = 2, BVectorSize = 4;
+        // constexpr index_t AVectorDim = 1, AVectorSize = 1, BVectorDim = 2, BVectorSize = 2;
+        // constexpr index_t AVectorDim = 1, AVectorSize = 2, BVectorDim = 2, BVectorSize = 2;
+        constexpr index_t AVectorDim = 1, AVectorSize = 2, BVectorDim = 2, BVectorSize = 2;
+
+        constexpr auto threadwise_gemm =
+            ThreadwiseGemm_km_kn_mn_v3<decltype(a_thread_mtx),
+                                       decltype(b_thread_mtx),
+                                       decltype(c_thread_mtx),
+                                       Sequence<EPerThreadLoop, KPerThreadSubC>,
+                                       Sequence<EPerThreadLoop, 1, HPerThread, WPerThread>,
+                                       Sequence<KPerThreadSubC, 1, HPerThread, WPerThread>,
+                                       AVectorDim,
+                                       AVectorSize,
+                                       BVectorDim,
+                                       BVectorSize>{};
         // loop over k
 #pragma unroll
         for(index_t e_begin = 0; e_begin < EPerBlock; e_begin += EPerThreadLoop)

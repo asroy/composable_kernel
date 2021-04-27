@@ -217,6 +217,76 @@ __device__ void amd_assembly_outer_product_1x4(half16_t a,
         p_a_half8[1], p_b0_half8[1], p_b1_half8[1], p_b2_half8[1], p_b3_half8[1], c0, c1, c2, c3);
 }
 
+// c0 += inner_product(a0, b)
+// c1 += inner_product(a1, b)
+__device__ void
+amd_assembly_outer_product_2x1(int8x4_t a0, int8x4_t a1, int8x4_t b, int32_t& c0, int32_t& c1)
+{
+    asm volatile("\n \
+            v_dot4_i32_i8 %0, %2, %4, %0\n \
+            v_dot4_i32_i8 %1, %3, %4, %1\n \
+            "
+                 : "=v"(c0), "=v"(c1)
+                 : "v"(as_type<int32_t>(a0)),
+                   "v"(as_type<int32_t>(a1)),
+                   "v"(as_type<int32_t>(b)),
+                   "0"(c0),
+                   "1"(c1));
+}
+
+__device__ void
+amd_assembly_outer_product_2x1(int8x8_t a0, int8x8_t a1, int8x8_t b, int32_t& c0, int32_t& c1)
+{
+    constexpr auto I0 = Number<0>{};
+    constexpr auto I1 = Number<1>{};
+
+    amd_assembly_outer_product_2x1(vector_type<int8_t, 8>{a0}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 8>{a1}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 8>{b}.AsType<int8x4_t>()[I0],
+                                   c0,
+                                   c1);
+
+    amd_assembly_outer_product_2x1(vector_type<int8_t, 8>{a0}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 8>{a1}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 8>{b}.AsType<int8x4_t>()[I1],
+                                   c0,
+                                   c1);
+}
+
+__device__ void
+amd_assembly_outer_product_2x1(int8x16_t a0, int8x16_t a1, int8x16_t b, int32_t& c0, int32_t& c1)
+
+{
+    constexpr auto I0 = Number<0>{};
+    constexpr auto I1 = Number<1>{};
+    constexpr auto I2 = Number<2>{};
+    constexpr auto I3 = Number<3>{};
+
+    amd_assembly_outer_product_2x1(vector_type<int8_t, 16>{a0}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 16>{a1}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 16>{b}.AsType<int8x4_t>()[I0],
+                                   c0,
+                                   c1);
+
+    amd_assembly_outer_product_2x1(vector_type<int8_t, 16>{a0}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 16>{a1}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 16>{b}.AsType<int8x4_t>()[I1],
+                                   c0,
+                                   c1);
+
+    amd_assembly_outer_product_2x1(vector_type<int8_t, 16>{a0}.AsType<int8x4_t>()[I2],
+                                   vector_type<int8_t, 16>{a1}.AsType<int8x4_t>()[I2],
+                                   vector_type<int8_t, 16>{b}.AsType<int8x4_t>()[I2],
+                                   c0,
+                                   c1);
+
+    amd_assembly_outer_product_2x1(vector_type<int8_t, 16>{a0}.AsType<int8x4_t>()[I3],
+                                   vector_type<int8_t, 16>{a1}.AsType<int8x4_t>()[I3],
+                                   vector_type<int8_t, 16>{b}.AsType<int8x4_t>()[I3],
+                                   c0,
+                                   c1);
+}
+
 // c0 += inner_product(a, b0)
 // c1 += inner_product(a, b1)
 __device__ void
@@ -237,6 +307,59 @@ amd_assembly_outer_product_1x2(int8x4_t a, int8x4_t b0, int8x4_t b1, int32_t& c0
     c0 = __builtin_amdgcn_sdot4(as_type<int32_t>(a), as_type<int32_t>(b0), c0, false);
     c1 = __builtin_amdgcn_sdot4(as_type<int32_t>(a), as_type<int32_t>(b1), c1, false);
 #endif
+}
+
+__device__ void
+amd_assembly_outer_product_1x2(int8x8_t a, int8x8_t b0, int8x8_t b1, int32_t& c0, int32_t& c1)
+{
+    constexpr auto I0 = Number<0>{};
+    constexpr auto I1 = Number<1>{};
+
+    amd_assembly_outer_product_1x2(vector_type<int8_t, 8>{a}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 8>{b0}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 8>{b1}.AsType<int8x4_t>()[I0],
+                                   c0,
+                                   c1);
+
+    amd_assembly_outer_product_1x2(vector_type<int8_t, 8>{a}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 8>{b0}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 8>{b1}.AsType<int8x4_t>()[I1],
+                                   c0,
+                                   c1);
+}
+
+__device__ void
+amd_assembly_outer_product_1x2(int8x16_t a, int8x16_t b0, int8x16_t b1, int32_t& c0, int32_t& c1)
+
+{
+    constexpr auto I0 = Number<0>{};
+    constexpr auto I1 = Number<1>{};
+    constexpr auto I2 = Number<2>{};
+    constexpr auto I3 = Number<3>{};
+
+    amd_assembly_outer_product_1x2(vector_type<int8_t, 16>{a}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 16>{b0}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 16>{b1}.AsType<int8x4_t>()[I0],
+                                   c0,
+                                   c1);
+
+    amd_assembly_outer_product_1x2(vector_type<int8_t, 16>{a}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 16>{b0}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 16>{b1}.AsType<int8x4_t>()[I1],
+                                   c0,
+                                   c1);
+
+    amd_assembly_outer_product_1x2(vector_type<int8_t, 16>{a}.AsType<int8x4_t>()[I2],
+                                   vector_type<int8_t, 16>{b0}.AsType<int8x4_t>()[I2],
+                                   vector_type<int8_t, 16>{b1}.AsType<int8x4_t>()[I2],
+                                   c0,
+                                   c1);
+
+    amd_assembly_outer_product_1x2(vector_type<int8_t, 16>{a}.AsType<int8x4_t>()[I3],
+                                   vector_type<int8_t, 16>{b0}.AsType<int8x4_t>()[I3],
+                                   vector_type<int8_t, 16>{b1}.AsType<int8x4_t>()[I3],
+                                   c0,
+                                   c1);
 }
 
 // c0 += inner_product(a, b0)
@@ -416,6 +539,119 @@ __device__ void amd_assembly_outer_product_1x1(int8x16_t a, int8x16_t b, int32_t
     amd_assembly_outer_product_1x1(vector_type<int8_t, 16>{a}.AsType<int8x4_t>()[I3],
                                    vector_type<int8_t, 16>{b}.AsType<int8x4_t>()[I3],
                                    c);
+}
+
+// c0 += inner_product(a0, b0)
+// c1 += inner_product(a0, b1)
+// c2 += inner_product(a1, b0)
+// c3 += inner_product(a1, b1)
+__device__ void amd_assembly_outer_product_2x2(int8x4_t a0,
+                                               int8x4_t a1,
+                                               int8x4_t b0,
+                                               int8x4_t b1,
+                                               int32_t& c0,
+                                               int32_t& c1,
+                                               int32_t& c2,
+                                               int32_t& c3)
+{
+    asm volatile("\n \
+            v_dot4_i32_i8 %0, %4, %6, %0\n \
+            v_dot4_i32_i8 %1, %4, %7, %1\n \
+            v_dot4_i32_i8 %2, %5, %6, %2\n \
+            v_dot4_i32_i8 %3, %5, %7, %3\n \
+            "
+                 : "=v"(c0), "=v"(c1), "=v"(c2), "=v"(c3)
+                 : "v"(as_type<int32_t>(a0)),
+                   "v"(as_type<int32_t>(a1)),
+                   "v"(as_type<int32_t>(b0)),
+                   "v"(as_type<int32_t>(b1)),
+                   "0"(c0),
+                   "1"(c1),
+                   "2"(c2),
+                   "3"(c3));
+}
+
+__device__ void amd_assembly_outer_product_2x2(int8x8_t a0,
+                                               int8x8_t a1,
+                                               int8x8_t b0,
+                                               int8x8_t b1,
+                                               int32_t& c0,
+                                               int32_t& c1,
+                                               int32_t& c2,
+                                               int32_t& c3)
+{
+    constexpr auto I0 = Number<0>{};
+    constexpr auto I1 = Number<1>{};
+
+    amd_assembly_outer_product_2x2(vector_type<int8_t, 8>{a0}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 8>{a1}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 8>{b0}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 8>{b1}.AsType<int8x4_t>()[I0],
+                                   c0,
+                                   c1,
+                                   c2,
+                                   c3);
+
+    amd_assembly_outer_product_2x2(vector_type<int8_t, 8>{a0}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 8>{a1}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 8>{b0}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 8>{b1}.AsType<int8x4_t>()[I1],
+                                   c0,
+                                   c1,
+                                   c2,
+                                   c3);
+}
+
+__device__ void amd_assembly_outer_product_2x2(int8x16_t a0,
+                                               int8x16_t a1,
+                                               int8x16_t b0,
+                                               int8x16_t b1,
+                                               int32_t& c0,
+                                               int32_t& c1,
+                                               int32_t& c2,
+                                               int32_t& c3)
+
+{
+    constexpr auto I0 = Number<0>{};
+    constexpr auto I1 = Number<1>{};
+    constexpr auto I2 = Number<2>{};
+    constexpr auto I3 = Number<3>{};
+
+    amd_assembly_outer_product_2x2(vector_type<int8_t, 16>{a0}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 16>{a1}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 16>{b0}.AsType<int8x4_t>()[I0],
+                                   vector_type<int8_t, 16>{b1}.AsType<int8x4_t>()[I0],
+                                   c0,
+                                   c1,
+                                   c2,
+                                   c3);
+
+    amd_assembly_outer_product_2x2(vector_type<int8_t, 16>{a0}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 16>{a1}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 16>{b0}.AsType<int8x4_t>()[I1],
+                                   vector_type<int8_t, 16>{b1}.AsType<int8x4_t>()[I1],
+                                   c0,
+                                   c1,
+                                   c2,
+                                   c3);
+
+    amd_assembly_outer_product_2x2(vector_type<int8_t, 16>{a0}.AsType<int8x4_t>()[I2],
+                                   vector_type<int8_t, 16>{a1}.AsType<int8x4_t>()[I2],
+                                   vector_type<int8_t, 16>{b0}.AsType<int8x4_t>()[I2],
+                                   vector_type<int8_t, 16>{b1}.AsType<int8x4_t>()[I2],
+                                   c0,
+                                   c1,
+                                   c2,
+                                   c3);
+
+    amd_assembly_outer_product_2x2(vector_type<int8_t, 16>{a0}.AsType<int8x4_t>()[I3],
+                                   vector_type<int8_t, 16>{a1}.AsType<int8x4_t>()[I3],
+                                   vector_type<int8_t, 16>{b0}.AsType<int8x4_t>()[I3],
+                                   vector_type<int8_t, 16>{b1}.AsType<int8x4_t>()[I3],
+                                   c0,
+                                   c1,
+                                   c2,
+                                   c3);
 }
 
 } // namespace ck
