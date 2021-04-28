@@ -48,16 +48,17 @@ __host__ __device__ constexpr auto make_cluster_descriptor(
 template <typename Lengths,
           typename ArrangeOrder = typename arithmetic_sequence_gen<0, Lengths::Size(), 1>::type>
 __host__ __device__ constexpr auto make_cluster_descriptor_v2(
-    Lengths, ArrangeOrder order = typename arithmetic_sequence_gen<0, Lengths::Size(), 1>::type{})
+    const Lengths& lengths,
+    ArrangeOrder order = typename arithmetic_sequence_gen<0, Lengths::Size(), 1>::type{})
 {
-    constexpr auto reordered_lengths = Lengths::ReorderGivenNew2Old(ArrangeOrder{});
+    constexpr index_t ndim_low = Lengths::Size();
 
-    constexpr index_t ndim_low = reordered_lengths.Size();
+    const auto reordered_lengths = container_reorder_given_new2old(lengths, order);
 
-    constexpr auto low_lengths = generate_tuple(
-        [&](auto idim_low) { return Number<reordered_lengths[idim_low]>{}; }, Number<ndim_low>{});
+    const auto low_lengths = generate_tuple(
+        [&](auto idim_low) { return reordered_lengths[idim_low]; }, Number<ndim_low>{});
 
-    constexpr auto transform = make_merge_transform(low_lengths);
+    const auto transform = make_merge_transform(low_lengths);
 
     constexpr auto low_dim_old_top_ids = ArrangeOrder{};
 

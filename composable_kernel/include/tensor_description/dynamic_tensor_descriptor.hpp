@@ -12,27 +12,6 @@ struct DynamicTensorCoordinate;
 template <index_t NTransform, index_t NDimVisible, typename UpdateLowerIndexHack>
 struct DynamicTensorCoordinateIterator;
 
-#if 0
-template <typename LowerDimensionIdss, typename UpperDimensionIdss>
-__host__ __device__ constexpr index_t GetNumOfHiddenDimension(LowerDimensionIdss,
-                                                              UpperDimensionIdss)
-{
-    constexpr auto all_low_dim_ids =
-        unpack([](auto&&... xs) constexpr { return merge_sequences(xs...); }, LowerDimensionIdss{});
-
-    constexpr auto all_up_dim_ids =
-        unpack([](auto&&... xs) constexpr { return merge_sequences(xs...); }, UpperDimensionIdss{});
-
-    constexpr auto all_dim_ids = merge_sequences(all_low_dim_ids, all_up_dim_ids);
-
-    using unique_sort_all_dim_ids = typename sequence_unique_sort<decltype(all_dim_ids),
-                                                                  math::less<index_t>,
-                                                                  math::equal<index_t>>::type;
-
-    return unique_sort_all_dim_ids::Size();
-}
-#endif
-
 // Transforms: Tuple<transforms...>
 // LowerDimensionIdss : Tuple<Sequence<...>, ...>
 // UpperDimensionIdss : Tuple<Sequence<...>, ...>

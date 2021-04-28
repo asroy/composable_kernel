@@ -47,44 +47,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
         index_t col;
     };
 
-    private:
-    static constexpr auto a_thread_mtx_desc_ = make_dynamic_naive_tensor_descriptor_packed_v2(
-        make_tuple(Number<KPerThreadLoop>{}, ThreadMatrixC{}.GetLength(Number<0>{})));
-
-    static constexpr auto b_thread_mtx_desc_ = make_dynamic_naive_tensor_descriptor_packed_v2(
-        make_tuple(Number<KPerThreadLoop>{}, ThreadMatrixC{}.GetLength(Number<1>{})));
-
-    using AThreadCopy =
-        ThreadwiseDynamicTensorSliceTransfer_v4<FloatA,
-                                                FloatA,
-                                                BlockMatrixA,
-                                                decltype(a_thread_mtx_desc_),
-                                                Sequence<KPerThreadLoop, MPerThreadSubC>,
-                                                Sequence<0, 1>,
-                                                1,
-                                                ThreadGemmADataPerRead_M,
-                                                AddressSpace::Generic,
-                                                AddressSpace::Vgpr,
-                                                1>;
-
-    using BThreadCopy =
-        ThreadwiseDynamicTensorSliceTransfer_v4<FloatB,
-                                                FloatB,
-                                                BlockMatrixB,
-                                                decltype(b_thread_mtx_desc_),
-                                                Sequence<KPerThreadLoop, NPerThreadSubC>,
-                                                Sequence<0, 1>,
-                                                1,
-                                                ThreadGemmBDataPerRead_N,
-                                                AddressSpace::Generic,
-                                                AddressSpace::Vgpr,
-                                                1>;
-
-    MatrixIndex c_thread_begin_mtx_idx_;
-
-    AThreadCopy a_thread_copy_;
-    BThreadCopy b_thread_copy_;
-
     public:
     __device__ BlockwiseGemm_km_kn_m0m1n0n1_v1r1()
         : c_thread_begin_mtx_idx_{GetBeginOfThreadMatrixC(get_thread_local_1d_id())},
@@ -136,21 +98,20 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
 
     __device__ static MatrixIndex GetBeginOfThreadMatrixC(index_t thread_id)
     {
-        constexpr index_t ThreadPerLevel0Cluster = MLevel0ThreadCluster * NLevel0ThreadCluster;
+        constexpr auto I0 = Number<0>{};
+        constexpr auto I1 = Number<1>{};
+        constexpr auto I2 = Number<2>{};
+        constexpr auto I3 = Number<3>{};
 
-        index_t level1_id   = thread_id / ThreadPerLevel0Cluster;
-        index_t level1_m_id = level1_id / NLevel1ThreadCluster;
-        index_t level1_n_id = level1_id % NLevel1ThreadCluster;
-
-        index_t level0_id   = thread_id % ThreadPerLevel0Cluster;
-        index_t level0_m_id = level0_id / NLevel0ThreadCluster;
-        index_t level0_n_id = level0_id % NLevel0ThreadCluster;
+        const auto thread_cluster_idx =
+            c_thread_cluster_desc_.CalculateBottomIndex(make_multi_index(thread_id));
 
         constexpr index_t MPerLevel0Cluster = MPerThreadSubC * MLevel0ThreadCluster;
         constexpr index_t NPerLevel0Cluster = NPerThreadSubC * NLevel0ThreadCluster;
 
-        return MatrixIndex{level1_m_id * MPerLevel0Cluster + level0_m_id * MPerThreadSubC,
-                           level1_n_id * NPerLevel0Cluster + level0_n_id * NPerThreadSubC};
+        return MatrixIndex{
+            thread_cluster_idx[I0] * MPerLevel0Cluster + thread_cluster_idx[I2] * MPerThreadSubC,
+            thread_cluster_idx[I1] * NPerLevel0Cluster + thread_cluster_idx[I3] * NPerThreadSubC};
     }
 
     template <typename ABlockBuffer, typename BBlockBuffer, typename CThreadBuffer>
@@ -371,6 +332,51 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v1r1
         Run_naive(a_block_buf, b_block_buf, c_thread_buf);
 #endif
     }
+
+    private:
+    static constexpr auto c_thread_cluster_desc_ =
+        make_cluster_descriptor_v2(Sequence<MLevel1ThreadCluster,
+                                            NLevel1ThreadCluster,
+                                            MLevel0ThreadCluster,
+                                            NLevel0ThreadCluster>{},
+                                   Sequence<0, 1, 2, 3>{});
+
+    static constexpr auto a_thread_mtx_desc_ = make_dynamic_naive_tensor_descriptor_packed_v2(
+        make_tuple(Number<KPerThreadLoop>{}, ThreadMatrixC{}.GetLength(Number<0>{})));
+
+    static constexpr auto b_thread_mtx_desc_ = make_dynamic_naive_tensor_descriptor_packed_v2(
+        make_tuple(Number<KPerThreadLoop>{}, ThreadMatrixC{}.GetLength(Number<1>{})));
+
+    using AThreadCopy =
+        ThreadwiseDynamicTensorSliceTransfer_v4<FloatA,
+                                                FloatA,
+                                                BlockMatrixA,
+                                                decltype(a_thread_mtx_desc_),
+                                                Sequence<KPerThreadLoop, MPerThreadSubC>,
+                                                Sequence<0, 1>,
+                                                1,
+                                                ThreadGemmADataPerRead_M,
+                                                AddressSpace::Generic,
+                                                AddressSpace::Vgpr,
+                                                1>;
+
+    using BThreadCopy =
+        ThreadwiseDynamicTensorSliceTransfer_v4<FloatB,
+                                                FloatB,
+                                                BlockMatrixB,
+                                                decltype(b_thread_mtx_desc_),
+                                                Sequence<KPerThreadLoop, NPerThreadSubC>,
+                                                Sequence<0, 1>,
+                                                1,
+                                                ThreadGemmBDataPerRead_N,
+                                                AddressSpace::Generic,
+                                                AddressSpace::Vgpr,
+                                                1>;
+
+    MatrixIndex c_thread_begin_mtx_idx_;
+
+    AThreadCopy a_thread_copy_;
+    BThreadCopy b_thread_copy_;
 };
 } // namespace ck
 #endif
