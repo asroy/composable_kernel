@@ -158,6 +158,7 @@ __host__ __device__ constexpr auto container_reduce_impl(
 }
 
 // rocm-4.1 compiler would crash for recursive lambda
+// container reduce with initial value
 template <typename Container,
           typename Reduce,
           typename Init,
@@ -175,23 +176,6 @@ __host__ __device__ constexpr auto container_reduce(const Container& x,
 
     return container_reduce_impl(
         x, reduce, init, Number<IBegin>{}, Number<IEnd>{}, Number<IStep>{});
-}
-
-template <typename Container,
-          typename Reduce,
-          index_t IBegin = 0,
-          index_t IEnd   = Container::Size(),
-          index_t IStep  = 1>
-__host__ __device__ constexpr auto container_reduce(const Container& x,
-                                                    Reduce reduce,
-                                                    Number<IBegin> = Number<0>{},
-                                                    Number<IEnd>   = Number<Container::Size()>{},
-                                                    Number<IStep>  = Number<1>{})
-{
-    static_assert(IEnd > IBegin && (IEnd - IBegin) % IStep == 0, "wrong!");
-
-    return container_reduce_impl(
-        x, reduce, x[Number<IBegin>{}] Number<IBegin + 1>{}, Number<IEnd>{}, Number<IStep>{});
 }
 #endif
 

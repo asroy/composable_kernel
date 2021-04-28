@@ -376,13 +376,13 @@ transform_dynamic_tensor_descriptor(const OldTensorDescriptor& old_tensor_desc,
         unordered_new_visible_dim_hidden_ids.ReorderGivenOld2New(new_visible_dim_unordered2ordered);
 
     // put everything together
-    const auto all_transforms = container_cat(old_tensor_desc.GetTransforms(), new_transforms);
+    const auto all_transforms = container_concat(old_tensor_desc.GetTransforms(), new_transforms);
 
     constexpr auto all_low_dim_hidden_idss =
-        container_cat(OldTensorDescriptor::GetLowerDimensionIdss(), low_dim_hidden_idss);
+        container_concat(OldTensorDescriptor::GetLowerDimensionIdss(), low_dim_hidden_idss);
 
     constexpr auto all_up_dim_hidden_idss =
-        container_cat(OldTensorDescriptor::GetUpperDimensionIdss(), up_dim_hidden_idss);
+        container_concat(OldTensorDescriptor::GetUpperDimensionIdss(), up_dim_hidden_idss);
 
     const auto element_space_size = old_tensor_desc.GetElementSpaceSize();
 
