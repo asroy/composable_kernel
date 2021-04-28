@@ -11,29 +11,11 @@ __device__ void threadwise_matrix_set_zero_v3(Desc, Float* __restrict__ p_thread
 {
     static_assert(Desc::IsKnownAtCompileTime(), "wrong! Desc should be known at compile-time");
 
-    constexpr auto I0 = Number<0>{};
-    constexpr auto I2 = Number<2>{};
-    constexpr auto I3 = Number<3>{};
-
-    constexpr auto desc = Desc{};
-
-    constexpr auto K = desc.GetLength(I0);
-    constexpr auto H = desc.GetLength(I2);
-    constexpr auto W = desc.GetLength(I3);
-
-    static_for<0, K, 1>{}([&](auto i) {
-        static_for<0, H, 1>{}([&](auto j) {
-            static_for<0, W, 1>{}([&](auto k) {
-                constexpr auto offset = desc.CalculateOffset(make_tuple(i, 0, j, k));
-
-                p_thread[offset] = Float(0);
-            });
-        });
-    });
+    constexpr auto thread_buff_size = Desc{}.GetElementSpaceSize();
+    static_for<0, thread_buff_size, 1>{}([&](auto i) { p_thread[i] = Float(0); });
 }
 
-// C[M, N] += transpose(A[K, M]) * B[K, N]
-//   Element of matrix can be vectorized data
+// C[M0, M1, ..., N0, N1, ...] += transpose(A[K, M0, M1, ...]) * B[K, N0, N1, ...]
 template <typename ADesc,
           typename BDesc,
           typename CDesc,
