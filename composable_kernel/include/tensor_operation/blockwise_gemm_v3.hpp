@@ -41,6 +41,11 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
     using BlockLengthsA = Sequence<1, 16>;
     using BlockLengthsB = Sequence<1, 1, 8, 32>;
 
+    // constexpr index_t AVectorDim = 1, AVectorSize = 1, BVectorDim = 2, BVectorSize = 4;
+    // constexpr index_t AVectorDim = 1, AVectorSize = 1, BVectorDim = 2, BVectorSize = 2;
+    // constexpr index_t AVectorDim = 1, AVectorSize = 2, BVectorDim = 2, BVectorSize = 2;
+    static constexpr index_t AVectorDim = 1, AVectorSize = 2, BVectorDim = 2, BVectorSize = 2;
+
     __device__ BlockwiseGemm_km_kn_m0m1n0n1_v3()
     {
         static_assert(BlockMatrixA::IsKnownAtCompileTime() &&
@@ -49,9 +54,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
                       "wrong! Desc should be known at compile-time");
 
         constexpr auto I0 = Number<0>{};
-        constexpr auto I1 = Number<1>{};
-        constexpr auto I2 = Number<2>{};
-        constexpr auto I3 = Number<3>{};
 
         static_assert(BlockMatrixA{}.GetLength(I0) == BlockMatrixB{}.GetLength(I0),
                       "wrong! K dimension not consistent\n");
@@ -218,11 +220,6 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
         constexpr auto a_thread_copy =
             ThreadwiseSliceCopy_a<BlockMatrixA, decltype(a_thread_mtx), ThreadGemmADataPerRead_K>{};
 
-        // constexpr index_t AVectorDim = 1, AVectorSize = 1, BVectorDim = 2, BVectorSize = 4;
-        // constexpr index_t AVectorDim = 1, AVectorSize = 1, BVectorDim = 2, BVectorSize = 2;
-        // constexpr index_t AVectorDim = 1, AVectorSize = 2, BVectorDim = 2, BVectorSize = 2;
-        constexpr index_t AVectorDim = 1, AVectorSize = 2, BVectorDim = 2, BVectorSize = 2;
-
         constexpr auto threadwise_gemm = ThreadwiseGemm_km_kn_mn_v3<decltype(a_thread_mtx),
                                                                     decltype(b_thread_mtx),
                                                                     decltype(c_thread_mtx),
@@ -233,10 +230,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
                                                                     AVectorSize,
                                                                     BVectorDim,
                                                                     BVectorSize>{};
-        // loop over k
-#pragma unroll
-        for(index_t e_begin = 0; e_begin < EPerBlock; e_begin += EPerThreadLoop)
-        {
+        static_for<0, EPerBlock, EPerThreadLoop>{}([&](auto e_begin) {
             a_thread_copy.Run(p_a_block + a_block_mtx.CalculateOffset(make_tuple(e_begin, 0)) +
                                   mMyThreadOffsetA,
                               p_a_thread);
@@ -245,7 +239,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v3
                                 p_b_thread +
                                     b_thread_mtx.CalculateOffset(make_tuple(e_begin, 0, 0, 0)),
                                 p_c_thread + c_thread_mtx.CalculateOffset(make_tuple(0, 0, 0, 0)));
-        }
+        });
     }
 
     template <typename FloatA, typename FloatB, typename FloatC>
