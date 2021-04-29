@@ -721,22 +721,22 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
                 Number<MRepeat>{}, Number<MPerThread>{}, Number<NRepeat>{}, Number<NPerThread>{}));
 
         const auto blockwise_gemm =
-            BlockwiseGemm_km0m1_kn0n1_m0m1n0n1_v1<BlockSize,
-                                                  FloatAB,
-                                                  FloatAB,
-                                                  FloatAcc,
-                                                  decltype(a_k_m0_m1_block_desc),
-                                                  decltype(b_k_n0_n1_block_desc),
-                                                  decltype(c_m0_m1_n0_n1_thread_desc),
-                                                  MPerThread,
-                                                  NPerThread,
-                                                  KPerThread,
-                                                  MLevel0Cluster,
-                                                  NLevel0Cluster,
-                                                  MLevel1Cluster,
-                                                  NLevel1Cluster,
-                                                  MPerThread,
-                                                  NPerThread>{};
+            BlockwiseGemm_km0m1_kn0n1_m0m1n0n1_v1r2<BlockSize,
+                                                    FloatAB,
+                                                    FloatAB,
+                                                    FloatAcc,
+                                                    decltype(a_k_m0_m1_block_desc),
+                                                    decltype(b_k_n0_n1_block_desc),
+                                                    decltype(c_m0_m1_n0_n1_thread_desc),
+                                                    MPerThread,
+                                                    NPerThread,
+                                                    KPerThread,
+                                                    MLevel0Cluster,
+                                                    NLevel0Cluster,
+                                                    MLevel1Cluster,
+                                                    NLevel1Cluster,
+                                                    MPerThread,
+                                                    NPerThread>{};
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
