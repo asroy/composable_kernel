@@ -235,15 +235,31 @@ __host__ __device__ constexpr auto chain_tensor_adaptors(const TensorAdaptor0& a
             constexpr index_t ndim_low =
                 TensorAdaptor1{}.GetTransforms()[itran].GetNumOfLowerDimension();
 
+            // get the min of all lower dimenions, but not bottom dimension (because their id will
+            // be matched with top id from adaptor0)
             static_for<0, ndim_low, 1>{}([&](auto idim_low) {
-                adaptor1_min_hidden_id =
-                    math::min(adaptor1_min_hidden_id,
-                              TensorAdaptor1::GetLowerDimensionHiddenIdss()[itran][idim_low].value);
+                constexpr index_t low_dim_hidden_id =
+                    TensorAdaptor1::GetLowerDimensionHiddenIdss()[itran][idim_low].value;
+
+                bool is_bottom_dim = false;
+                static_for<0, TensorAdaptor1::GetNumOfBottomDimension(), 1>{}([&](auto i) {
+                    if constexpr(low_dim_hidden_id ==
+                                 TensorAdaptor1::GetBottomDimensionHiddenIds()[i])
+                    {
+                        is_bottom_dim = true;
+                    }
+                });
+
+                if(!is_bottom_dim)
+                {
+                    adaptor1_min_hidden_id = math::min(adaptor1_min_hidden_id, low_dim_hidden_id);
+                }
             });
 
             constexpr index_t ndim_up =
                 TensorAdaptor1{}.GetTransforms()[itran].GetNumOfUpperDimension();
 
+            // get the min of all upper dimensions
             static_for<0, ndim_up, 1>{}([&](auto idim_up) {
                 adaptor1_min_hidden_id =
                     math::min(adaptor1_min_hidden_id,
@@ -255,7 +271,7 @@ __host__ __device__ constexpr auto chain_tensor_adaptors(const TensorAdaptor0& a
     }();
 
     constexpr index_t adaptor1_hidden_id_shift =
-        adaptor1_min_hidden_id - adaptor0_max_hidden_id + 1;
+        adaptor0_max_hidden_id + 1 - adaptor1_min_hidden_id;
 
     constexpr index_t ndim_bottom_1 = TensorAdaptor1::GetNumOfBottomDimension();
 
@@ -276,7 +292,7 @@ __host__ __device__ constexpr auto chain_tensor_adaptors(const TensorAdaptor0& a
 
                 // shift hidden id so every dim id is unique
                 static_for<0, ndim_low_1, 1>{}([&](auto idim_low_1) {
-                    low_dim_hidden_ids_1_mod(idim_low_1) -= adaptor1_hidden_id_shift;
+                    low_dim_hidden_ids_1_mod(idim_low_1) += adaptor1_hidden_id_shift;
                 });
 
                 // match hidden id
@@ -322,7 +338,7 @@ __host__ __device__ constexpr auto chain_tensor_adaptors(const TensorAdaptor0& a
 
                 // shift hidden id
                 static_for<0, ndim_up_1, 1>{}([&](auto idim_up_1) {
-                    up_dim_hidden_ids_1_mod(idim_up_1) -= adaptor1_hidden_id_shift;
+                    up_dim_hidden_ids_1_mod(idim_up_1) += adaptor1_hidden_id_shift;
                 });
 
                 return up_dim_hidden_ids_1_mod;
@@ -344,23 +360,23 @@ __host__ __device__ constexpr auto chain_tensor_adaptors(const TensorAdaptor0& a
 
     // top_dim_hidden_ids = shift_hidden_id(top_dim_hidden_ids_1)
     constexpr auto top_dim_hidden_ids =
-        TensorAdaptor1::GetTopDimensionHiddenIds() - Number<adaptor1_hidden_id_shift>{};
+        TensorAdaptor1::GetTopDimensionHiddenIds() + Number<adaptor1_hidden_id_shift>{};
 
     // put everything together
-    return TensorAdaptor<decltype(all_transforms),
-                         decltype(all_low_dim_hidden_idss),
-                         decltype(all_up_dim_hidden_idss),
-                         decltype(bottom_dim_hidden_ids),
-                         decltype(top_dim_hidden_ids)>{all_transforms};
+    return TensorAdaptor<remove_cv_t<decltype(all_transforms)>,
+                         remove_cv_t<decltype(all_low_dim_hidden_idss)>,
+                         remove_cv_t<decltype(all_up_dim_hidden_idss)>,
+                         remove_cv_t<decltype(bottom_dim_hidden_ids)>,
+                         remove_cv_t<decltype(top_dim_hidden_ids)>>{all_transforms};
 }
 
 // Transforms: Tuple<transforms...>
 // LowerDimensionOldTopIdss: Tuple<Sequence<...>, ...>
 // UpperDimensionNewTopIdss: Tuple<Sequence<...>, ...>
 template <typename Transforms, typename LowerDimensionOldTopIdss, typename UpperDimensionNewTopIdss>
-__host__ __device__ constexpr auto make_simple_tensor_adaptor(const Transforms& transforms,
-                                                              LowerDimensionOldTopIdss,
-                                                              UpperDimensionNewTopIdss)
+__host__ __device__ constexpr auto make_single_stage_tensor_adaptor(const Transforms& transforms,
+                                                                    LowerDimensionOldTopIdss,
+                                                                    UpperDimensionNewTopIdss)
 {
     constexpr index_t ntransform = Transforms::Size();
 
@@ -400,11 +416,19 @@ __host__ __device__ constexpr auto make_simple_tensor_adaptor(const Transforms& 
     constexpr auto top_dim_hidden_ids =
         typename arithmetic_sequence_gen<0, ndim_new_top, 1>::type{} + Number<ndim_old_top>{};
 
-    return TensorAdaptor<Transforms,
-                         decltype(low_dim_hidden_idss),
-                         decltype(up_dim_hidden_idss),
-                         decltype(bottom_dim_hidden_ids),
-                         decltype(top_dim_hidden_ids)>{transforms};
+    return TensorAdaptor<remove_cv_t<Transforms>,
+                         remove_cv_t<decltype(low_dim_hidden_idss)>,
+                         remove_cv_t<decltype(up_dim_hidden_idss)>,
+                         remove_cv_t<decltype(bottom_dim_hidden_ids)>,
+                         remove_cv_t<decltype(top_dim_hidden_ids)>>{transforms};
+}
+
+template <typename X,
+          typename... Xs,
+          typename std::enable_if<sizeof...(Xs) >= 2, bool>::type = false>
+__host__ __device__ constexpr auto chain_tensor_adaptors(const X& x, const Xs&... xs)
+{
+    return chain_tensor_adaptors(x, chain_tensor_adaptors(xs...));
 }
 
 } // namespace ck

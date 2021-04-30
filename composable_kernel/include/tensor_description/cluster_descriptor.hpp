@@ -45,6 +45,7 @@ __host__ __device__ constexpr auto make_cluster_descriptor(
     return ClusterDescriptor<Lengths, decltype(order)>{};
 }
 
+#if 1
 template <typename Lengths,
           typename ArrangeOrder = typename arithmetic_sequence_gen<0, Lengths::Size(), 1>::type>
 __host__ __device__ constexpr auto make_cluster_descriptor_v2(
@@ -64,9 +65,10 @@ __host__ __device__ constexpr auto make_cluster_descriptor_v2(
 
     constexpr auto up_dim_new_top_ids = Sequence<0>{};
 
-    return make_simple_tensor_adaptor(
+    return make_single_stage_tensor_adaptor(
         make_tuple(transform), make_tuple(low_dim_old_top_ids), make_tuple(up_dim_new_top_ids));
 }
+#endif
 
 } // namespace ck
 #endif
