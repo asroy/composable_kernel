@@ -240,108 +240,80 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             {
                 if(has_main_k_block_loop && has_double_tail_k_block_loop)
                 {
-                    const auto kernel =
-                        run_gridwise_operation<gridwise_gemm,
-                                               decltype(wei_e_k_global_desc),
-                                               const FloatAB*,
-                                               decltype(in_e_n_ho_wo_global_desc),
-                                               const FloatAB*,
-                                               decltype(out_k_n_hop_wop_global_desc),
-                                               FloatC*,
-                                               integral_constant<bool, true>,
-                                               integral_constant<bool, true>>;
+                    const auto kernel = run_gridwise_operation<gridwise_gemm,
+                                                               const FloatAB*,
+                                                               const FloatAB*,
+                                                               FloatC*,
+                                                               integral_constant<bool, true>,
+                                                               integral_constant<bool, true>>;
 
                     launch_kernel(kernel,
                                   dim3(GridSize),
                                   dim3(BlockSize),
                                   0,
                                   0,
-                                  wei_e_k_global_desc,
                                   p_wei_global,
-                                  in_e_n_ho_wo_global_desc,
                                   p_in_global,
-                                  out_k_n_hop_wop_global_desc,
                                   p_out_global,
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, true>{});
                 }
                 else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
                 {
-                    const auto kernel =
-                        run_gridwise_operation<gridwise_gemm,
-                                               decltype(wei_e_k_global_desc),
-                                               const FloatAB*,
-                                               decltype(in_e_n_ho_wo_global_desc),
-                                               const FloatAB*,
-                                               decltype(out_k_n_hop_wop_global_desc),
-                                               FloatC*,
-                                               integral_constant<bool, true>,
-                                               integral_constant<bool, false>>;
+                    const auto kernel = run_gridwise_operation<gridwise_gemm,
+                                                               const FloatAB*,
+                                                               const FloatAB*,
+                                                               FloatC*,
+                                                               integral_constant<bool, true>,
+                                                               integral_constant<bool, false>>;
 
                     launch_kernel(kernel,
                                   dim3(GridSize),
                                   dim3(BlockSize),
                                   0,
                                   0,
-                                  wei_e_k_global_desc,
                                   p_wei_global,
-                                  in_e_n_ho_wo_global_desc,
                                   p_in_global,
-                                  out_k_n_hop_wop_global_desc,
                                   p_out_global,
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, false>{});
                 }
                 else if(!has_main_k_block_loop && has_double_tail_k_block_loop)
                 {
-                    const auto kernel =
-                        run_gridwise_operation<gridwise_gemm,
-                                               decltype(wei_e_k_global_desc),
-                                               const FloatAB*,
-                                               decltype(in_e_n_ho_wo_global_desc),
-                                               const FloatAB*,
-                                               decltype(out_k_n_hop_wop_global_desc),
-                                               FloatC*,
-                                               integral_constant<bool, false>,
-                                               integral_constant<bool, true>>;
+                    const auto kernel = run_gridwise_operation<gridwise_gemm,
+                                                               const FloatAB*,
+                                                               const FloatAB*,
+                                                               FloatC*,
+                                                               integral_constant<bool, false>,
+                                                               integral_constant<bool, true>>;
 
                     launch_kernel(kernel,
                                   dim3(GridSize),
                                   dim3(BlockSize),
                                   0,
                                   0,
-                                  wei_e_k_global_desc,
                                   p_wei_global,
-                                  in_e_n_ho_wo_global_desc,
                                   p_in_global,
-                                  out_k_n_hop_wop_global_desc,
                                   p_out_global,
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, true>{});
                 }
                 else
                 {
-                    const auto kernel =
-                        run_gridwise_operation<gridwise_gemm,
-                                               decltype(wei_e_k_global_desc),
-                                               const FloatAB*,
-                                               decltype(in_e_n_ho_wo_global_desc),
-                                               const FloatAB*,
-                                               decltype(out_k_n_hop_wop_global_desc),
-                                               FloatC*,
-                                               integral_constant<bool, false>,
-                                               integral_constant<bool, false>>;
+                    const auto kernel = run_gridwise_operation<gridwise_gemm,
+                                                               const FloatAB*,
+                                                               const FloatAB*,
+                                                               FloatC*,
+                                                               integral_constant<bool, false>,
+                                                               integral_constant<bool, false>>;
 
                     launch_kernel(kernel,
                                   dim3(GridSize),
                                   dim3(BlockSize),
                                   0,
                                   0,
-                                  wei_e_k_global_desc,
                                   p_wei_global,
-                                  in_e_n_ho_wo_global_desc,
                                   p_in_global,
-                                  out_k_n_hop_wop_global_desc,
                                   p_out_global,
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, false>{});

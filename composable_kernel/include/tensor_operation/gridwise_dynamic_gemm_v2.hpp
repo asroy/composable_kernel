@@ -69,11 +69,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
     }
 
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
-    __device__ void Run(const AGlobalDesc& a_e_k_global_desc,
-                        const FloatAB* __restrict__ p_a_global,
-                        const BGlobalDesc& b_e_n_ho_wo_global_desc,
+    __device__ void Run(const FloatAB* __restrict__ p_a_global,
                         const FloatAB* __restrict__ p_b_global,
-                        const CGlobalDesc& c_k_n_ho_wo_global_desc,
                         FloatC* __restrict__ p_c_global,
                         FloatAB* __restrict__ p_shared_block,
                         integral_constant<bool, HasMainKBlockLoop>,
@@ -85,6 +82,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         constexpr auto I3 = Number<3>{};
 
         constexpr auto E = EPerBlock * 3 * 3;
+
+        constexpr auto a_e_k_global_desc       = AGlobalDesc{};
+        constexpr auto b_e_n_ho_wo_global_desc = BGlobalDesc{};
+        constexpr auto c_k_n_ho_wo_global_desc = CGlobalDesc{};
 
         const auto K = a_e_k_global_desc.GetLength(I1);
 
@@ -423,11 +424,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
     // pass tensor descriptor by reference
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
-    __device__ void Run(const AGlobalDesc& a_e_k_global_desc,
-                        const FloatAB* __restrict__ p_a_global,
-                        const BGlobalDesc& b_e_n_ho_wo_global_desc,
+    __device__ void Run(const FloatAB* __restrict__ p_a_global,
                         const FloatAB* __restrict__ p_b_global,
-                        const CGlobalDesc& c_k_n_ho_wo_global_desc,
                         FloatC* __restrict__ p_c_global,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
@@ -436,65 +434,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         __shared__ FloatAB p_shared_block[shared_block_size];
 
-        Run(a_e_k_global_desc,
-            p_a_global,
-            b_e_n_ho_wo_global_desc,
+        Run(p_a_global,
             p_b_global,
-            c_k_n_ho_wo_global_desc,
             p_c_global,
             p_shared_block,
-            integral_constant<bool, HasMainKBlockLoop>{},
-            integral_constant<bool, HasDoubleTailKBlockLoop>{});
-    }
-
-    // pass tensor descriptors by their pointers
-    template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
-    __device__ void Run(const AGlobalDesc* p_a_e_k_global_desc,
-                        const FloatAB* __restrict__ p_a_global,
-                        const BGlobalDesc* p_b_e_n_ho_wo_global_desc,
-                        const FloatAB* __restrict__ p_b_global,
-                        const CGlobalDesc* p_c_k_n_ho_wo_global_desc,
-                        FloatC* __restrict__ p_c_global,
-                        integral_constant<bool, HasMainKBlockLoop>,
-                        integral_constant<bool, HasDoubleTailKBlockLoop>) const
-    {
-        const auto a_e_k_global_desc       = *p_a_e_k_global_desc;
-        const auto b_e_n_ho_wo_global_desc = *p_b_e_n_ho_wo_global_desc;
-        const auto c_k_n_ho_wo_global_desc = *p_c_k_n_ho_wo_global_desc;
-
-        Run(a_e_k_global_desc,
-            p_a_global,
-            b_e_n_ho_wo_global_desc,
-            p_b_global,
-            c_k_n_ho_wo_global_desc,
-            p_c_global,
-            integral_constant<bool, HasMainKBlockLoop>{},
-            integral_constant<bool, HasDoubleTailKBlockLoop>{});
-    }
-
-    // pass tensor descriptors by void*
-    template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
-    __device__ void Run(const void* p_a_e_k_global_desc,
-                        const FloatAB* __restrict__ p_a_global,
-                        const void* p_b_e_n_ho_wo_global_desc,
-                        const FloatAB* __restrict__ p_b_global,
-                        const void* p_c_k_n_ho_wo_global_desc,
-                        FloatC* __restrict__ p_c_global,
-                        integral_constant<bool, HasMainKBlockLoop>,
-                        integral_constant<bool, HasDoubleTailKBlockLoop>) const
-    {
-        const auto a_e_k_global_desc = *reinterpret_cast<const AGlobalDesc*>(p_a_e_k_global_desc);
-        const auto b_e_n_ho_wo_global_desc =
-            *reinterpret_cast<const BGlobalDesc*>(p_b_e_n_ho_wo_global_desc);
-        const auto c_k_n_ho_wo_global_desc =
-            *reinterpret_cast<const CGlobalDesc*>(p_c_k_n_ho_wo_global_desc);
-
-        Run(a_e_k_global_desc,
-            p_a_global,
-            b_e_n_ho_wo_global_desc,
-            p_b_global,
-            c_k_n_ho_wo_global_desc,
-            p_c_global,
             integral_constant<bool, HasMainKBlockLoop>{},
             integral_constant<bool, HasDoubleTailKBlockLoop>{});
     }
