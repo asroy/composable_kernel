@@ -150,6 +150,10 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
                 make_tuple(Sequence<0>{}, Sequence<1>{}),
                 make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
 
+        // c_block_cluster_desc
+        const auto gemm_block_cluster_desc = make_cluster_descriptor_v2(
+            make_tuple(GemmM / Number<GemmMPerBlock>{}, GemmN / Number<GemmNPerBlock>{}));
+
         // hack to control index calculation when iterating over a_k_m_global tensor
         constexpr auto a_k_m_global_iterator_hacks =
             make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
@@ -189,6 +193,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
             decltype(wei_gemmk_gemmm_global_desc),
             decltype(in_gemmk_gemmn_global_desc),
             decltype(out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc),
+            decltype(gemm_block_cluster_desc),
             GemmMPerBlock,
             GemmNPerBlock,
             GemmKPerBlock,
@@ -256,6 +261,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
                                                decltype(
                                                    out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc),
                                                FloatC*,
+                                               decltype(gemm_block_cluster_desc),
                                                integral_constant<bool, true>,
                                                integral_constant<bool, true>>;
 
@@ -270,6 +276,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
                                   p_in_global,
                                   out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc,
                                   p_out_global,
+                                  gemm_block_cluster_desc,
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, true>{});
                 }
@@ -284,6 +291,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
                                                decltype(
                                                    out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc),
                                                FloatC*,
+                                               decltype(gemm_block_cluster_desc),
                                                integral_constant<bool, true>,
                                                integral_constant<bool, false>>;
 
@@ -298,6 +306,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
                                   p_in_global,
                                   out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc,
                                   p_out_global,
+                                  gemm_block_cluster_desc,
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, false>{});
                 }
@@ -312,6 +321,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
                                                decltype(
                                                    out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc),
                                                FloatC*,
+                                               decltype(gemm_block_cluster_desc),
                                                integral_constant<bool, false>,
                                                integral_constant<bool, true>>;
 
@@ -326,6 +336,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
                                   p_in_global,
                                   out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc,
                                   p_out_global,
+                                  gemm_block_cluster_desc,
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, true>{});
                 }
@@ -340,6 +351,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
                                                decltype(
                                                    out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc),
                                                FloatC*,
+                                               decltype(gemm_block_cluster_desc),
                                                integral_constant<bool, false>,
                                                integral_constant<bool, false>>;
 
@@ -354,6 +366,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
                                   p_in_global,
                                   out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc,
                                   p_out_global,
+                                  gemm_block_cluster_desc,
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, false>{});
                 }
@@ -522,6 +535,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_pad
     }
 };
 
+#if 0
 template <index_t BlockSize,
           typename FloatAB,
           typename FloatAcc,
@@ -1013,6 +1027,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v4r4_nhwc_kyxc_nhwk_1x1
 #endif
     }
 };
+#endif
 
 } // namespace ck
 #endif
