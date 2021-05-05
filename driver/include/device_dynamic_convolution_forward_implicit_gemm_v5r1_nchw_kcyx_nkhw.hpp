@@ -76,17 +76,17 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     const auto in_right_pads  = to_multi_index(InRightPads{});
 #else
     // compile-time variables
-    const auto in_n_c0_hi_wi_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, C0, Hi, Wi));
-    const auto wei_k_c0_y_x_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, C0, Y, X));
-    const auto out_n_k0_ho_wo_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Ho, Wo));
+    constexpr auto in_n_c0_hi_wi_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+        make_tuple(Number<N>{}, Number<C0>{}, Number<Hi>{}, Number<Wi>{}));
+    constexpr auto wei_k_c0_y_x_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+        make_tuple(Number<K>{}, Number<C0>{}, Number<Y>{}, Number<X>{}));
+    constexpr auto out_n_k0_ho_wo_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+        make_tuple(Number<N>{}, Number<K0>{}, Number<Ho>{}, Number<Wo>{}));
 
-    const auto conv_strides   = sequence_to_tuple_of_number(ConvStrides{});
-    const auto conv_dilations = sequence_to_tuple_of_number(ConvDilations{});
-    const auto in_left_pads   = sequence_to_tuple_of_number(InLeftPads{});
-    const auto in_right_pads  = sequence_to_tuple_of_number(InRightPads{});
+    constexpr auto conv_strides   = sequence_to_tuple_of_number(ConvStrides{});
+    constexpr auto conv_dilations = sequence_to_tuple_of_number(ConvDilations{});
+    constexpr auto in_left_pads   = sequence_to_tuple_of_number(InLeftPads{});
+    constexpr auto in_right_pads  = sequence_to_tuple_of_number(InRightPads{});
 #endif
 
     Tensor<TInWei> in_n_c0_hi_wi_c1(make_HostTensorDescriptor(

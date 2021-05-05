@@ -42,7 +42,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                       const ConvStrides& conv_strides,
                       const ConvDilations& conv_dilations,
                       const InLeftPads& in_left_pads,
-                      const InRightPads& in_right_pads,
+                      const InRightPads& in_right_pads_,
                       const FloatAB* __restrict__ p_wei_global,
                       const FloatAB* __restrict__ p_in_global,
                       FloatC* __restrict__ p_out_global) const
@@ -53,37 +53,65 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         constexpr auto I3 = Number<3>{};
         constexpr auto I4 = Number<4>{};
 
-        const auto N  = in_n_c_hi_wi_global_desc.GetLength(I0);
-        const auto C  = in_n_c_hi_wi_global_desc.GetLength(I1);
-        const auto K0 = out_n_k0_ho_wo_global_desc.GetLength(I1);
+        const auto N_  = in_n_c_hi_wi_global_desc.GetLength(I0);
+        const auto C_  = in_n_c_hi_wi_global_desc.GetLength(I1);
+        const auto K0_ = out_n_k0_ho_wo_global_desc.GetLength(I1);
 
-        const auto Hi = in_n_c_hi_wi_global_desc.GetLength(I2);
-        const auto Wi = in_n_c_hi_wi_global_desc.GetLength(I3);
+        const auto Hi_ = in_n_c_hi_wi_global_desc.GetLength(I2);
+        const auto Wi_ = in_n_c_hi_wi_global_desc.GetLength(I3);
 
-        const auto Ho = out_n_k0_ho_wo_global_desc.GetLength(I2);
-        const auto Wo = out_n_k0_ho_wo_global_desc.GetLength(I3);
+        const auto Ho_ = out_n_k0_ho_wo_global_desc.GetLength(I2);
+        const auto Wo_ = out_n_k0_ho_wo_global_desc.GetLength(I3);
 
-        const auto K = wei_k_c_y_x_global_desc.GetLength(I0);
-        const auto Y = wei_k_c_y_x_global_desc.GetLength(I2);
-        const auto X = wei_k_c_y_x_global_desc.GetLength(I3);
+        const auto K_ = wei_k_c_y_x_global_desc.GetLength(I0);
+        const auto Y_ = wei_k_c_y_x_global_desc.GetLength(I2);
+        const auto X_ = wei_k_c_y_x_global_desc.GetLength(I3);
 
-        const auto ConvStrideH = conv_strides[I0];
-        const auto ConvStrideW = conv_strides[I1];
+        constexpr auto N  = Number<N_>{};
+        constexpr auto C  = Number<C_>{};
+        constexpr auto K0 = Number<K0_>{};
 
-        const auto ConvDilationH = conv_dilations[I0];
-        const auto ConvDilationW = conv_dilations[I1];
+        constexpr auto Hi = Number<Hi_>{};
+        constexpr auto Wi = Number<Wi_>{};
 
-        const auto Hop = (Ho + HoPerBlock - 1) / HoPerBlock * HoPerBlock;
-        const auto Wop = (Wo + WoPerBlock - 1) / WoPerBlock * WoPerBlock;
+        constexpr auto Ho = Number<Ho_>{};
+        constexpr auto Wo = Number<Wo_>{};
 
-        const auto OutRightPadH = Hop - Ho;
-        const auto OutRightPadW = Wop - Wo;
+        constexpr auto K = Number<K_>{};
+        constexpr auto Y = Number<Y_>{};
+        constexpr auto X = Number<X_>{};
 
-        const auto InLeftPadH = in_left_pads[I0];
-        const auto InLeftPadW = in_left_pads[I1];
+        const auto ConvStrideH_ = conv_strides[I0];
+        const auto ConvStrideW_ = conv_strides[I1];
 
-        const auto InRightPadH = in_right_pads[I0] + OutRightPadH * ConvStrideH;
-        const auto InRightPadW = in_right_pads[I1] + OutRightPadW * ConvStrideW;
+        const auto ConvDilationH_ = conv_dilations[I0];
+        const auto ConvDilationW_ = conv_dilations[I1];
+
+        constexpr auto ConvStrideH = Number<ConvStrideH_>{};
+        constexpr auto ConvStrideW = Number<ConvStrideW_>{};
+
+        constexpr auto ConvDilationH = Number<ConvDilationH_>{};
+        constexpr auto ConvDilationW = Number<ConvDilationW_>{};
+
+        constexpr auto Hop = Number<(Ho + HoPerBlock - 1) / HoPerBlock * HoPerBlock>{};
+        constexpr auto Wop = Number<(Wo + WoPerBlock - 1) / WoPerBlock * WoPerBlock>{};
+
+        constexpr auto OutRightPadH = Hop - Ho;
+        constexpr auto OutRightPadW = Wop - Wo;
+
+        const auto InLeftPadH_ = in_left_pads[I0];
+        const auto InLeftPadW_ = in_left_pads[I1];
+
+        constexpr auto InLeftPadH = Number<InLeftPadH_>{};
+        constexpr auto InLeftPadW = Number<InLeftPadW_>{};
+
+        constexpr auto in_right_pads = InRightPads{};
+
+        const auto InRightPadH_ = in_right_pads[I0] + OutRightPadH * ConvStrideH;
+        const auto InRightPadW_ = in_right_pads[I1] + OutRightPadW * ConvStrideW;
+
+        constexpr auto InRightPadH = Number<InRightPadH_>{};
+        constexpr auto InRightPadW = Number<InRightPadW_>{};
 
         std::cerr << "OutRightPadH = " << OutRightPadH << " OutRightPadW = " << OutRightPadW
                   << std::endl;
@@ -97,6 +125,9 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             make_tuple(Sequence<0>{}, Sequence<1>{}),
             make_tuple(Sequence<1>{}, Sequence<0>{}));
 
+        static_assert(wei_e_k_global_desc.IsKnownAtCompileTime(),
+                      "wrong! wei_e_k_global_desc need to known at compile-time");
+
         // input tensor
         const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor(
             in_n_c_hi_wi_global_desc,
@@ -106,6 +137,9 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                        make_pad_transform(Wi, InLeftPadW, InRightPadW)),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
+
+        static_assert(in_n_c_hip_wip_global_desc.IsKnownAtCompileTime(),
+                      "wrong! in_n_c_hip_wip_global_desc need to known at compile-time");
 
         const auto in_n_c_y_ho_x_wo_global_desc = transform_dynamic_tensor_descriptor(
             in_n_c_hip_wip_global_desc,
@@ -117,6 +151,9 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2, 3>{}, Sequence<4, 5>{}));
 
+        static_assert(in_n_c_y_ho_x_wo_global_desc.IsKnownAtCompileTime(),
+                      "wrong! in_n_c_y_ho_x_wo_global_desc need to known at compile-time");
+
         const auto in_e_n_ho_wo_global_desc = transform_dynamic_tensor_descriptor(
             in_n_c_y_ho_x_wo_global_desc,
             make_tuple(make_merge_transform(make_tuple(C, Y, X)),
@@ -126,15 +163,21 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             make_tuple(Sequence<1, 2, 4>{}, Sequence<0>{}, Sequence<3>{}, Sequence<5>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 
+        static_assert(in_e_n_ho_wo_global_desc.IsKnownAtCompileTime(),
+                      "wrong! in_e_n_ho_wo_global_desc need to known at compile-time");
+
         // output tensor
         const auto out_k_n_hop_wop_global_desc = transform_dynamic_tensor_descriptor(
             make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Ho, Wo)),
             make_tuple(make_pass_through_transform(K0),
                        make_pass_through_transform(N),
-                       make_pad_transform(Ho, 0, OutRightPadH),
-                       make_pad_transform(Wo, 0, OutRightPadW)),
+                       make_pad_transform(Ho, I0, OutRightPadH),
+                       make_pad_transform(Wo, I0, OutRightPadW)),
             make_tuple(Sequence<1>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
+
+        static_assert(out_k_n_hop_wop_global_desc.IsKnownAtCompileTime(),
+                      "wrong! out_k_n_hop_wop_global_desc need to known at compile-time");
 
         const auto E = C * Y * X;
 
