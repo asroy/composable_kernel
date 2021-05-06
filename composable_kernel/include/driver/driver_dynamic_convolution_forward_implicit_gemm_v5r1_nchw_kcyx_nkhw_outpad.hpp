@@ -263,9 +263,9 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
         const auto GridSize = (K / KPerBlock) * (Hop / HoPerBlock) * (Wop / WoPerBlock) * N;
 
-        const bool has_main_k_block_loop = (E + EPerBlock) / (2 * EPerBlock) > 1;
+        constexpr bool has_main_k_block_loop = (E + EPerBlock) / (2 * EPerBlock) > 1;
 
-        const bool has_double_tail_k_block_loop = (E / EPerBlock) % 2 == 0;
+        constexpr bool has_double_tail_k_block_loop = (E / EPerBlock) % 2 == 0;
 
         index_t nrepeat = 100;
 
@@ -281,7 +281,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
             for(index_t j = 0; j < nrepeat; ++j)
             {
-                if(has_main_k_block_loop && has_double_tail_k_block_loop)
+                if constexpr(has_main_k_block_loop && has_double_tail_k_block_loop)
                 {
                     const auto kernel = run_gridwise_operation<gridwise_gemm,
                                                                const FloatAB*,
@@ -301,7 +301,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, true>{});
                 }
-                else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
+                else if constexpr(has_main_k_block_loop && !has_double_tail_k_block_loop)
                 {
                     const auto kernel = run_gridwise_operation<gridwise_gemm,
                                                                const FloatAB*,
@@ -321,7 +321,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, false>{});
                 }
-                else if(!has_main_k_block_loop && has_double_tail_k_block_loop)
+                else if constexpr(!has_main_k_block_loop && has_double_tail_k_block_loop)
                 {
                     const auto kernel = run_gridwise_operation<gridwise_gemm,
                                                                const FloatAB*,
