@@ -651,7 +651,7 @@ int main(int argc, char* argv[])
     using out_data_t                 = int8_t;
 #elif 1
     using in_data_t                  = int8_t;
-    constexpr index_t in_vector_size = 16;
+    constexpr index_t in_vector_size = 4;
     using acc_data_t                 = int32_t;
     using out_data_t                 = int8_t;
 #endif
@@ -800,10 +800,14 @@ int main(int argc, char* argv[])
 #if 1
         if(do_log)
         {
-            LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
-            LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
-            LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
-            LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
+            // LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
+            // LogRange(std::cout << "wei_kcyx: ", wei_kcyx.mData, ",") << std::endl;
+            // LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
+            // LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
+
+            for(auto i : out_nkhw_device.mData)
+                std::cout << (int)i << ",";
+            std::cout << std::endl;
         }
 #endif
     }

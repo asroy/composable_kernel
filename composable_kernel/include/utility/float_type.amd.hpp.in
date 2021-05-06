@@ -408,6 +408,8 @@ struct vector_type<T, 64>
 {
     using d1_t = T;
     typedef T d64_t __attribute__((ext_vector_type(64)));
+    typedef T d8_t __attribute__((ext_vector_type(8)));
+    typedef T d4_t __attribute__((ext_vector_type(4)));
     typedef T d16_t __attribute__((ext_vector_type(16)));
 
     using type = d64_t;
@@ -416,7 +418,9 @@ struct vector_type<T, 64>
     {
         d64_t d64_;
         StaticallyIndexedArray<d1_t, 64> d1x64_;
-        StaticallyIndexedArray<d16_t, 16> d16x4_;
+        StaticallyIndexedArray<d4_t, 16> d4x16_;
+        StaticallyIndexedArray<d8_t, 8> d8x8_;
+        StaticallyIndexedArray<d16_t, 4> d16x4_;
         StaticallyIndexedArray<d64_t, 1> d16x1_;
     } data_;
 
@@ -428,6 +432,8 @@ struct vector_type<T, 64>
     __host__ __device__ constexpr const auto& AsType() const
     {
         static_assert(is_same<X, d1_t>::value ||
+                          is_same<X, d4_t>::value ||
+                          is_same<X, d8_t>::value ||
                           is_same<X, d16_t>::value ||
                           is_same<X, d64_t>::value,
                       "wrong!");
@@ -435,6 +441,14 @@ struct vector_type<T, 64>
         if constexpr(is_same<X, d1_t>::value)
         {
             return data_.d1x64_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x16_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x8_;
         }
         else if constexpr(is_same<X, d16_t>::value)
         {
@@ -450,6 +464,8 @@ struct vector_type<T, 64>
     __host__ __device__ constexpr auto& AsType()
     {
         static_assert(is_same<X, d1_t>::value ||
+                          is_same<X, d4_t>::value ||
+                          is_same<X, d8_t>::value ||
                           is_same<X, d16_t>::value ||
                           is_same<X, d64_t>::value,
                       "wrong!");
@@ -457,6 +473,14 @@ struct vector_type<T, 64>
         if constexpr(is_same<X, d1_t>::value)
         {
             return data_.d1x64_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x16_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x8_;
         }
         else if constexpr(is_same<X, d16_t>::value)
         {

@@ -87,11 +87,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         constexpr auto b_e_n_ho_wo_global_desc = BGlobalDesc{};
         constexpr auto c_k_n_ho_wo_global_desc = CGlobalDesc{};
 
-        const auto K = a_e_k_global_desc.GetLength(I1);
-
-        const auto N  = b_e_n_ho_wo_global_desc.GetLength(I1);
-        const auto Ho = b_e_n_ho_wo_global_desc.GetLength(I2);
-        const auto Wo = b_e_n_ho_wo_global_desc.GetLength(I3);
+        constexpr auto K  = a_e_k_global_desc.GetLength(I1);
+        constexpr auto N  = b_e_n_ho_wo_global_desc.GetLength(I1);
+        constexpr auto Ho = b_e_n_ho_wo_global_desc.GetLength(I2);
+        constexpr auto Wo = b_e_n_ho_wo_global_desc.GetLength(I3);
 
         // divide block work by [M, N]
 #if 0
@@ -402,7 +401,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                 Sequence<KPerThreadVec, 1, HoPerThread, WoPerThread>,
                 CThreadTransferSrcDstAccessOrder,
                 CThreadTransferSrcDstVectorDim,
-                // CThreadTransferDstScalarPerVector,
                 1,
                 AddressSpace::Vgpr,
                 AddressSpace::Global,
