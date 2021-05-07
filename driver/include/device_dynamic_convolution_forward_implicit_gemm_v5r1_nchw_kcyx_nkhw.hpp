@@ -137,6 +137,11 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
 
     static_assert(KPerThread % CThreadTransferDstScalarPerVector_W == 0, "");
 
+    std::cerr << "conv_fp16_nchwc" << C1 << "_n" << N << "c" << C << "h" << Hi << "w" << Wi << "-k"
+              << K << "c" << C << "y" << Y << "x" << X << "-u" << conv_strides[I0] << "v"
+              << conv_strides[I1] << "l" << conv_dilations[I0] << "j" << conv_dilations[I1] << "q"
+              << in_left_pads[I0] << "p" << in_right_pads[I0] << std::endl;
+
     constexpr auto conv_driver =
 #if 0
         DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad

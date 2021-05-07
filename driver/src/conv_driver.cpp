@@ -639,9 +639,9 @@ int main(int argc, char* argv[])
     constexpr index_t in_vector_size = 1;
     using acc_data_t                 = float;
     using out_data_t                 = float;
-#elif 0
+#elif 1
     using in_data_t                  = half_t;
-    constexpr index_t in_vector_size = 4;
+    constexpr index_t in_vector_size = 8;
     using acc_data_t                 = float;
     using out_data_t                 = half_t;
 #elif 0

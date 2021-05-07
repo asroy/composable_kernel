@@ -369,19 +369,21 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
             const index_t vec_len = c_k_n_ho_wo_thread_desc_vec.GetElementSpaceSize() *
                                     CThreadTransferDstScalarPerVector;
 
-            vector_type<int8_t, vec_len> d_vec;
+            using baseType = half_t;
+
+            vector_type<baseType, vec_len> d_vec;
 
             static_for<0, KPerThreadVec, 1>{}([&](auto k_i) {
                 static_for<0, HoPerThread, 1>{}([&](auto h_i) {
                     static_for<0, WoPerThread, 1>{}([&](auto w_i) {
-                        vector_type<int8_t, CThreadTransferDstScalarPerVector> t;
+                        vector_type<baseType, CThreadTransferDstScalarPerVector> t;
 
                         t.template AsType<FloatC>()(Number<0>{}) = d_vec.template AsType<
                             FloatC>()[Number<c_k_n_ho_wo_thread_desc_vec.CalculateOffset(
                             make_tuple(k_i, 0, h_i, w_i))>{}];
 
                         static_for<0, CThreadTransferDstScalarPerVector, 1>{}([&](auto i) {
-                            t.template AsType<int8_t>()(i) =
+                            t.template AsType<baseType>()(i) =
                                 p_c_thread[c_k_n_ho_wo_thread_desc_vec.CalculateOffset(make_tuple(
                                     k_i * CThreadTransferDstScalarPerVector + i, 0, h_i, w_i))];
                         });
