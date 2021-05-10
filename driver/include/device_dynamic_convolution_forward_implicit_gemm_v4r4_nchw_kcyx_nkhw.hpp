@@ -487,71 +487,74 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
                                                        in_left_pads,
                                                        in_right_pads);
 
-    float ave_time = launch_kernel_dynamic_gemm_v1<
-        BlockSize,
-        typename vector_type<TInWei, InWeiVectorSize>::type,
-        TAcc,
-        TOut,
-        InMemoryDataOperation::Set,
-        decltype(descs[I0]),
-        decltype(descs[I1]),
-        decltype(descs[I2]),
-        decltype(descs[I3]),
-        GemmMPerBlock,
-        GemmNPerBlock,
-        GemmKPerBlock,
-        GemmMPerThread,
-        GemmNPerThread,
-        GemmKPerThread,
-        GemmMLevel0Cluster,
-        GemmNLevel0Cluster,
-        GemmMLevel1Cluster,
-        GemmNLevel1Cluster,
-        GemmABlockTransferThreadSliceLengths_GemmK_GemmM,
-        GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
-        Sequence<1, 0>,
-        Sequence<1, 0>,
-        0,
-        GemmABlockTransferSrcScalarPerVector_GemmK,
-        GemmABlockTransferDstScalarPerVector_GemmM,
-        false, // don't move back src coordinate after threadwise copy
-        GemmBBlockTransferThreadSliceLengths_GemmK_GemmN,
-        GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
-        Sequence<0, 1>,
-        Sequence<0, 1>,
-        1,
-        GemmBBlockTransferSrcScalarPerVector_GemmN,
-        GemmBBlockTransferDstScalarPerVector_GemmN,
-        false, // don't move back src coordinate after threadwise copy, which will be fused with
-               // MoveSrcSliceWindow() to save addr computation
-        Sequence<2, 3, 0, 1>,
-        3,
-        GemmCThreadTransferDstScalarPerVector_GemmN1,
-        decltype(descs[I4]),
-        decltype(descs[I5]),
-        decltype(descs[I6]),
-        decltype(descs[I7]),
-        decltype(descs[I8])>(static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
-                                 wei_k_c_y_x_device_buf.GetDeviceBuffer()),
-                             static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
-                                 in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
-                             static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()),
-                             descs[I0],
-                             descs[I1],
-                             descs[I2],
-                             descs[I3],
-                             descs[I4],
-                             descs[I5],
-                             descs[I6],
-                             descs[I7],
-                             descs[I8],
-                             nrepeat);
+    for(index_t i = 0; i < 5; ++i)
+    {
+        float ave_time = launch_kernel_dynamic_gemm_v1<
+            BlockSize,
+            typename vector_type<TInWei, InWeiVectorSize>::type,
+            TAcc,
+            TOut,
+            InMemoryDataOperation::Set,
+            decltype(descs[I0]),
+            decltype(descs[I1]),
+            decltype(descs[I2]),
+            decltype(descs[I3]),
+            GemmMPerBlock,
+            GemmNPerBlock,
+            GemmKPerBlock,
+            GemmMPerThread,
+            GemmNPerThread,
+            GemmKPerThread,
+            GemmMLevel0Cluster,
+            GemmNLevel0Cluster,
+            GemmMLevel1Cluster,
+            GemmNLevel1Cluster,
+            GemmABlockTransferThreadSliceLengths_GemmK_GemmM,
+            GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
+            Sequence<1, 0>,
+            Sequence<1, 0>,
+            0,
+            GemmABlockTransferSrcScalarPerVector_GemmK,
+            GemmABlockTransferDstScalarPerVector_GemmM,
+            false, // don't move back src coordinate after threadwise copy
+            GemmBBlockTransferThreadSliceLengths_GemmK_GemmN,
+            GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
+            Sequence<0, 1>,
+            Sequence<0, 1>,
+            1,
+            GemmBBlockTransferSrcScalarPerVector_GemmN,
+            GemmBBlockTransferDstScalarPerVector_GemmN,
+            false, // don't move back src coordinate after threadwise copy, which will be fused with
+                   // MoveSrcSliceWindow() to save addr computation
+            Sequence<2, 3, 0, 1>,
+            3,
+            GemmCThreadTransferDstScalarPerVector_GemmN1,
+            decltype(descs[I4]),
+            decltype(descs[I5]),
+            decltype(descs[I6]),
+            decltype(descs[I7]),
+            decltype(descs[I8])>(static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
+                                     wei_k_c_y_x_device_buf.GetDeviceBuffer()),
+                                 static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
+                                     in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
+                                 static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()),
+                                 descs[I0],
+                                 descs[I1],
+                                 descs[I2],
+                                 descs[I3],
+                                 descs[I4],
+                                 descs[I5],
+                                 descs[I6],
+                                 descs[I7],
+                                 descs[I8],
+                                 nrepeat);
 
-    float perf = (float)calculate_convolution_flops(
-                     in_n_c_hi_wi_desc, wei_k_c_y_x_desc, out_n_k_ho_wo_desc) /
-                 (std::size_t(1000) * 1000 * 1000) / ave_time;
+        float perf = (float)calculate_convolution_flops(
+                         in_n_c_hi_wi_desc, wei_k_c_y_x_desc, out_n_k_ho_wo_desc) /
+                     (std::size_t(1000) * 1000 * 1000) / ave_time;
 
-    std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s" << std::endl;
+        std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s" << std::endl;
+    }
 
     // copy result back to host
     out_n_k_ho_wo_device_buf.FromDevice(out_n_k_ho_wo.mData.data());
