@@ -184,6 +184,27 @@ struct TensorAdaptor
         return get_container_subset(idx_hidden, BottomDimensionHiddenIds{});
     }
 
+    __host__ __device__ void Print() const
+    {
+        printf("{");
+        printf("TensorAdaptor, ");
+        static_for<0, ntransform_, 1>{}([&](auto i) {
+            printf("transforms: ");
+            transforms_[i].Print();
+            printf("LowerDimensionHiddenIds:");
+            LowerDimensionHiddenIdss{}.At(i).Print();
+            printf("UpperDimensionHiddenIds:");
+            UpperDimensionHiddenIdss{}.At(i).Print();
+        });
+
+        printf("BottomDimensionHiddenIds:");
+        BottomDimensionHiddenIds::Print();
+        printf("TopDimensionHiddenIds:");
+        TopDimensionHiddenIds::Print();
+
+        printf("}");
+    }
+
     private:
     Transforms transforms_;
     ElementSize element_size_;

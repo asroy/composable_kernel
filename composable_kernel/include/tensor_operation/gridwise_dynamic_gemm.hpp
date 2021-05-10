@@ -12,7 +12,36 @@
 
 namespace ck {
 
-#if CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER
+#if CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VALUE
+template <typename GridwiseGemm,
+          typename AGlobalDesc,
+          typename FloatA,
+          typename BGlobalDesc,
+          typename FloatB,
+          typename CGlobalDesc,
+          typename FloatC,
+          typename CBlockClusterDesc,
+          bool HasMainKBlockLoop,
+          bool HasDoubleTailKBlockLoop>
+__global__ void kernel_dynamic_gemm_v1(const AGlobalDesc a_k_m_global_desc,
+                                       const FloatA* __restrict__ p_a_global,
+                                       const BGlobalDesc b_k_n_global_desc,
+                                       const FloatB* __restrict__ p_b_global,
+                                       const CGlobalDesc c_m0_m1_n0_n1_global_desc,
+                                       FloatC* __restrict__ p_c_global,
+                                       const CBlockClusterDesc c_block_cluster_desc)
+{
+    GridwiseGemm{}.Run(a_k_m_global_desc,
+                       p_a_global,
+                       b_k_n_global_desc,
+                       p_b_global,
+                       c_m0_m1_n0_n1_global_desc,
+                       p_c_global,
+                       c_block_cluster_desc,
+                       integral_constant<bool, HasMainKBlockLoop>{},
+                       integral_constant<bool, HasDoubleTailKBlockLoop>{});
+}
+#elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER
 // pass tensor descriptor by __CONSTANT__ void pointer
 // __CONSTANT__ is needed to inform compiler void pointers in the kernel signature are pointing to
 // non-modifiable parameter address space, so compiler can enable corresponding optimization
@@ -26,13 +55,13 @@ template <typename GridwiseGemm,
           typename CBlockClusterDesc,
           bool HasMainKBlockLoop,
           bool HasDoubleTailKBlockLoop>
-__global__ void run_gridwise_dynamic_gemm_v1(const void __CONSTANT__* p_a_k_m_global_desc,
-                                             const FloatA* __restrict__ p_a_global,
-                                             const void __CONSTANT__* p_b_k_n_global_desc,
-                                             const FloatB* __restrict__ p_b_global,
-                                             const void __CONSTANT__* p_c_m0_m1_n0_n1_global_desc,
-                                             FloatC* __restrict__ p_c_global,
-                                             const void __CONSTANT__* p_c_block_cluster_desc)
+__global__ void kernel_dynamic_gemm_v1(const void __CONSTANT__* p_a_k_m_global_desc,
+                                       const FloatA* __restrict__ p_a_global,
+                                       const void __CONSTANT__* p_b_k_n_global_desc,
+                                       const FloatB* __restrict__ p_b_global,
+                                       const void __CONSTANT__* p_c_m0_m1_n0_n1_global_desc,
+                                       FloatC* __restrict__ p_c_global,
+                                       const void __CONSTANT__* p_c_block_cluster_desc)
 {
     // first cast void __CONSTANT__ void* to void*
     // second cast void* to Desc*
