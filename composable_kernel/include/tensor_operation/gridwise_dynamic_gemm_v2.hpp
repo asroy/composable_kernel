@@ -84,6 +84,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
 
+        auto a_global_buf = make_dynamic_buffer(p_a_global);
+        auto b_global_buf = make_dynamic_buffer(p_b_global);
+        auto c_global_buf = make_dynamic_buffer(p_c_global);
+
         constexpr auto E = EPerBlock * 3 * 3;
 
         // const auto E = a_e_k_global_desc.GetLength(I0);
@@ -255,16 +259,16 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
 
         // LDS double buffer: preload data
         {
-            a_blockwise_copy.RunRead(a_e_k_global_desc, p_a_global, a_e_k_global_iterator_hacks);
+            a_blockwise_copy.RunRead(a_e_k_global_desc, a_global_buf, a_e_k_global_iterator_hacks);
 
             b_threadwise_transfer.Run(b_e_n_ho_wo_global_desc,
-                                      p_b_global,
+                                      b_global_buf,
                                       b_e_n_ho_wo_thread_desc,
                                       make_tuple(I0, I0, I0, I0),
                                       b_thread_even_buf,
                                       b_e_n_ho_wo_global_iterator_hacks);
 
-            a_blockwise_copy.RunWrite(a_e_k_desc, p_a_block);
+            a_blockwise_copy.RunWrite(a_e_k_desc, a_block_buf);
         }
 
         __syncthreads();
@@ -282,7 +286,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                                          b_thread_slice_copy_step);
 
                 b_threadwise_transfer.Run(b_e_n_ho_wo_global_desc,
-                                          p_b_global,
+                                          b_global_buf,
                                           b_e_n_ho_wo_thread_desc,
                                           make_tuple(I0, I0, I0, I0),
                                           b_thread_odd_buf,
@@ -298,7 +302,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                                          b_thread_slice_copy_step);
 
                 b_threadwise_transfer.Run(b_e_n_ho_wo_global_desc,
-                                          p_b_global,
+                                          b_global_buf,
                                           b_e_n_ho_wo_thread_desc,
                                           make_tuple(I0, I0, I0, I0),
                                           b_thread_even_buf,
@@ -321,7 +325,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                                      b_thread_slice_copy_step);
 
             b_threadwise_transfer.Run(b_e_n_ho_wo_global_desc,
-                                      p_b_global,
+                                      b_global_buf,
                                       b_e_n_ho_wo_thread_desc,
                                       make_tuple(I0, I0, I0, I0),
                                       b_thread_odd_buf,
@@ -370,7 +374,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                      make_tuple(I0, I0, I0, I0),
                      c_thread_buf,
                      c_k_n_ho_wo_global_desc,
-                     p_c_global,
+                     c_global_buf,
                      c_k_n_ho_wo_global_tensor_iterator_hacks);
         }
     }

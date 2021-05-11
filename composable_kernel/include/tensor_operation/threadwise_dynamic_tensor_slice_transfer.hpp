@@ -83,12 +83,15 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
         dst_slice_origin_coord_ = make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_idx);
     }
 
-    template <typename SrcSliceOriginIdx, typename SrcBuffer, typename DstIteratorHacks>
+    template <typename SrcSliceOriginIdx,
+              typename SrcBuffer,
+              typename DstBuffer,
+              typename DstIteratorHacks>
     __device__ void Run(const SrcDesc&,
                         const SrcSliceOriginIdx&,
                         const SrcBuffer& src_buf,
                         const DstDesc& dst_desc,
-                        DstData* p_dst,
+                        DstBuffer& dst_buf,
                         const DstIteratorHacks& dst_iterator_hacks)
     {
         static_assert(SrcDesc::IsKnownAtCompileTime(),
@@ -214,7 +217,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
 #if CK_USE_AMD_BUFFER_ADDRESSING
                 amd_buffer_store_v2<DstData, DstScalarPerVector>(
                     dst_vector.template AsType<dst_vector_t>()(Number<0>{}),
-                    p_dst,
+                    dst_buf.p_data_,
                     dst_slice_origin_coord_.GetOffset(),
                     is_dst_valid,
                     dst_desc.GetElementSpaceSize());
@@ -222,7 +225,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
                 if(is_dst_valid)
                 {
                     *reinterpret_cast<dst_vector_t*>(
-                        &(p_dst[dst_slice_origin_coord_.GetOffset()])) =
+                        &(dst_buf.p_data_[dst_slice_origin_coord_.GetOffset()])) =
                         dst_vector.template AsType<dst_vector_t>()[Number<0>{}];
                 }
 #endif
@@ -232,7 +235,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
                 if(is_dst_valid)
                 {
                     *reinterpret_cast<dst_vector_t*>(
-                        &(p_dst[dst_slice_origin_coord_.GetOffset()])) =
+                        &(dst_buf.p_data_[dst_slice_origin_coord_.GetOffset()])) =
                         dst_vector.template AsType<dst_vector_t>()[Number<0>{}];
                 }
             }
@@ -283,7 +286,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
         }
     }
 
-    __device__ void Run(const SrcData* p_src, const DstDesc& dst_desc, DstData* p_dst)
+    template <typename SrcSliceOriginIdx, typename SrcBuffer, typename DstBuffer>
+    __device__ void Run(const SrcDesc&,
+                        const SrcSliceOriginIdx&,
+                        const SrcBuffer& src_buf,
+                        const DstDesc& dst_desc,
+                        DstBuffer& dst_buf)
     {
         constexpr index_t ntransform_dst = DstDesc::GetNumOfTransform();
 
@@ -293,7 +301,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
             make_tuple(generate_tuple([&](auto) { return zeros; }, Number<nDim>{}),
                        generate_tuple([&](auto) { return zeros; }, Number<nDim>{}));
 
-        Run(p_src, dst_desc, p_dst, dst_iterator_hacks);
+        Run(SrcDesc{}, SrcSliceOriginIdx{}, src_buf, dst_desc, dst_buf, dst_iterator_hacks);
     }
 
     __device__ static constexpr auto GetDstCoordinateResetStep()
@@ -379,10 +387,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
 }; // namespace ck
 
 // Assume:
-//   1. src_desc is not known at compile-time
-//   2. dst_desc is known at compile-time
-//   3. src_slice_origin_idx is not known at compile-time
-//   4. dst_slice_origin_idx is known at compile-time and it's 0
+//   1. src:
+//     1. SrcDesc is not known at compile-time
+//     2. SrcBuffer is DynamicBuffer
+//     3. src_slice_origin_idx is not known at compile-time
+//   2. dst:
+//     1. DstDesc is known at compile-time
+//     2. DstBuffer is StaticBuffer
+//     3. dst_slice_origin_idx is known at compile-time
 template <typename SrcData,
           typename DstData,
           typename SrcDesc,
@@ -419,9 +431,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
         src_slice_origin_coord_ = make_dynamic_tensor_coordinate(src_desc, src_slice_origin_idx);
     }
 
-    template <typename DstBuffer, typename DstSliceOriginIdx, typename SrcIteratorHacks>
+    template <typename SrcBuffer,
+              typename DstBuffer,
+              typename DstSliceOriginIdx,
+              typename SrcIteratorHacks>
     __device__ void Run(const SrcDesc& src_desc,
-                        const SrcData* p_src,
+                        const SrcBuffer& src_buf,
                         const DstDesc&,
                         const DstSliceOriginIdx&,
                         DstBuffer& dst_buf,
@@ -541,14 +556,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
 #if CK_USE_AMD_BUFFER_ADDRESSING
                 src_vector.template AsType<src_vector_t>()(Number<0>{}) =
                     amd_buffer_load_v2<SrcData, SrcScalarPerVector>(
-                        p_src,
+                        src_buf.p_data_,
                         src_slice_origin_coord_.GetOffset(),
                         is_src_valid,
                         src_desc.GetElementSpaceSize());
 #else
                 src_vector.template AsType<src_vector_t>()(Number<0>{}) =
                     is_src_valid ? *reinterpret_cast<const src_vector_t*>(
-                                       &p_src[src_slice_origin_coord_.GetOffset()])
+                                       &src_buf.p_data_[src_slice_origin_coord_.GetOffset()])
                                  : src_vector_t{0};
 #endif
             }
@@ -556,7 +571,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
             {
                 src_vector.template AsType<src_vector_t>()(Number<0>{}) =
                     is_src_valid ? *reinterpret_cast<const src_vector_t*>(
-                                       &p_src[src_slice_origin_coord_.GetOffset()])
+                                       &src_buf.p_data_[src_slice_origin_coord_.GetOffset()])
                                  : src_vector_t{0};
             }
 
@@ -614,9 +629,9 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
         }
     }
 
-    template <typename DstBuffer, typename DstSliceOriginIdx>
+    template <typename SrcBuffer, typename DstBuffer, typename DstSliceOriginIdx>
     __device__ void Run(const SrcDesc& src_desc,
-                        const SrcData* p_src,
+                        const SrcBuffer& src_buf,
                         const DstDesc&,
                         const DstSliceOriginIdx&,
                         DstBuffer& dst_buf)
@@ -629,7 +644,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
             make_tuple(generate_tuple([&](auto) { return zeros; }, Number<nDim>{}),
                        generate_tuple([&](auto) { return zeros; }, Number<nDim>{}));
 
-        Run(src_desc, p_src, DstDesc{}, DstSliceOriginIdx{}, dst_buf, src_iterator_hacks);
+        Run(src_desc, src_buf, DstDesc{}, DstSliceOriginIdx{}, dst_buf, src_iterator_hacks);
     }
 
     __device__ static constexpr auto GetSrcCoordinateResetStep()
@@ -716,8 +731,9 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
 
 // Assume:
 //   1. src_desc and dst_desc are not known at compile-time
-//   2. src_slice_origin and dst_slice_origin are not known at compile-time,
-//   3. Use thread buffer
+//   2. SrcBuffer and DstBuffer are DynamicBuffer
+//   3. src_slice_origin and dst_slice_origin are not known at compile-time,
+//   4. Use thread buffer
 template <typename SliceLengths,
           InMemoryDataOperation DstInMemOp,
           typename SrcData,
@@ -780,11 +796,15 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         dst_slice_origin_coord_ = make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_idx);
     }
 
-    template <typename SrcIteratorHacks>
+    template <typename SrcBuffer, typename SrcIteratorHacks>
     __device__ void RunRead(const SrcDesc& src_desc,
-                            const SrcData* p_src,
+                            const SrcBuffer& src_buf,
                             const SrcIteratorHacks& src_iterator_hacks)
     {
+        static_assert(is_same<remove_cv_t<remove_reference_t<typename SrcBuffer::type>>,
+                              remove_cv_t<remove_reference_t<SrcData>>>::value,
+                      "wrong! SrcBuffer and SrcData data type are inconsistent");
+
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
 
@@ -882,14 +902,14 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 #if CK_USE_AMD_BUFFER_ADDRESSING
                 src_tmp_vector.template AsType<src_vector_t>()(Number<0>{}) =
                     amd_buffer_load_v2<SrcData, SrcScalarPerVector>(
-                        p_src,
+                        src_buf.p_data_,
                         src_slice_origin_coord_.GetOffset(),
                         is_src_valid,
                         src_desc.GetElementSpaceSize());
 #else
                 src_tmp_vector.template AsType<src_vector_t>()(Number<0>{}) =
                     is_src_valid ? *reinterpret_cast<const src_vector_t*>(
-                                       &p_src[src_slice_origin_coord_.GetOffset()])
+                                       &src_buf.p_data_[src_slice_origin_coord_.GetOffset()])
                                  : src_vector_t{0};
 #endif
             }
@@ -897,7 +917,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             {
                 src_tmp_vector.template AsType<src_vector_t>()(Number<0>{}) =
                     is_src_valid ? *reinterpret_cast<const src_vector_t*>(
-                                       &p_src[src_slice_origin_coord_.GetOffset()])
+                                       &src_buf.p_data_[src_slice_origin_coord_.GetOffset()])
                                  : src_vector_t{0};
             }
 
@@ -958,10 +978,15 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         }
     }
 
-    template <typename DstIteratorHacks>
-    __device__ void
-    RunWrite(const DstDesc& dst_desc, DstData* p_dst, const DstIteratorHacks& dst_iterator_hacks)
+    template <typename DstBuffer, typename DstIteratorHacks>
+    __device__ void RunWrite(const DstDesc& dst_desc,
+                             DstBuffer& dst_buf,
+                             const DstIteratorHacks& dst_iterator_hacks)
     {
+        static_assert(is_same<remove_cv_t<remove_reference_t<typename DstBuffer::type>>,
+                              remove_cv_t<remove_reference_t<DstData>>>::value,
+                      "wrong! SrcBuffer or DstBuffer data type is wrong");
+
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
 
@@ -1070,8 +1095,9 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             using dst_vector_t = typename decltype(dst_tmp_vector)::type;
 
             // copy data from dst_tmp_vector to dst_buf
-            *reinterpret_cast<dst_vector_t*>(p_dst + dst_slice_origin_coord_.GetOffset()) =
-                dst_tmp_vector.template AsType<dst_vector_t>()[Number<0>{}];
+            dst_buf.template Set<dst_vector_t>(
+                dst_slice_origin_coord_.GetOffset(),
+                dst_tmp_vector.template AsType<dst_vector_t>()[Number<0>{}]);
 
             constexpr auto move_on_dim = [&]() constexpr
             {
@@ -1122,7 +1148,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         }
     }
 
-    __device__ void RunRead(const SrcDesc& src_desc, const SrcData* p_src)
+    template <typename SrcBuffer>
+    __device__ void RunRead(const SrcDesc& src_desc, const SrcBuffer& src_buf)
     {
         constexpr index_t ntransform_src = SrcDesc::GetNumOfTransform();
 
@@ -1132,10 +1159,11 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             make_tuple(generate_tuple([&](auto) { return zeros; }, Number<nDim>{}),
                        generate_tuple([&](auto) { return zeros; }, Number<nDim>{}));
 
-        RunRead(src_desc, p_src, src_iterator_hacks);
+        RunRead(src_desc, src_buf, src_iterator_hacks);
     }
 
-    __device__ void RunWrite(const DstDesc& dst_desc, DstData* p_dst)
+    template <typename DstBuffer>
+    __device__ void RunWrite(const DstDesc& dst_desc, DstBuffer& dst_buf)
     {
         constexpr index_t ntransform_dst = DstDesc::GetNumOfTransform();
 
@@ -1145,7 +1173,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             make_tuple(generate_tuple([&](auto) { return zeros; }, Number<nDim>{}),
                        generate_tuple([&](auto) { return zeros; }, Number<nDim>{}));
 
-        RunWrite(dst_desc, p_dst, dst_iterator_hacks);
+        RunWrite(dst_desc, dst_buf, dst_iterator_hacks);
     }
 
     __device__ static constexpr auto GetSrcCoordinateResetStep()

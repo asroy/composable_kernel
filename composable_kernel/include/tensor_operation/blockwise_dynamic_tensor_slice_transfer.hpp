@@ -79,24 +79,25 @@ struct BlockwiseDynamicTensorSliceTransfer_v4
         }
     }
 
-    template <typename SrcIteratorHacks>
+    template <typename SrcBuffer, typename SrcIteratorHacks>
     __device__ void RunRead(const SrcDesc& src_desc,
-                            const SrcData* p_src,
+                            const SrcBuffer& src_buf,
                             const SrcIteratorHacks& src_iterator_hacks)
     {
         if(BlockSize == thread_cluster_desc_.GetElementSize() or
            get_thread_local_1d_id() < thread_cluster_desc_.GetElementSize())
         {
-            threadwise_transfer_.RunRead(src_desc, p_src, src_iterator_hacks);
+            threadwise_transfer_.RunRead(src_desc, src_buf, src_iterator_hacks);
         }
     }
 
-    __device__ void RunWrite(const DstDesc& dst_desc, DstData* p_dst)
+    template <typename DstBuffer>
+    __device__ void RunWrite(const DstDesc& dst_desc, DstBuffer& dst_buf)
     {
         if(BlockSize == thread_cluster_desc_.GetElementSize() or
            get_thread_local_1d_id() < thread_cluster_desc_.GetElementSize())
         {
-            threadwise_transfer_.RunWrite(dst_desc, p_dst);
+            threadwise_transfer_.RunWrite(dst_desc, dst_buf);
         }
     }
 
