@@ -84,9 +84,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
 
-        auto a_global_buf = make_dynamic_buffer(p_a_global);
-        auto b_global_buf = make_dynamic_buffer(p_b_global);
-        auto c_global_buf = make_dynamic_buffer(p_c_global);
+        const auto a_global_buf = make_dynamic_buffer(p_a_global);
+        const auto b_global_buf = make_dynamic_buffer(p_b_global);
+        auto c_global_buf       = make_dynamic_buffer(p_c_global);
 
         constexpr auto E = EPerBlock * 3 * 3;
 
