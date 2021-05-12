@@ -84,9 +84,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
 
-        const auto a_global_buf = make_dynamic_buffer<AddressSpace::Global>(p_a_global);
-        const auto b_global_buf = make_dynamic_buffer<AddressSpace::Global>(p_b_global);
-        auto c_global_buf       = make_dynamic_buffer<AddressSpace::Global>(p_c_global);
+        const auto a_global_buf = make_dynamic_buffer<AddressSpace::Global>(
+            p_a_global, a_e_k_global_desc.GetElementSpaceSize());
+        const auto b_global_buf = make_dynamic_buffer<AddressSpace::Global>(
+            p_b_global, b_e_n_ho_wo_global_desc.GetElementSpaceSize());
+        auto c_global_buf = make_dynamic_buffer<AddressSpace::Global>(
+            p_c_global, c_k_n_ho_wo_global_desc.GetElementSpaceSize());
 
         constexpr auto E = EPerBlock * 3 * 3;
 
@@ -223,7 +226,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             true>(b_e_n_ho_wo_global_desc,
                   make_multi_index(0, 0, ho_thread_data_on_global, wo_thread_data_on_global));
 
-        auto a_block_buf = make_dynamic_buffer<AddressSpace::Lds>(p_shared_block);
+        auto a_block_buf = make_dynamic_buffer<AddressSpace::Lds>(p_shared_block,
+                                                                  a_e_k_desc.GetElementSpaceSize());
 
         // register allocation for output
         StaticBuffer<AddressSpace::Vgpr, FloatAcc, c_k_n_ho_wo_thread_desc.GetElementSpaceSize()>

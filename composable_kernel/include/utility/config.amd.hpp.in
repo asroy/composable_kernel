@@ -143,8 +143,8 @@
 #endif
 
 // workaround for compiler crash when using buffer load/store for i8
-#ifndef CK_WORKAROUND_SWDEV_XXXXXX
-#define CK_WORKAROUND_SWDEV_XXXXXX 1
+#ifndef CK_WORKAROUND_SWDEV_XXXXXX_INT8_BUFFER_LOAD_STORE_ISSUE
+#define CK_WORKAROUND_SWDEV_XXXXXX_INT8_BUFFER_LOAD_STORE_ISSUE 1
 #endif
 
 // workaround for compiler crash when using buffer load/store for i8

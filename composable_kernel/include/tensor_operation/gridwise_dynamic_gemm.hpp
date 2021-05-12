@@ -185,9 +185,12 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
 
-        const auto a_global_buf = make_dynamic_buffer<AddressSpace::Global>(p_a_global);
-        const auto b_global_buf = make_dynamic_buffer<AddressSpace::Global>(p_b_global);
-        auto c_global_buf       = make_dynamic_buffer<AddressSpace::Global>(p_c_global);
+        const auto a_global_buf = make_dynamic_buffer<AddressSpace::Global>(
+            p_a_global, a_k_m_global_desc.GetElementSpaceSize());
+        const auto b_global_buf = make_dynamic_buffer<AddressSpace::Global>(
+            p_b_global, b_k_n_global_desc.GetElementSpaceSize());
+        auto c_global_buf = make_dynamic_buffer<AddressSpace::Global>(
+            p_c_global, c_m0_m1_n0_n1_global_desc.GetElementSpaceSize());
 
         const auto K = a_k_m_global_desc.GetLength(I0);
         const auto M = a_k_m_global_desc.GetLength(I1);
@@ -361,13 +364,15 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
         constexpr auto b_k_n_global_move_slice_window_iterator_hack =
             BGlobalMoveSliceWindowIteratorHacks{};
 
-        auto a_block_even_buf = make_dynamic_buffer<AddressSpace::Lds>(p_a_block_double);
-        auto b_block_even_buf = make_dynamic_buffer<AddressSpace::Lds>(p_b_block_double);
+        auto a_block_even_buf = make_dynamic_buffer<AddressSpace::Lds>(
+            p_a_block_double, a_k_m_block_desc.GetElementSpaceSize());
+        auto b_block_even_buf = make_dynamic_buffer<AddressSpace::Lds>(
+            p_b_block_double, b_k_n_block_desc.GetElementSpaceSize());
 
-        auto a_block_odd_buf =
-            make_dynamic_buffer<AddressSpace::Lds>(p_a_block_double + a_block_space_size);
-        auto b_block_odd_buf =
-            make_dynamic_buffer<AddressSpace::Lds>(p_b_block_double + b_block_space_size);
+        auto a_block_odd_buf = make_dynamic_buffer<AddressSpace::Lds>(
+            p_a_block_double + a_block_space_size, a_k_m_block_desc.GetElementSpaceSize());
+        auto b_block_odd_buf = make_dynamic_buffer<AddressSpace::Lds>(
+            p_b_block_double + b_block_space_size, b_k_n_block_desc.GetElementSpaceSize());
 
         // LDS double buffer: preload data into LDS
         {
