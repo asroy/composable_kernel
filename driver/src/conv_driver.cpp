@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<1, 1>;
     using RightPads = Sequence<1, 1>;
-#elif 0
+#elif 1
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
     constexpr index_t HI = 540;
@@ -630,7 +630,7 @@ int main(int argc, char* argv[])
     print_array("ConvStrides", to_multi_index(ConvStrides{}));
     print_array("ConvDilations", to_multi_index(ConvDilations{}));
 
-#if 1
+#if 0
     using in_data_t                  = float;
     constexpr index_t in_vector_size = 1;
     using acc_data_t                 = float;
@@ -740,7 +740,7 @@ int main(int argc, char* argv[])
         LeftPads{},
         RightPads{},
         nrepeat);
-#elif 1
+#elif 0
     device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<in_data_t,
                                                                          in_vector_size,
                                                                          acc_data_t,

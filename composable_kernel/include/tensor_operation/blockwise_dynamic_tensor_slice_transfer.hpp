@@ -29,8 +29,6 @@ template <index_t BlockSize,
           index_t DstVectorDim,
           index_t SrcScalarPerVector,
           index_t DstScalarPerVector,
-          AddressSpace SrcAddressSpace,
-          AddressSpace DstAddressSpace,
           index_t SrcScalarStrideInVector,
           index_t DstScalarStrideInVector,
           index_t ThreadTransferSrcResetCoordinateAfterRun,
@@ -153,8 +151,6 @@ struct BlockwiseDynamicTensorSliceTransfer_v4
                                                 DstScalarPerVector,
                                                 SrcScalarStrideInVector,
                                                 DstScalarStrideInVector,
-                                                SrcAddressSpace,
-                                                DstAddressSpace,
                                                 ThreadTransferSrcResetCoordinateAfterRun,
                                                 ThreadTransferDstResetCoordinateAfterRun>;
 

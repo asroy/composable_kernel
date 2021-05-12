@@ -159,6 +159,7 @@ enum AddressSpace
     Generic,
     Global,
     Lds,
+    Sgpr,
     Vgpr
 };
 

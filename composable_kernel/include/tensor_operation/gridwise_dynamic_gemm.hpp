@@ -35,8 +35,7 @@ __global__ void
                                const CGlobalDesc c_m0_m1_n0_n1_global_desc,
                                const CBlockClusterDesc c_block_cluster_desc)
 {
-    GridwiseGemm::Run(
-                      p_a_global,
+    GridwiseGemm::Run(p_a_global,
                       p_b_global,
                       p_c_global,
                       a_k_m_global_desc,
@@ -85,8 +84,7 @@ __global__ void
     const auto c_block_cluster_desc =
         *reinterpret_cast<const CBlockClusterDesc*>((const void*)p_c_block_cluster_desc);
 
-    GridwiseGemm::Run(
-                      p_a_global,
+    GridwiseGemm::Run(p_a_global,
                       p_b_global,
                       p_c_global,
                       a_k_m_global_desc,
@@ -171,8 +169,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
     }
 
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
-    __device__ static void Run(
-                               const FloatAB* __restrict__ p_a_global,
+    __device__ static void Run(const FloatAB* __restrict__ p_a_global,
                                const FloatAB* __restrict__ p_b_global,
                                FloatC* __restrict__ p_c_global,
                                const AGlobalDesc& a_k_m_global_desc,
@@ -188,9 +185,9 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
 
-        const auto a_global_buf = make_dynamic_buffer(p_a_global);
-        const auto b_global_buf = make_dynamic_buffer(p_b_global);
-        auto c_global_buf       = make_dynamic_buffer(p_c_global);
+        const auto a_global_buf = make_dynamic_buffer<AddressSpace::Global>(p_a_global);
+        const auto b_global_buf = make_dynamic_buffer<AddressSpace::Global>(p_b_global);
+        auto c_global_buf       = make_dynamic_buffer<AddressSpace::Global>(p_c_global);
 
         const auto K = a_k_m_global_desc.GetLength(I0);
         const auto M = a_k_m_global_desc.GetLength(I1);
@@ -241,8 +238,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
                                                    1,
                                                    ABlockTransferSrcScalarPerVector,
                                                    ABlockTransferDstScalarPerVector_M,
-                                                   AddressSpace::Global,
-                                                   AddressSpace::Lds,
                                                    1,
                                                    1,
                                                    AThreadTransferSrcResetCoordinateAfterRun,
@@ -270,8 +265,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
                                                    1,
                                                    BBlockTransferSrcScalarPerVector,
                                                    BBlockTransferDstScalarPerVector_N,
-                                                   AddressSpace::Global,
-                                                   AddressSpace::Lds,
                                                    1,
                                                    1,
                                                    BThreadTransferSrcResetCoordinateAfterRun,
@@ -346,8 +339,8 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
         FloatAB* p_b_block_double = p_shared_block + 2 * a_block_space_size;
 
         // register allocation for output
-        auto c_thread_buf =
-            make_static_buffer<FloatAcc>(c_m0_m1_n0_n1_thread_desc.GetElementSpaceSize());
+        auto c_thread_buf = make_static_buffer<AddressSpace::Vgpr, FloatAcc>(
+            c_m0_m1_n0_n1_thread_desc.GetElementSpaceSize());
 
         ThreadwiseDynamicTensorSliceSet_v1<FloatAcc,
                                            decltype(c_m0_m1_n0_n1_thread_desc),
@@ -368,11 +361,13 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
         constexpr auto b_k_n_global_move_slice_window_iterator_hack =
             BGlobalMoveSliceWindowIteratorHacks{};
 
-        auto a_block_even_buf = make_dynamic_buffer(p_a_block_double);
-        auto b_block_even_buf = make_dynamic_buffer(p_b_block_double);
+        auto a_block_even_buf = make_dynamic_buffer<AddressSpace::Lds>(p_a_block_double);
+        auto b_block_even_buf = make_dynamic_buffer<AddressSpace::Lds>(p_b_block_double);
 
-        auto a_block_odd_buf = make_dynamic_buffer(p_a_block_double + a_block_space_size);
-        auto b_block_odd_buf = make_dynamic_buffer(p_b_block_double + b_block_space_size);
+        auto a_block_odd_buf =
+            make_dynamic_buffer<AddressSpace::Lds>(p_a_block_double + a_block_space_size);
+        auto b_block_odd_buf =
+            make_dynamic_buffer<AddressSpace::Lds>(p_b_block_double + b_block_space_size);
 
         // LDS double buffer: preload data into LDS
         {
@@ -497,8 +492,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
                 CThreadTransferSrcDstAccessOrder,
                 CThreadTransferSrcDstVectorDim,
                 CThreadTransferDstScalarPerVector,
-                AddressSpace::Vgpr,
-                AddressSpace::Global,
                 CGlobalMemoryDataOperation,
                 1,
                 true>{
@@ -517,8 +510,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
     }
 
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
-    __device__ static void Run(
-                               const FloatAB* __restrict__ p_a_global,
+    __device__ static void Run(const FloatAB* __restrict__ p_a_global,
                                const FloatAB* __restrict__ p_b_global,
                                FloatC* __restrict__ p_c_global,
                                const AGlobalDesc& a_k_m_global_desc,
@@ -532,8 +524,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
 
         __shared__ FloatAB p_shared_block[shared_block_size];
 
-        Run(
-            p_a_global,
+        Run(p_a_global,
             p_b_global,
             p_c_global,
             a_k_m_global_desc,

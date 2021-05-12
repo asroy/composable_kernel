@@ -54,8 +54,6 @@ template <typename SrcData,
           typename DimAccessOrder,
           index_t DstVectorDim,
           index_t DstScalarPerVector,
-          AddressSpace SrcAddressSpace,
-          AddressSpace DstAddressSpace,
           InMemoryDataOperation DstInMemOp,
           index_t DstScalarStrideInVector,
           bool DstResetCoordinateAfterRun,
@@ -211,8 +209,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
             const bool is_dst_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
                 dst_desc, dst_slice_origin_coord_);
 
-            if constexpr(SrcAddressSpace == AddressSpace::Vgpr &&
-                         DstAddressSpace == AddressSpace::Global)
+            if constexpr(SrcBuffer::GetAddressSpace() == AddressSpace::Vgpr &&
+                         DstBuffer::GetAddressSpace() == AddressSpace::Global)
             {
 #if CK_USE_AMD_BUFFER_ADDRESSING
                 amd_buffer_store_v2<DstData, DstScalarPerVector>(
@@ -403,8 +401,6 @@ template <typename SrcData,
           typename DimAccessOrder,
           index_t SrcVectorDim,
           index_t SrcScalarPerVector,
-          AddressSpace SrcAddressSpace,
-          AddressSpace DstAddressSpace,
           index_t SrcScalarStrideInVector,
           bool SrcResetCoordinateAfterRun,
           typename std::enable_if<DstDesc::IsKnownAtCompileTime(), bool>::type = false>
@@ -541,8 +537,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
             }();
 
             // copy data
-            static_assert(DstAddressSpace == AddressSpace::Vgpr, "wrong! hardcode for vgpr dst");
-
             typename vector_type_maker<SrcData, SrcScalarPerVector>::type src_vector;
 
             using src_vector_t =
@@ -551,7 +545,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
             const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
                 src_desc, src_slice_origin_coord_);
 
-            if constexpr(SrcAddressSpace == AddressSpace::Global)
+            if constexpr(SrcBuffer::GetAddressSpace() == AddressSpace::Global)
             {
 #if CK_USE_AMD_BUFFER_ADDRESSING
                 src_vector.template AsType<src_vector_t>()(Number<0>{}) =
@@ -748,8 +742,6 @@ template <typename SliceLengths,
           index_t DstScalarPerVector,
           index_t SrcScalarStrideInVector,
           index_t DstScalarStrideInVector,
-          AddressSpace SrcAddressSpace,
-          AddressSpace DstAddressSpace,
           bool SrcResetCoordinateAfterRun, // control whether to move back src coordinate after each
                                            // RunRead(),  will be fused with MoveSrcSliceWindow to
                                            // save addr computation
@@ -774,13 +766,6 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         : src_slice_origin_coord_(make_dynamic_tensor_coordinate(src_desc, src_slice_origin)),
           dst_slice_origin_coord_(make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin))
     {
-        static_assert(SrcAddressSpace == AddressSpace::Global or
-                          SrcAddressSpace == AddressSpace::Lds,
-                      "wrong!");
-        static_assert(DstAddressSpace == AddressSpace::Global or
-                          DstAddressSpace == AddressSpace::Lds,
-                      "wrong!");
-
         // TODO: fix this
         static_assert(is_same<SrcData, DstData>::value,
                       "wrong! current implementation assume SrcData and DstData are same type");
@@ -801,6 +786,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                             const SrcBuffer& src_buf,
                             const SrcIteratorHacks& src_iterator_hacks)
     {
+        static_assert(SrcBuffer::GetAddressSpace() == AddressSpace::Global or
+                          SrcBuffer::GetAddressSpace() == AddressSpace::Lds,
+                      "wrong!");
+
         static_assert(is_same<remove_cv_t<remove_reference_t<typename SrcBuffer::type>>,
                               remove_cv_t<remove_reference_t<SrcData>>>::value,
                       "wrong! SrcBuffer and SrcData data type are inconsistent");
@@ -897,7 +886,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
                 src_desc, src_slice_origin_coord_);
 
-            if constexpr(SrcAddressSpace == AddressSpace::Global)
+            if constexpr(SrcBuffer::GetAddressSpace() == AddressSpace::Global)
             {
 #if CK_USE_AMD_BUFFER_ADDRESSING
                 src_tmp_vector.template AsType<src_vector_t>()(Number<0>{}) =
@@ -983,6 +972,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                              DstBuffer& dst_buf,
                              const DstIteratorHacks& dst_iterator_hacks)
     {
+        static_assert(DstBuffer::GetAddressSpace() == AddressSpace::Global or
+                          DstBuffer::GetAddressSpace() == AddressSpace::Lds,
+                      "wrong!");
+
         static_assert(is_same<remove_cv_t<remove_reference_t<typename DstBuffer::type>>,
                               remove_cv_t<remove_reference_t<DstData>>>::value,
                       "wrong! SrcBuffer or DstBuffer data type is wrong");
@@ -1078,7 +1071,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             // copy data
             // hardcoding for ds_write
             // TODO refactor transfer_data() to encapsulate this
-            static_assert(DstAddressSpace == AddressSpace::Lds &&
+            static_assert(DstBuffer::GetAddressSpace() == AddressSpace::Lds &&
                               DstInMemOp == InMemoryDataOperation::Set,
                           "wrong! hardcoded for ds_write");
 
@@ -1356,7 +1349,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
     static constexpr auto buffer_size_ = buffer_desc_.GetElementSpaceSize();
 
-    StaticBuffer<SrcData, buffer_size_> buffer_;
+    StaticBuffer<AddressSpace::Vgpr, SrcData, buffer_size_> buffer_;
 
     SrcCoord src_slice_origin_coord_;
     DstCoord dst_slice_origin_coord_;
@@ -1384,8 +1377,6 @@ template <
     typename DimAccessOrder,
     index_t SrcVectorDim,
     index_t SrcScalarPerVector,
-    AddressSpace SrcAddressSpace,
-    AddressSpace DstAddressSpace,
     index_t SrcScalarStrideInVector,
     typename std::enable_if<SrcDesc::IsKnownAtCompileTime() && DstDesc::IsKnownAtCompileTime(),
                             bool>::type = false>

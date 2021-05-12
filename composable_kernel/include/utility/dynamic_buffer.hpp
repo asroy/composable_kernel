@@ -1,30 +1,9 @@
-#ifndef CK_BUFFER_HPP
-#define CK_BUFFER_HPP
-
-#include "statically_indexed_array.hpp"
+#ifndef CK_DYNAMIC_BUFFER_HPP
+#define CK_DYNAMIC_BUFFER_HPP
 
 namespace ck {
 
-template <typename T, index_t N>
-struct StaticBuffer : public StaticallyIndexedArray<T, N>
-{
-    using type = T;
-    using base = StaticallyIndexedArray<T, N>;
-
-    __host__ __device__ constexpr StaticBuffer() : base{} {}
-
-    __host__ __device__ static constexpr bool IsStaticBuffer() { return true; }
-
-    __host__ __device__ static constexpr bool IsDynamicBuffer() { return false; }
-};
-
-template <typename T, index_t N>
-__host__ __device__ constexpr auto make_static_buffer(Number<N>)
-{
-    return StaticBuffer<T, N>{};
-}
-
-template <typename T>
+template <AddressSpace BufferAddressSpace, typename T>
 struct DynamicBuffer
 {
     using type = T;
@@ -32,6 +11,11 @@ struct DynamicBuffer
     T* p_data_;
 
     __host__ __device__ constexpr DynamicBuffer(T* p_data) : p_data_{p_data} {}
+
+    __host__ __device__ static constexpr AddressSpace GetAddressSpace()
+    {
+        return BufferAddressSpace;
+    }
 
     __host__ __device__ constexpr const T& operator[](index_t i) const { return p_data_[i]; }
 
@@ -91,10 +75,10 @@ struct DynamicBuffer
     __host__ __device__ static constexpr bool IsDynamicBuffer() { return true; }
 };
 
-template <typename T>
+template <AddressSpace BufferAddressSpace = AddressSpace::Generic, typename T>
 __host__ __device__ constexpr auto make_dynamic_buffer(T* p)
 {
-    return DynamicBuffer<T>{p};
+    return DynamicBuffer<BufferAddressSpace, T>{p};
 }
 
 } // namespace ck

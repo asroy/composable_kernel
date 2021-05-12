@@ -84,9 +84,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
 
-        const auto a_global_buf = make_dynamic_buffer(p_a_global);
-        const auto b_global_buf = make_dynamic_buffer(p_b_global);
-        auto c_global_buf       = make_dynamic_buffer(p_c_global);
+        const auto a_global_buf = make_dynamic_buffer<AddressSpace::Global>(p_a_global);
+        const auto b_global_buf = make_dynamic_buffer<AddressSpace::Global>(p_b_global);
+        auto c_global_buf       = make_dynamic_buffer<AddressSpace::Global>(p_c_global);
 
         constexpr auto E = EPerBlock * 3 * 3;
 
@@ -196,8 +196,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                                                    1,
                                                    ABlockTransferSrcScalarPerVector,
                                                    ABlockTransferDstScalarPerVector_K,
-                                                   AddressSpace::Global,
-                                                   AddressSpace::Lds,
                                                    1,
                                                    1,
                                                    AThreadTransferSrcResetCoordinateAfterRun,
@@ -220,19 +218,16 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             BBlockTransferSrcAccessOrder,
             BBlockTransferSrcVectorDim,
             BBlockTransferSrcScalarPerVector,
-            AddressSpace::Global,
-            AddressSpace::Vgpr,
             InMemoryDataOperation::Set,
             1,
             true>(b_e_n_ho_wo_global_desc,
                   make_multi_index(0, 0, ho_thread_data_on_global, wo_thread_data_on_global));
 
-        FloatAB* p_a_block = p_shared_block;
-
-        auto a_block_buf = make_dynamic_buffer(p_a_block);
+        auto a_block_buf = make_dynamic_buffer<AddressSpace::Lds>(p_shared_block);
 
         // register allocation for output
-        StaticBuffer<FloatAcc, c_k_n_ho_wo_thread_desc.GetElementSpaceSize()> c_thread_buf;
+        StaticBuffer<AddressSpace::Vgpr, FloatAcc, c_k_n_ho_wo_thread_desc.GetElementSpaceSize()>
+            c_thread_buf;
 
         // initialize output thread tensor
         ThreadwiseDynamicTensorSliceSet_v1<FloatAcc,
@@ -254,8 +249,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
             BGlobalMoveSliceWindowIteratorHacks{};
 
         // double regsiter buffer for b
-        StaticBuffer<FloatAB, b_e_n_ho_wo_thread_desc.GetElementSpaceSize()> b_thread_even_buf,
-            b_thread_odd_buf;
+        StaticBuffer<AddressSpace::Vgpr, FloatAB, b_e_n_ho_wo_thread_desc.GetElementSpaceSize()>
+            b_thread_even_buf, b_thread_odd_buf;
 
         // LDS double buffer: preload data
         {
@@ -362,8 +357,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v3
                 CThreadTransferSrcDstAccessOrder,
                 CThreadTransferSrcDstVectorDim,
                 CThreadTransferDstScalarPerVector,
-                AddressSpace::Vgpr,
-                AddressSpace::Global,
                 CGlobalMemoryDataOperation,
                 1,
                 true>(
