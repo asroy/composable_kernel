@@ -107,14 +107,34 @@ struct DynamicBuffer
                                      int8_t>::value)
                 {
                     static_assert(
-                        is_same<remove_cv_t<remove_reference_t<T>>, int8x16_t>::value &&
-                            is_same<remove_cv_t<remove_reference_t<X>>, int8x16_t>::value,
+                        (is_same<remove_cv_t<remove_reference_t<T>>, int8x4_t>::value &&
+                         is_same<remove_cv_t<remove_reference_t<X>>, int8x4_t>::value) ||
+                            (is_same<remove_cv_t<remove_reference_t<T>>, int8x8_t>::value &&
+                             is_same<remove_cv_t<remove_reference_t<X>>, int8x8_t>::value) ||
+                            (is_same<remove_cv_t<remove_reference_t<T>>, int8x16_t>::value &&
+                             is_same<remove_cv_t<remove_reference_t<X>>, int8x16_t>::value),
                         "wrong! not implemented for this combination, please add implementation");
 
+                    if constexpr(is_same<remove_cv_t<remove_reference_t<T>>, int8x4_t>::value &&
+                                 is_same<remove_cv_t<remove_reference_t<X>>, int8x4_t>::value)
+                    {
+                        // HACK: cast pointer of x is bad
+                        // TODO: remove this after compiler fix
+                        *reinterpret_cast<int32_t*>(&p_data_[i]) =
+                            *reinterpret_cast<const int32_t*>(&x);
+                    }
+                    if constexpr(is_same<remove_cv_t<remove_reference_t<T>>, int8x8_t>::value &&
+                                 is_same<remove_cv_t<remove_reference_t<X>>, int8x8_t>::value)
+                    {
+                        // HACK: cast pointer of x is bad
+                        // TODO: remove this after compiler fix
+                        *reinterpret_cast<int32x2_t*>(&p_data_[i]) =
+                            *reinterpret_cast<const int32x2_t*>(&x);
+                    }
                     if constexpr(is_same<remove_cv_t<remove_reference_t<T>>, int8x16_t>::value &&
                                  is_same<remove_cv_t<remove_reference_t<X>>, int8x16_t>::value)
                     {
-                        // HACK: compiler would emit IR "store<i32, 4>" if using this
+                        // HACK: cast pointer of x is bad
                         // TODO: remove this after compiler fix
                         *reinterpret_cast<int32x4_t*>(&p_data_[i]) =
                             *reinterpret_cast<const int32x4_t*>(&x);
