@@ -724,7 +724,7 @@ int main(int argc, char* argv[])
                                                                  LeftPads{},
                                                                  RightPads{},
                                                                  nrepeat);
-#elif 0
+#elif 1
     device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw<in_data_t,
                                                                          in_vector_size,
                                                                          acc_data_t,
