@@ -70,7 +70,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
 
     __device__ constexpr ThreadwiseDynamicTensorSliceTransfer_v1r3(
         const DstDesc& dst_desc, const Index& dst_slice_origin_idx)
-        : dst_slice_origin_coord_(make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_idx))
+        : dst_coord_(make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_idx))
     {
         static_assert(SrcDesc::IsKnownAtCompileTime(),
                       "wrong! SrcDesc need to known at compile-time");
@@ -78,7 +78,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
 
     __device__ void SetDstSliceOrigin(const DstDesc& dst_desc, const Index& dst_slice_origin_idx)
     {
-        dst_slice_origin_coord_ = make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_idx);
+        dst_coord_ = make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_idx);
     }
 
     template <typename SrcSliceOriginIdx,
@@ -206,12 +206,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
                     type_convert<DstData>{}(src_buf[Number<src_offset>{}]);
             });
 
-            const bool is_dst_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                dst_desc, dst_slice_origin_coord_);
+            const bool is_dst_valid =
+                coordinate_has_valid_offset_assuming_visible_index_is_valid(dst_desc, dst_coord_);
 
             // copy data from dst_vector into dst_buf
             dst_buf.template Set<dst_vector_t>(
-                dst_slice_origin_coord_.GetOffset(),
+                dst_coord_.GetOffset(),
                 is_dst_valid,
                 dst_vector.template AsType<dst_vector_t>()[Number<0>{}]);
 
@@ -237,15 +237,13 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
                 {
                     if constexpr(forward_sweep[i])
                     {
-                        move_dynamic_tensor_coordinate(dst_desc,
-                                                       dst_slice_origin_coord_,
-                                                       dst_forward_iterators[dim_access_order[i]]);
+                        move_dynamic_tensor_coordinate(
+                            dst_desc, dst_coord_, dst_forward_iterators[dim_access_order[i]]);
                     }
                     else
                     {
-                        move_dynamic_tensor_coordinate(dst_desc,
-                                                       dst_slice_origin_coord_,
-                                                       dst_backward_iterators[dim_access_order[i]]);
+                        move_dynamic_tensor_coordinate(
+                            dst_desc, dst_coord_, dst_backward_iterators[dim_access_order[i]]);
                     }
                 }
             });
@@ -257,7 +255,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
             const auto dst_reset_iterator =
                 make_dynamic_tensor_coordinate_iterator(dst_desc, GetDstCoordinateResetStep());
 
-            move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_coord_, dst_reset_iterator);
+            move_dynamic_tensor_coordinate(dst_desc, dst_coord_, dst_reset_iterator);
         }
     }
 
@@ -354,11 +352,11 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
         const auto adjusted_step =
             make_dynamic_tensor_coordinate_iterator(dst_desc, adjusted_step_idx);
 
-        move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_coord_, adjusted_step);
+        move_dynamic_tensor_coordinate(dst_desc, dst_coord_, adjusted_step);
     }
 
     private:
-    DstCoord dst_slice_origin_coord_;
+    DstCoord dst_coord_;
 }; // namespace ck
 
 // Assume:
@@ -393,7 +391,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
 
     __device__ constexpr ThreadwiseDynamicTensorSliceTransfer_v2(const SrcDesc& src_desc,
                                                                  const Index& src_slice_origin_idx)
-        : src_slice_origin_coord_(make_dynamic_tensor_coordinate(src_desc, src_slice_origin_idx))
+        : src_coord_(make_dynamic_tensor_coordinate(src_desc, src_slice_origin_idx))
     {
         static_assert(DstDesc::IsKnownAtCompileTime(),
                       "wrong! SrcDesc need to known at compile-time");
@@ -401,7 +399,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
 
     __device__ void SetDstSliceOrigin(const SrcDesc& src_desc, const Index& src_slice_origin_idx)
     {
-        src_slice_origin_coord_ = make_dynamic_tensor_coordinate(src_desc, src_slice_origin_idx);
+        src_coord_ = make_dynamic_tensor_coordinate(src_desc, src_slice_origin_idx);
     }
 
     template <typename SrcBuffer,
@@ -518,13 +516,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
             using src_vector_t =
                 typename vector_type_maker<SrcData, SrcScalarPerVector>::type::type;
 
-            const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                src_desc, src_slice_origin_coord_);
+            const bool is_src_valid =
+                coordinate_has_valid_offset_assuming_visible_index_is_valid(src_desc, src_coord_);
 
             // copy data from src_buf into src_vector
             src_vector.template AsType<src_vector_t>()(Number<0>{}) =
-                src_buf.template Get<src_vector_t>(src_slice_origin_coord_.GetOffset(),
-                                                   is_src_valid);
+                src_buf.template Get<src_vector_t>(src_coord_.GetOffset(), is_src_valid);
 
             // copy data from src_vector into dst_buf
             static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
@@ -557,15 +554,13 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
                 {
                     if constexpr(forward_sweep[i])
                     {
-                        move_dynamic_tensor_coordinate(src_desc,
-                                                       src_slice_origin_coord_,
-                                                       src_forward_iterators[dim_access_order[i]]);
+                        move_dynamic_tensor_coordinate(
+                            src_desc, src_coord_, src_forward_iterators[dim_access_order[i]]);
                     }
                     else
                     {
-                        move_dynamic_tensor_coordinate(src_desc,
-                                                       src_slice_origin_coord_,
-                                                       src_backward_iterators[dim_access_order[i]]);
+                        move_dynamic_tensor_coordinate(
+                            src_desc, src_coord_, src_backward_iterators[dim_access_order[i]]);
                     }
                 }
             });
@@ -577,7 +572,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
             const auto src_reset_iterator =
                 make_dynamic_tensor_coordinate_iterator(src_desc, GetSrcCoordinateResetStep());
 
-            move_dynamic_tensor_coordinate(src_desc, src_slice_origin_coord_, src_reset_iterator);
+            move_dynamic_tensor_coordinate(src_desc, src_coord_, src_reset_iterator);
         }
     }
 
@@ -674,11 +669,11 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
         const auto adjusted_step =
             make_dynamic_tensor_coordinate_iterator(src_desc, adjusted_step_idx);
 
-        move_dynamic_tensor_coordinate(src_desc, src_slice_origin_coord_, adjusted_step);
+        move_dynamic_tensor_coordinate(src_desc, src_coord_, adjusted_step);
     }
 
     private:
-    SrcCoord src_slice_origin_coord_;
+    SrcCoord src_coord_;
 }; // namespace ck
 
 // Assume:
@@ -721,8 +716,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                                                                  const Index& src_slice_origin,
                                                                  const DstDesc& dst_desc,
                                                                  const Index& dst_slice_origin)
-        : src_slice_origin_coord_(make_dynamic_tensor_coordinate(src_desc, src_slice_origin)),
-          dst_slice_origin_coord_(make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin))
+        : src_coord_(make_dynamic_tensor_coordinate(src_desc, src_slice_origin)),
+          dst_coord_(make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin))
     {
         // TODO: fix this
         static_assert(is_same<SrcData, DstData>::value,
@@ -731,12 +726,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
     __device__ void SetSrcSliceOrigin(const SrcDesc& src_desc, const Index& src_slice_origin_idx)
     {
-        src_slice_origin_coord_ = make_dynamic_tensor_coordinate(src_desc, src_slice_origin_idx);
+        src_coord_ = make_dynamic_tensor_coordinate(src_desc, src_slice_origin_idx);
     }
 
     __device__ void SetDstSliceOrigin(const DstDesc& dst_desc, const Index& dst_slice_origin_idx)
     {
-        dst_slice_origin_coord_ = make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_idx);
+        dst_coord_ = make_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_idx);
     }
 
     template <typename SrcBuffer, typename SrcIteratorHacks>
@@ -840,13 +835,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
             using src_vector_t = typename decltype(src_tmp_vector)::type;
 
-            const bool is_src_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                src_desc, src_slice_origin_coord_);
+            const bool is_src_valid =
+                coordinate_has_valid_offset_assuming_visible_index_is_valid(src_desc, src_coord_);
 
             // copy data from src_buf to src_tmp_vector
             src_tmp_vector.template AsType<src_vector_t>()(Number<0>{}) =
-                src_buf.template Get<src_vector_t>(src_slice_origin_coord_.GetOffset(),
-                                                   is_src_valid);
+                src_buf.template Get<src_vector_t>(src_coord_.GetOffset(), is_src_valid);
 
             // copy data from src_tmp_vector to buffer_
             static_for<0, SrcScalarPerVector, 1>{}([&](auto i) {
@@ -880,16 +874,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                     if constexpr(forward_sweep[i])
                     {
                         move_dynamic_tensor_coordinate(
-                            src_desc,
-                            src_slice_origin_coord_,
-                            src_forward_iterators[src_dim_access_order[i]]);
+                            src_desc, src_coord_, src_forward_iterators[src_dim_access_order[i]]);
                     }
                     else
                     {
                         move_dynamic_tensor_coordinate(
-                            src_desc,
-                            src_slice_origin_coord_,
-                            src_backward_iterators[src_dim_access_order[i]]);
+                            src_desc, src_coord_, src_backward_iterators[src_dim_access_order[i]]);
                     }
                 }
             });
@@ -901,7 +891,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             const auto src_reset_iterator =
                 make_dynamic_tensor_coordinate_iterator(src_desc, GetSrcCoordinateResetStep());
 
-            move_dynamic_tensor_coordinate(src_desc, src_slice_origin_coord_, src_reset_iterator);
+            move_dynamic_tensor_coordinate(src_desc, src_coord_, src_reset_iterator);
         }
     }
 
@@ -1019,11 +1009,11 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             using dst_vector_t = typename decltype(dst_tmp_vector)::type;
 
             // copy data from dst_tmp_vector to dst_buf
-            const bool is_dst_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
-                dst_desc, dst_slice_origin_coord_);
+            const bool is_dst_valid =
+                coordinate_has_valid_offset_assuming_visible_index_is_valid(dst_desc, dst_coord_);
 
             dst_buf.template Set<dst_vector_t>(
-                dst_slice_origin_coord_.GetOffset(),
+                dst_coord_.GetOffset(),
                 is_dst_valid,
                 dst_tmp_vector.template AsType<dst_vector_t>()[Number<0>{}]);
 
@@ -1051,16 +1041,12 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
                     if constexpr(forward_sweep[i])
                     {
                         move_dynamic_tensor_coordinate(
-                            dst_desc,
-                            dst_slice_origin_coord_,
-                            dst_forward_iterators[dst_dim_access_order[i]]);
+                            dst_desc, dst_coord_, dst_forward_iterators[dst_dim_access_order[i]]);
                     }
                     else
                     {
                         move_dynamic_tensor_coordinate(
-                            dst_desc,
-                            dst_slice_origin_coord_,
-                            dst_backward_iterators[dst_dim_access_order[i]]);
+                            dst_desc, dst_coord_, dst_backward_iterators[dst_dim_access_order[i]]);
                     }
                 }
             });
@@ -1072,7 +1058,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
             const auto dst_reset_iterator =
                 make_dynamic_tensor_coordinate_iterator(dst_desc, GetDstCoordinateResetStep());
 
-            move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_coord_, dst_reset_iterator);
+            move_dynamic_tensor_coordinate(dst_desc, dst_coord_, dst_reset_iterator);
         }
     }
 
@@ -1241,7 +1227,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         const auto adjusted_step =
             make_dynamic_tensor_coordinate_iterator(src_desc, adjusted_step_idx);
 
-        move_dynamic_tensor_coordinate(src_desc, src_slice_origin_coord_, adjusted_step);
+        move_dynamic_tensor_coordinate(src_desc, src_coord_, adjusted_step);
     }
 
     // src_slice_origin_step_idx need to be known at compile-time, for performance reason
@@ -1260,7 +1246,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         const auto adjusted_step = make_dynamic_tensor_coordinate_iterator(
             src_desc, adjusted_step_idx, src_move_slice_window_iterator_hack);
 
-        move_dynamic_tensor_coordinate(src_desc, src_slice_origin_coord_, adjusted_step);
+        move_dynamic_tensor_coordinate(src_desc, src_coord_, adjusted_step);
     }
     // dst_slice_origin_step_idx need to be known at compile-time, for performance reason
     __device__ void MoveDstSliceWindow(const DstDesc& dst_desc,
@@ -1275,7 +1261,7 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
         const auto adjusted_step =
             make_dynamic_tensor_coordinate_iterator(dst_desc, adjusted_step_idx);
 
-        move_dynamic_tensor_coordinate(dst_desc, dst_slice_origin_coord_, adjusted_step);
+        move_dynamic_tensor_coordinate(dst_desc, dst_coord_, adjusted_step);
     }
 
     private:
@@ -1286,8 +1272,8 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
     StaticBuffer<AddressSpace::Vgpr, SrcData, buffer_size_> buffer_;
 
-    SrcCoord src_slice_origin_coord_;
-    DstCoord dst_slice_origin_coord_;
+    SrcCoord src_coord_;
+    DstCoord dst_coord_;
 };
 
 // Assume:
