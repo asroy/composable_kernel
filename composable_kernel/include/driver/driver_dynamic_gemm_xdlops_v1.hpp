@@ -141,20 +141,21 @@ __host__ float launch_kernel_dynamic_gemm_xdlops_v1(const FloatAB* p_a_global,
 
     const bool has_double_tail_k_block_loop = (K / KPerBlock) % 2 == 0;
 
+#if CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VALUE
     float ave_time = 0;
 
     if(has_main_k_block_loop && has_double_tail_k_block_loop)
     {
-        const auto kernel = run_gridwise_operation<gridwise_gemm,
-                                                   remove_reference_t<AGlobalDesc>,
-                                                   const FloatAB*,
-                                                   remove_reference_t<BGlobalDesc>,
-                                                   const FloatAB*,
-                                                   remove_reference_t<CGlobalDesc>,
-                                                   FloatC*,
-                                                   remove_reference_t<CBlockClusterDesc>,
-                                                   integral_constant<bool, true>,
-                                                   integral_constant<bool, true>>;
+        const auto kernel = kernel_dynamic_gemm_xdlops_v1<gridwise_gemm,
+                                                          FloatAB,
+                                                          FloatAB,
+                                                          FloatC,
+                                                          remove_reference_t<AGlobalDesc>,
+                                                          remove_reference_t<BGlobalDesc>,
+                                                          remove_reference_t<CGlobalDesc>,
+                                                          remove_reference_t<CBlockClusterDesc>,
+                                                          true,
+                                                          true>;
 
         ave_time = launch_and_time_kernel(kernel,
                                           nrepeat,
@@ -162,28 +163,26 @@ __host__ float launch_kernel_dynamic_gemm_xdlops_v1(const FloatAB* p_a_global,
                                           dim3(BlockSize),
                                           0,
                                           0,
-                                          a_k_m_global_desc,
                                           p_a_global,
-                                          b_k_n_global_desc,
                                           p_b_global,
-                                          c_m0_m1_n0_n1_global_desc,
                                           p_c_global,
-                                          c_block_cluster_desc,
-                                          integral_constant<bool, true>{},
-                                          integral_constant<bool, true>{});
+                                          a_k_m_global_desc,
+                                          b_k_n_global_desc,
+                                          c_m0_m1_n0_n1_global_desc,
+                                          c_block_cluster_desc);
     }
     else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
     {
-        const auto kernel = run_gridwise_operation<gridwise_gemm,
-                                                   remove_reference_t<AGlobalDesc>,
-                                                   const FloatAB*,
-                                                   remove_reference_t<BGlobalDesc>,
-                                                   const FloatAB*,
-                                                   remove_reference_t<CGlobalDesc>,
-                                                   FloatC*,
-                                                   remove_reference_t<CBlockClusterDesc>,
-                                                   integral_constant<bool, true>,
-                                                   integral_constant<bool, false>>;
+        const auto kernel = kernel_dynamic_gemm_xdlops_v1<gridwise_gemm,
+                                                          FloatAB,
+                                                          FloatAB,
+                                                          FloatC,
+                                                          remove_reference_t<AGlobalDesc>,
+                                                          remove_reference_t<BGlobalDesc>,
+                                                          remove_reference_t<CGlobalDesc>,
+                                                          remove_reference_t<CBlockClusterDesc>,
+                                                          true,
+                                                          false>;
 
         ave_time = launch_and_time_kernel(kernel,
                                           nrepeat,
@@ -191,28 +190,26 @@ __host__ float launch_kernel_dynamic_gemm_xdlops_v1(const FloatAB* p_a_global,
                                           dim3(BlockSize),
                                           0,
                                           0,
-                                          a_k_m_global_desc,
                                           p_a_global,
-                                          b_k_n_global_desc,
                                           p_b_global,
-                                          c_m0_m1_n0_n1_global_desc,
                                           p_c_global,
-                                          c_block_cluster_desc,
-                                          integral_constant<bool, true>{},
-                                          integral_constant<bool, false>{});
+                                          a_k_m_global_desc,
+                                          b_k_n_global_desc,
+                                          c_m0_m1_n0_n1_global_desc,
+                                          c_block_cluster_desc);
     }
     else if(!has_main_k_block_loop && has_double_tail_k_block_loop)
     {
-        const auto kernel = run_gridwise_operation<gridwise_gemm,
-                                                   remove_reference_t<AGlobalDesc>,
-                                                   const FloatAB*,
-                                                   remove_reference_t<BGlobalDesc>,
-                                                   const FloatAB*,
-                                                   remove_reference_t<CGlobalDesc>,
-                                                   FloatC*,
-                                                   remove_reference_t<CBlockClusterDesc>,
-                                                   integral_constant<bool, false>,
-                                                   integral_constant<bool, true>>;
+        const auto kernel = kernel_dynamic_gemm_xdlops_v1<gridwise_gemm,
+                                                          FloatAB,
+                                                          FloatAB,
+                                                          FloatC,
+                                                          remove_reference_t<AGlobalDesc>,
+                                                          remove_reference_t<BGlobalDesc>,
+                                                          remove_reference_t<CGlobalDesc>,
+                                                          remove_reference_t<CBlockClusterDesc>,
+                                                          false,
+                                                          true>;
 
         ave_time = launch_and_time_kernel(kernel,
                                           nrepeat,
@@ -220,28 +217,26 @@ __host__ float launch_kernel_dynamic_gemm_xdlops_v1(const FloatAB* p_a_global,
                                           dim3(BlockSize),
                                           0,
                                           0,
-                                          a_k_m_global_desc,
                                           p_a_global,
-                                          b_k_n_global_desc,
                                           p_b_global,
-                                          c_m0_m1_n0_n1_global_desc,
                                           p_c_global,
-                                          c_block_cluster_desc,
-                                          integral_constant<bool, false>{},
-                                          integral_constant<bool, true>{});
+                                          a_k_m_global_desc,
+                                          b_k_n_global_desc,
+                                          c_m0_m1_n0_n1_global_desc,
+                                          c_block_cluster_desc);
     }
     else
     {
-        const auto kernel = run_gridwise_operation<gridwise_gemm,
-                                                   remove_reference_t<AGlobalDesc>,
-                                                   const FloatAB*,
-                                                   remove_reference_t<BGlobalDesc>,
-                                                   const FloatAB*,
-                                                   remove_reference_t<CGlobalDesc>,
-                                                   FloatC*,
-                                                   remove_reference_t<CBlockClusterDesc>,
-                                                   integral_constant<bool, false>,
-                                                   integral_constant<bool, false>>;
+        const auto kernel = kernel_dynamic_gemm_xdlops_v1<gridwise_gemm,
+                                                          FloatAB,
+                                                          FloatAB,
+                                                          FloatC,
+                                                          remove_reference_t<AGlobalDesc>,
+                                                          remove_reference_t<BGlobalDesc>,
+                                                          remove_reference_t<CGlobalDesc>,
+                                                          remove_reference_t<CBlockClusterDesc>,
+                                                          false,
+                                                          false>;
 
         ave_time = launch_and_time_kernel(kernel,
                                           nrepeat,
@@ -249,18 +244,144 @@ __host__ float launch_kernel_dynamic_gemm_xdlops_v1(const FloatAB* p_a_global,
                                           dim3(BlockSize),
                                           0,
                                           0,
-                                          a_k_m_global_desc,
                                           p_a_global,
-                                          b_k_n_global_desc,
                                           p_b_global,
-                                          c_m0_m1_n0_n1_global_desc,
                                           p_c_global,
-                                          c_block_cluster_desc,
-                                          integral_constant<bool, false>{},
-                                          integral_constant<bool, false>{});
+                                          a_k_m_global_desc,
+                                          b_k_n_global_desc,
+                                          c_m0_m1_n0_n1_global_desc,
+                                          c_block_cluster_desc);
     }
 
     return ave_time;
+#elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER
+    DeviceMem a_k_m_global_desc_device_buf(sizeof(AGlobalDesc));
+    DeviceMem b_k_n_global_desc_device_buf(sizeof(BGlobalDesc));
+    DeviceMem c_m0_m1_n0_n1_global_desc_device_buf(sizeof(CGlobalDesc));
+    DeviceMem c_block_cluster_desc_device_buf(sizeof(c_block_cluster_desc));
+
+    a_k_m_global_desc_device_buf.ToDevice(&a_k_m_global_desc);
+    b_k_n_global_desc_device_buf.ToDevice(&b_k_n_global_desc);
+    c_m0_m1_n0_n1_global_desc_device_buf.ToDevice(&c_m0_m1_n0_n1_global_desc);
+    c_block_cluster_desc_device_buf.ToDevice(&c_block_cluster_desc);
+
+    float ave_time = 0;
+
+    if(has_main_k_block_loop && has_double_tail_k_block_loop)
+    {
+        const auto kernel = kernel_dynamic_gemm_xdlops_v1<gridwise_gemm,
+                                                          FloatAB,
+                                                          FloatAB,
+                                                          FloatC,
+                                                          remove_reference_t<AGlobalDesc>,
+                                                          remove_reference_t<BGlobalDesc>,
+                                                          remove_reference_t<CGlobalDesc>,
+                                                          remove_reference_t<CBlockClusterDesc>,
+                                                          true,
+                                                          true>;
+
+        ave_time = launch_and_time_kernel(
+            kernel,
+            nrepeat,
+            dim3(GridSize),
+            dim3(BlockSize),
+            0,
+            0,
+            p_a_global,
+            p_b_global,
+            p_c_global,
+            (void __CONSTANT__*)a_k_m_global_desc_device_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)b_k_n_global_desc_device_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)c_m0_m1_n0_n1_global_desc_device_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)c_block_cluster_desc_device_buf.GetDeviceBuffer());
+    }
+    else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
+    {
+        const auto kernel = kernel_dynamic_gemm_xdlops_v1<gridwise_gemm,
+                                                          FloatAB,
+                                                          FloatAB,
+                                                          FloatC,
+                                                          remove_reference_t<AGlobalDesc>,
+                                                          remove_reference_t<BGlobalDesc>,
+                                                          remove_reference_t<CGlobalDesc>,
+                                                          remove_reference_t<CBlockClusterDesc>,
+                                                          true,
+                                                          false>;
+
+        ave_time = launch_and_time_kernel(
+            kernel,
+            nrepeat,
+            dim3(GridSize),
+            dim3(BlockSize),
+            0,
+            0,
+            p_a_global,
+            p_b_global,
+            p_c_global,
+            (void __CONSTANT__*)a_k_m_global_desc_device_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)b_k_n_global_desc_device_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)c_m0_m1_n0_n1_global_desc_device_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)c_block_cluster_desc_device_buf.GetDeviceBuffer());
+    }
+    else if(!has_main_k_block_loop && has_double_tail_k_block_loop)
+    {
+        const auto kernel = kernel_dynamic_gemm_xdlops_v1<gridwise_gemm,
+                                                          FloatAB,
+                                                          FloatAB,
+                                                          FloatC,
+                                                          remove_reference_t<AGlobalDesc>,
+                                                          remove_reference_t<BGlobalDesc>,
+                                                          remove_reference_t<CGlobalDesc>,
+                                                          remove_reference_t<CBlockClusterDesc>,
+                                                          false,
+                                                          true>;
+
+        ave_time = launch_and_time_kernel(
+            kernel,
+            nrepeat,
+            dim3(GridSize),
+            dim3(BlockSize),
+            0,
+            0,
+            p_a_global,
+            p_b_global,
+            p_c_global,
+            (void __CONSTANT__*)a_k_m_global_desc_device_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)b_k_n_global_desc_device_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)c_m0_m1_n0_n1_global_desc_device_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)c_block_cluster_desc_device_buf.GetDeviceBuffer());
+    }
+    else
+    {
+        const auto kernel = kernel_dynamic_gemm_xdlops_v1<gridwise_gemm,
+                                                          FloatAB,
+                                                          FloatAB,
+                                                          FloatC,
+                                                          remove_reference_t<AGlobalDesc>,
+                                                          remove_reference_t<BGlobalDesc>,
+                                                          remove_reference_t<CGlobalDesc>,
+                                                          remove_reference_t<CBlockClusterDesc>,
+                                                          false,
+                                                          false>;
+
+        ave_time = launch_and_time_kernel(
+            kernel,
+            nrepeat,
+            dim3(GridSize),
+            dim3(BlockSize),
+            0,
+            0,
+            p_a_global,
+            p_b_global,
+            p_c_global,
+            (void __CONSTANT__*)a_k_m_global_desc_device_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)b_k_n_global_desc_device_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)c_m0_m1_n0_n1_global_desc_device_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)c_block_cluster_desc_device_buf.GetDeviceBuffer());
+    }
+
+    return ave_time;
+#endif
 }
 
 } // namespace ck
