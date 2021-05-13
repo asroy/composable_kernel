@@ -5,7 +5,7 @@
 #include "dynamic_multi_index_transform_helper.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
-#include "blockwise_gemm_v2.hpp"
+#include "blockwise_gemm_xdlops.hpp"
 #include "blockwise_dynamic_tensor_slice_transfer.hpp"
 #include "threadwise_dynamic_tensor_slice_transfer.hpp"
 #include "threadwise_dynamic_tensor_slice_set.hpp"
@@ -313,23 +313,20 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
             make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
                 Number<MRepeat>{}, Number<MPerThread>{}, Number<NRepeat>{}, Number<NPerThread>{}));
 
-        const auto blockwise_gemm =
-            BlockwiseGemm_km0m1_kn0n1_m0m1n0n1_v2_pipeline_2x2<BlockSize,
-                                                               FloatAB,
-                                                               FloatAB,
-                                                               FloatAcc,
-                                                               decltype(a_k_m0_m1_block_desc),
-                                                               decltype(b_k_n0_n1_block_desc),
-                                                               decltype(c_m0_m1_n0_n1_thread_desc),
-                                                               MPerThread,
-                                                               NPerThread,
-                                                               KPerThread,
-                                                               MLevel0Cluster,
-                                                               NLevel0Cluster,
-                                                               MLevel1Cluster,
-                                                               NLevel1Cluster,
-                                                               MPerThread,
-                                                               NPerThread>{};
+        const auto blockwise_gemm = BlockwiseGemmXdlops_km_kn_m0m1m2n_v1<BlockSize,
+                                                                         FloatAB,
+                                                                         FloatAB,
+                                                                         FloatAcc,
+                                                                         decltype(a_k_m_block_desc),
+                                                                         decltype(b_k_n_block_desc),
+                                                                         64, // MPerWave,
+                                                                         64, // NPerWave,
+                                                                         KPerBlock,
+                                                                         2, // MWaves,
+                                                                         2, // NWaves,
+                                                                         1, // GemmDataPerReadM,
+                                                                         1  // GemmDataPerReadN
+                                                                         >{};
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
@@ -477,6 +474,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
             blockwise_gemm.Run(a_block_even_buf, b_block_even_buf, c_thread_buf);
         }
 
+#if 0
         // output: register to global memory
         {
             constexpr auto M1 = Number<MPerThread * MLevel0Cluster * MLevel1Cluster>{};
@@ -512,6 +510,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                      c_global_buf,
                      c_m0_m1_n0_n1_global_tensor_iterator_hacks);
         }
+#endif
     }
 
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
