@@ -113,7 +113,8 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
 
     const auto out_m0_m1_m2_n_global_desc = transform_dynamic_tensor_descriptor(
         out_gemmm_gemmn_global_desc,
-        make_tuple(make_unmerge_transform(make_tuple(4, 2, 4)), make_pass_through_transform(N)),
+        make_tuple(make_unmerge_transform(make_tuple(GemmM / 8, 2, 4)),
+                   make_pass_through_transform(GemmN)),
         make_tuple(Sequence<0>{}, Sequence<1>{}),
         make_tuple(Sequence<0, 1, 2>{}, Sequence<3>{}));
 

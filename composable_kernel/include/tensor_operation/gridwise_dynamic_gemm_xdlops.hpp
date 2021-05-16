@@ -476,11 +476,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         // output: register to global memory
         {
 
-            StaticBuffer<AddressSpace::Vgpr, float, 64> c_thread_buf_;
-
-            static_for<0, 64, 1>{}(
-                [&](auto i) { c_thread_buf_(i) = c_thread_buf.template AsType<float>()[i]; });
-
             constexpr auto OutputLayout = blockwise_gemm.GetOutputLayout();
             constexpr index_t K0        = OutputLayout.M1();
             constexpr index_t K1        = OutputLayout.N1();
@@ -498,8 +493,14 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
             static_assert(BlkSize == 16 && NumBlks == 4, "");
 
             // force unrolling the output loop to get ride of scratches
-            for(index_t i = 0; i < NumBlks; ++i)
-            {
+            static_for<0, NumBlks, 1>{}([&](auto i) {
+                StaticBuffer<AddressSpace::Vgpr, float, BlkSize> c_thread_buf_;
+
+                static_for<0, BlkSize, 1>{}([&](auto j) {
+                    c_thread_buf_(j) =
+                        c_thread_buf.template AsType<float>()[Number<i * BlkSize + j>{}];
+                });
+
                 // calculate origin of thread output tensor on global memory
                 //     blockwise GEMM c matrix starting index
                 const auto c_thread_mtx_on_block =
@@ -535,7 +536,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                          c_m0_m1_m2_n_global_desc,
                          c_global_buf,
                          c_m0_m1_n0_n1_global_tensor_iterator_hacks);
-            }
+            });
         }
     }
 
