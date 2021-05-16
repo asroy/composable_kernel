@@ -50,20 +50,10 @@ struct mfma_info<mfma_instr::mfma_f32_32x32x1xf32>
     static constexpr index_t cycles          = 64;
     static constexpr index_t k_base          = 1;
 
-    template <index_t MPerXdlops,
-              index_t NPerXdlops,
-              index_t AStride,
-              index_t BStride,
-              class FloatA,
-              class FloatB,
-              class FloatC>
-    __device__ FloatC run(const FloatA* a, const FloatB* b, FloatC reg_c) const
+    template <index_t MPerXdlops, index_t NPerXdlops, class FloatA, class FloatB, class FloatC>
+    __device__ void run(const FloatA& a, const FloatB& b, FloatC& reg_c) const
     {
-        const auto p_a = reinterpret_cast<const float*>(a);
-        const auto p_b = reinterpret_cast<const float*>(b);
-
-        return intrin_mfma_f32_32x32x1f32<MPerXdlops, NPerXdlops, AStride, BStride>::run(
-            p_a, p_b, reg_c);
+        return intrin_mfma_f32_32x32x1f32<MPerXdlops, NPerXdlops>::run(a, b, reg_c);
     }
 };
 
@@ -557,11 +547,7 @@ struct xdlops_info
     static constexpr auto OutputVecType = OutputVecType_{};
 };
 
-template <class data_type,
-          index_t GemmMPerWave,
-          index_t GemmNPerWave,
-          index_t GemmDataPerReadA,
-          index_t GemmDataPerReadB>
+template <class data_type, index_t MPerWave, index_t NPerWave, index_t KPerWave>
 struct XdlopsGemm_t
 {
     struct MatrixIndex
@@ -585,8 +571,6 @@ struct XdlopsGemm_t
                           MPerXdlops == 64,
                       "Only support GemmMPerXdlops == 4, 8, 16, 32 or 64 for xdlops");
 
-        static_assert(GemmDataPerReadA == 1 && GemmDataPerReadB == 1, "GemmDataPerReadA/B != 1");
-
         static_assert(mfma_type.num_threads_blk == mfma_type.n, "n != num_threads_blk");
         static_assert(mfma_type.num_regs_blk * mfma_type.num_input_blks == mfma_type.m,
                       "m != num_input_blks * num_regs_blk");
@@ -604,187 +588,17 @@ struct XdlopsGemm_t
         return MPerXdlops * NPerXdlops / mfma_type.wave_size;
     }
 
-#if CK_USE_AMD_XDLOPS_EMULATE
-    // emulate xdlops
-    template <index_t M, index_t N, index_t K, class FloatA, class FloatB, class FloatC>
-    __device__ FloatC XdlopsEmulate(const FloatA* const __restrict__ p_a_wave,
-                                    const FloatB* const __restrict__ p_b_wave,
-                                    FloatC p_c_thread) const
+    template <class FloatA, class FloatB, class FloatC>
+    __device__ void Run(const FloatA& p_a_wave, const FloatB& p_b_wave, FloatC& p_c_thread) const
     {
-        const index_t laneId = get_thread_local_1d_id() % mfma_type.wave_size;
-        const index_t blk_id = laneId / mfma_type.num_threads_blk;
-        const index_t blk_td = laneId % mfma_type.num_threads_blk;
-
-        // K reduction
-        static_if<IsKReduction>{}([&](auto) {
-            for(index_t k = 0; k < K; k += mfma_type.num_input_blks)
-            {
-                for(index_t n = 0; n < mfma_type.num_input_blks; ++n)
-                {
-                    index_t a_off = (k + n) * M;
-                    index_t b_off = (k + n) * N;
-                    index_t c_off = 0;
-
-                    for(index_t m = 0; m < mfma_type.num_regs_blk; ++m)
-                    {
-                        index_t aindex = m % mfma_type.group_size + blk_id * mfma_type.group_size +
-                                         m / mfma_type.group_size *
-                                             (mfma_type.group_size * mfma_type.num_input_blks);
-                        index_t bindex = blk_td;
-                        p_c_thread.n[m + c_off] += inner_product_with_conversion<float>{}(
-                            p_a_wave[aindex + a_off], p_b_wave[bindex + b_off]);
-                    }
-                }
-            }
-        })
-            .Else([&](auto) {
-                static_if<IsABroadcast>{}([&](auto) {
-                    for(index_t m_i = 0; m_i < MRepeats; ++m_i)
-                    {
-                        for(index_t n_i = 0; n_i < NRepeats; ++n_i)
-                        {
-                            // ABroadcast
-                            for(index_t k = 0; k < K; ++k)
-                            {
-                                for(index_t b = 0; b < MPerXdlops / mfma_type.m; ++b)
-                                {
-                                    for(index_t n = 0; n < mfma_type.num_input_blks; ++n)
-                                    {
-                                        index_t a_off = k * M + b * mfma_type.m + MPerXdlops * m_i;
-                                        index_t b_off = k * N + n * mfma_type.num_threads_blk +
-                                                        NPerXdlops * n_i;
-                                        index_t c_off =
-                                            n * mfma_type.num_regs_blk +
-                                            b * mfma_type.num_regs_xdlops +
-                                            (NRepeats * m_i + n_i) * GetRegSizePerXdlops();
-
-                                        for(index_t m = 0; m < mfma_type.num_regs_blk; ++m)
-                                        {
-                                            index_t aindex = m % mfma_type.group_size +
-                                                             blk_id * mfma_type.group_size +
-                                                             m / mfma_type.group_size *
-                                                                 (mfma_type.group_size *
-                                                                  mfma_type.num_input_blks);
-                                            index_t bindex = blk_td;
-                                            p_c_thread.n[m + c_off] +=
-                                                inner_product_with_conversion<float>{}(
-                                                    p_a_wave[aindex + a_off],
-                                                    p_b_wave[bindex + b_off]);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                })
-                    .Else([&](auto) {
-                        // BBroadcast
-                        for(index_t k = 0; k < K; ++k)
-                        {
-                            for(index_t b = 0; b < NPerXdlops / mfma_type.n; ++b)
-                            {
-                                for(index_t n = 0; n < mfma_type.num_input_blks; ++n)
-                                {
-                                    index_t a_off = k * M + n * mfma_type.m;
-                                    index_t b_off = k * N + b * mfma_type.n;
-                                    index_t c_off =
-                                        n * mfma_type.num_regs_blk + b * mfma_type.num_regs_xdlops;
-
-                                    for(index_t m = 0; m < mfma_type.num_regs_blk; ++m)
-                                    {
-                                        index_t aindex =
-                                            m % mfma_type.group_size +
-                                            blk_id * mfma_type.group_size +
-                                            m / mfma_type.group_size *
-                                                (mfma_type.group_size * mfma_type.num_input_blks);
-                                        index_t bindex = blk_td;
-                                        p_c_thread.n[m + c_off] +=
-                                            inner_product_with_conversion<float>{}(
-                                                p_a_wave[aindex + a_off], p_b_wave[bindex + b_off]);
-                                    }
-                                }
-                            }
-                        }
-                    });
-            });
-
-        return p_c_thread;
-    }
-#endif
-
-    template <index_t M, index_t N, index_t K, class FloatA, class FloatB, class FloatC>
-    __device__ FloatC Run(const FloatA* const __restrict__ p_a_wave,
-                          const FloatB* const __restrict__ p_b_wave,
-                          FloatC p_c_thread) const
-    {
-        static_assert(is_same<FloatA, FloatB>::value, "FloatA != FloatB");
-
         static_assert(is_same<data_type, float>::value || is_same<data_type, half_t>::value ||
                           is_same<data_type, ushort>::value,
                       "base data_type must be float, half, ushort!");
 
-#if CK_USE_AMD_XDLOPS_EMULATE
-        p_c_thread = XdlopsEmulate<M, N, K>(p_a_wave, p_b_wave, p_c_thread);
-#else
-
-        constexpr index_t KPACT = sizeof(FloatA) / sizeof(data_type);
-
-        static_assert(KPACT % mfma_type.k_base == 0, "wrong! KPACT is not supported by mfma");
-
-        constexpr index_t KRepeats = KPACT / mfma_type.k_base;
-
-        static_assert(!IsKReduction || K % mfma_type.num_input_blks == 0,
-                      "K cannot divided by mfma_type.num_input_blks!");
-
-        constexpr index_t KPerThread = IsKReduction ? K / mfma_type.num_input_blks : K;
-
-        static_assert(!IsKReduction || (MRepeats == 1 && NRepeats == 1),
-                      "KReduction does not support M/N Repeats!");
-
-        FloatA a[KPerThread * MRepeats];
-        FloatB b[KPerThread * NRepeats];
-
-        auto pa = reinterpret_cast<const data_type*>(&a);
-        auto pb = reinterpret_cast<const data_type*>(&b);
-
-        constexpr index_t AStride = KPerThread * KRepeats;
-        constexpr index_t BStride = KPerThread * KRepeats;
-
-        const index_t laneId = get_thread_local_1d_id() % mfma_type.wave_size;
-
-        static_if<!IsKReduction>{}([&](auto) {
-            for(index_t m_i = 0; m_i < MRepeats; ++m_i)
-                for(index_t k_i = 0; k_i < KPerThread; ++k_i)
-                    a[k_i + m_i * KPerThread] = p_a_wave[k_i * M + laneId + MPerXdlops * m_i];
-
-            for(index_t n_i = 0; n_i < NRepeats; ++n_i)
-                for(index_t k_i = 0; k_i < KPerThread; ++k_i)
-                    b[k_i + n_i * KPerThread] = p_b_wave[k_i * N + laneId + NPerXdlops * n_i];
-        })
-            .Else([&](auto) {
-                const index_t blk_id = laneId / mfma_type.num_threads_blk;
-                const index_t blk_td = laneId % mfma_type.num_threads_blk;
-
-                for(index_t k_i = 0; k_i < KPerThread; ++k_i)
-                {
-                    a[k_i] = p_a_wave[(k_i * mfma_type.num_input_blks + blk_id) * M + blk_td];
-                    b[k_i] = p_b_wave[(k_i * mfma_type.num_input_blks + blk_id) * N + blk_td];
-                }
-            });
-
-#if CK_WORKAROUND_SWDEV_229564
-#pragma unroll
-#endif
-        for(index_t k_i = 0; k_i < KPerThread * KRepeats; ++k_i)
-        {
-            p_c_thread =
-                mfma_type
-                    .template run<MPerXdlops * MRepeats, NPerXdlops * NRepeats, AStride, BStride>(
-                        &pa[k_i * mfma_type.k_base], &pb[k_i * mfma_type.k_base], p_c_thread);
-        }
-#endif
-
-        return p_c_thread;
+        static_for<0, KPerWave, mfma_type.k_base>{}([&](auto k_i) {
+            mfma_type.template run<MPerXdlops, NPerXdlops>(
+                p_a_wave[Number<k_i>{}], p_b_wave[Number<k_i>{}], p_c_thread);
+        });
     }
 
     __device__ static MatrixIndex GetBeginOfThreadBlk(index_t i)
@@ -821,8 +635,8 @@ struct XdlopsGemm_t
     }
 
     template <class data_type_  = data_type,
-              index_t MPerWave_ = GemmMPerWave,
-              index_t NPerWave_ = GemmNPerWave>
+              index_t MPerWave_ = MPerWave,
+              index_t NPerWave_ = NPerWave>
     static constexpr auto GetXdlopsInfo();
 
     template <>

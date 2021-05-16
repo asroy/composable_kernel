@@ -111,12 +111,11 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
     const auto GemmM0 = GemmM / Number<GemmM1>{};
     const auto GemmN0 = GemmN / Number<GemmN1>{};
 
-    const auto out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc = transform_dynamic_tensor_descriptor(
+    const auto out_m0_m1_m2_n_global_desc = transform_dynamic_tensor_descriptor(
         out_gemmm_gemmn_global_desc,
-        make_tuple(make_unmerge_transform(make_tuple(GemmM0, GemmM1)),
-                   make_unmerge_transform(make_tuple(GemmN0, GemmN1))),
+        make_tuple(make_unmerge_transform(make_tuple(4, 2, 4)), make_pass_through_transform(N)),
         make_tuple(Sequence<0>{}, Sequence<1>{}),
-        make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
+        make_tuple(Sequence<0, 1, 2>{}, Sequence<3>{}));
 
     // out_gemm_block_cluster_desc
     const auto out_gemm_block_cluster_desc = make_cluster_descriptor_v2(
@@ -141,23 +140,23 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
 
     // hack to control index calculation when iterating over out_gemmm0_gemmm1_gemmn0_gemmn1_global
     // tensor hack for NKHW format
-    constexpr auto out_gemmm0_gemmm1_gemmn0_gemmn1_global_iterator_hacks =
+    constexpr auto out_m0_m1_m2_n_global_iterator_hacks =
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 1, 0, 0>{},
-                              Sequence<0, 0, 1, 0, 0>{}),
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{}),
                    make_tuple(Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 2, 0, 0>{},
-                              Sequence<0, 0, 2, 0, 0>{}));
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{}));
 
     return make_tuple(wei_gemmk_gemmm_global_desc,
                       in_gemmk_gemmn_global_desc,
-                      out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc,
+                      out_m0_m1_m2_n_global_desc,
                       out_gemm_block_cluster_desc,
                       wei_gemmk_gemmm_global_iterator_hacks,
                       in_gemmk_gemmn_global_iterator_hacks,
-                      out_gemmm0_gemmm1_gemmn0_gemmn1_global_iterator_hacks,
+                      out_m0_m1_m2_n_global_iterator_hacks,
                       wei_gemmk_gemmm_global_move_slice_window_iterator_hacks,
                       in_gemmk_gemmn_global_move_slice_window_iterator_hacks);
 }
