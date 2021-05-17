@@ -15,9 +15,7 @@ template <index_t BlockSize,
           class BBlockDesc,
           index_t MPerWave,
           index_t NPerWave,
-          index_t KPerWave,
-          index_t MWaves,
-          index_t NWaves>
+          index_t KPerWave>
 struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
 {
 
@@ -31,6 +29,11 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
     static constexpr auto XdlopsGemm = XdlopsGemm_t<float, MPerWave, NPerWave, KPerWave>{};
 
     static constexpr index_t WaveSize = 64;
+
+    static constexpr index_t MPerBlock = ABlockDesc{}.GetLength(I1); // A is transposed
+    static constexpr index_t NPerBlock = BBlockDesc{}.GetLength(I1);
+    static constexpr index_t MWaves    = MPerBlock / MPerWave;
+    static constexpr index_t NWaves    = NPerBlock / NPerWave;
 
     __device__ constexpr auto GetOutputLayout() const { return XdlopsGemm.GetOutputLayout(); }
 
@@ -90,11 +93,8 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
         static_assert(ABlockDesc{}.GetLength(I0) == BBlockDesc{}.GetLength(I0),
                       "wrong! K dimension not consistent");
 
-        constexpr index_t M = ABlockDesc{}.GetLength(I1); // A is transposed
-        constexpr index_t N = BBlockDesc{}.GetLength(I1);
-
-        static_assert(MPerWave * MWaves == M, "GemmMWaves * MPerWave != M");
-        static_assert(NPerWave * NWaves == N, "GemmNWaves * NPerWave != N");
+        static_assert(MPerWave * MWaves == MPerBlock, "GemmMWaves * MPerWave != M");
+        static_assert(NPerWave * NWaves == NPerBlock, "GemmNWaves * NPerWave != N");
 
         static_assert(BlockSize == MWaves * NWaves * WaveSize,
                       "BlockSize != MWaves * NWaves * WaveSize\n");

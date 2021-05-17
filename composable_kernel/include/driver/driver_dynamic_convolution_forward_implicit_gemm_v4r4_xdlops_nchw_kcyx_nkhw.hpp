@@ -13,8 +13,6 @@ namespace ck {
 // GemmK = C * Y * X
 template <index_t GemmMPerBlock,
           index_t GemmNPerBlock,
-          index_t GemmM1,
-          index_t GemmN1,
           typename... Wei,
           typename... In,
           typename... Out,
@@ -107,9 +105,6 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
     const auto GemmK = wei_gemmk_gemmm_global_desc.GetLength(I0);
 
     assert(GemmM % GemmMPerBlock == 0 && GemmN % GemmNPerBlock == 0 && GemmK % GemmKPerBlock == 0);
-
-    const auto GemmM0 = GemmM / Number<GemmM1>{};
-    const auto GemmN0 = GemmN / Number<GemmN1>{};
 
     const auto out_m0_m1_m2_n_global_desc = transform_dynamic_tensor_descriptor(
         out_gemmm_gemmn_global_desc,

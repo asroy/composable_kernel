@@ -84,14 +84,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
     constexpr index_t GemmNPerBlock = 64;
     constexpr index_t GemmKPerBlock = 8;
 
-    constexpr index_t GemmMPerThread = 4;
-    constexpr index_t GemmNPerThread = 4;
-    constexpr index_t GemmKPerThread = 1;
-
-    constexpr index_t GemmMLevel0Cluster = 2;
-    constexpr index_t GemmNLevel0Cluster = 2;
-    constexpr index_t GemmMLevel1Cluster = 2;
-    constexpr index_t GemmNLevel1Cluster = 2;
+    constexpr index_t GemmMPerWave = 64;
+    constexpr index_t GemmNPerWave = 64;
+    constexpr index_t GemmKPerWave = 1;
 
     using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<4, 2>;
     using GemmABlockTransferThreadClusterLengths_GemmK_GemmM = Sequence<2, 32>;
@@ -107,14 +102,12 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 1;
 
-    constexpr index_t GemmM1 = GemmMPerThread * GemmMLevel0Cluster * GemmMLevel1Cluster;
-    constexpr index_t GemmN1 = GemmNPerThread * GemmNLevel0Cluster * GemmNLevel1Cluster;
+    constexpr index_t GemmM1 = GemmMPerWave;
+    constexpr index_t GemmN1 = GemmNPerWave;
 
     const auto descs =
         transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad<GemmMPerBlock,
-                                                                               GemmNPerBlock,
-                                                                               GemmM1,
-                                                                               GemmN1>(
+                                                                               GemmNPerBlock>(
             wei_k_c_y_x_desc,
             in_n_c_hi_wi_desc,
             out_n_k_ho_wo_desc,
@@ -138,13 +131,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
             GemmMPerBlock,
             GemmNPerBlock,
             GemmKPerBlock,
-            GemmMPerThread,
-            GemmNPerThread,
-            GemmKPerThread,
-            GemmMLevel0Cluster,
-            GemmNLevel0Cluster,
-            GemmMLevel1Cluster,
-            GemmNLevel1Cluster,
+            GemmMPerWave,
+            GemmNPerWave,
+            GemmKPerWave,
             GemmABlockTransferThreadSliceLengths_GemmK_GemmM,
             GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
             Sequence<1, 0>,

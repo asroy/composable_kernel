@@ -25,11 +25,11 @@ int main(int argc, char* argv[])
     using namespace ck;
 
 #if 1
-    constexpr index_t N  = 4;
-    constexpr index_t C  = 16;
-    constexpr index_t HI = 4;
-    constexpr index_t WI = 4;
-    constexpr index_t K  = 64;
+    constexpr index_t N  = 256;
+    constexpr index_t C  = 256;
+    constexpr index_t HI = 16;
+    constexpr index_t WI = 16;
+    constexpr index_t K  = 256;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
 

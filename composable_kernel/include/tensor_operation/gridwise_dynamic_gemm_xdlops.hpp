@@ -108,13 +108,9 @@ template <index_t BlockSize,
           index_t MPerBlock,
           index_t NPerBlock,
           index_t KPerBlock,
-          index_t MPerThread,
-          index_t NPerThread,
-          index_t KPerThread,
-          index_t MLevel0Cluster,
-          index_t NLevel0Cluster,
-          index_t MLevel1Cluster,
-          index_t NLevel1Cluster,
+          index_t MPerWave,
+          index_t NPerWave,
+          index_t KPerWave,
           typename ABlockTransferThreadSliceLengths_K_M,
           typename ABlockTransferThreadClusterLengths_K_M,
           typename ABlockTransferThreadClusterArrangeOrder,
@@ -144,9 +140,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
         constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_M>{},
-                                                 Number<BBlockTransferDstScalarPerVector_N>{},
-                                                 Number<MPerThread>{},
-                                                 Number<NPerThread>{});
+                                                 Number<BBlockTransferDstScalarPerVector_N>{});
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -209,9 +203,9 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
 
         // lds max alignment
         constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_M>{},
-                                                 Number<BBlockTransferDstScalarPerVector_N>{},
-                                                 Number<MPerThread>{},
-                                                 Number<NPerThread>{});
+                                                 Number<BBlockTransferDstScalarPerVector_N>{});
+        // Number<MPerThread>{},
+        // Number<NPerThread>{});
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -284,30 +278,28 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         //     c_mtx[MPerBlock, NPerBlock] is distributed among threads, and saved in
         //       register
         // sanity check
-        static_assert(MPerBlock % (MPerThread * MLevel0Cluster * MLevel1Cluster) == 0 &&
-                          NPerBlock % (NPerThread * NLevel0Cluster * NLevel1Cluster) == 0,
-                      "wrong!");
+        static_assert(MPerBlock % MPerWave == 0 && NPerBlock % NPerWave == 0, "wrong!");
 
-        constexpr index_t MRepeat = MPerBlock / (MPerThread * MLevel0Cluster * MLevel1Cluster);
-        constexpr index_t NRepeat = NPerBlock / (NPerThread * NLevel0Cluster * NLevel1Cluster);
+        // constexpr index_t MRepeat = MPerBlock / (MPerThread * MLevel0Cluster * MLevel1Cluster);
+        // constexpr index_t NRepeat = NPerBlock / (NPerThread * NLevel0Cluster * NLevel1Cluster);
 
-        constexpr auto a_k_m0_m1_block_desc = transform_dynamic_tensor_descriptor(
-            a_k_m_block_desc,
-            make_tuple(
-                make_pass_through_transform(Number<KPerBlock>{}),
-                make_unmerge_transform(make_tuple(
-                    Number<MRepeat>{}, Number<MPerThread * MLevel0Cluster * MLevel1Cluster>{}))),
-            make_tuple(Sequence<0>{}, Sequence<1>{}),
-            make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
+        // constexpr auto a_k_m0_m1_block_desc = transform_dynamic_tensor_descriptor(
+        // a_k_m_block_desc,
+        // make_tuple(
+        // make_pass_through_transform(Number<KPerBlock>{}),
+        // make_unmerge_transform(make_tuple(
+        // Number<MRepeat>{}, Number<MPerThread * MLevel0Cluster * MLevel1Cluster>{}))),
+        // make_tuple(Sequence<0>{}, Sequence<1>{}),
+        // make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
 
-        constexpr auto b_k_n0_n1_block_desc = transform_dynamic_tensor_descriptor(
-            b_k_n_block_desc,
-            make_tuple(
-                make_pass_through_transform(Number<KPerBlock>{}),
-                make_unmerge_transform(make_tuple(
-                    Number<NRepeat>{}, Number<NPerThread * NLevel0Cluster * NLevel1Cluster>{}))),
-            make_tuple(Sequence<0>{}, Sequence<1>{}),
-            make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
+        // constexpr auto b_k_n0_n1_block_desc = transform_dynamic_tensor_descriptor(
+        // b_k_n_block_desc,
+        // make_tuple(
+        // make_pass_through_transform(Number<KPerBlock>{}),
+        // make_unmerge_transform(make_tuple(
+        // Number<NRepeat>{}, Number<NPerThread * NLevel0Cluster * NLevel1Cluster>{}))),
+        // make_tuple(Sequence<0>{}, Sequence<1>{}),
+        // make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
 
         // constexpr auto c_m0_m1_n0_n1_thread_desc =
         // make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
@@ -318,12 +310,9 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                                                                          FloatAB,
                                                                          decltype(a_k_m_block_desc),
                                                                          decltype(b_k_n_block_desc),
-                                                                         64, // MPerWave,
-                                                                         64, // NPerWave,
-                                                                         1,  // KPerWave,
-                                                                         1,  // MWaves,
-                                                                         1   // NWaves,
-                                                                         >{};
+                                                                         MPerWave,
+                                                                         NPerWave,
+                                                                         KPerWave>{};
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
@@ -481,7 +470,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
             constexpr index_t K1        = OutputLayout.N1();
             constexpr index_t K2        = OutputLayout.M0();
 
-            static_assert(K0 == 4 && K1 == 2 && K2 == 4, "");
+            // static_assert(K0 == 4 && K1 == 2 && K2 == 4, "");
 
             constexpr auto c_m0_m1_m2_n_thread_desc =
                 make_dynamic_naive_tensor_descriptor_packed_v2(
@@ -490,7 +479,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
             constexpr index_t BlkSize = OutputLayout.GetBlkSize();
             constexpr index_t NumBlks = OutputLayout.GetNumBlks();
 
-            static_assert(BlkSize == 16 && NumBlks == 4, "");
+            // static_assert(BlkSize == 16 && NumBlks == 4, "");
 
             // force unrolling the output loop to get ride of scratches
             static_for<0, NumBlks, 1>{}([&](auto i) {

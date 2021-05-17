@@ -21,13 +21,9 @@ template <index_t BlockSize,
           index_t MPerBlock,
           index_t NPerBlock,
           index_t KPerBlock,
-          index_t MPerThread,
-          index_t NPerThread,
-          index_t KPerThread,
-          index_t MLevel0Cluster,
-          index_t NLevel0Cluster,
-          index_t MLevel1Cluster,
-          index_t NLevel1Cluster,
+          index_t MPerWave,
+          index_t NPerWave,
+          index_t KPerWave,
           typename ABlockTransferThreadSliceLengths_K_M,
           typename ABlockTransferThreadClusterLengths_K_M,
           typename ABlockTransferThreadClusterArrangeOrder,
@@ -81,10 +77,7 @@ __host__ float launch_kernel_dynamic_gemm_xdlops_v1(const FloatAB* p_a_global,
         throw std::runtime_error("wrong! GEMM size no divisible");
     }
 
-    constexpr auto M1 = Number<MPerThread * MLevel0Cluster * MLevel1Cluster>{};
-    constexpr auto N1 = Number<NPerThread * NLevel0Cluster * NLevel1Cluster>{};
-
-    if(!(MPerBlock % M1 == 0 && NPerBlock % N1 == 0))
+    if(!(MPerBlock % MPerWave == 0 && NPerBlock % NPerWave == 0))
     {
         throw std::runtime_error("wrong! GEMM size no divisible");
     }
@@ -103,13 +96,9 @@ __host__ float launch_kernel_dynamic_gemm_xdlops_v1(const FloatAB* p_a_global,
                                                      MPerBlock,
                                                      NPerBlock,
                                                      KPerBlock,
-                                                     MPerThread,
-                                                     NPerThread,
-                                                     KPerThread,
-                                                     MLevel0Cluster,
-                                                     NLevel0Cluster,
-                                                     MLevel1Cluster,
-                                                     NLevel1Cluster,
+                                                     MPerWave,
+                                                     NPerWave,
+                                                     KPerWave,
                                                      ABlockTransferThreadSliceLengths_K_M,
                                                      ABlockTransferThreadClusterLengths_K_M,
                                                      ABlockTransferThreadClusterArrangeOrder,
@@ -140,6 +129,9 @@ __host__ float launch_kernel_dynamic_gemm_xdlops_v1(const FloatAB* p_a_global,
     const bool has_main_k_block_loop = (K + KPerBlock) / (2 * KPerBlock) > 1;
 
     const bool has_double_tail_k_block_loop = (K / KPerBlock) % 2 == 0;
+
+    std::cerr << "has_main_k_block_loop = " << has_main_k_block_loop
+              << " has_double_tail_k_block_loop = " << has_double_tail_k_block_loop << std::endl;
 
 #if CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VALUE
     float ave_time = 0;
