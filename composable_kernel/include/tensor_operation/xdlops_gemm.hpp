@@ -599,6 +599,34 @@ struct XdlopsGemm
         });
     }
 
+    template <class ADesc,
+              class BDesc,
+              class CDesc,
+              index_t m0,
+              index_t n0,
+              class FloatA,
+              class FloatB,
+              class FloatC>
+    __device__ void Run2(const FloatA& p_a_wave, const FloatB& p_b_wave, FloatC& p_c_thread) const
+    {
+        static_assert(is_same<data_type, float>::value || is_same<data_type, half_t>::value ||
+                          is_same<data_type, ushort>::value,
+                      "base data_type must be float, half, ushort!");
+
+        static_assert(KPerWave % KPerXdlops == 0, "KPerWave cannot be divided by KPerXdlops");
+
+        static_for<0, KPerWave, KPerXdlops>{}([&](auto k) {
+            constexpr index_t a_offset = ADesc{}.CalculateOffset(make_multi_index(k, m0, 0));
+            constexpr index_t b_offset = BDesc{}.CalculateOffset(make_multi_index(k, n0, 0));
+            constexpr index_t c_offset = CDesc{}.CalculateOffset(make_multi_index(m0, n0));
+
+            mfma_type.template run<MPerXdlops, NPerXdlops>(
+                p_a_wave[Number<a_offset>{}],
+                p_b_wave[Number<b_offset>{}],
+                p_c_thread.template AsType<float16_t>()(Number<c_offset>{}));
+        });
+    }
+
     __device__ static MatrixIndex GetBeginOfThreadBlk(index_t i)
     {
         const index_t xdlops_i = i / GetNumBlksPerXdlops();

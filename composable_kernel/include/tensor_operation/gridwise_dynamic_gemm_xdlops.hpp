@@ -278,41 +278,42 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         //     c_mtx[MPerBlock, NPerBlock] is distributed among threads, and saved in
         //       register
         // sanity check
-        static_assert(MPerBlock % MPerWave == 0 && NPerBlock % NPerWave == 0, "wrong!");
+        constexpr index_t MRepeat = 2;
+        constexpr index_t NRepeat = 2;
 
-        // constexpr index_t MRepeat = MPerBlock / (MPerThread * MLevel0Cluster * MLevel1Cluster);
-        // constexpr index_t NRepeat = NPerBlock / (NPerThread * NLevel0Cluster * NLevel1Cluster);
+        static_assert(MPerBlock % (MPerWave * MRepeat) == 0 &&
+                          NPerBlock % (NPerWave * NRepeat) == 0,
+                      "wrong!");
 
-        // constexpr auto a_k_m0_m1_block_desc = transform_dynamic_tensor_descriptor(
-        // a_k_m_block_desc,
-        // make_tuple(
-        // make_pass_through_transform(Number<KPerBlock>{}),
-        // make_unmerge_transform(make_tuple(
-        // Number<MRepeat>{}, Number<MPerThread * MLevel0Cluster * MLevel1Cluster>{}))),
-        // make_tuple(Sequence<0>{}, Sequence<1>{}),
-        // make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
+        constexpr auto a_k_m0_m1_block_desc = transform_dynamic_tensor_descriptor(
+            a_k_m_block_desc,
+            make_tuple(make_pass_through_transform(Number<KPerBlock>{}),
+                       make_unmerge_transform(
+                           make_tuple(Number<MRepeat>{}, Number<MPerBlock / MRepeat>{}))),
+            make_tuple(Sequence<0>{}, Sequence<1>{}),
+            make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
 
-        // constexpr auto b_k_n0_n1_block_desc = transform_dynamic_tensor_descriptor(
-        // b_k_n_block_desc,
-        // make_tuple(
-        // make_pass_through_transform(Number<KPerBlock>{}),
-        // make_unmerge_transform(make_tuple(
-        // Number<NRepeat>{}, Number<NPerThread * NLevel0Cluster * NLevel1Cluster>{}))),
-        // make_tuple(Sequence<0>{}, Sequence<1>{}),
-        // make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
+        constexpr auto b_k_n0_n1_block_desc = transform_dynamic_tensor_descriptor(
+            b_k_n_block_desc,
+            make_tuple(make_pass_through_transform(Number<KPerBlock>{}),
+                       make_unmerge_transform(
+                           make_tuple(Number<NRepeat>{}, Number<NPerBlock / NRepeat>{}))),
+            make_tuple(Sequence<0>{}, Sequence<1>{}),
+            make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
 
         // constexpr auto c_m0_m1_n0_n1_thread_desc =
         // make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
         // Number<MRepeat>{}, Number<MPerThread>{}, Number<NRepeat>{}, Number<NPerThread>{}));
 
-        const auto blockwise_gemm = BlockwiseGemmXdlops_km_kn_m0m1m2n_v1<BlockSize,
-                                                                         FloatAB,
-                                                                         FloatAB,
-                                                                         decltype(a_k_m_block_desc),
-                                                                         decltype(b_k_n_block_desc),
-                                                                         MPerWave,
-                                                                         NPerWave,
-                                                                         KPerWave>{};
+        const auto blockwise_gemm =
+            BlockwiseGemmXdlops_km_kn_m0m1m2n_v1<BlockSize,
+                                                 FloatAB,
+                                                 FloatAB,
+                                                 decltype(a_k_m0_m1_block_desc),
+                                                 decltype(b_k_n0_n1_block_desc),
+                                                 MPerWave,
+                                                 NPerWave,
+                                                 KPerWave>{};
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
@@ -483,50 +484,56 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
 
             // static_assert(BlkSize == 16 && NumBlks == 4, "");
 
-            // force unrolling the output loop to get ride of scratches
-            static_for<0, NumBlks, 1>{}([&](auto i) {
-                StaticBuffer<AddressSpace::Vgpr, float, BlkSize> c_thread_buf_;
+            static_for<0, MRepeat, 1>{}([&](auto m_i) {
+                static_for<0, NRepeat, 1>{}([&](auto n_i) {
+                    // force unrolling the output loop to get ride of scratches
+                    static_for<0, NumBlks, 1>{}([&](auto i) {
+                        StaticBuffer<AddressSpace::Vgpr, float, BlkSize> c_thread_buf_;
 
-                static_for<0, BlkSize, 1>{}([&](auto j) {
-                    c_thread_buf_(j) =
-                        c_thread_buf.template AsType<float>()[Number<i * BlkSize + j>{}];
+                        static_for<0, BlkSize, 1>{}([&](auto j) {
+                            c_thread_buf_(j) = c_thread_buf.template AsType<
+                                float>()[Number<m_i*(NRepeat * BlkSize * NumBlks) +
+                                                n_i*(BlkSize * NumBlks) + i * BlkSize + j>{}];
+                        });
+
+                        // calculate origin of thread output tensor on global memory
+                        //     blockwise GEMM c matrix starting index
+                        const auto c_thread_mtx_on_block =
+                            blockwise_gemm.CalculateCThreadOriginDataIndex(m_i, n_i, i);
+
+                        const index_t k_thread_data_on_global =
+                            m_block_data_idx_on_global + c_thread_mtx_on_block[I0];
+
+                        const index_t b_thread_data_on_global =
+                            n_block_data_idx_on_global + c_thread_mtx_on_block[I1];
+
+                        constexpr auto c_m0_m1_n0_n1_global_tensor_iterator_hacks =
+                            CGlobalIteratorHacks{};
+
+                        ThreadwiseDynamicTensorSliceTransfer_v1r3<
+                            FloatAcc,
+                            FloatC,
+                            decltype(c_m0_m1_m2_n_thread_desc),
+                            decltype(c_m0_m1_m2_n_global_desc),
+                            Sequence<M0, 1, M2, 1>,
+                            Sequence<0, 1, 2, 3>, // CThreadTransferSrcDstAccessOrder,
+                            3,                    // CThreadTransferSrcDstVectorDim,
+                            1,                    // CThreadTransferDstScalarPerVector,
+                            CGlobalMemoryDataOperation,
+                            1,
+                            true>{c_m0_m1_m2_n_global_desc,
+                                  make_multi_index(k_thread_data_on_global / (M2 * M1),
+                                                   k_thread_data_on_global % (M2 * M1) / M2,
+                                                   k_thread_data_on_global % M2,
+                                                   b_thread_data_on_global)}
+                            .Run(c_m0_m1_m2_n_thread_desc,
+                                 make_tuple(I0, I0, I0, I0),
+                                 c_thread_buf_,
+                                 c_m0_m1_m2_n_global_desc,
+                                 c_global_buf,
+                                 c_m0_m1_n0_n1_global_tensor_iterator_hacks);
+                    });
                 });
-
-                // calculate origin of thread output tensor on global memory
-                //     blockwise GEMM c matrix starting index
-                const auto c_thread_mtx_on_block =
-                    blockwise_gemm.CalculateCThreadOriginDataIndex(i);
-
-                const index_t k_thread_data_on_global =
-                    m_block_data_idx_on_global + c_thread_mtx_on_block[I0];
-
-                const index_t b_thread_data_on_global =
-                    n_block_data_idx_on_global + c_thread_mtx_on_block[I1];
-
-                constexpr auto c_m0_m1_n0_n1_global_tensor_iterator_hacks = CGlobalIteratorHacks{};
-
-                ThreadwiseDynamicTensorSliceTransfer_v1r3<
-                    FloatAcc,
-                    FloatC,
-                    decltype(c_m0_m1_m2_n_thread_desc),
-                    decltype(c_m0_m1_m2_n_global_desc),
-                    Sequence<M0, 1, M2, 1>,
-                    Sequence<0, 1, 2, 3>, // CThreadTransferSrcDstAccessOrder,
-                    3,                    // CThreadTransferSrcDstVectorDim,
-                    1,                    // CThreadTransferDstScalarPerVector,
-                    CGlobalMemoryDataOperation,
-                    1,
-                    true>{c_m0_m1_m2_n_global_desc,
-                          make_multi_index(k_thread_data_on_global / (M2 * M1),
-                                           k_thread_data_on_global % (M2 * M1) / M2,
-                                           k_thread_data_on_global % M2,
-                                           b_thread_data_on_global)}
-                    .Run(c_m0_m1_m2_n_thread_desc,
-                         make_tuple(I0, I0, I0, I0),
-                         c_thread_buf_,
-                         c_m0_m1_m2_n_global_desc,
-                         c_global_buf,
-                         c_m0_m1_n0_n1_global_tensor_iterator_hacks);
             });
         }
     }

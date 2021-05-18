@@ -278,11 +278,9 @@ struct intrin_mfma_f32_32x32x2f32;
 template <>
 struct intrin_mfma_f32_32x32x2f32<32, 32>
 {
-    __device__ static void
-    Run(const float& reg_a, const float& reg_b, vector_type<float, 16>& reg_c)
+    __device__ static void Run(const float& reg_a, const float& reg_b, float16_t& reg_c)
     {
-        reg_c.template AsType<float16_t>()(Number<0>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x2f32(
-            reg_a, reg_b, reg_c.template AsType<float16_t>()[Number<0>{}], 0, 0, 0);
+        reg_c = llvm_intrin_amdgcn_mfma_f32_32x32x2f32(reg_a, reg_b, reg_c, 0, 0, 0);
     }
 };
 

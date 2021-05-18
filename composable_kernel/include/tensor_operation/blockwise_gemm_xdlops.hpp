@@ -30,10 +30,20 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
 
     static constexpr index_t WaveSize = 64;
 
-    static constexpr index_t MPerBlock = ABlockDesc{}.GetLength(I1); // A is transposed
-    static constexpr index_t NPerBlock = BBlockDesc{}.GetLength(I1);
-    static constexpr index_t MWaves    = MPerBlock / MPerWave;
-    static constexpr index_t NWaves    = NPerBlock / NPerWave;
+    static constexpr index_t M0 = ABlockDesc{}.GetLength(I1);
+    static constexpr index_t M1 = ABlockDesc{}.GetLength(I2);
+
+    static constexpr index_t N0 = BBlockDesc{}.GetLength(I1);
+    static constexpr index_t N1 = BBlockDesc{}.GetLength(I2);
+
+    // static constexpr index_t MPerBlock = M0 * M1; // A is transposed
+    // static constexpr index_t NPerBlock = N0 * N1;
+
+    static constexpr index_t MWaves = M1 / MPerWave;
+    static constexpr index_t NWaves = N1 / NPerWave;
+
+    static constexpr index_t MRepeat = M0;
+    static constexpr index_t NRepeat = N0;
 
     __device__ constexpr auto GetOutputLayout() const { return xdlops_gemm.GetOutputLayout(); }
 
@@ -59,13 +69,13 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
         {
             const index_t m_offset = waveId_m * MPerWave + xdlops_gemm.GetBlkTd(laneId);
             const index_t k_offset = xdlops_gemm.GetBlkId(laneId) * xdlops_gemm.mfma_type.k_base;
-            return make_tuple(k_offset, m_offset);
+            return make_tuple(k_offset, 0, m_offset);
         }
         else
         {
             const index_t m_offset = waveId_m * MPerWave + laneId;
             const index_t k_offset = 0;
-            return make_tuple(k_offset, m_offset);
+            return make_tuple(k_offset, 0, m_offset);
         }
     }
 
@@ -81,26 +91,30 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
         {
             const index_t n_offset = waveId_n * NPerWave + xdlops_gemm.GetBlkTd(laneId);
             const index_t k_offset = xdlops_gemm.GetBlkId(laneId) * xdlops_gemm.mfma_type.k_base;
-            return make_tuple(k_offset, n_offset);
+            return make_tuple(k_offset, 0, n_offset);
         }
         else
         {
             const index_t n_offset = waveId_n * NPerWave + laneId;
             const index_t k_offset = 0;
-            return make_tuple(k_offset, n_offset);
+            return make_tuple(k_offset, 0, n_offset);
         }
     }
 
-    template <index_t AStride = MPerWave, index_t BStride = NPerWave>
-    __device__ static CIndex CalculateCThreadOriginDataIndex(index_t blk_i)
+    __device__ static CIndex CalculateCThreadOriginDataIndex(const index_t m_repeat_id,
+                                                             const index_t n_repeat_id,
+                                                             const index_t blk_i)
     {
 
         const index_t waveId = get_thread_local_1d_id() / WaveSize;
 
         const auto thread_mtx_on_blk = xdlops_gemm.GetBeginOfThreadBlk(blk_i);
 
-        const index_t row = (waveId / NWaves) * AStride + thread_mtx_on_blk.row;
-        const index_t col = (waveId % NWaves) * BStride + thread_mtx_on_blk.col;
+        const index_t waveId_m = waveId / NWaves;
+        const index_t waveId_n = waveId % NWaves;
+
+        const index_t row = m_repeat_id * M1 + waveId_m * MPerWave + thread_mtx_on_blk.row;
+        const index_t col = n_repeat_id * N1 + waveId_n * NPerWave + thread_mtx_on_blk.col;
 
         return CIndex{row, col};
     }
@@ -115,8 +129,8 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
         static_assert(ABlockDesc{}.GetLength(I0) == BBlockDesc{}.GetLength(I0),
                       "wrong! K dimension not consistent");
 
-        static_assert(MPerWave * MWaves == MPerBlock, "GemmMWaves * MPerWave != M");
-        static_assert(NPerWave * NWaves == NPerBlock, "GemmNWaves * NPerWave != N");
+        // static_assert(MPerWave * MWaves == MPerBlock, "GemmMWaves * MPerWave != M");
+        // static_assert(NPerWave * NWaves == NPerBlock, "GemmNWaves * NPerWave != N");
 
         static_assert(BlockSize == MWaves * NWaves * WaveSize,
                       "BlockSize != MWaves * NWaves * WaveSize\n");
@@ -136,39 +150,78 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
 
         static_for<0, KPerBlock, KPerWave>{}([&](auto k) {
             a_thread_copy_.Run(ABlockDesc{},
-                               make_tuple(k, I0),
+                               make_tuple(k, I0, I0),
                                a_block_buf,
                                a_thread_desc_,
-                               make_tuple(I0, I0),
+                               make_tuple(I0, I0, I0),
                                a_thread_buf);
 
             b_thread_copy_.Run(BBlockDesc{},
-                               make_tuple(k, I0),
+                               make_tuple(k, I0, I0),
                                b_block_buf,
                                b_thread_desc_,
-                               make_tuple(I0, I0),
+                               make_tuple(I0, I0, I0),
                                b_thread_buf);
 
-            xdlops_gemm.template Run(a_thread_buf, b_thread_buf, c_thread_buf);
+            xdlops_gemm.template Run2<decltype(a_thread_desc_),
+                                      decltype(b_thread_desc_),
+                                      decltype(c_thread_desc_),
+                                      0,
+                                      0>(a_thread_buf, b_thread_buf, c_thread_buf);
+
+            b_thread_copy_.Run(BBlockDesc{},
+                               make_tuple(k, I1, I0),
+                               b_block_buf,
+                               b_thread_desc_,
+                               make_tuple(I0, I1, I0),
+                               b_thread_buf);
+
+            xdlops_gemm.template Run2<decltype(a_thread_desc_),
+                                      decltype(b_thread_desc_),
+                                      decltype(c_thread_desc_),
+                                      0,
+                                      1>(a_thread_buf, b_thread_buf, c_thread_buf);
+
+            a_thread_copy_.Run(ABlockDesc{},
+                               make_tuple(k, I1, I0),
+                               a_block_buf,
+                               a_thread_desc_,
+                               make_tuple(I0, I1, I0),
+                               a_thread_buf);
+
+            xdlops_gemm.template Run2<decltype(a_thread_desc_),
+                                      decltype(b_thread_desc_),
+                                      decltype(c_thread_desc_),
+                                      1,
+                                      0>(a_thread_buf, b_thread_buf, c_thread_buf);
+
+            xdlops_gemm.template Run2<decltype(a_thread_desc_),
+                                      decltype(b_thread_desc_),
+                                      decltype(c_thread_desc_),
+                                      1,
+                                      1>(a_thread_buf, b_thread_buf, c_thread_buf);
         });
     }
 
     private:
     // A[K, M]
-    static constexpr auto a_thread_desc_ =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(Number<KPerWave>{}, Number<1>{}));
+    static constexpr auto a_thread_desc_ = make_dynamic_naive_tensor_descriptor_packed_v2(
+        make_tuple(Number<KPerWave>{}, Number<MRepeat>{}, I1));
 
     // B[K, N]
-    static constexpr auto b_thread_desc_ =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(Number<KPerWave>{}, Number<1>{}));
+    static constexpr auto b_thread_desc_ = make_dynamic_naive_tensor_descriptor_packed_v2(
+        make_tuple(Number<KPerWave>{}, Number<NRepeat>{}, I1));
+
+    static constexpr auto c_thread_desc_ = make_dynamic_naive_tensor_descriptor_packed_v2(
+        make_tuple(Number<MRepeat>{}, Number<NRepeat>{}));
 
     using AThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4<FloatA,
                                                                 FloatA,
                                                                 ABlockDesc,
                                                                 decltype(a_thread_desc_),
-                                                                Sequence<KPerWave, 1>,
-                                                                Sequence<0, 1>,
-                                                                1,
+                                                                Sequence<KPerWave, 1, 1>,
+                                                                Sequence<0, 1, 2>,
+                                                                2,
                                                                 1,
                                                                 1>;
 
@@ -176,9 +229,9 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
                                                                 FloatB,
                                                                 BBlockDesc,
                                                                 decltype(b_thread_desc_),
-                                                                Sequence<KPerWave, 1>,
-                                                                Sequence<0, 1>,
-                                                                1,
+                                                                Sequence<KPerWave, 1, 1>,
+                                                                Sequence<0, 1, 2>,
+                                                                2,
                                                                 1,
                                                                 1>;
 

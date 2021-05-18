@@ -104,21 +104,21 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
 #else
     constexpr index_t BlockSize = 64;
 
-    constexpr index_t GemmMPerBlock = 32;
-    constexpr index_t GemmNPerBlock = 32;
+    constexpr index_t GemmMPerBlock = 64;
+    constexpr index_t GemmNPerBlock = 64;
     constexpr index_t GemmKPerBlock = 8;
 
     constexpr index_t GemmMPerWave = 32;
     constexpr index_t GemmNPerWave = 32;
     constexpr index_t GemmKPerWave = 2;
 
-    using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<4, 1>;
+    using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<4, 2>;
     using GemmABlockTransferThreadClusterLengths_GemmK_GemmM = Sequence<2, 32>;
 
     constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 1;
     constexpr index_t GemmABlockTransferDstScalarPerVector_GemmM = 1;
 
-    using GemmBBlockTransferThreadSliceLengths_GemmK_GemmN   = Sequence<4, 1>;
+    using GemmBBlockTransferThreadSliceLengths_GemmK_GemmN   = Sequence<4, 2>;
     using GemmBBlockTransferThreadClusterLengths_GemmK_GemmN = Sequence<2, 32>;
 
     constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmN = 1;
