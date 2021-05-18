@@ -13,6 +13,9 @@ namespace ck {
 // GemmK = C * Y * X
 template <index_t GemmMPerBlock,
           index_t GemmNPerBlock,
+          index_t GemmMPerWave,
+          index_t GemmNPerWave,
+          index_t GemmKPerWave,
           typename... Wei,
           typename... In,
           typename... Out,
@@ -106,9 +109,17 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
 
     assert(GemmM % GemmMPerBlock == 0 && GemmN % GemmNPerBlock == 0 && GemmK % GemmKPerBlock == 0);
 
+    constexpr auto xdlops_gemm = XdlopsGemm<float, GemmMPerWave, GemmNPerWave, GemmKPerWave>{};
+
+    constexpr auto CLayout = xdlops_gemm.GetOutputLayout();
+
+    constexpr index_t M0 = CLayout.M1();
+    constexpr index_t M1 = CLayout.N1();
+    constexpr index_t M2 = CLayout.M0();
+
     const auto out_m0_m1_m2_n_global_desc = transform_dynamic_tensor_descriptor(
         out_gemmm_gemmn_global_desc,
-        make_tuple(make_unmerge_transform(make_tuple(GemmM / 8, 2, 4)),
+        make_tuple(make_unmerge_transform(make_tuple(GemmM / (M1 * M2), M1, M2)),
                    make_pass_through_transform(GemmN)),
         make_tuple(Sequence<0>{}, Sequence<1>{}),
         make_tuple(Sequence<0, 1, 2>{}, Sequence<3>{}));

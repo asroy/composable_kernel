@@ -26,7 +26,7 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
     static constexpr auto I2 = Number<2>{};
     static constexpr auto I3 = Number<3>{};
 
-    static constexpr auto XdlopsGemm = XdlopsGemm_t<float, MPerWave, NPerWave, KPerWave>{};
+    static constexpr auto xdlops_gemm = XdlopsGemm<float, MPerWave, NPerWave, KPerWave>{};
 
     static constexpr index_t WaveSize = 64;
 
@@ -35,16 +35,16 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
     static constexpr index_t MWaves    = MPerBlock / MPerWave;
     static constexpr index_t NWaves    = NPerBlock / NPerWave;
 
-    __device__ constexpr auto GetOutputLayout() const { return XdlopsGemm.GetOutputLayout(); }
+    __device__ constexpr auto GetOutputLayout() const { return xdlops_gemm.GetOutputLayout(); }
 
     __device__ constexpr auto GetNumBlks() const
     {
-        return XdlopsGemm.GetOutputLayout().GetNumBlks();
+        return xdlops_gemm.GetOutputLayout().GetNumBlks();
     }
 
     __device__ constexpr auto GetBlkSize() const
     {
-        return XdlopsGemm.GetOutputLayout().GetBlkSize();
+        return xdlops_gemm.GetOutputLayout().GetBlkSize();
     }
 
     __device__ static auto CalculateAThreadOriginDataIndex()
@@ -75,7 +75,7 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
 
         const index_t waveId = get_thread_local_1d_id() / WaveSize;
 
-        const auto thread_mtx_on_blk = XdlopsGemm.GetBeginOfThreadBlk(blk_i);
+        const auto thread_mtx_on_blk = xdlops_gemm.GetBeginOfThreadBlk(blk_i);
 
         const index_t row = (waveId / NWaves) * AStride + thread_mtx_on_blk.row;
         const index_t col = (waveId % NWaves) * BStride + thread_mtx_on_blk.col;
@@ -127,7 +127,7 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
                                make_tuple(I0, I0),
                                b_thread_buf);
 
-            XdlopsGemm.template Run(a_thread_buf, b_thread_buf, c_thread_buf);
+            xdlops_gemm.template Run(a_thread_buf, b_thread_buf, c_thread_buf);
         });
     }
 

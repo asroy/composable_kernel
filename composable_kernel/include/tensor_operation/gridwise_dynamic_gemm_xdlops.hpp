@@ -333,7 +333,9 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         // Sequence<MRepeat, MPerThread, NRepeat, NPerThread>>{}
         //.Run(c_m0_m1_n0_n1_thread_desc, make_tuple(I0, I0, I0, I0), c_thread_buf, FloatAcc{0});
 
-        vector_type<float, 64> c_thread_buf;
+        constexpr auto c_vec_size = MPerBlock * NPerBlock / BlockSize;
+
+        vector_type<float, c_vec_size> c_thread_buf;
 
         constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0);
         constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0);
@@ -466,15 +468,15 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         {
 
             constexpr auto OutputLayout = blockwise_gemm.GetOutputLayout();
-            constexpr index_t K0        = OutputLayout.M1();
-            constexpr index_t K1        = OutputLayout.N1();
-            constexpr index_t K2        = OutputLayout.M0();
+            constexpr index_t M0        = OutputLayout.M1();
+            constexpr index_t M1        = OutputLayout.N1();
+            constexpr index_t M2        = OutputLayout.M0();
 
-            // static_assert(K0 == 4 && K1 == 2 && K2 == 4, "");
+            // static_assert(M0 == 4 && M1 == 2 && M2 == 4, "");
 
             constexpr auto c_m0_m1_m2_n_thread_desc =
                 make_dynamic_naive_tensor_descriptor_packed_v2(
-                    make_tuple(Number<K0>{}, Number<1>{}, Number<K2>{}, Number<1>{}));
+                    make_tuple(Number<M0>{}, Number<1>{}, Number<M2>{}, Number<1>{}));
 
             constexpr index_t BlkSize = OutputLayout.GetBlkSize();
             constexpr index_t NumBlks = OutputLayout.GetNumBlks();
@@ -508,16 +510,16 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                     FloatC,
                     decltype(c_m0_m1_m2_n_thread_desc),
                     decltype(c_m0_m1_m2_n_global_desc),
-                    Sequence<K0, 1, K2, 1>,
+                    Sequence<M0, 1, M2, 1>,
                     Sequence<0, 1, 2, 3>, // CThreadTransferSrcDstAccessOrder,
                     3,                    // CThreadTransferSrcDstVectorDim,
                     1,                    // CThreadTransferDstScalarPerVector,
                     CGlobalMemoryDataOperation,
                     1,
                     true>{c_m0_m1_m2_n_global_desc,
-                          make_multi_index(k_thread_data_on_global / (K2 * K1),
-                                           k_thread_data_on_global % (K2 * K1) / K2,
-                                           k_thread_data_on_global % K2,
+                          make_multi_index(k_thread_data_on_global / (M2 * M1),
+                                           k_thread_data_on_global % (M2 * M1) / M2,
+                                           k_thread_data_on_global % M2,
                                            b_thread_data_on_global)}
                     .Run(c_m0_m1_m2_n_thread_desc,
                          make_tuple(I0, I0, I0, I0),

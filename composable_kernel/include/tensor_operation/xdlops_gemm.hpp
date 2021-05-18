@@ -53,7 +53,7 @@ struct mfma_info<mfma_instr::mfma_f32_32x32x1xf32>
     template <index_t MPerXdlops, index_t NPerXdlops, class FloatA, class FloatB, class FloatC>
     __device__ void run(const FloatA& a, const FloatB& b, FloatC& reg_c) const
     {
-        return intrin_mfma_f32_32x32x1f32<MPerXdlops, NPerXdlops>::run(a, b, reg_c);
+        return intrin_mfma_f32_32x32x1f32<MPerXdlops, NPerXdlops>::Run(a, b, reg_c);
     }
 };
 
@@ -74,19 +74,10 @@ struct mfma_info<mfma_instr::mfma_f32_32x32x2xf32>
     static constexpr index_t cycles          = 64;
     static constexpr index_t k_base          = 1;
 
-    template <index_t MPerXdlops,
-              index_t NPerXdlops,
-              index_t AStride,
-              index_t BStride,
-              class FloatA,
-              class FloatB,
-              class FloatC>
-    __device__ FloatC run(const FloatA* a, const FloatB* b, FloatC reg_c) const
+    template <index_t MPerXdlops, index_t NPerXdlops, class FloatA, class FloatB, class FloatC>
+    __device__ void run(const FloatA& a, const FloatB& b, FloatC& reg_c) const
     {
-        const auto p_a = reinterpret_cast<const float*>(a);
-        const auto p_b = reinterpret_cast<const float*>(b);
-
-        return intrin_mfma_f32_32x32x2f32(p_a, p_b, reg_c);
+        return intrin_mfma_f32_32x32x2f32<MPerXdlops, NPerXdlops>::Run(a, b, reg_c);
     }
 };
 
@@ -548,7 +539,7 @@ struct xdlops_info
 };
 
 template <class data_type, index_t MPerWave, index_t NPerWave, index_t KPerWave>
-struct XdlopsGemm_t
+struct XdlopsGemm
 {
     struct MatrixIndex
     {
@@ -561,7 +552,7 @@ struct XdlopsGemm_t
         return (MPerXdlops * NPerXdlops) / (mfma_type.m * mfma_type.n);
     }
 
-    __device__ constexpr XdlopsGemm_t()
+    __host__ __device__ constexpr XdlopsGemm()
     {
         static_assert(NPerXdlops == 4 || NPerXdlops == 8 || NPerXdlops == 16 || NPerXdlops == 32 ||
                           NPerXdlops == 64,
@@ -849,10 +840,10 @@ struct XdlopsGemm_t
 
     struct OutputLayout
     {
-        __device__ static constexpr index_t M1() { return mfma_type.num_groups_blk; }
-        __device__ static constexpr index_t M0() { return mfma_type.group_size; }
-        __device__ static constexpr index_t N1() { return mfma_type.num_input_blks; }
-        __device__ static constexpr index_t N0() { return mfma_type.num_threads_blk; }
+        __host__ __device__ static constexpr index_t M1() { return mfma_type.num_groups_blk; }
+        __host__ __device__ static constexpr index_t M0() { return mfma_type.group_size; }
+        __host__ __device__ static constexpr index_t N1() { return mfma_type.num_input_blks; }
+        __host__ __device__ static constexpr index_t N0() { return mfma_type.num_threads_blk; }
 
         __device__ static constexpr index_t GetBlkSize() { return mfma_type.num_regs_blk; }
 
@@ -867,7 +858,7 @@ struct XdlopsGemm_t
         }
     };
 
-    __device__ static constexpr auto GetOutputLayout() { return OutputLayout{}; }
+    __host__ __device__ static constexpr auto GetOutputLayout() { return OutputLayout{}; }
 };
 
 } // namespace ck
