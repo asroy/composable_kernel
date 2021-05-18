@@ -620,10 +620,9 @@ struct XdlopsGemm
             constexpr index_t b_offset = BDesc{}.CalculateOffset(make_multi_index(k, n0, 0));
             constexpr index_t c_offset = CDesc{}.CalculateOffset(make_multi_index(m0, n0));
 
-            mfma_type.template run<MPerXdlops, NPerXdlops>(
-                p_a_wave[Number<a_offset>{}],
-                p_b_wave[Number<b_offset>{}],
-                p_c_thread.template AsType<float16_t>()(Number<c_offset>{}));
+            mfma_type.template run<MPerXdlops, NPerXdlops>(p_a_wave[Number<a_offset>{}],
+                                                           p_b_wave[Number<b_offset>{}],
+                                                           p_c_thread.template AsType<float32_t>());
         });
     }
 

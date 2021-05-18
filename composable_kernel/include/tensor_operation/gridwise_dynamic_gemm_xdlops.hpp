@@ -111,6 +111,8 @@ template <index_t BlockSize,
           index_t MPerWave,
           index_t NPerWave,
           index_t KPerWave,
+          index_t MRepeat,
+          index_t NRepeat,
           typename ABlockTransferThreadSliceLengths_K_M,
           typename ABlockTransferThreadClusterLengths_K_M,
           typename ABlockTransferThreadClusterArrangeOrder,
@@ -278,8 +280,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         //     c_mtx[MPerBlock, NPerBlock] is distributed among threads, and saved in
         //       register
         // sanity check
-        constexpr index_t MRepeat = 2;
-        constexpr index_t NRepeat = 2;
 
         static_assert(MPerBlock % (MPerWave * MRepeat) == 0 &&
                           NPerBlock % (NPerWave * NRepeat) == 0,
