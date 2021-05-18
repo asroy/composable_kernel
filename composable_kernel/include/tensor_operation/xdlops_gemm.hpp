@@ -535,6 +535,11 @@ struct xdlops_info
         return (mfma_type.num_output_blks == 1) && (mfma_type.num_input_blks > 1);
     }
 
+    static constexpr index_t GetKPerXdlops()
+    {
+        return mfma_type.k_base * (IsKReduction() ? mfma_type.num_input_blks : 1);
+    }
+
     static constexpr auto OutputVecType = OutputVecType_{};
 };
 
@@ -571,7 +576,7 @@ struct XdlopsGemm
         static_assert(mfma_type.num_regs_blk * mfma_type.wave_size == mfma_type.m * mfma_type.n,
                       "num_regs_blk incorrect");
 
-        static_assert(mfma_type.k % mfma_type.k_base == 0, "k and k_base is inconsistent!");
+        static_assert(mfma_type.k % mfma_type.k_base == 0, "k % kbase != 0!");
     }
 
     __device__ static constexpr index_t GetRegSizePerXdlops()
@@ -586,7 +591,9 @@ struct XdlopsGemm
                           is_same<data_type, ushort>::value,
                       "base data_type must be float, half, ushort!");
 
-        static_for<0, KPerWave, mfma_type.k_base>{}([&](auto k_i) {
+        static_assert(KPerWave % KPerXdlops == 0, "KPerWave cannot be divided by KPerXdlops");
+
+        static_for<0, KPerWave, KPerXdlops>{}([&](auto k_i) {
             mfma_type.template run<MPerXdlops, NPerXdlops>(
                 p_a_wave[Number<k_i>{}], p_b_wave[Number<k_i>{}], p_c_thread);
         });
@@ -833,8 +840,19 @@ struct XdlopsGemm
     static constexpr index_t MPerXdlops = GetXdlopsInfo().MPerXdlops;
     static constexpr index_t NPerXdlops = GetXdlopsInfo().NPerXdlops;
 
-    static constexpr bool IsKReduction = GetXdlopsInfo().IsKReduction();
-    static constexpr bool IsABroadcast = GetXdlopsInfo().IsABroadcast();
+    static constexpr bool IsKReduction  = GetXdlopsInfo().IsKReduction();
+    static constexpr bool IsABroadcast  = GetXdlopsInfo().IsABroadcast();
+    static constexpr index_t KPerXdlops = GetXdlopsInfo().GetKPerXdlops();
+
+    static constexpr auto GetBlkId(const index_t lane_id)
+    {
+        return lane_id / mfma_type.num_threads_blk;
+    }
+
+    static constexpr auto GetBlkTd(const index_t lane_id)
+    {
+        return lane_id % mfma_type.num_threads_blk;
+    }
 
     static constexpr auto mfma_type = GetXdlopsInfo().mfma_type;
 

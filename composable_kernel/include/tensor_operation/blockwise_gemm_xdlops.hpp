@@ -55,7 +55,18 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
         const index_t waveId_m  = waveId / NWaves;
         const index_t waveId_n  = waveId % NWaves;
 
-        return make_tuple(0, waveId_m * MPerWave + laneId);
+        if constexpr(xdlops_gemm.IsKReduction)
+        {
+            const index_t m_offset = waveId_m * MPerWave + xdlops_gemm.GetBlkTd(laneId);
+            const index_t k_offset = xdlops_gemm.GetBlkId(laneId) * xdlops_gemm.mfma_type.k_base;
+            return make_tuple(k_offset, m_offset);
+        }
+        else
+        {
+            const index_t m_offset = waveId_m * MPerWave + laneId;
+            const index_t k_offset = 0;
+            return make_tuple(k_offset, m_offset);
+        }
     }
 
     __device__ static auto CalculateBThreadOriginDataIndex()
@@ -66,7 +77,18 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
         const index_t waveId_m  = waveId / NWaves;
         const index_t waveId_n  = waveId % NWaves;
 
-        return make_tuple(0, waveId_n * NPerWave + laneId);
+        if constexpr(xdlops_gemm.IsKReduction)
+        {
+            const index_t n_offset = waveId_n * NPerWave + xdlops_gemm.GetBlkTd(laneId);
+            const index_t k_offset = xdlops_gemm.GetBlkId(laneId) * xdlops_gemm.mfma_type.k_base;
+            return make_tuple(k_offset, n_offset);
+        }
+        else
+        {
+            const index_t n_offset = waveId_n * NPerWave + laneId;
+            const index_t k_offset = 0;
+            return make_tuple(k_offset, n_offset);
+        }
     }
 
     template <index_t AStride = MPerWave, index_t BStride = NPerWave>
