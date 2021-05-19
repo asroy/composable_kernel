@@ -243,10 +243,10 @@ struct intrin_mfma_f32_32x32x1f32<64, 64>
     template <class FloatA, class FloatB, class FloatC>
     __device__ static void Run(const FloatA& reg_a, const FloatB& reg_b, FloatC& reg_c)
     {
-        reg_c(Number<0>{}) =
-            llvm_intrin_amdgcn_mfma_f32_32x32x1f32(reg_a, reg_b, reg_c[Number<0>{}], 1, 0, 0);
-        reg_c(Number<1>{}) =
-            llvm_intrin_amdgcn_mfma_f32_32x32x1f32(reg_a, reg_b, reg_c[Number<1>{}], 1, 1, 0);
+        reg_c.template AsType<float32_t>()(Number<0>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
+            reg_a, reg_b, reg_c.template AsType<float32_t>()[Number<0>{}], 1, 0, 0);
+        reg_c.template AsType<float32_t>()(Number<1>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
+            reg_a, reg_b, reg_c.template AsType<float32_t>()[Number<1>{}], 1, 1, 0);
     }
 };
 
@@ -278,9 +278,11 @@ struct intrin_mfma_f32_32x32x2f32;
 template <>
 struct intrin_mfma_f32_32x32x2f32<32, 32>
 {
-    __device__ static void Run(const float& reg_a, const float& reg_b, float16_t& reg_c)
+    template <class FloatA, class FloatB, class FloatC>
+    __device__ static void Run(const FloatA& reg_a, const FloatB& reg_b, FloatC& reg_c)
     {
-        reg_c = llvm_intrin_amdgcn_mfma_f32_32x32x2f32(reg_a, reg_b, reg_c, 0, 0, 0);
+        reg_c.template AsType<float16_t>()(Number<0>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x2f32(
+            reg_a, reg_b, reg_c.template AsType<float16_t>()[Number<0>{}], 0, 0, 0);
     }
 };
 

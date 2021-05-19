@@ -160,11 +160,11 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
 
             static_for<0, MRepeat, 1>{}([&](auto m0) {
                 static_for<0, NRepeat, 1>{}([&](auto n0) {
-                    xdlops_gemm.template Run2<decltype(a_thread_desc_),
-                                              decltype(b_thread_desc_),
-                                              decltype(c_thread_desc_),
-                                              m0,
-                                              n0>(a_thread_buf, b_thread_buf, c_thread_buf);
+                    xdlops_gemm.template Run<decltype(a_thread_desc_),
+                                             decltype(b_thread_desc_),
+                                             decltype(c_thread_desc_),
+                                             m0,
+                                             n0>(a_thread_buf, b_thread_buf, c_thread_buf);
                 });
             });
         });
@@ -372,18 +372,18 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline
                            a_thread_buf);
 
         // C_sub_00 += transpose(A_sub_0) * B_sub_0
-        xdlops_gemm.template Run2<decltype(a_thread_desc_),
-                                  decltype(b_thread_desc_),
-                                  decltype(c_thread_desc_),
-                                  0,
-                                  0>(a_thread_buf, b_thread_buf, c_thread_buf);
+        xdlops_gemm.template Run<decltype(a_thread_desc_),
+                                 decltype(b_thread_desc_),
+                                 decltype(c_thread_desc_),
+                                 0,
+                                 0>(a_thread_buf, b_thread_buf, c_thread_buf);
 
         // C_sub_01 += transpose(A_sub_0) * B_sub_1
-        xdlops_gemm.template Run2<decltype(a_thread_desc_),
-                                  decltype(b_thread_desc_),
-                                  decltype(c_thread_desc_),
-                                  0,
-                                  1>(a_thread_buf, b_thread_buf, c_thread_buf);
+        xdlops_gemm.template Run<decltype(a_thread_desc_),
+                                 decltype(b_thread_desc_),
+                                 decltype(c_thread_desc_),
+                                 0,
+                                 1>(a_thread_buf, b_thread_buf, c_thread_buf);
 
         static_for<KPerWave, KPerBlock, KPerWave>{}([&](auto k) {
             // read A_sub_0
@@ -395,11 +395,11 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline
                                a_thread_buf);
 
             // C_sub_10 += transpose(A_sub_1) * B_sub_0
-            xdlops_gemm.template Run2<decltype(a_thread_desc_),
-                                      decltype(b_thread_desc_),
-                                      decltype(c_thread_desc_),
-                                      1,
-                                      0>(a_thread_buf, b_thread_buf, c_thread_buf);
+            xdlops_gemm.template Run<decltype(a_thread_desc_),
+                                     decltype(b_thread_desc_),
+                                     decltype(c_thread_desc_),
+                                     1,
+                                     0>(a_thread_buf, b_thread_buf, c_thread_buf);
 
             // read B_sub_0
             b_thread_copy_.Run(BBlockDesc{},
@@ -410,11 +410,11 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline
                                b_thread_buf);
 
             // C_sub_11 += transpose(A_sub_1) * B_sub_1
-            xdlops_gemm.template Run2<decltype(a_thread_desc_),
-                                      decltype(b_thread_desc_),
-                                      decltype(c_thread_desc_),
-                                      1,
-                                      1>(a_thread_buf, b_thread_buf, c_thread_buf);
+            xdlops_gemm.template Run<decltype(a_thread_desc_),
+                                     decltype(b_thread_desc_),
+                                     decltype(c_thread_desc_),
+                                     1,
+                                     1>(a_thread_buf, b_thread_buf, c_thread_buf);
 
             // read B_sub_1
             b_thread_copy_.Run(BBlockDesc{},
@@ -433,33 +433,33 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline
                                a_thread_buf);
 
             // C_sub_00 += transpose(A_sub_0) * B_sub_0
-            xdlops_gemm.template Run2<decltype(a_thread_desc_),
-                                      decltype(b_thread_desc_),
-                                      decltype(c_thread_desc_),
-                                      0,
-                                      0>(a_thread_buf, b_thread_buf, c_thread_buf);
+            xdlops_gemm.template Run<decltype(a_thread_desc_),
+                                     decltype(b_thread_desc_),
+                                     decltype(c_thread_desc_),
+                                     0,
+                                     0>(a_thread_buf, b_thread_buf, c_thread_buf);
 
             // C_sub_01 += transpose(A_sub_0) * B_sub_1
-            xdlops_gemm.template Run2<decltype(a_thread_desc_),
-                                      decltype(b_thread_desc_),
-                                      decltype(c_thread_desc_),
-                                      0,
-                                      1>(a_thread_buf, b_thread_buf, c_thread_buf);
+            xdlops_gemm.template Run<decltype(a_thread_desc_),
+                                     decltype(b_thread_desc_),
+                                     decltype(c_thread_desc_),
+                                     0,
+                                     1>(a_thread_buf, b_thread_buf, c_thread_buf);
         });
 
         // C_sub_10 += transpose(A_sub_1) * B_sub_0
-        xdlops_gemm.template Run2<decltype(a_thread_desc_),
-                                  decltype(b_thread_desc_),
-                                  decltype(c_thread_desc_),
-                                  1,
-                                  0>(a_thread_buf, b_thread_buf, c_thread_buf);
+        xdlops_gemm.template Run<decltype(a_thread_desc_),
+                                 decltype(b_thread_desc_),
+                                 decltype(c_thread_desc_),
+                                 1,
+                                 0>(a_thread_buf, b_thread_buf, c_thread_buf);
 
         // C_sub_11 += transpose(A_sub_1) * B_sub_1
-        xdlops_gemm.template Run2<decltype(a_thread_desc_),
-                                  decltype(b_thread_desc_),
-                                  decltype(c_thread_desc_),
-                                  1,
-                                  1>(a_thread_buf, b_thread_buf, c_thread_buf);
+        xdlops_gemm.template Run<decltype(a_thread_desc_),
+                                 decltype(b_thread_desc_),
+                                 decltype(c_thread_desc_),
+                                 1,
+                                 1>(a_thread_buf, b_thread_buf, c_thread_buf);
     }
 
     private:

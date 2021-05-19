@@ -518,7 +518,7 @@ template <mfma_instr instr,
           index_t NPerXdlops_,
           index_t MRepeats_,
           index_t NRepeats_,
-          class OutputVecType_>
+          class CType_>
 struct xdlops_info
 {
     static constexpr auto mfma_type = mfma_info<instr>{};
@@ -540,196 +540,74 @@ struct xdlops_info
         return mfma_type.k_base * (IsKReduction() ? mfma_type.num_input_blks : 1);
     }
 
-    static constexpr auto OutputVecType = OutputVecType_{};
+    static constexpr index_t GetNumCRegs() { return MPerXdlops * NPerXdlops / mfma_type.wave_size; }
+
+    static constexpr auto GetCType() { return CType_{}; }
 };
 
-template <class data_type, index_t MPerWave, index_t NPerWave, index_t KPerWave>
+template <class base_type, index_t MPerWave, index_t NPerWave, index_t KPerWave>
 struct XdlopsGemm
 {
-    struct MatrixIndex
-    {
-        index_t row;
-        index_t col;
-    };
-
-    __device__ static constexpr index_t GetNumBlksPerXdlops()
-    {
-        return (MPerXdlops * NPerXdlops) / (mfma_type.m * mfma_type.n);
-    }
-
-    __host__ __device__ constexpr XdlopsGemm()
-    {
-        static_assert(NPerXdlops == 4 || NPerXdlops == 8 || NPerXdlops == 16 || NPerXdlops == 32 ||
-                          NPerXdlops == 64,
-                      "Only support GemmNPerXdlops == 4, 8, 16, 32 or 64 for xdlops");
-
-        static_assert(MPerXdlops == 4 || MPerXdlops == 8 || MPerXdlops == 16 || MPerXdlops == 32 ||
-                          MPerXdlops == 64,
-                      "Only support GemmMPerXdlops == 4, 8, 16, 32 or 64 for xdlops");
-
-        static_assert(mfma_type.num_threads_blk == mfma_type.n, "n != num_threads_blk");
-        static_assert(mfma_type.num_regs_blk * mfma_type.num_input_blks == mfma_type.m,
-                      "m != num_input_blks * num_regs_blk");
-        static_assert(mfma_type.num_output_blks == mfma_type.num_input_blks ||
-                          mfma_type.num_output_blks == 1,
-                      "incorrect num_output_blks");
-        static_assert(mfma_type.num_regs_blk * mfma_type.wave_size == mfma_type.m * mfma_type.n,
-                      "num_regs_blk incorrect");
-
-        static_assert(mfma_type.k % mfma_type.k_base == 0, "k % kbase != 0!");
-    }
-
-    __device__ static constexpr index_t GetRegSizePerXdlops()
-    {
-        return MPerXdlops * NPerXdlops / mfma_type.wave_size;
-    }
-
-    template <class FloatA, class FloatB, class FloatC>
-    __device__ void Run(const FloatA& p_a_wave, const FloatB& p_b_wave, FloatC& p_c_thread) const
-    {
-        static_assert(is_same<data_type, float>::value || is_same<data_type, half_t>::value ||
-                          is_same<data_type, ushort>::value,
-                      "base data_type must be float, half, ushort!");
-
-        static_assert(KPerWave % KPerXdlops == 0, "KPerWave cannot be divided by KPerXdlops");
-
-        static_for<0, KPerWave, KPerXdlops>{}([&](auto k_i) {
-            mfma_type.template run<MPerXdlops, NPerXdlops>(
-                p_a_wave[Number<k_i>{}], p_b_wave[Number<k_i>{}], p_c_thread);
-        });
-    }
-
-    template <class ADesc,
-              class BDesc,
-              class CDesc,
-              index_t m0,
-              index_t n0,
-              class FloatA,
-              class FloatB,
-              class FloatC>
-    __device__ void Run2(const FloatA& p_a_wave, const FloatB& p_b_wave, FloatC& p_c_thread) const
-    {
-        static_assert(is_same<data_type, float>::value || is_same<data_type, half_t>::value ||
-                          is_same<data_type, ushort>::value,
-                      "base data_type must be float, half, ushort!");
-
-        static_assert(KPerWave % KPerXdlops == 0, "KPerWave cannot be divided by KPerXdlops");
-
-        static_for<0, KPerWave, KPerXdlops>{}([&](auto k) {
-            constexpr index_t a_offset = ADesc{}.CalculateOffset(make_multi_index(k, m0, 0));
-            constexpr index_t b_offset = BDesc{}.CalculateOffset(make_multi_index(k, n0, 0));
-            constexpr index_t c_offset = CDesc{}.CalculateOffset(make_multi_index(m0, n0));
-
-            mfma_type.template run<MPerXdlops, NPerXdlops>(p_a_wave[Number<a_offset>{}],
-                                                           p_b_wave[Number<b_offset>{}],
-                                                           p_c_thread.template AsType<float32_t>());
-        });
-    }
-
-    __device__ static MatrixIndex GetBeginOfThreadBlk(index_t i)
-    {
-        const index_t xdlops_i = i / GetNumBlksPerXdlops();
-        const index_t j        = i % GetNumBlksPerXdlops();
-
-        const index_t m_i = xdlops_i / NRepeats;
-        const index_t n_i = xdlops_i % NRepeats;
-
-        const index_t laneId = get_thread_local_1d_id() % mfma_type.wave_size;
-        const index_t blk_id = laneId / mfma_type.num_threads_blk;
-        const index_t blk_td = laneId % mfma_type.num_threads_blk;
-
-        index_t col_blk = j % mfma_type.num_output_blks;
-        index_t row_blk = j / mfma_type.num_output_blks;
-
-        static_if<!IsABroadcast>{}([&](auto) {
-            col_blk = j / mfma_type.num_output_blks;
-            row_blk = j % mfma_type.num_output_blks;
-        });
-
-        index_t col = col_blk * mfma_type.n + blk_td + n_i * NPerXdlops;
-        index_t row = row_blk * mfma_type.m + blk_id * mfma_type.group_size + m_i * MPerXdlops;
-
-        return MatrixIndex{row, col};
-    }
-
-    __device__ void SetZeroXdlopsRegs() const {}
-
-    template <class FloatC>
-    __device__ void ReadXdlopsRegs(FloatC* const __restrict__) const
-    {
-    }
-
-    template <class data_type_  = data_type,
+    template <class base_type_  = base_type,
               index_t MPerWave_ = MPerWave,
               index_t NPerWave_ = NPerWave>
     static constexpr auto GetXdlopsInfo();
 
     template <>
-    static constexpr auto GetXdlopsInfo<float, 128, 64>()
-    {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 64, 2, 1, c_vec32_4_t>{};
-    }
-
-    template <>
-    static constexpr auto GetXdlopsInfo<float, 64, 128>()
-    {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 64, 1, 2, c_vec32_4_t>{};
-    }
-
-    template <>
     static constexpr auto GetXdlopsInfo<float, 64, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 64, 1, 1, c_vec32_2_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 64, 1, 1, float64_t>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 64, 32>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 32, 1, 1, c_vec32_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 64, 32, 1, 1, float32_t>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 32, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 32, 64, 1, 1, c_vec32_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x1xf32, 32, 64, 1, 1, float32_t>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 64, 16>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_16x16x1xf32, 64, 16, 1, 1, c_vec16_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_16x16x1xf32, 64, 16, 1, 1, float16_t>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 16, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_16x16x1xf32, 16, 64, 1, 1, c_vec16_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_16x16x1xf32, 16, 64, 1, 1, float16_t>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 8, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_4x4x1xf32, 8, 64, 1, 1, c_vec4_2_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_4x4x1xf32, 8, 64, 1, 1, float8_t>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 4, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_4x4x1xf32, 4, 64, 1, 1, c_vec4_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_4x4x1xf32, 4, 64, 1, 1, float4_t>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 32, 32>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x2xf32, 32, 32, 1, 1, c_vec16_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x2xf32, 32, 32, 1, 1, float16_t>{};
     }
 
     template <>
     static constexpr auto GetXdlopsInfo<float, 16, 16>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_16x16x4xf32, 16, 16, 1, 1, c_vec4_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_16x16x4xf32, 16, 16, 1, 1, float4_t>{};
     }
 
+#if 0
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 128, 64>()
     {
@@ -861,6 +739,107 @@ struct XdlopsGemm
     {
         return xdlops_info<mfma_instr::mfma_f32_16x16x8bf16, 16, 16, 1, 1, c_vec4_1_t>{};
     }
+#endif
+
+    struct MatrixIndex
+    {
+        index_t row;
+        index_t col;
+    };
+
+    __device__ static constexpr index_t GetNumBlksPerXdlops()
+    {
+        return (MPerXdlops * NPerXdlops) / (mfma_type.m * mfma_type.n);
+    }
+
+    __host__ __device__ constexpr XdlopsGemm()
+    {
+        static_assert(NPerXdlops == 4 || NPerXdlops == 8 || NPerXdlops == 16 || NPerXdlops == 32 ||
+                          NPerXdlops == 64,
+                      "Only support GemmNPerXdlops == 4, 8, 16, 32 or 64 for xdlops");
+
+        static_assert(MPerXdlops == 4 || MPerXdlops == 8 || MPerXdlops == 16 || MPerXdlops == 32 ||
+                          MPerXdlops == 64,
+                      "Only support GemmMPerXdlops == 4, 8, 16, 32 or 64 for xdlops");
+
+        static_assert(mfma_type.num_threads_blk == mfma_type.n, "n != num_threads_blk");
+        static_assert(mfma_type.num_regs_blk * mfma_type.num_input_blks == mfma_type.m,
+                      "m != num_input_blks * num_regs_blk");
+        static_assert(mfma_type.num_output_blks == mfma_type.num_input_blks ||
+                          mfma_type.num_output_blks == 1,
+                      "incorrect num_output_blks");
+        static_assert(mfma_type.num_regs_blk * mfma_type.wave_size == mfma_type.m * mfma_type.n,
+                      "num_regs_blk incorrect");
+
+        static_assert(mfma_type.k % mfma_type.k_base == 0, "k % kbase != 0!");
+    }
+
+    __device__ static constexpr index_t GetRegSizePerXdlops()
+    {
+        return MPerXdlops * NPerXdlops / mfma_type.wave_size;
+    }
+
+    template <class ADesc,
+              class BDesc,
+              class CDesc,
+              index_t m0,
+              index_t n0,
+              class FloatA,
+              class FloatB,
+              class FloatC>
+    __device__ void Run(const FloatA& p_a_wave, const FloatB& p_b_wave, FloatC& p_c_thread) const
+    {
+        static_assert(is_same<base_type, float>::value || is_same<base_type, half_t>::value ||
+                          is_same<base_type, ushort>::value,
+                      "base base_type must be float, half, ushort!");
+
+        static_assert(KPerWave % KPerXdlops == 0, "KPerWave cannot be divided by KPerXdlops");
+
+        static_for<0, KPerWave, KPerXdlops>{}([&](auto k) {
+            constexpr index_t a_offset = ADesc{}.CalculateOffset(make_multi_index(k, m0, 0));
+            constexpr index_t b_offset = BDesc{}.CalculateOffset(make_multi_index(k, n0, 0));
+            constexpr index_t c_offset = CDesc{}.CalculateOffset(make_multi_index(m0, n0));
+
+            vector_type<base_type, GetXdlopsInfo().GetNumCRegs()> t;
+
+            using c_type = decltype(GetXdlopsInfo().GetCType());
+
+            t.template AsType<c_type>()(Number<0>{}) =
+                p_c_thread.template AsType<c_type>()[Number<c_offset>{}];
+
+            mfma_type.template run<MPerXdlops, NPerXdlops>(
+                p_a_wave[Number<a_offset>{}], p_b_wave[Number<b_offset>{}], t);
+
+            p_c_thread.template AsType<c_type>()(Number<c_offset>{}) =
+                t.template AsType<c_type>()[Number<0>{}];
+        });
+    }
+
+    __device__ static MatrixIndex GetBeginOfThreadBlk(index_t i)
+    {
+        const index_t xdlops_i = i / GetNumBlksPerXdlops();
+        const index_t j        = i % GetNumBlksPerXdlops();
+
+        const index_t m_i = xdlops_i / NRepeats;
+        const index_t n_i = xdlops_i % NRepeats;
+
+        const index_t laneId = get_thread_local_1d_id() % mfma_type.wave_size;
+        const index_t blk_id = laneId / mfma_type.num_threads_blk;
+        const index_t blk_td = laneId % mfma_type.num_threads_blk;
+
+        index_t col_blk = j % mfma_type.num_output_blks;
+        index_t row_blk = j / mfma_type.num_output_blks;
+
+        static_if<!IsABroadcast>{}([&](auto) {
+            col_blk = j / mfma_type.num_output_blks;
+            row_blk = j % mfma_type.num_output_blks;
+        });
+
+        index_t col = col_blk * mfma_type.n + blk_td + n_i * NPerXdlops;
+        index_t row = row_blk * mfma_type.m + blk_id * mfma_type.group_size + m_i * MPerXdlops;
+
+        return MatrixIndex{row, col};
+    }
 
     static constexpr index_t MRepeats   = GetXdlopsInfo().MRepeats;
     static constexpr index_t NRepeats   = GetXdlopsInfo().NRepeats;
@@ -895,11 +874,6 @@ struct XdlopsGemm
         __device__ static constexpr index_t GetNumBlks()
         {
             return GetNumBlksPerXdlops() * MRepeats * NRepeats;
-        }
-
-        __device__ static constexpr auto CreateOutputVecZero()
-        {
-            return GetXdlopsInfo().OutputVecType.CreateVecZero();
         }
     };
 
