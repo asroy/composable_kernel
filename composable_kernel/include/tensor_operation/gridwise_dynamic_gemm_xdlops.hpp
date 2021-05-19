@@ -301,10 +301,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
             make_tuple(Sequence<0>{}, Sequence<1>{}),
             make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
 
-        // constexpr auto c_m0_m1_n0_n1_thread_desc =
-        // make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
-        // Number<MRepeat>{}, Number<MPerThread>{}, Number<NRepeat>{}, Number<NPerThread>{}));
-
         const auto blockwise_gemm =
             BlockwiseGemmXdlops_km_kn_m0m1m2n_v1<BlockSize,
                                                  FloatAB,
@@ -314,6 +310,13 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                                                  MPerWave,
                                                  NPerWave,
                                                  KPerWave>{};
+        constexpr auto OutputLayout = blockwise_gemm.GetOutputLayout();
+
+        constexpr index_t BlkSize = OutputLayout.GetBlkSize();
+        constexpr index_t NumBlks = OutputLayout.GetNumBlks();
+
+        constexpr auto c_mr_nr_nb_bk_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<MRepeat>{}, Number<NRepeat>{}, Number<NumBlks>{}, Number<BlkSize>{}));
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
@@ -334,7 +337,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         // Sequence<MRepeat, MPerThread, NRepeat, NPerThread>>{}
         //.Run(c_m0_m1_n0_n1_thread_desc, make_tuple(I0, I0, I0, I0), c_thread_buf, FloatAcc{0});
 
-        constexpr auto c_vec_size = MPerBlock * NPerBlock / BlockSize;
+        constexpr auto c_vec_size = c_mr_nr_nb_bk_thread_desc.GetElementSpaceSize();
 
         vector_type<float, c_vec_size> c_thread_buf;
 
@@ -468,10 +471,9 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         // output: register to global memory
         {
 
-            constexpr auto OutputLayout = blockwise_gemm.GetOutputLayout();
-            constexpr index_t M0        = OutputLayout.M1();
-            constexpr index_t M1        = OutputLayout.N1();
-            constexpr index_t M2        = OutputLayout.M0();
+            constexpr index_t M0 = OutputLayout.M1();
+            constexpr index_t M1 = OutputLayout.N1();
+            constexpr index_t M2 = OutputLayout.M0();
 
             // static_assert(M0 == 4 && M1 == 2 && M2 == 4, "");
 
@@ -479,27 +481,23 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                 make_dynamic_naive_tensor_descriptor_packed_v2(
                     make_tuple(Number<M0>{}, Number<1>{}, Number<M2>{}, Number<1>{}));
 
-            constexpr index_t BlkSize = OutputLayout.GetBlkSize();
-            constexpr index_t NumBlks = OutputLayout.GetNumBlks();
-
             // static_assert(BlkSize == 16 && NumBlks == 4, "");
 
-            static_for<0, MRepeat, 1>{}([&](auto m_i) {
-                static_for<0, NRepeat, 1>{}([&](auto n_i) {
-                    // force unrolling the output loop to get ride of scratches
-                    static_for<0, NumBlks, 1>{}([&](auto i) {
+            static_for<0, MRepeat, 1>{}([&](auto mr_i) {
+                static_for<0, NRepeat, 1>{}([&](auto nr_i) {
+                    static_for<0, NumBlks, 1>{}([&](auto blk_i) {
                         StaticBuffer<AddressSpace::Vgpr, float, BlkSize> c_thread_buf_;
 
                         static_for<0, BlkSize, 1>{}([&](auto j) {
                             c_thread_buf_(j) = c_thread_buf.template AsType<
-                                float>()[Number<m_i*(NRepeat * BlkSize * NumBlks) +
-                                                n_i*(BlkSize * NumBlks) + i * BlkSize + j>{}];
+                                float>()[Number<c_mr_nr_nb_bk_thread_desc.CalculateOffset(
+                                make_tuple(mr_i, nr_i, blk_i, j))>{}];
                         });
 
                         // calculate origin of thread output tensor on global memory
                         //     blockwise GEMM c matrix starting index
                         const auto c_thread_mtx_on_block =
-                            blockwise_gemm.CalculateCThreadOriginDataIndex(m_i, n_i, i);
+                            blockwise_gemm.CalculateCThreadOriginDataIndex(mr_i, nr_i, blk_i);
 
                         const index_t k_thread_data_on_global =
                             m_block_data_idx_on_global + c_thread_mtx_on_block[I0];
@@ -507,7 +505,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                         const index_t b_thread_data_on_global =
                             n_block_data_idx_on_global + c_thread_mtx_on_block[I1];
 
-                        constexpr auto c_m0_m1_n0_n1_global_tensor_iterator_hacks =
+                        constexpr auto c_m0_m1_m2_n_global_tensor_iterator_hacks =
                             CGlobalIteratorHacks{};
 
                         ThreadwiseDynamicTensorSliceTransfer_v1r3<
@@ -531,7 +529,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                                  c_thread_buf_,
                                  c_m0_m1_m2_n_global_desc,
                                  c_global_buf,
-                                 c_m0_m1_n0_n1_global_tensor_iterator_hacks);
+                                 c_m0_m1_m2_n_global_tensor_iterator_hacks);
                     });
                 });
             });

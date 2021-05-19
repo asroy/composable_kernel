@@ -98,8 +98,8 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
         }
     }
 
-    __device__ static CIndex
-    CalculateCThreadOriginDataIndex(const index_t m0, const index_t n0, const index_t blk_i)
+    template <index_t m0, index_t n0, index_t blk_i>
+    __device__ static CIndex CalculateCThreadOriginDataIndex(Number<m0>, Number<n0>, Number<blk_i>)
     {
 
         const index_t waveId = get_thread_local_1d_id() / WaveSize;
@@ -109,10 +109,10 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
         const index_t waveId_m = waveId / NWaves;
         const index_t waveId_n = waveId % NWaves;
 
-        const index_t row = m0 * M1 + waveId_m * MPerWave + thread_mtx_on_blk.row;
-        const index_t col = n0 * N1 + waveId_n * NPerWave + thread_mtx_on_blk.col;
+        const index_t m_offset = m0 * M1 + waveId_m * MPerWave + thread_mtx_on_blk[I0];
+        const index_t n_offset = n0 * N1 + waveId_n * NPerWave + thread_mtx_on_blk[I1];
 
-        return CIndex{row, col};
+        return CIndex{m_offset, n_offset};
     }
 
     __device__ BlockwiseGemmXdlops_km_kn_m0m1m2n_v1()
@@ -307,10 +307,10 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline
         const index_t waveId_m = waveId / NWaves;
         const index_t waveId_n = waveId % NWaves;
 
-        const index_t row = m0 * M1 + waveId_m * MPerWave + thread_mtx_on_blk.row;
-        const index_t col = n0 * N1 + waveId_n * NPerWave + thread_mtx_on_blk.col;
+        const index_t m_offset = m0 * M1 + waveId_m * MPerWave + thread_mtx_on_blk[I0];
+        const index_t n_offset = n0 * N1 + waveId_n * NPerWave + thread_mtx_on_blk[I1];
 
-        return CIndex{row, col};
+        return CIndex{m_offset, n_offset};
     }
 
     __device__ BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline()

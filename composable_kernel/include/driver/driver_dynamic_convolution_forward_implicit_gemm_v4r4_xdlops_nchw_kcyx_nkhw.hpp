@@ -151,11 +151,11 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{}),
+                              Sequence<0, 0, 1, 0, 0>{}),
                    make_tuple(Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{}));
+                              Sequence<0, 0, 2, 0, 0>{}));
 
     return make_tuple(wei_gemmk_gemmm_global_desc,
                       in_gemmk_gemmn_global_desc,

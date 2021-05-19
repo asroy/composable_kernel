@@ -741,11 +741,7 @@ struct XdlopsGemm
     }
 #endif
 
-    struct MatrixIndex
-    {
-        index_t row;
-        index_t col;
-    };
+    using CIndex = MultiIndex<2>;
 
     __device__ static constexpr index_t GetNumBlksPerXdlops()
     {
@@ -795,14 +791,15 @@ struct XdlopsGemm
 
         static_assert(KPerWave % KPerXdlops == 0, "KPerWave cannot be divided by KPerXdlops");
 
+        vector_type<base_type, GetXdlopsInfo().GetNumCRegs()> t;
+
+        using c_type = decltype(GetXdlopsInfo().GetCType());
+
+        constexpr index_t c_offset = CDesc{}.CalculateOffset(make_tuple(m0, n0));
+
         static_for<0, KPerWave, KPerXdlops>{}([&](auto k) {
-            constexpr index_t a_offset = ADesc{}.CalculateOffset(make_multi_index(k, m0, 0));
-            constexpr index_t b_offset = BDesc{}.CalculateOffset(make_multi_index(k, n0, 0));
-            constexpr index_t c_offset = CDesc{}.CalculateOffset(make_multi_index(m0, n0));
-
-            vector_type<base_type, GetXdlopsInfo().GetNumCRegs()> t;
-
-            using c_type = decltype(GetXdlopsInfo().GetCType());
+            constexpr index_t a_offset = ADesc{}.CalculateOffset(make_tuple(k, m0, 0));
+            constexpr index_t b_offset = BDesc{}.CalculateOffset(make_tuple(k, n0, 0));
 
             t.template AsType<c_type>()(Number<0>{}) =
                 p_c_thread.template AsType<c_type>()[Number<c_offset>{}];
@@ -815,7 +812,7 @@ struct XdlopsGemm
         });
     }
 
-    __device__ static MatrixIndex GetBeginOfThreadBlk(index_t i)
+    __device__ static CIndex GetBeginOfThreadBlk(index_t i)
     {
         const index_t xdlops_i = i / GetNumBlksPerXdlops();
         const index_t j        = i % GetNumBlksPerXdlops();
@@ -838,7 +835,7 @@ struct XdlopsGemm
         index_t col = col_blk * mfma_type.n + blk_td + n_i * NPerXdlops;
         index_t row = row_blk * mfma_type.m + blk_id * mfma_type.group_size + m_i * MPerXdlops;
 
-        return MatrixIndex{row, col};
+        return CIndex{row, col};
     }
 
     static constexpr index_t MRepeats   = GetXdlopsInfo().MRepeats;
