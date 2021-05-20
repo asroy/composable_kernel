@@ -50,10 +50,15 @@ struct mfma_info<mfma_instr::mfma_f32_32x32x1xf32>
     static constexpr index_t cycles          = 64;
     static constexpr index_t k_base          = 1;
 
-    template <index_t MPerXdlops, index_t NPerXdlops, class FloatA, class FloatB, class FloatC>
+    template <index_t MPerXdlops,
+              index_t NPerXdlops,
+              index_t COffset,
+              class FloatA,
+              class FloatB,
+              class FloatC>
     __device__ void run(const FloatA& a, const FloatB& b, FloatC& reg_c) const
     {
-        return intrin_mfma_f32_32x32x1f32<MPerXdlops, NPerXdlops>::Run(a, b, reg_c);
+        return intrin_mfma_f32_32x32x1f32<MPerXdlops, NPerXdlops, COffset>::Run(a, b, reg_c);
     }
 };
 
@@ -74,10 +79,15 @@ struct mfma_info<mfma_instr::mfma_f32_32x32x2xf32>
     static constexpr index_t cycles          = 64;
     static constexpr index_t k_base          = 1;
 
-    template <index_t MPerXdlops, index_t NPerXdlops, class FloatA, class FloatB, class FloatC>
+    template <index_t MPerXdlops,
+              index_t NPerXdlops,
+              index_t COffset,
+              class FloatA,
+              class FloatB,
+              class FloatC>
     __device__ void run(const FloatA& a, const FloatB& b, FloatC& reg_c) const
     {
-        return intrin_mfma_f32_32x32x2f32<MPerXdlops, NPerXdlops>::Run(a, b, reg_c);
+        return intrin_mfma_f32_32x32x2f32<MPerXdlops, NPerXdlops, COffset>::Run(a, b, reg_c);
     }
 };
 
@@ -528,7 +538,7 @@ struct xdlops_info
     static constexpr index_t MRepeats   = MRepeats_;
     static constexpr index_t NRepeats   = NRepeats_;
 
-    static constexpr bool IsABroadcast() { return NPerXdlops >= MPerXdlops; }
+    // static constexpr bool IsABroadcast() { return NPerXdlops >= MPerXdlops; }
 
     static constexpr bool IsKReduction()
     {
@@ -743,9 +753,11 @@ struct XdlopsGemm
 
     using CIndex = MultiIndex<2>;
 
-    __device__ static constexpr index_t GetNumBlksPerXdlops()
+    __device__ static constexpr index_t GetNumBlks() { return mfma_type.num_output_blks; }
+
+    __device__ static constexpr index_t GetNumXdlops()
     {
-        return (MPerXdlops * NPerXdlops) / (mfma_type.m * mfma_type.n);
+        return MPerXdlops * NPerXdlops / (mfma_type.m * mfma_type.n * mfma_type.num_output_blks);
     }
 
     __host__ __device__ constexpr XdlopsGemm()
@@ -791,42 +803,27 @@ struct XdlopsGemm
 
         static_assert(KPerWave % KPerXdlops == 0, "KPerWave cannot be divided by KPerXdlops");
 
-        constexpr index_t c_offset = CDesc{}.CalculateOffset(make_tuple(m0, n0));
+        constexpr index_t c_offset = CDesc{}.CalculateOffset(make_tuple(m0, n0)) * GetNumXdlops();
 
         static_for<0, KPerWave, KPerXdlops>{}([&](auto k) {
             constexpr index_t a_offset = ADesc{}.CalculateOffset(make_tuple(k, m0, 0));
             constexpr index_t b_offset = BDesc{}.CalculateOffset(make_tuple(k, n0, 0));
 
-            mfma_type.template run<MPerXdlops, NPerXdlops>(p_a_wave[Number<a_offset>{}],
-                                                           p_b_wave[Number<b_offset>{}],
-                                                           p_c_thread(Number<c_offset>{}));
+            mfma_type.template run<MPerXdlops, NPerXdlops, c_offset>(
+                p_a_wave[Number<a_offset>{}], p_b_wave[Number<b_offset>{}], p_c_thread);
         });
     }
 
-    __device__ static CIndex GetBeginOfThreadBlk(index_t i)
+    __device__ static CIndex GetBeginOfThreadBlk(index_t xdlops_i, index_t blk_i)
     {
-        const index_t xdlops_i = i / GetNumBlksPerXdlops();
-        const index_t j        = i % GetNumBlksPerXdlops();
-
-        const index_t m_i = xdlops_i / NRepeats;
-        const index_t n_i = xdlops_i % NRepeats;
-
         const index_t laneId = get_thread_local_1d_id() % mfma_type.wave_size;
         const index_t blk_id = laneId / mfma_type.num_threads_blk;
         const index_t blk_td = laneId % mfma_type.num_threads_blk;
 
-        index_t col_blk = j % mfma_type.num_output_blks;
-        index_t row_blk = j / mfma_type.num_output_blks;
+        index_t n_offset = blk_i * mfma_type.n + blk_td;
+        index_t m_offset = xdlops_i * mfma_type.m + blk_id * mfma_type.group_size;
 
-        static_if<!IsABroadcast>{}([&](auto) {
-            col_blk = j / mfma_type.num_output_blks;
-            row_blk = j % mfma_type.num_output_blks;
-        });
-
-        index_t col = col_blk * mfma_type.n + blk_td + n_i * NPerXdlops;
-        index_t row = row_blk * mfma_type.m + blk_id * mfma_type.group_size + m_i * MPerXdlops;
-
-        return CIndex{row, col};
+        return CIndex{m_offset, n_offset};
     }
 
     static constexpr index_t MRepeats   = GetXdlopsInfo().MRepeats;
@@ -834,8 +831,8 @@ struct XdlopsGemm
     static constexpr index_t MPerXdlops = GetXdlopsInfo().MPerXdlops;
     static constexpr index_t NPerXdlops = GetXdlopsInfo().NPerXdlops;
 
-    static constexpr bool IsKReduction  = GetXdlopsInfo().IsKReduction();
-    static constexpr bool IsABroadcast  = GetXdlopsInfo().IsABroadcast();
+    static constexpr bool IsKReduction = GetXdlopsInfo().IsKReduction();
+    // static constexpr bool IsABroadcast  = GetXdlopsInfo().IsABroadcast();
     static constexpr index_t KPerXdlops = GetXdlopsInfo().GetKPerXdlops();
 
     static constexpr auto GetBlkId(const index_t lane_id)
@@ -850,7 +847,7 @@ struct XdlopsGemm
 
     static constexpr auto mfma_type = GetXdlopsInfo().mfma_type;
 
-    struct OutputLayout
+    struct CLayout
     {
         __host__ __device__ static constexpr index_t M1() { return mfma_type.num_groups_blk; }
         __host__ __device__ static constexpr index_t M0() { return mfma_type.group_size; }
@@ -859,13 +856,16 @@ struct XdlopsGemm
 
         __device__ static constexpr index_t GetBlkSize() { return mfma_type.num_regs_blk; }
 
-        __device__ static constexpr index_t GetNumBlks()
+        __device__ static constexpr index_t GetNumBlks() { return mfma_type.num_output_blks; }
+
+        __device__ static constexpr index_t GetNumXdlops()
         {
-            return GetNumBlksPerXdlops() * MRepeats * NRepeats;
+            return MPerXdlops * NPerXdlops /
+                   (mfma_type.m * mfma_type.n * mfma_type.num_output_blks);
         }
     };
 
-    __host__ __device__ static constexpr auto GetOutputLayout() { return OutputLayout{}; }
+    __host__ __device__ static constexpr auto GetCLayout() { return CLayout{}; }
 };
 
 } // namespace ck

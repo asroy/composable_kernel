@@ -198,7 +198,7 @@ extern "C" __device__ float16_t llvm_intrin_amdgcn_mfma_f32_16x16x2bf16(
 extern "C" __device__ float4_t llvm_intrin_amdgcn_mfma_f32_4x4x2bf16(
     ushort2_t, ushort2_t, float4_t, int, int, int) __asm("llvm.amdgcn.mfma.f32.4x4x2bf16");
 
-template <index_t MPerWave, index_t NPerWave>
+template <index_t MPerWave, index_t NPerWave, index_t COffset>
 struct intrin_mfma_f32_32x32x1f32;
 
 // template <index_t AStride, index_t BStride>
@@ -237,16 +237,28 @@ struct intrin_mfma_f32_32x32x1f32;
 //}
 //};
 
-template <>
-struct intrin_mfma_f32_32x32x1f32<64, 64>
+template <index_t COffset>
+struct intrin_mfma_f32_32x32x1f32<64, 64, COffset>
 {
     template <class FloatA, class FloatB, class FloatC>
     __device__ static void Run(const FloatA& reg_a, const FloatB& reg_b, FloatC& reg_c)
     {
-        reg_c.template AsType<float32_t>()(Number<0>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
-            reg_a, reg_b, reg_c.template AsType<float32_t>()[Number<0>{}], 1, 0, 0);
-        reg_c.template AsType<float32_t>()(Number<1>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
-            reg_a, reg_b, reg_c.template AsType<float32_t>()[Number<1>{}], 1, 1, 0);
+        reg_c(Number<COffset>{}).template AsType<float32_t>()(Number<0>{}) =
+            llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
+                reg_a,
+                reg_b,
+                reg_c[Number<COffset>{}].template AsType<float32_t>()[Number<0>{}],
+                1,
+                0,
+                0);
+        reg_c(Number<COffset + 1>{}).template AsType<float32_t>()(Number<0>{}) =
+            llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
+                reg_a,
+                reg_b,
+                reg_c[Number<COffset + 1>{}].template AsType<float32_t>()[Number<0>{}],
+                1,
+                1,
+                0);
     }
 };
 
@@ -272,17 +284,23 @@ struct intrin_mfma_f32_32x32x1f32<64, 64>
 //}
 //};
 
-template <index_t MPerWave, index_t NPerWave>
+template <index_t MPerWave, index_t NPerWave, index_t COffset>
 struct intrin_mfma_f32_32x32x2f32;
 
-template <>
-struct intrin_mfma_f32_32x32x2f32<32, 32>
+template <index_t COffset>
+struct intrin_mfma_f32_32x32x2f32<32, 32, COffset>
 {
     template <class FloatA, class FloatB, class FloatC>
     __device__ static void Run(const FloatA& reg_a, const FloatB& reg_b, FloatC& reg_c)
     {
-        reg_c.template AsType<float16_t>()(Number<0>{}) = llvm_intrin_amdgcn_mfma_f32_32x32x2f32(
-            reg_a, reg_b, reg_c.template AsType<float16_t>()[Number<0>{}], 0, 0, 0);
+        reg_c(Number<COffset>{}).template AsType<float16_t>()(Number<0>{}) =
+            llvm_intrin_amdgcn_mfma_f32_32x32x2f32(
+                reg_a,
+                reg_b,
+                reg_c[Number<COffset>{}].template AsType<float16_t>()[Number<0>{}],
+                0,
+                0,
+                0);
     }
 };
 

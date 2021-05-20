@@ -111,7 +111,7 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
 
     constexpr auto xdlops_gemm = XdlopsGemm<float, GemmMPerWave, GemmNPerWave, GemmKPerWave>{};
 
-    constexpr auto CLayout = xdlops_gemm.GetOutputLayout();
+    constexpr auto CLayout = xdlops_gemm.GetCLayout();
 
     constexpr index_t M0 = CLayout.M1();
     constexpr index_t M1 = CLayout.N1();

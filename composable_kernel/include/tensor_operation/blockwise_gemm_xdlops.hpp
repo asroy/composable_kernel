@@ -42,17 +42,11 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
     static constexpr index_t MRepeat = M0;
     static constexpr index_t NRepeat = N0;
 
-    __device__ constexpr auto GetOutputLayout() const { return xdlops_gemm.GetOutputLayout(); }
+    __device__ constexpr auto GetCLayout() const { return xdlops_gemm.GetCLayout(); }
 
-    __device__ constexpr auto GetNumBlks() const
-    {
-        return xdlops_gemm.GetOutputLayout().GetNumBlks();
-    }
+    __device__ constexpr auto GetNumBlks() const { return xdlops_gemm.GetCLayout().GetNumBlks(); }
 
-    __device__ constexpr auto GetBlkSize() const
-    {
-        return xdlops_gemm.GetOutputLayout().GetBlkSize();
-    }
+    __device__ constexpr auto GetBlkSize() const { return xdlops_gemm.GetCLayout().GetBlkSize(); }
 
     __device__ static auto CalculateAThreadOriginDataIndex()
     {
@@ -98,13 +92,14 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
         }
     }
 
-    template <index_t m0, index_t n0, index_t blk_i>
-    __device__ static CIndex CalculateCThreadOriginDataIndex(Number<m0>, Number<n0>, Number<blk_i>)
+    template <index_t m0, index_t n0, index_t xdlops_i, index_t blk_i>
+    __device__ static CIndex
+        CalculateCThreadOriginDataIndex(Number<m0>, Number<n0>, Number<xdlops_i>, Number<blk_i>)
     {
 
         const index_t waveId = get_thread_local_1d_id() / WaveSize;
 
-        const auto thread_mtx_on_blk = xdlops_gemm.GetBeginOfThreadBlk(blk_i);
+        const auto thread_mtx_on_blk = xdlops_gemm.GetBeginOfThreadBlk(xdlops_i, blk_i);
 
         const index_t waveId_m = waveId / NWaves;
         const index_t waveId_n = waveId % NWaves;
@@ -240,17 +235,11 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline
     static constexpr index_t MRepeat = M0;
     static constexpr index_t NRepeat = N0;
 
-    __device__ constexpr auto GetOutputLayout() const { return xdlops_gemm.GetOutputLayout(); }
+    __device__ constexpr auto GetCLayout() const { return xdlops_gemm.GetCLayout(); }
 
-    __device__ constexpr auto GetNumBlks() const
-    {
-        return xdlops_gemm.GetOutputLayout().GetNumBlks();
-    }
+    __device__ constexpr auto GetNumBlks() const { return xdlops_gemm.GetCLayout().GetNumBlks(); }
 
-    __device__ constexpr auto GetBlkSize() const
-    {
-        return xdlops_gemm.GetOutputLayout().GetBlkSize();
-    }
+    __device__ constexpr auto GetBlkSize() const { return xdlops_gemm.GetCLayout().GetBlkSize(); }
 
     __device__ static auto CalculateAThreadOriginDataIndex()
     {
