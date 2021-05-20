@@ -791,24 +791,15 @@ struct XdlopsGemm
 
         static_assert(KPerWave % KPerXdlops == 0, "KPerWave cannot be divided by KPerXdlops");
 
-        vector_type<base_type, GetXdlopsInfo().GetNumCRegs()> t;
-
-        using c_type = decltype(GetXdlopsInfo().GetCType());
-
         constexpr index_t c_offset = CDesc{}.CalculateOffset(make_tuple(m0, n0));
 
         static_for<0, KPerWave, KPerXdlops>{}([&](auto k) {
             constexpr index_t a_offset = ADesc{}.CalculateOffset(make_tuple(k, m0, 0));
             constexpr index_t b_offset = BDesc{}.CalculateOffset(make_tuple(k, n0, 0));
 
-            t.template AsType<c_type>()(Number<0>{}) =
-                p_c_thread.template AsType<c_type>()[Number<c_offset>{}];
-
-            mfma_type.template run<MPerXdlops, NPerXdlops>(
-                p_a_wave[Number<a_offset>{}], p_b_wave[Number<b_offset>{}], t);
-
-            p_c_thread.template AsType<c_type>()(Number<c_offset>{}) =
-                t.template AsType<c_type>()[Number<0>{}];
+            mfma_type.template run<MPerXdlops, NPerXdlops>(p_a_wave[Number<a_offset>{}],
+                                                           p_b_wave[Number<b_offset>{}],
+                                                           p_c_thread(Number<c_offset>{}));
         });
     }
 
