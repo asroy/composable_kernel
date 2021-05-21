@@ -475,7 +475,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
     const auto descs =
 #if 1
         transform_forward_convolution_into_gemm_v4r4_nchw_kcyx_nkhw_pad
-#elif 0
+#elif 1
         transform_forward_convolution_into_gemm_v4r4_nchw_kcyx_nkhw_no_pad
 #else
         transform_forward_convolution_into_gemm_v4r4_nchw_kcyx_nkhw_1x1
