@@ -285,13 +285,14 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline
         }
     }
 
+    template <index_t m0, index_t n0, index_t xdlops_i, index_t blk_i>
     __device__ static CIndex
-    CalculateCThreadOriginDataIndex(const index_t m0, const index_t n0, const index_t blk_i)
+        CalculateCThreadOriginDataIndex(Number<m0>, Number<n0>, Number<xdlops_i>, Number<blk_i>)
     {
 
         const index_t waveId = get_thread_local_1d_id() / WaveSize;
 
-        const auto thread_mtx_on_blk = xdlops_gemm.GetBeginOfThreadBlk(blk_i);
+        const auto thread_mtx_on_blk = xdlops_gemm.GetBeginOfThreadBlk(xdlops_i, blk_i);
 
         const index_t waveId_m = waveId / NWaves;
         const index_t waveId_n = waveId % NWaves;

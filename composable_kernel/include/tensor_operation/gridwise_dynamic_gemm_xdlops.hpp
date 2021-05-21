@@ -302,14 +302,14 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
             make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
 
         const auto blockwise_gemm =
-            BlockwiseGemmXdlops_km_kn_m0m1m2n_v1<BlockSize,
-                                                 FloatAB,
-                                                 FloatAB,
-                                                 decltype(a_k_m0_m1_block_desc),
-                                                 decltype(b_k_n0_n1_block_desc),
-                                                 MPerWave,
-                                                 NPerWave,
-                                                 KPerWave>{};
+            BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline<BlockSize,
+                                                             FloatAB,
+                                                             FloatAB,
+                                                             decltype(a_k_m0_m1_block_desc),
+                                                             decltype(b_k_n0_n1_block_desc),
+                                                             MPerWave,
+                                                             NPerWave,
+                                                             KPerWave>{};
         constexpr auto CLayout = blockwise_gemm.GetCLayout();
 
         constexpr index_t BlkSize   = CLayout.GetBlkSize();
