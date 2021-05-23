@@ -27,13 +27,13 @@ __global__ void
 #if CK_USE_LAUNCH_BOUNDS
     __launch_bounds__(CK_MAX_THREAD_PER_BLOCK, CK_MIN_BLOCK_PER_CU)
 #endif
-        kernel_dynamic_gemm_v1(const FloatA* __restrict__ p_a_global,
-                               const FloatB* __restrict__ p_b_global,
-                               FloatC* __restrict__ p_c_global,
-                               const AGlobalDesc a_k_m_global_desc,
-                               const BGlobalDesc b_k_n_global_desc,
-                               const CGlobalDesc c_m0_m1_n0_n1_global_desc,
-                               const CBlockClusterDesc c_block_cluster_desc)
+        kernel_dynamic_gemm_v1r1(const FloatA* __restrict__ p_a_global,
+                                 const FloatB* __restrict__ p_b_global,
+                                 FloatC* __restrict__ p_c_global,
+                                 const AGlobalDesc a_k_m_global_desc,
+                                 const BGlobalDesc b_k_n_global_desc,
+                                 const CGlobalDesc c_m0_m1_n0_n1_global_desc,
+                                 const CBlockClusterDesc c_block_cluster_desc)
 {
     GridwiseGemm::Run(p_a_global,
                       p_b_global,
@@ -63,13 +63,13 @@ __global__ void
 #if CK_USE_LAUNCH_BOUNDS
     __launch_bounds__(CK_MAX_THREAD_PER_BLOCK, CK_MIN_BLOCK_PER_CU)
 #endif
-        kernel_dynamic_gemm_v1(const FloatA* __restrict__ p_a_global,
-                               const FloatB* __restrict__ p_b_global,
-                               FloatC* __restrict__ p_c_global,
-                               const void __CONSTANT__* p_a_k_m_global_desc,
-                               const void __CONSTANT__* p_b_k_n_global_desc,
-                               const void __CONSTANT__* p_c_m0_m1_n0_n1_global_desc,
-                               const void __CONSTANT__* p_c_block_cluster_desc)
+        kernel_dynamic_gemm_v1r1(const FloatA* __restrict__ p_a_global,
+                                 const FloatB* __restrict__ p_b_global,
+                                 FloatC* __restrict__ p_c_global,
+                                 const void __CONSTANT__* p_a_k_m_global_desc,
+                                 const void __CONSTANT__* p_b_k_n_global_desc,
+                                 const void __CONSTANT__* p_c_m0_m1_n0_n1_global_desc,
+                                 const void __CONSTANT__* p_c_block_cluster_desc)
 {
     // first cast void __CONSTANT__ void* to void*
     // second cast void* to Desc*
@@ -139,7 +139,7 @@ template <index_t BlockSize,
           typename CGlobalIteratorHacks,
           typename AGlobalMoveSliceWindowIteratorHacks,
           typename BGlobalMoveSliceWindowIteratorHacks>
-struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1
+struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r1
 {
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {

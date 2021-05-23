@@ -2,7 +2,7 @@
 #include "device.hpp"
 #include "host_tensor.hpp"
 #include "transform_forward_convolution_into_gemm_v4r4_nchw_kcyx_nkhw.hpp"
-#include "driver_dynamic_gemm_v1.hpp"
+#include "driver_dynamic_gemm_v1r1.hpp"
 
 template <class TInWei,
           ck::index_t InWeiVectorSize,
@@ -490,7 +490,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
 
     for(index_t i = 0; i < 5; ++i)
     {
-        float ave_time = launch_kernel_dynamic_gemm_v1<
+        float ave_time = launch_kernel_dynamic_gemm_v1r1<
             BlockSize,
             typename vector_type<TInWei, InWeiVectorSize>::type,
             TAcc,
