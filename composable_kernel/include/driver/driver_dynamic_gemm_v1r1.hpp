@@ -20,13 +20,13 @@ template <index_t BlockSize,
           index_t MPerBlock,
           index_t NPerBlock,
           index_t KPerBlock,
-          index_t MPerThread,
-          index_t NPerThread,
+          index_t M1PerThread,
+          index_t N1PerThread,
           index_t KPerThread,
-          index_t MLevel0Cluster,
-          index_t NLevel0Cluster,
-          index_t MLevel1Cluster,
-          index_t NLevel1Cluster,
+          index_t M1N1ThreadClusterM10,
+          index_t M1N1ThreadClusterN10,
+          index_t M1N1ThreadClusterM11,
+          index_t M1N1ThreadClusterN11,
           typename ABlockTransferThreadSliceLengths_K_M,
           typename ABlockTransferThreadClusterLengths_K_M,
           typename ABlockTransferThreadClusterArrangeOrder,
@@ -80,8 +80,8 @@ __host__ float launch_kernel_dynamic_gemm_v1r1(const FloatAB* p_a_global,
         throw std::runtime_error("wrong! GEMM size no divisible");
     }
 
-    constexpr auto M1 = Number<MPerThread * MLevel0Cluster * MLevel1Cluster>{};
-    constexpr auto N1 = Number<NPerThread * NLevel0Cluster * NLevel1Cluster>{};
+    constexpr auto M1 = Number<M1PerThread * M1N1ThreadClusterM11 * M1N1ThreadClusterM10>{};
+    constexpr auto N1 = Number<N1PerThread * M1N1ThreadClusterN11 * M1N1ThreadClusterN10>{};
 
     if(!(MPerBlock % M1 == 0 && NPerBlock % N1 == 0))
     {
@@ -102,13 +102,13 @@ __host__ float launch_kernel_dynamic_gemm_v1r1(const FloatAB* p_a_global,
                                                 MPerBlock,
                                                 NPerBlock,
                                                 KPerBlock,
-                                                MPerThread,
-                                                NPerThread,
+                                                M1PerThread,
+                                                N1PerThread,
                                                 KPerThread,
-                                                MLevel0Cluster,
-                                                NLevel0Cluster,
-                                                MLevel1Cluster,
-                                                NLevel1Cluster,
+                                                M1N1ThreadClusterM10,
+                                                M1N1ThreadClusterN10,
+                                                M1N1ThreadClusterM11,
+                                                M1N1ThreadClusterN11,
                                                 ABlockTransferThreadSliceLengths_K_M,
                                                 ABlockTransferThreadClusterLengths_K_M,
                                                 ABlockTransferThreadClusterArrangeOrder,
