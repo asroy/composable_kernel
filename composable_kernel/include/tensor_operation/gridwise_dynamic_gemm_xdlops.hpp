@@ -110,7 +110,7 @@ template <index_t BlockSize,
           index_t KPerBlock,
           index_t MPerWave,
           index_t NPerWave,
-          index_t KPerWave,
+          index_t KPack,
           index_t MRepeat,
           index_t NRepeat,
           typename ABlockTransferThreadSliceLengths_K_M,
@@ -276,7 +276,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         // GEMM definition
         //   c_mtx += transpose(a_mtx) * b_mtx
         //     a_mtx[KPerBlock, MPerBlock] is in LDS
-        //     b_mtx[KPerBlocl, NPerBlock] is in LDS
+        //     b_mtx[KPerBlock, NPerBlock] is in LDS
         //     c_mtx[MPerBlock, NPerBlock] is distributed among threads, and saved in
         //       register
         // sanity check
@@ -285,31 +285,35 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                           NPerBlock % (NPerWave * NRepeat) == 0,
                       "wrong!");
 
-        constexpr auto a_k_m0_m1_block_desc = transform_dynamic_tensor_descriptor(
-            a_k_m_block_desc,
-            make_tuple(make_pass_through_transform(Number<KPerBlock>{}),
-                       make_unmerge_transform(
-                           make_tuple(Number<MRepeat>{}, Number<MPerBlock / MRepeat>{}))),
-            make_tuple(Sequence<0>{}, Sequence<1>{}),
-            make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
+        static_assert(KPerBlock % KPack == 0, "KPerBlock is wrong!");
 
-        constexpr auto b_k_n0_n1_block_desc = transform_dynamic_tensor_descriptor(
-            b_k_n_block_desc,
-            make_tuple(make_pass_through_transform(Number<KPerBlock>{}),
-                       make_unmerge_transform(
-                           make_tuple(Number<NRepeat>{}, Number<NPerBlock / NRepeat>{}))),
+        constexpr auto a_k0_m0_m1_k1_block_desc = transform_dynamic_tensor_descriptor(
+            a_k_m_block_desc,
+            make_tuple(
+                make_unmerge_transform(make_tuple(Number<KPerBlock / KPack>{}, Number<KPack>{})),
+                make_unmerge_transform(
+                    make_tuple(Number<MRepeat>{}, Number<MPerBlock / MRepeat>{}))),
             make_tuple(Sequence<0>{}, Sequence<1>{}),
-            make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
+            make_tuple(Sequence<0, 3>{}, Sequence<1, 2>{}));
+
+        constexpr auto b_k0_n0_n1_k1_block_desc = transform_dynamic_tensor_descriptor(
+            b_k_n_block_desc,
+            make_tuple(
+                make_unmerge_transform(make_tuple(Number<KPerBlock / KPack>{}, Number<KPack>{})),
+                make_unmerge_transform(
+                    make_tuple(Number<NRepeat>{}, Number<NPerBlock / NRepeat>{}))),
+            make_tuple(Sequence<0>{}, Sequence<1>{}),
+            make_tuple(Sequence<0, 3>{}, Sequence<1, 2>{}));
 
         const auto blockwise_gemm =
             BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline<BlockSize,
                                                              FloatAB,
                                                              FloatAB,
-                                                             decltype(a_k_m0_m1_block_desc),
-                                                             decltype(b_k_n0_n1_block_desc),
+                                                             decltype(a_k0_m0_m1_k1_block_desc),
+                                                             decltype(b_k0_n0_n1_k1_block_desc),
                                                              MPerWave,
                                                              NPerWave,
-                                                             KPerWave>{};
+                                                             KPack>{};
         constexpr auto CLayout = blockwise_gemm.GetCLayout();
 
         constexpr index_t BlkSize   = CLayout.GetBlkSize();

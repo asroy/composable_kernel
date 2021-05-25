@@ -547,7 +547,7 @@ struct xdlops_info
 
     static constexpr index_t GetKPerXdlops()
     {
-        return mfma_type.k_base * (IsKReduction() ? mfma_type.num_input_blks : 1);
+        return IsKReduction() ? mfma_type.num_input_blks : 1;
     }
 
     static constexpr index_t GetNumCRegs() { return MPerXdlops * NPerXdlops / mfma_type.wave_size; }
@@ -555,7 +555,7 @@ struct xdlops_info
     static constexpr auto GetCType() { return CType_{}; }
 };
 
-template <class base_type, index_t MPerWave, index_t NPerWave, index_t KPerWave>
+template <class base_type, index_t MPerWave, index_t NPerWave, index_t KPack>
 struct XdlopsGemm
 {
     template <class base_type_  = base_type,
@@ -801,13 +801,13 @@ struct XdlopsGemm
                           is_same<base_type, ushort>::value,
                       "base base_type must be float, half, ushort!");
 
-        static_assert(KPerWave % KPerXdlops == 0, "KPerWave cannot be divided by KPerXdlops");
+        static_assert(KPack % mfma_type.k_base == 0, "KPack cannot be divided by k_base");
 
         constexpr index_t c_offset = CDesc{}.CalculateOffset(make_tuple(m0, n0)) * GetNumXdlops();
 
-        static_for<0, KPerWave, KPerXdlops>{}([&](auto k) {
-            constexpr index_t a_offset = ADesc{}.CalculateOffset(make_tuple(k, m0, 0));
-            constexpr index_t b_offset = BDesc{}.CalculateOffset(make_tuple(k, n0, 0));
+        static_for<0, KPack, mfma_type.k_base>{}([&](auto k) {
+            constexpr index_t a_offset = ADesc{}.CalculateOffset(make_tuple(0, m0, 0, k));
+            constexpr index_t b_offset = BDesc{}.CalculateOffset(make_tuple(0, n0, 0, k));
 
             mfma_type.template run<MPerXdlops, NPerXdlops, c_offset>(
                 p_a_wave[Number<a_offset>{}], p_b_wave[Number<b_offset>{}], p_c_thread);
