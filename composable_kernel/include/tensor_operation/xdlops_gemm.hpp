@@ -538,7 +538,11 @@ struct xdlops_info
     static constexpr index_t MRepeats   = MRepeats_;
     static constexpr index_t NRepeats   = NRepeats_;
 
-    // static constexpr bool IsABroadcast() { return NPerXdlops >= MPerXdlops; }
+    static constexpr bool IsABroadcast()
+    {
+        static_assert(NPerXdlops >= MPerXdlops, "only support ABroadcast");
+        return true;
+    }
 
     static constexpr bool IsKReduction()
     {
@@ -831,8 +835,8 @@ struct XdlopsGemm
     static constexpr index_t MPerXdlops = GetXdlopsInfo().MPerXdlops;
     static constexpr index_t NPerXdlops = GetXdlopsInfo().NPerXdlops;
 
-    static constexpr bool IsKReduction = GetXdlopsInfo().IsKReduction();
-    // static constexpr bool IsABroadcast  = GetXdlopsInfo().IsABroadcast();
+    static constexpr bool IsKReduction  = GetXdlopsInfo().IsKReduction();
+    static constexpr bool IsABroadcast  = GetXdlopsInfo().IsABroadcast();
     static constexpr index_t KPerXdlops = GetXdlopsInfo().GetKPerXdlops();
 
     static constexpr auto GetBlkId(const index_t lane_id)
