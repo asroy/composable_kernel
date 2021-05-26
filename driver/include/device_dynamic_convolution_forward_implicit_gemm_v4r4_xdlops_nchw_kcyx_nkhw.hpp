@@ -49,6 +49,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
     wei_k_c_y_x_device_buf.ToDevice(wei_k_c_y_x.mData.data());
     out_n_k_ho_wo_device_buf.ToDevice(out_n_k_ho_wo.mData.data());
 
+    static_assert(1 == InWeiVectorSize, "support InWeiVectorSize == 1 only!");
+
 #if 1
     // run-time variables
     const auto in_n_c_hi_wi_desc =
@@ -108,12 +110,12 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
     constexpr index_t GemmNPerBlock = 128;
     constexpr index_t GemmKPerBlock = 16;
 
-    constexpr index_t GemmMPerWave = 32;
-    constexpr index_t GemmNPerWave = 32;
+    constexpr index_t GemmMPerWave = 8;
+    constexpr index_t GemmNPerWave = 64;
     constexpr index_t GemmKPerWave = 4;
 
-    constexpr index_t MRepeat = 2;
-    constexpr index_t NRepeat = 2;
+    constexpr index_t MRepeat = 8;
+    constexpr index_t NRepeat = 1;
 
     using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<4, 2>;
     using GemmABlockTransferThreadClusterLengths_GemmK_GemmM = Sequence<4, 64>;
@@ -131,7 +133,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
 #endif
 
     const auto descs =
-        transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad<GemmMPerBlock,
+        transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad<TInWei,
+                                                                               GemmMPerBlock,
                                                                                GemmNPerBlock,
                                                                                GemmMPerWave,
                                                                                GemmNPerWave,
@@ -148,7 +151,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
     {
         float ave_time = launch_kernel_dynamic_gemm_xdlops_v1<
             BlockSize,
-            typename vector_type<TInWei, InWeiVectorSize>::type,
+            TInWei,
             TAcc,
             TOut,
             InMemoryDataOperation::Set,
@@ -188,10 +191,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
             decltype(descs[I5]),
             decltype(descs[I6]),
             decltype(descs[I7]),
-            decltype(descs[I8])>(static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
-                                     wei_k_c_y_x_device_buf.GetDeviceBuffer()),
-                                 static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
-                                     in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
+            decltype(descs[I8])>(static_cast<TInWei*>(wei_k_c_y_x_device_buf.GetDeviceBuffer()),
+                                 static_cast<TInWei*>(in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
                                  static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()),
                                  descs[I0],
                                  descs[I1],

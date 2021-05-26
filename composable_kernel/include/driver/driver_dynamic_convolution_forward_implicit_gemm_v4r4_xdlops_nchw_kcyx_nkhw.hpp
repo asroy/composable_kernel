@@ -11,7 +11,8 @@ namespace ck {
 // GemmM = K
 // GemmN = N * Ho * Wo
 // GemmK = C * Y * X
-template <index_t GemmMPerBlock,
+template <typename FloatAB,
+          index_t GemmMPerBlock,
           index_t GemmNPerBlock,
           index_t GemmMPerWave,
           index_t GemmNPerWave,
@@ -109,7 +110,7 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
 
     assert(GemmM % GemmMPerBlock == 0 && GemmN % GemmNPerBlock == 0 && GemmK % GemmKPerBlock == 0);
 
-    constexpr auto xdlops_gemm = XdlopsGemm<float, GemmMPerWave, GemmNPerWave, GemmKPerWave>{};
+    constexpr auto xdlops_gemm = XdlopsGemm<FloatAB, GemmMPerWave, GemmNPerWave, GemmKPerWave>{};
 
     constexpr auto CLayout = xdlops_gemm.GetCLayout();
 

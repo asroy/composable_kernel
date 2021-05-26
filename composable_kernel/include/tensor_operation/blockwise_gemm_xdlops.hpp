@@ -34,7 +34,7 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
     static constexpr index_t N0 = BBlockDesc{}.GetLength(I1);
     static constexpr index_t N1 = BBlockDesc{}.GetLength(I2);
 
-    static constexpr auto xdlops_gemm = XdlopsGemm<float, MPerWave, NPerWave, KPack>{};
+    static constexpr auto xdlops_gemm = XdlopsGemm<FloatA, MPerWave, NPerWave, KPack>{};
 
     static constexpr index_t MWaves = M1 / MPerWave;
     static constexpr index_t NWaves = N1 / NPerWave;
