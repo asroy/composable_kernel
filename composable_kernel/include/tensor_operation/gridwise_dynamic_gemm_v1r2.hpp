@@ -319,22 +319,23 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
                                                                       Number<N1PerThread>{}));
 
         const auto blockwise_gemm =
-            BlockwiseGemm_km0m1_kn0n1_m0m1n0n1_v2_pipeline_2x2<BlockSize,
-                                                               FloatAB,
-                                                               FloatAB,
-                                                               FloatAcc,
-                                                               decltype(a_k_m0_m1_block_desc),
-                                                               decltype(b_k_n0_n1_block_desc),
-                                                               decltype(c_m0_m1_n0_n1_thread_desc),
-                                                               M1PerThread,
-                                                               N1PerThread,
-                                                               KPerThread,
-                                                               M1N1ThreadClusterM10,
-                                                               M1N1ThreadClusterN10,
-                                                               M1N1ThreadClusterM11,
-                                                               M1N1ThreadClusterN11,
-                                                               M1PerThread,
-                                                               N1PerThread>{};
+            BlockwiseGemm_km0m1_kn0n1_m0m1n0n1_v2r2_pipeline_2x2<BlockSize,
+                                                                 FloatAB,
+                                                                 FloatAB,
+                                                                 FloatAcc,
+                                                                 decltype(a_k_m0_m1_block_desc),
+                                                                 decltype(b_k_n0_n1_block_desc),
+                                                                 decltype(
+                                                                     c_m0_m1_n0_n1_thread_desc),
+                                                                 M1PerThread,
+                                                                 N1PerThread,
+                                                                 KPerThread,
+                                                                 M1N1ThreadClusterM10,
+                                                                 M1N1ThreadClusterN10,
+                                                                 M1N1ThreadClusterM11,
+                                                                 M1N1ThreadClusterN11,
+                                                                 M1PerThread,
+                                                                 N1PerThread>{};
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
