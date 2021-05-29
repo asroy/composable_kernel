@@ -15,6 +15,7 @@
 #include "device_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
+#include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw.hpp"
 
@@ -724,11 +725,27 @@ int main(int argc, char* argv[])
                                                                  LeftPads{},
                                                                  RightPads{},
                                                                  nrepeat);
-#elif 1
+#elif 0
     device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw<in_data_t,
                                                                          in_vector_size,
                                                                          acc_data_t,
                                                                          out_data_t>(
+        in_nchw_desc,
+        in_nchw,
+        wei_kcyx_desc,
+        wei_kcyx,
+        out_nkhw_desc,
+        out_nkhw_device,
+        ConvStrides{},
+        ConvDilations{},
+        LeftPads{},
+        RightPads{},
+        nrepeat);
+#elif 1
+    device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw<in_data_t,
+                                                                           in_vector_size,
+                                                                           acc_data_t,
+                                                                           out_data_t>(
         in_nchw_desc,
         in_nchw,
         wei_kcyx_desc,
