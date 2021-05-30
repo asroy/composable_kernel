@@ -283,59 +283,27 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         //     b_mtx[KPerBlocl, NPerBlock] is in LDS
         //     c_mtx[MPerBlock, NPerBlock] is distributed among threads, and saved in
         //       register
-        // sanity check
-        static_assert(
-            MPerBlock % (M1PerThread * M1N1ThreadClusterM11 * M1N1ThreadClusterM10) == 0 &&
-                NPerBlock % (N1PerThread * M1N1ThreadClusterN11 * M1N1ThreadClusterN10) == 0,
-            "wrong!");
-
-        constexpr index_t M0PerThread =
-            MPerBlock / (M1PerThread * M1N1ThreadClusterM11 * M1N1ThreadClusterM10);
-        constexpr index_t N0PerThread =
-            NPerBlock / (N1PerThread * M1N1ThreadClusterN11 * M1N1ThreadClusterN10);
-
-        constexpr auto a_k_m0_m1_block_desc = transform_dynamic_tensor_descriptor(
-            a_k_m_block_desc,
-            make_tuple(make_pass_through_transform(Number<KPerBlock>{}),
-                       make_unmerge_transform(make_tuple(
-                           Number<M0PerThread>{},
-                           Number<M1PerThread * M1N1ThreadClusterM11 * M1N1ThreadClusterM10>{}))),
-            make_tuple(Sequence<0>{}, Sequence<1>{}),
-            make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
-
-        constexpr auto b_k_n0_n1_block_desc = transform_dynamic_tensor_descriptor(
-            b_k_n_block_desc,
-            make_tuple(make_pass_through_transform(Number<KPerBlock>{}),
-                       make_unmerge_transform(make_tuple(
-                           Number<N0PerThread>{},
-                           Number<N1PerThread * M1N1ThreadClusterN11 * M1N1ThreadClusterN10>{}))),
-            make_tuple(Sequence<0>{}, Sequence<1>{}),
-            make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
-
-        constexpr auto c_m0_m1_n0_n1_thread_desc =
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(Number<M0PerThread>{},
-                                                                      Number<M1PerThread>{},
-                                                                      Number<N0PerThread>{},
-                                                                      Number<N1PerThread>{}));
-
         const auto blockwise_gemm =
-            BlockwiseGemm_km0m1_kn0n1_m0m1n0n1_v2r2_pipeline_2x2<BlockSize,
-                                                                 FloatAB,
-                                                                 FloatAB,
-                                                                 FloatAcc,
-                                                                 decltype(a_k_m0_m1_block_desc),
-                                                                 decltype(b_k_n0_n1_block_desc),
-                                                                 decltype(
-                                                                     c_m0_m1_n0_n1_thread_desc),
-                                                                 M1PerThread,
-                                                                 N1PerThread,
-                                                                 KPerThread,
-                                                                 M1N1ThreadClusterM10,
-                                                                 M1N1ThreadClusterN10,
-                                                                 M1N1ThreadClusterM11,
-                                                                 M1N1ThreadClusterN11,
-                                                                 M1PerThread,
-                                                                 N1PerThread>{};
+            BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2<BlockSize,
+                                                           FloatAB,
+                                                           FloatAB,
+                                                           FloatAcc,
+                                                           decltype(a_k_m_block_desc),
+                                                           decltype(b_k_n_block_desc),
+                                                           M1PerThread,
+                                                           N1PerThread,
+                                                           KPerThread,
+                                                           M1N1ThreadClusterM10,
+                                                           M1N1ThreadClusterN10,
+                                                           M1N1ThreadClusterM11,
+                                                           M1N1ThreadClusterN11,
+                                                           M1PerThread,
+                                                           N1PerThread>{};
+        constexpr auto c_m0_m1_n0_n1_thread_tensor_lengths =
+            decltype(blockwise_gemm)::GetCM0M1N0N1ThreadTensorLengths();
+
+        constexpr auto c_m0_m1_n0_n1_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            sequence_to_tuple_of_number(c_m0_m1_n0_n1_thread_tensor_lengths));
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
@@ -351,10 +319,9 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         auto c_thread_buf = make_static_buffer<AddressSpace::Vgpr, FloatAcc>(
             c_m0_m1_n0_n1_thread_desc.GetElementSpaceSize());
 
-        ThreadwiseDynamicTensorSliceSet_v1<
-            FloatAcc,
-            decltype(c_m0_m1_n0_n1_thread_desc),
-            Sequence<M0PerThread, M1PerThread, N0PerThread, N1PerThread>>{}
+        ThreadwiseDynamicTensorSliceSet_v1<FloatAcc,
+                                           decltype(c_m0_m1_n0_n1_thread_desc),
+                                           decltype(c_m0_m1_n0_n1_thread_tensor_lengths)>{}
             .Run(c_m0_m1_n0_n1_thread_desc, make_tuple(I0, I0, I0, I0), c_thread_buf, FloatAcc{0});
 
         constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0);
@@ -415,7 +382,8 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
                     b_k_n_global_desc, b_global_buf, b_k_n_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(a_block_even_buf, b_block_even_buf, c_thread_buf);
+                blockwise_gemm.Run(
+                    c_m0_m1_n0_n1_thread_desc, a_block_even_buf, b_block_even_buf, c_thread_buf);
 
                 // LDS double buffer: store next data to LDS
                 a_blockwise_copy.RunWrite(a_k_m_block_desc, a_block_odd_buf);
@@ -438,7 +406,8 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
                     b_k_n_global_desc, b_global_buf, b_k_n_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(a_block_odd_buf, b_block_odd_buf, c_thread_buf);
+                blockwise_gemm.Run(
+                    c_m0_m1_n0_n1_thread_desc, a_block_odd_buf, b_block_odd_buf, c_thread_buf);
 
                 // LDS double buffer: store next data to LDS
                 a_blockwise_copy.RunWrite(a_k_m_block_desc, a_block_even_buf);
@@ -465,7 +434,8 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
             b_blockwise_copy.RunRead(b_k_n_global_desc, b_global_buf, b_k_n_global_iterator_hacks);
 
             // LDS double buffer: GEMM on 2nd-last data
-            blockwise_gemm.Run(a_block_even_buf, b_block_even_buf, c_thread_buf);
+            blockwise_gemm.Run(
+                c_m0_m1_n0_n1_thread_desc, a_block_even_buf, b_block_even_buf, c_thread_buf);
 
             // LDS double buffer: store last data to LDS
             a_blockwise_copy.RunWrite(a_k_m_block_desc, a_block_odd_buf);
@@ -474,14 +444,16 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
             __syncthreads();
 
             // LDS double buffer: GEMM on last data
-            blockwise_gemm.Run(a_block_odd_buf, b_block_odd_buf, c_thread_buf);
+            blockwise_gemm.Run(
+                c_m0_m1_n0_n1_thread_desc, a_block_odd_buf, b_block_odd_buf, c_thread_buf);
         }
         else // if has 1 iteration left
         {
             __syncthreads();
 
             // LDS double buffer: GEMM on last data
-            blockwise_gemm.Run(a_block_even_buf, b_block_even_buf, c_thread_buf);
+            blockwise_gemm.Run(
+                c_m0_m1_n0_n1_thread_desc, a_block_even_buf, b_block_even_buf, c_thread_buf);
         }
 
         // output: register to global memory
@@ -495,18 +467,17 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
             const auto c_thread_data_idx_on_block =
                 blockwise_gemm.CalculateCThreadOriginDataIndex(get_thread_local_1d_id());
 
-            ThreadwiseDynamicTensorSliceTransfer_v1r3<
-                FloatAcc,
-                FloatC,
-                decltype(c_m0_m1_n0_n1_thread_desc),
-                decltype(c_m0_m1_n0_n1_global_desc),
-                Sequence<M0PerThread, M1PerThread, N0PerThread, N1PerThread>,
-                CThreadTransferSrcDstAccessOrder,
-                CThreadTransferSrcDstVectorDim,
-                CThreadTransferDstScalarPerVector,
-                CGlobalMemoryDataOperation,
-                1,
-                true>{
+            ThreadwiseDynamicTensorSliceTransfer_v1r3<FloatAcc,
+                                                      FloatC,
+                                                      decltype(c_m0_m1_n0_n1_thread_desc),
+                                                      decltype(c_m0_m1_n0_n1_global_desc),
+                                                      decltype(c_m0_m1_n0_n1_thread_tensor_lengths),
+                                                      CThreadTransferSrcDstAccessOrder,
+                                                      CThreadTransferSrcDstVectorDim,
+                                                      CThreadTransferDstScalarPerVector,
+                                                      CGlobalMemoryDataOperation,
+                                                      1,
+                                                      true>{
                 c_m0_m1_n0_n1_global_desc,
                 make_multi_index(m_block_data_idx_on_global / M1 + c_thread_data_idx_on_block[I0],
                                  c_thread_data_idx_on_block[I1],
