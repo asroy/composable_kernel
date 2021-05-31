@@ -78,8 +78,8 @@ int main(int argc, char* argv[])
     using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;
 
-    using LeftPads  = Sequence<0, 0>;
-    using RightPads = Sequence<0, 0>;
+    using LeftPads                   = Sequence<0, 0>;
+    using RightPads                  = Sequence<0, 0>;
 #elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
@@ -651,6 +651,11 @@ int main(int argc, char* argv[])
     constexpr index_t in_vector_size = 1;
     using acc_data_t                 = float;
     using out_data_t                 = float;
+#elif 1
+    using in_data_t                  = half_t;
+    constexpr index_t in_vector_size = 1;
+    using acc_data_t                 = float;
+    using out_data_t                 = half_t;
 #elif 0
     using in_data_t                  = float;
     constexpr index_t in_vector_size = 1;
@@ -819,6 +824,7 @@ int main(int argc, char* argv[])
 
         check_error(out_nkhw_host, out_nkhw_device);
 
+#if 0
         if(do_log)
         {
             LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
@@ -826,5 +832,6 @@ int main(int argc, char* argv[])
             LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
             LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
         }
+#endif
     }
 }

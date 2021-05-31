@@ -198,18 +198,13 @@ struct mfma_info<mfma_instr::mfma_f32_32x32x4f16>
 
     template <index_t MPerXdlops,
               index_t NPerXdlops,
-              index_t AStride,
-              index_t BStride,
+              index_t COffset,
               class FloatA,
               class FloatB,
               class FloatC>
-    __device__ FloatC run(const FloatA* a, const FloatB* b, FloatC reg_c) const
+    __device__ void run(const FloatA& a, const FloatB& b, FloatC& reg_c) const
     {
-        const auto p_a = reinterpret_cast<const half4_t*>(a);
-        const auto p_b = reinterpret_cast<const half4_t*>(b);
-
-        return intrin_mfma_f32_32x32x4f16<MPerXdlops, NPerXdlops, AStride, BStride>::run(
-            p_a, p_b, reg_c);
+        intrin_mfma_f32_32x32x4f16<MPerXdlops, NPerXdlops, COffset>::Run(a, b, reg_c);
     }
 };
 
@@ -588,25 +583,13 @@ struct XdlopsGemm
         return xdlops_info<mfma_instr::mfma_f32_16x16x4xf32, 16, 16>{};
     }
 
-#if 0
-    template <>
-    static constexpr auto GetXdlopsInfo<half_t, 128, 64>()
-    {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 64, 2, 1, c_vec32_4_t>{};
-    }
-
-    template <>
-    static constexpr auto GetXdlopsInfo<half_t, 64, 128>()
-    {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 64, 1, 2, c_vec32_4_t>{};
-    }
-
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 64, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 64, 1, 1, c_vec32_2_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 64>{};
     }
 
+#if 0
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 64, 32>()
     {

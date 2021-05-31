@@ -327,7 +327,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
             make_tuple(Number<NumBlks>{}, Number<BlkSize>{}));
 
         StaticBuffer<AddressSpace::Vgpr,
-                     vector_type<FloatAB, c_blk_nb_bs_desc.GetElementSpaceSize()>,
+                     vector_type<FloatAcc, c_blk_nb_bs_desc.GetElementSpaceSize()>,
                      c_mr_nr_nx_desc.GetElementSpaceSize()>
             c_thread_buf;
 
@@ -488,7 +488,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                 make_dynamic_naive_tensor_descriptor_packed_v2(
                     make_tuple(Number<M0>{}, Number<1>{}, Number<M2>{}, Number<1>{}));
 
-            StaticBuffer<AddressSpace::Vgpr, FloatAB, BlkSize> c_blk_buf_;
+            StaticBuffer<AddressSpace::Vgpr, FloatC, BlkSize> c_blk_buf_;
 
             static_for<0, MRepeat, 1>{}([&](auto mr_i) {
                 static_for<0, NRepeat, 1>{}([&](auto nr_i) {
@@ -498,7 +498,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                                 make_tuple(mr_i, nr_i, xdlops_i))>{}];
 
                             static_for<0, BlkSize, 1>{}([&](auto j) {
-                                c_blk_buf_(j) = c_blk.template AsType<FloatAB>()[Number<
+                                c_blk_buf_(j) = c_blk.template AsType<FloatAcc>()[Number<
                                     c_blk_nb_bs_desc.CalculateOffset(make_tuple(blk_i, j))>{}];
                             });
 
@@ -518,7 +518,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                                 CGlobalIteratorHacks{};
 
                             ThreadwiseDynamicTensorSliceTransfer_v1r3<
-                                FloatAcc,
+                                FloatC,
                                 FloatC,
                                 decltype(c_m0_m1_m2_n_thread_desc),
                                 decltype(c_m0_m1_m2_n_global_desc),
