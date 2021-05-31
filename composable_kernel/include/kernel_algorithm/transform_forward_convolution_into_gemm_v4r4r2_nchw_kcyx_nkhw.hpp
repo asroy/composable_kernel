@@ -10,11 +10,7 @@ namespace ck {
 // GemmM = K
 // GemmN = N * Ho * Wo
 // GemmK = C * Y * X
-template <index_t GemmMPerBlock,
-          index_t GemmNPerBlock,
-          index_t GemmM1,
-          index_t GemmN1,
-          typename... Wei,
+template <typename... Wei,
           typename... In,
           typename... Out,
           typename ConvStrides,
@@ -101,30 +97,8 @@ transform_forward_convolution_into_gemm_v4r4r2_nchw_kcyx_nkhw_pad(
         make_tuple(Sequence<1>{}, Sequence<0, 2>{}),
         make_tuple(Sequence<0>{}, Sequence<1>{}));
 
-    const auto GemmM = out_gemmm_gemmn_global_desc.GetLength(I0);
-    const auto GemmN = out_gemmm_gemmn_global_desc.GetLength(I1);
-    const auto GemmK = wei_gemmk_gemmm_global_desc.GetLength(I0);
-
-    assert(GemmM % GemmMPerBlock == 0 && GemmN % GemmNPerBlock == 0 && GemmK % GemmKPerBlock == 0);
-
-    const auto GemmM0 = GemmM / Number<GemmM1>{};
-    const auto GemmN0 = GemmN / Number<GemmN1>{};
-
-    const auto out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc = transform_dynamic_tensor_descriptor(
-        out_gemmm_gemmn_global_desc,
-        make_tuple(make_unmerge_transform(make_tuple(GemmM0, GemmM1)),
-                   make_unmerge_transform(make_tuple(GemmN0, GemmN1))),
-        make_tuple(Sequence<0>{}, Sequence<1>{}),
-        make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
-
-    // out_gemm_block_cluster_desc
-    const auto out_gemm_block_cluster_desc = make_cluster_descriptor_v2(
-        make_tuple(GemmM / Number<GemmMPerBlock>{}, GemmN / Number<GemmNPerBlock>{}));
-
-    return make_tuple(wei_gemmk_gemmm_global_desc,
-                      in_gemmk_gemmn_global_desc,
-                      out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc,
-                      out_gemm_block_cluster_desc);
+    return make_tuple(
+        wei_gemmk_gemmm_global_desc, in_gemmk_gemmn_global_desc, out_gemmm_gemmn_global_desc);
 }
 
 } // namespace ck
