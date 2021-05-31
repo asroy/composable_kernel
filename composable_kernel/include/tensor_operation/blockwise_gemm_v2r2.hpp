@@ -54,6 +54,15 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2
     static constexpr index_t M = AKMBlockDesc{}.GetLength(I1);
     static constexpr index_t N = BKNBlockDesc{}.GetLength(I1);
 
+    static constexpr index_t M100 = M1N1ThreadClusterM100;
+    static constexpr index_t N100 = M1N1ThreadClusterN100;
+
+    static constexpr index_t M101 = M1N1ThreadClusterM101;
+    static constexpr index_t N101 = M1N1ThreadClusterN101;
+
+    static constexpr index_t M11 = M1PerThreadM11;
+    static constexpr index_t N11 = N1PerThreadN11;
+
     static constexpr index_t M1 = M1N1ThreadClusterM100 * M1N1ThreadClusterM101 * M1PerThreadM11;
     static constexpr index_t N1 = M1N1ThreadClusterN100 * M1N1ThreadClusterN101 * N1PerThreadN11;
 
@@ -86,9 +95,44 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2
         return b_k_n0_n1_block_desc;
     }
 
+    __host__ __device__ static constexpr auto MakeCM0M100M101M11N0N100N101N11ToMNBlockAdaptor()
+    {
+        // upper: [M0, M100, M101, M11, N0, N100, N101, N11]
+        // lower: [M, N]
+        constexpr auto c_m0_m100_m101_m11_n0_n100_n101_n11_to_m_n_block_adaptor =
+            make_single_stage_tensor_adaptor(
+                make_tuple(make_unmerge_transform(make_tuple(
+                               Number<M0>{}, Number<M100>{}, Number<M101>{}, Number<M11>{})),
+                           make_unmerge_transform(make_tuple(
+                               Number<N0>{}, Number<N100>{}, Number<N101>{}, Number<N11>{}))),
+                make_tuple(Sequence<0>{}, Sequence<1>{}),
+                make_tuple(Sequence<0, 1, 2, 3>{}, Sequence<4, 5, 6, 7>{}));
+
+        return c_m0_m100_m101_m11_n0_n100_n101_n11_to_m_n_block_adaptor;
+    }
+
+    __host__ __device__ static constexpr auto
+    MakeCM0M100M101M11N0N100N101N11ToM0M1N0N1BlockAdaptor()
+    {
+        // upper: [M0, M100, M101, M11, N0, N100, N101, N11]
+        // lower: [M0, M1, N0, N1]
+        constexpr auto c_m0_m100_m101_m11_n0_n100_n101_n11_to_m0_m1_n0_n1_block_adaptor =
+            make_single_stage_tensor_adaptor(
+                make_tuple(make_pass_through_transform(Number<M0>{}),
+                           make_unmerge_transform(
+                               make_tuple(Number<M100>{}, Number<M101>{}, Number<M11>{})),
+                           make_pass_through_transform(Number<N0>{}),
+                           make_unmerge_transform(
+                               make_tuple(Number<N100>{}, Number<N101>{}, Number<N11>{}))),
+                make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
+                make_tuple(Sequence<0>{}, Sequence<1, 2, 3>{}, Sequence<4>{}, Sequence<5, 6, 7>{}));
+
+        return c_m0_m100_m101_m11_n0_n100_n101_n11_to_m0_m1_n0_n1_block_adaptor;
+    }
+
     __host__ __device__ static constexpr auto GetCM0M1N0N1ThreadTensorLengths()
     {
-        return Sequence<M0, M1PerThreadM11, N0, N1PerThreadN11>{};
+        return Sequence<M0, M11, N0, N11>{};
     }
 
     static constexpr auto a_k_m0_m1_block_desc_ = MakeAKM0M1BlockDescriptor(AKMBlockDesc{});
@@ -96,7 +140,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2
 
     public:
     __device__ BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2()
-        : c_thread_origin_data_idx_{CalculateCThreadOriginDataIndex(get_thread_local_1d_id())},
+        : c_thread_origin_data_idx_{CalculateCM0M1N0N1ThreadOriginIndex(get_thread_local_1d_id())},
           a_thread_copy_{
               make_tuple(0, c_thread_origin_data_idx_[I0], c_thread_origin_data_idx_[I1])},
           b_thread_copy_{
@@ -105,8 +149,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2
         static_assert(AKMBlockDesc::IsKnownAtCompileTime() && BKNBlockDesc::IsKnownAtCompileTime(),
                       "wrong! Desc should be known at compile-time");
 
-        static_assert(BlockSize == M1N1ThreadClusterM101 * M1N1ThreadClusterM100 *
-                                       M1N1ThreadClusterN101 * M1N1ThreadClusterN100,
+        static_assert(BlockSize == M101 * M100 * N101 * N100,
                       "wrong! blocksize and cluster size not consistent");
 
         static_assert(M % M1 == 0 && N % N1 == 0, "wrong!");
@@ -118,39 +161,27 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2
         static_assert(M0 == 2 && N0 == 2, "wrong");
     }
 
-    __device__ static CIndex CalculateCThreadOriginDataIndex(index_t thread_id)
+    __device__ static CIndex CalculateCM0M1N0N1ThreadOriginIndex(index_t thread_id)
     {
-        // 4-d data space into 4-d thread space
-        constexpr auto adaptor0 = make_single_stage_tensor_adaptor(
-            make_tuple(make_vectorize_transform(M0, 1),
-                       make_vectorize_transform(M1PerThreadM11, M1 / M1PerThreadM11),
-                       make_vectorize_transform(N0, 1),
-                       make_vectorize_transform(N1PerThreadN11, N1 / N1PerThreadN11)),
-            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
-            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
+        // upper: [M0, M100, M101, M11, N0, N100, N101, N11]
+        // lower: [M0, M1, N0, N1]
+        constexpr auto adaptor0 = MakeCM0M100M101M11N0N100N101N11ToM0M1N0N1BlockAdaptor();
 
-        // thread position 4-d thread space
+        // upper: [Tid, M0, M11, N0, N11]
+        // lower: [M0, M100, M101, M11, N0, N100, N101, N11]
         constexpr auto adaptor1 = make_single_stage_tensor_adaptor(
+            make_tuple(make_merge_transform(make_tuple(M100, N100, M101, N101)),
+                       make_pass_through_transform(M0),
+                       make_pass_through_transform(M11),
+                       make_pass_through_transform(N0),
+                       make_pass_through_transform(N11)),
             make_tuple(
-                make_freeze_transform(make_multi_index(0)),
-                make_unmerge_transform(make_tuple(M1N1ThreadClusterM100, M1N1ThreadClusterM101)),
-                make_freeze_transform(make_multi_index(0)),
-                make_unmerge_transform(make_tuple(M1N1ThreadClusterN100, M1N1ThreadClusterN101))),
-            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
-            make_tuple(Sequence<>{}, Sequence<0, 1>{}, Sequence<>{}, Sequence<2, 3>{}));
+                Sequence<1, 5, 2, 6>{}, Sequence<0>{}, Sequence<3>{}, Sequence<4>{}, Sequence<7>{}),
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}, Sequence<4>{}));
 
-        // 4-d thread space to 1-d thread space
-        constexpr auto adaptor2 = make_single_stage_tensor_adaptor(
-            make_tuple(make_merge_transform(make_tuple(M1N1ThreadClusterM100,
-                                                       M1N1ThreadClusterN100,
-                                                       M1N1ThreadClusterM101,
-                                                       M1N1ThreadClusterN101))),
-            make_tuple(Sequence<0, 2, 1, 3>{}),
-            make_tuple(Sequence<0>{}));
+        constexpr auto adaptor = chain_tensor_adaptors(adaptor0, adaptor1);
 
-        constexpr auto cluster_desc = chain_tensor_adaptors(adaptor0, adaptor1, adaptor2);
-
-        return cluster_desc.CalculateBottomIndex(make_multi_index(get_thread_local_1d_id()));
+        return adaptor.CalculateBottomIndex(make_multi_index(get_thread_local_1d_id(), 0, 0, 0, 0));
     }
 
     template <typename CM0M1N0N1ThreadDesc,

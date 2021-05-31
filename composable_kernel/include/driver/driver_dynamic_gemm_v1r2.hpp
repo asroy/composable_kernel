@@ -78,25 +78,29 @@ __host__ float launch_kernel_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
         throw std::runtime_error("wrong! GEMM size no divisible");
     }
 
-    const auto M1 = Number<M1PerThread * M1N1ThreadClusterM11 * M1N1ThreadClusterM10>{};
-    const auto N1 = Number<N1PerThread * M1N1ThreadClusterN11 * M1N1ThreadClusterN10>{};
+    const auto M1Old = Number<M1PerThread * M1N1ThreadClusterM11 * M1N1ThreadClusterM10>{};
+    const auto N1Old = Number<N1PerThread * M1N1ThreadClusterN11 * M1N1ThreadClusterN10>{};
 
-    if(!(MPerBlock % M1 == 0 && NPerBlock % N1 == 0))
+    if(!(MPerBlock % M1Old == 0 && NPerBlock % N1Old == 0))
     {
         throw std::runtime_error("wrong! GEMM size no divisible");
     }
 
-    const auto M0 = M / M1;
-    const auto N0 = N / N1;
+    const auto M0Old = M / M1Old;
+    const auto N0Old = N / N1Old;
 
-    const auto c_m0_m1_n0_n1_grid_desc =
-        transform_dynamic_tensor_descriptor(c_m_n_grid_desc,
-                                            make_tuple(make_unmerge_transform(make_tuple(M0, M1)),
-                                                       make_unmerge_transform(make_tuple(N0, N1))),
-                                            make_tuple(Sequence<0>{}, Sequence<1>{}),
-                                            make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
+    const auto c_m0_m1_n0_n1_grid_desc = transform_dynamic_tensor_descriptor(
+        c_m_n_grid_desc,
+        make_tuple(make_unmerge_transform(make_tuple(M0Old, M1Old)),
+                   make_unmerge_transform(make_tuple(N0Old, N1Old))),
+        make_tuple(Sequence<0>{}, Sequence<1>{}),
+        make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
 
     using CM0M1N0N1GridDesc = decltype(c_m0_m1_n0_n1_grid_desc);
+
+#if 0
+    const auto c_m0_m10_m
+#endif
 
     // out_gemm_block_cluster_desc
     const auto c_block_cluster_desc =

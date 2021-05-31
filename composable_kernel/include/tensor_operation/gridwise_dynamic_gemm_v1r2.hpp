@@ -220,10 +220,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
                                const BKNGridDesc& b_k_n_grid_desc,
                                const CM0M1N0N1GridDesc& c_m0_m1_n0_n1_grid_desc,
                                const CBlockClusterDesc& c_block_cluster_desc,
-#if 0
-                               const AKM0M1GridDesc& a_k_m0_m1_grid_desc,
-                               const BKN0N1GridDesc& b_k_n0_n1_grid_desc,
-#endif
                                FloatAB* __restrict__ p_shared_block,
                                integral_constant<bool, HasMainKBlockLoop>,
                                integral_constant<bool, HasDoubleTailKBlockLoop>)
@@ -508,7 +504,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
             constexpr auto c_m0_m1_n0_n1_global_tensor_iterator_hacks = CGridIteratorHacks{};
 
             const auto c_thread_data_idx_on_block =
-                blockwise_gemm.CalculateCThreadOriginDataIndex(get_thread_local_1d_id());
+                blockwise_gemm.CalculateCM0M1N0N1ThreadOriginIndex(get_thread_local_1d_id());
 
             ThreadwiseDynamicTensorSliceTransfer_v1r3<FloatAcc,
                                                       FloatC,
