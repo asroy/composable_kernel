@@ -74,7 +74,7 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2
     }
 
     __host__ __device__ static constexpr auto
-    MakeBKN0N1BlockDescriptor(const BKNBlockDesc& n_k_n_block_desc)
+    MakeBKN0N1BlockDescriptor(const BKNBlockDesc& b_k_n_block_desc)
     {
         const auto b_k_n0_n1_block_desc = transform_dynamic_tensor_descriptor(
             BKNBlockDesc{},

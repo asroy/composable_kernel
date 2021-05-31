@@ -121,44 +121,10 @@ transform_forward_convolution_into_gemm_v4r4r2_nchw_kcyx_nkhw_pad(
     const auto out_gemm_block_cluster_desc = make_cluster_descriptor_v2(
         make_tuple(GemmM / Number<GemmMPerBlock>{}, GemmN / Number<GemmNPerBlock>{}));
 
-    // hack to control index calculation when iterating over wei_gemmk_gemmm_global tensor
-    constexpr auto wei_gemmk_gemmm_global_iterator_hacks =
-        make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
-                   make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
-
-    constexpr auto wei_gemmk_gemmm_global_move_slice_window_iterator_hacks = Sequence<0, 0, 0>{};
-
-    // hack to control index calculation when iterating over in_gemmk_gemmn_global tensor
-    constexpr auto in_gemmk_gemmn_global_iterator_hacks =
-        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>{}),
-                   make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>{}));
-
-    constexpr auto in_gemmk_gemmn_global_move_slice_window_iterator_hacks =
-        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2>{};
-
-    // hack to control index calculation when iterating over out_gemmm0_gemmm1_gemmn0_gemmn1_global
-    // tensor hack for NKHW format
-    constexpr auto out_gemmm0_gemmm1_gemmn0_gemmn1_global_iterator_hacks =
-        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 1, 0, 0>{},
-                              Sequence<0, 0, 1, 0, 0>{}),
-                   make_tuple(Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 2, 0, 0>{},
-                              Sequence<0, 0, 2, 0, 0>{}));
-
     return make_tuple(wei_gemmk_gemmm_global_desc,
                       in_gemmk_gemmn_global_desc,
                       out_gemmm0_gemmm1_gemmn0_gemmn1_global_desc,
-                      out_gemm_block_cluster_desc,
-                      wei_gemmk_gemmm_global_iterator_hacks,
-                      in_gemmk_gemmn_global_iterator_hacks,
-                      out_gemmm0_gemmm1_gemmn0_gemmn1_global_iterator_hacks,
-                      wei_gemmk_gemmm_global_move_slice_window_iterator_hacks,
-                      in_gemmk_gemmn_global_move_slice_window_iterator_hacks);
+                      out_gemm_block_cluster_desc);
 }
 
 } // namespace ck

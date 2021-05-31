@@ -485,6 +485,35 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw(
             in_left_pads,
             in_right_pads);
 
+    // hack to control index calculation when iterating over wei_gemmk_gemmm_global tensor
+    constexpr auto wei_gemmk_gemmm_global_iterator_hacks =
+        make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
+                   make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
+
+    constexpr auto wei_gemmk_gemmm_global_move_slice_window_iterator_hacks = Sequence<0, 0, 0>{};
+
+    // hack to control index calculation when iterating over in_gemmk_gemmn_global tensor
+    constexpr auto in_gemmk_gemmn_global_iterator_hacks =
+        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>{},
+                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>{}),
+                   make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0>{},
+                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>{}));
+
+    constexpr auto in_gemmk_gemmn_global_move_slice_window_iterator_hacks =
+        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2>{};
+
+    // hack to control index calculation when iterating over out_gemmm0_gemmm1_gemmn0_gemmn1_global
+    // tensor hack for NKHW format
+    constexpr auto out_gemmm0_gemmm1_gemmn0_gemmn1_global_iterator_hacks =
+        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 1, 0, 0>{},
+                              Sequence<0, 0, 1, 0, 0>{}),
+                   make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 2, 0, 0>{},
+                              Sequence<0, 0, 2, 0, 0>{}));
+
     for(index_t i = 0; i < 5; ++i)
     {
         float ave_time = launch_kernel_dynamic_gemm_v1r2<
@@ -527,25 +556,26 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw(
             Sequence<2, 3, 0, 1>,
             3,
             GemmCThreadTransferDstScalarPerVector_GemmN1,
-            decltype(descs[I4]),
-            decltype(descs[I5]),
-            decltype(descs[I6]),
-            decltype(descs[I7]),
-            decltype(descs[I8])>(static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
-                                     wei_k_c_y_x_device_buf.GetDeviceBuffer()),
-                                 static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
-                                     in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
-                                 static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()),
-                                 descs[I0],
-                                 descs[I1],
-                                 descs[I2],
-                                 descs[I3],
-                                 descs[I4],
-                                 descs[I5],
-                                 descs[I6],
-                                 descs[I7],
-                                 descs[I8],
-                                 nrepeat);
+            decltype(wei_gemmk_gemmm_global_iterator_hacks),
+            decltype(in_gemmk_gemmn_global_iterator_hacks),
+            decltype(out_gemmm0_gemmm1_gemmn0_gemmn1_global_iterator_hacks),
+            decltype(wei_gemmk_gemmm_global_move_slice_window_iterator_hacks),
+            decltype(in_gemmk_gemmn_global_move_slice_window_iterator_hacks)>(
+            static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
+                wei_k_c_y_x_device_buf.GetDeviceBuffer()),
+            static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
+                in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
+            static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()),
+            descs[I0],
+            descs[I1],
+            descs[I2],
+            descs[I3],
+            wei_gemmk_gemmm_global_iterator_hacks,
+            in_gemmk_gemmn_global_iterator_hacks,
+            out_gemmm0_gemmm1_gemmn0_gemmn1_global_iterator_hacks,
+            wei_gemmk_gemmm_global_move_slice_window_iterator_hacks,
+            in_gemmk_gemmn_global_move_slice_window_iterator_hacks,
+            nrepeat);
 
         float perf = (float)calculate_convolution_flops(
                          in_n_c_hi_wi_desc, wei_k_c_y_x_desc, out_n_k_ho_wo_desc) /
