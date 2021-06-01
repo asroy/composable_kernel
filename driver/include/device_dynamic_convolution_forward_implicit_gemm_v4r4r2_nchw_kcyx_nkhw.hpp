@@ -499,6 +499,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw(
     constexpr auto in_gemmk_gemmn_grid_move_slice_window_iterator_hacks =
         Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2>{};
 
+#if 0
     // hack to control index calculation when iterating over out_gemmm0_gemmm1_gemmn0_gemmn1_grid
     constexpr auto out_gemmm0_gemmm1_gemmn0_gemmn1_grid_iterator_hacks =
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
@@ -509,6 +510,21 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw(
                               Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 2, 0, 0>{},
                               Sequence<0, 0, 2, 0, 0>{}));
+#else
+    constexpr auto out_gemmm0_gemmm10_gemmm11_gemmn0_gemmn10_gemmn11_grid_iterator_hacks =
+        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 1, 0, 0>{},
+                              Sequence<0, 0, 1, 0, 0>{},
+                              Sequence<0, 0, 1, 0, 0>{}),
+                   make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 2, 0, 0>{},
+                              Sequence<0, 0, 2, 0, 0>{},
+                              Sequence<0, 0, 2, 0, 0>{}));
+#endif
 
     for(index_t i = 0; i < 5; ++i)
     {
@@ -553,7 +569,11 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw(
             GemmCThreadTransferDstScalarPerVector_GemmN1,
             decltype(wei_gemmk_gemmm_grid_iterator_hacks),
             decltype(in_gemmk_gemmn_grid_iterator_hacks),
+#if 0
             decltype(out_gemmm0_gemmm1_gemmn0_gemmn1_grid_iterator_hacks),
+#else
+            decltype(out_gemmm0_gemmm10_gemmm11_gemmn0_gemmn10_gemmn11_grid_iterator_hacks),
+#endif
             decltype(wei_gemmk_gemmm_grid_move_slice_window_iterator_hacks),
             decltype(in_gemmk_gemmn_grid_move_slice_window_iterator_hacks)>(
             static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
@@ -566,7 +586,11 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw(
             out_gemmm_gemmn_grid_desc,
             wei_gemmk_gemmm_grid_iterator_hacks,
             in_gemmk_gemmn_grid_iterator_hacks,
+#if 0
             out_gemmm0_gemmm1_gemmn0_gemmn1_grid_iterator_hacks,
+#else
+            out_gemmm0_gemmm10_gemmm11_gemmn0_gemmn10_gemmn11_grid_iterator_hacks,
+#endif
             wei_gemmk_gemmm_grid_move_slice_window_iterator_hacks,
             in_gemmk_gemmn_grid_move_slice_window_iterator_hacks,
             nrepeat);

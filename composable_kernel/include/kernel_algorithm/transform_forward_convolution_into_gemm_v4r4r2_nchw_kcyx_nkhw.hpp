@@ -93,7 +93,8 @@ transform_forward_convolution_into_gemm_v4r4r2_nchw_kcyx_nkhw_pad(
     // output tensor
     const auto out_gemmm_gemmn_global_desc = transform_dynamic_tensor_descriptor(
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K, Ho * Wo)),
-        make_tuple(make_pass_through_transform(K), make_merge_transform(make_tuple(N, Ho * Wo))),
+        make_tuple(make_pass_through_transform(K),
+                   make_merge_transform(make_tuple(N, Ho * Wo))),
         make_tuple(Sequence<1>{}, Sequence<0, 2>{}),
         make_tuple(Sequence<0>{}, Sequence<1>{}));
 
