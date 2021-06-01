@@ -646,7 +646,7 @@ int main(int argc, char* argv[])
     print_array("ConvStrides", to_multi_index(ConvStrides{}));
     print_array("ConvDilations", to_multi_index(ConvDilations{}));
 
-#if 0
+#if 1
     using in_data_t                  = float;
     constexpr index_t in_vector_size = 1;
     using acc_data_t                 = float;
@@ -824,7 +824,6 @@ int main(int argc, char* argv[])
 
         check_error(out_nkhw_host, out_nkhw_device);
 
-#if 0
         if(do_log)
         {
             LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
@@ -832,6 +831,5 @@ int main(int argc, char* argv[])
             LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
             LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
         }
-#endif
     }
 }
