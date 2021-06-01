@@ -308,7 +308,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         const auto blockwise_gemm =
             BlockwiseGemmXdlops_km_kn_m0m1m2n_v1<BlockSize,
                                                  FloatAB,
-                                                 FloatAB,
                                                  decltype(a_k0_m0_m1_k1_block_desc),
                                                  decltype(b_k0_n0_n1_k1_block_desc),
                                                  MPerWave,

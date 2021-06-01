@@ -646,7 +646,7 @@ int main(int argc, char* argv[])
     print_array("ConvStrides", to_multi_index(ConvStrides{}));
     print_array("ConvDilations", to_multi_index(ConvDilations{}));
 
-#if 1
+#if 0
     using in_data_t                  = float;
     constexpr index_t in_vector_size = 1;
     using acc_data_t                 = float;

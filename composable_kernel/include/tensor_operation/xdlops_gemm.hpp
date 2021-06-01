@@ -759,7 +759,7 @@ struct XdlopsGemm
 
         constexpr index_t c_offset = CDesc{}.CalculateOffset(make_tuple(m0, n0)) * GetNumXdlops();
 
-        static_for<0, KPack, mfma_type.k_base>{}([&](auto k) {
+        static_for<0, KPack / mfma_type.k_base, 1>{}([&](auto k) {
             constexpr index_t a_offset = ADesc{}.CalculateOffset(make_tuple(0, m0, 0, k));
             constexpr index_t b_offset = BDesc{}.CalculateOffset(make_tuple(0, n0, 0, k));
 

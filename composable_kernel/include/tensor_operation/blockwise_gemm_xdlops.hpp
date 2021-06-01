@@ -9,8 +9,7 @@
 namespace ck {
 
 template <index_t BlockSize,
-          typename FloatA,
-          typename FloatB,
+          typename FloatAB,
           class ABlockDesc,
           class BBlockDesc,
           index_t MPerWave,
@@ -34,7 +33,7 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
     static constexpr index_t N0 = BBlockDesc{}.GetLength(I1);
     static constexpr index_t N1 = BBlockDesc{}.GetLength(I2);
 
-    static constexpr auto xdlops_gemm = XdlopsGemm<FloatA, MPerWave, NPerWave, KPack>{};
+    static constexpr auto xdlops_gemm = XdlopsGemm<FloatAB, MPerWave, NPerWave, KPack>{};
 
     static constexpr index_t MWaves = M1 / MPerWave;
     static constexpr index_t NWaves = N1 / NPerWave;
@@ -141,11 +140,15 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
                         CThreadBuffer& c_thread_buf) const
     {
         auto a_thread_buf =
-            make_static_buffer<AddressSpace::Vgpr, FloatA>(a_thread_desc_.GetElementSpaceSize());
+            make_static_buffer<AddressSpace::Vgpr, FloatAB>(a_thread_desc_.GetElementSpaceSize());
         auto b_thread_buf =
-            make_static_buffer<AddressSpace::Vgpr, FloatB>(b_thread_desc_.GetElementSpaceSize());
+            make_static_buffer<AddressSpace::Vgpr, FloatAB>(b_thread_desc_.GetElementSpaceSize());
 
         constexpr index_t KPerBlock = ABlockDesc{}.GetLength(I0);
+
+        vector_type<FloatAB, a_thread_desc_.GetElementSpaceSize()> a_thread_vec;
+
+        vector_type<FloatAB, b_thread_desc_.GetElementSpaceSize()> b_thread_vec;
 
         static_for<0, KPerBlock, xdlops_gemm.KPerXdlops>{}([&](auto k) {
             // read A
@@ -164,13 +167,23 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
                                make_tuple(I0, I0, I0, I0),
                                b_thread_buf);
 
+            static_for<0, a_thread_desc_.GetElementSpaceSize(), 1>{}([&](auto i) {
+                a_thread_vec.template AsType<FloatAB>()(Number<i>{}) = a_thread_buf[Number<i>{}];
+            });
+
+            static_for<0, b_thread_desc_.GetElementSpaceSize(), 1>{}([&](auto i) {
+                b_thread_vec.template AsType<FloatAB>()(Number<i>{}) = b_thread_buf[Number<i>{}];
+            });
+
             static_for<0, MRepeat, 1>{}([&](auto m0) {
                 static_for<0, NRepeat, 1>{}([&](auto n0) {
                     xdlops_gemm.template Run<decltype(a_thread_desc_),
                                              decltype(b_thread_desc_),
                                              decltype(c_thread_desc_),
                                              m0,
-                                             n0>(a_thread_buf, b_thread_buf, c_thread_buf);
+                                             n0>(a_thread_vec.template AsType<half4_t>(),
+                                                 b_thread_vec.template AsType<half4_t>(),
+                                                 c_thread_buf);
                 });
             });
         });
@@ -188,8 +201,8 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
     static constexpr auto c_thread_desc_ = make_dynamic_naive_tensor_descriptor_packed_v2(
         make_tuple(Number<MRepeat>{}, Number<NRepeat>{}));
 
-    using AThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4<FloatA,
-                                                                FloatA,
+    using AThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4<FloatAB,
+                                                                FloatAB,
                                                                 ABlockDesc,
                                                                 decltype(a_thread_desc_),
                                                                 Sequence<1, MRepeat, 1, KPack>,
@@ -198,8 +211,8 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
                                                                 1, // KPack,
                                                                 1>;
 
-    using BThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4<FloatB,
-                                                                FloatB,
+    using BThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4<FloatAB,
+                                                                FloatAB,
                                                                 BBlockDesc,
                                                                 decltype(b_thread_desc_),
                                                                 Sequence<1, NRepeat, 1, KPack>,
@@ -213,8 +226,7 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
 };
 
 template <index_t BlockSize,
-          typename FloatA,
-          typename FloatB,
+          typename FloatAB,
           class ABlockDesc,
           class BBlockDesc,
           index_t MPerWave,
@@ -345,9 +357,9 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline
                         CThreadBuffer& c_thread_buf) const
     {
         auto a_thread_buf =
-            make_static_buffer<AddressSpace::Vgpr, FloatA>(a_thread_desc_.GetElementSpaceSize());
+            make_static_buffer<AddressSpace::Vgpr, FloatAB>(a_thread_desc_.GetElementSpaceSize());
         auto b_thread_buf =
-            make_static_buffer<AddressSpace::Vgpr, FloatB>(b_thread_desc_.GetElementSpaceSize());
+            make_static_buffer<AddressSpace::Vgpr, FloatAB>(b_thread_desc_.GetElementSpaceSize());
 
         constexpr index_t KPerBlock = ABlockDesc{}.GetLength(I0);
 
@@ -486,8 +498,8 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline
     static constexpr auto c_thread_desc_ = make_dynamic_naive_tensor_descriptor_packed_v2(
         make_tuple(Number<MRepeat>{}, Number<NRepeat>{}));
 
-    using AThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4<FloatA,
-                                                                FloatA,
+    using AThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4<FloatAB,
+                                                                FloatAB,
                                                                 ABlockDesc,
                                                                 decltype(a_thread_desc_),
                                                                 Sequence<1, 1, 1, KPack>,
@@ -496,8 +508,8 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1_2x2pipeline
                                                                 1, // KPack,
                                                                 1>;
 
-    using BThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4<FloatB,
-                                                                FloatB,
+    using BThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4<FloatAB,
+                                                                FloatAB,
                                                                 BBlockDesc,
                                                                 decltype(b_thread_desc_),
                                                                 Sequence<1, 1, 1, KPack>,
