@@ -126,6 +126,21 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         return 2 * (a_block_space_size + b_block_space_size) * sizeof(FloatAB);
     }
 
+    __host__ __device__ static constexpr bool CheckValidity(const AKMGridDesc& a_k_m_grid_desc,
+                                                            const BKNGridDesc& b_k_n_grid_desc,
+                                                            const CMNGridDesc& c_m_n_grid_desc)
+    {
+        const auto M = a_k_m_grid_desc.GetLength(I1);
+        const auto N = b_k_n_grid_desc.GetLength(I1);
+        const auto K = a_k_m_grid_desc.GetLength(I0);
+
+        // TODO: also check validity of all components (blockwise-copy, threadwise-copy, etc)
+
+        return (M == c_m_n_grid_desc.GetLength(I0) && N == c_m_n_grid_desc.GetLength(I1) &&
+                K == b_k_n_grid_desc.GetLength(I0)) &&
+               (M % MPerBlock == 0 && N % NPerBlock == 0 && K % KPerBlock == 0);
+    }
+
     __host__ __device__ static constexpr index_t CalculateGridSize(index_t M, index_t N)
     {
         const index_t grid_size = (M / MPerBlock) * (N / NPerBlock);

@@ -116,7 +116,7 @@ __host__ float driver_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
     const auto N = b_k_n_grid_desc.GetLength(I1);
     const auto K = a_k_m_grid_desc.GetLength(I0);
 
-    if(!(M % MPerBlock == 0 && N % NPerBlock == 0 && K % KPerBlock == 0))
+    if(!GridwiseGemm::CheckValidity(a_k_m_grid_desc, b_k_n_grid_desc, c_m_n_grid_desc))
     {
         throw std::runtime_error("wrong! GEMM size no divisible");
     }
