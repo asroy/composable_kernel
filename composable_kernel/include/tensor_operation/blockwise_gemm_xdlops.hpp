@@ -167,6 +167,9 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
                                make_tuple(I0, I0, I0, I0),
                                b_thread_buf);
 
+            using mfma_input_type =
+                typename vector_type<FloatAB, xdlops_gemm.mfma_type.k_base>::type;
+
             static_for<0, a_thread_desc_.GetElementSpaceSize(), 1>{}([&](auto i) {
                 a_thread_vec.template AsType<FloatAB>()(Number<i>{}) = a_thread_buf[Number<i>{}];
             });
@@ -181,8 +184,8 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
                                              decltype(b_thread_desc_),
                                              decltype(c_thread_desc_),
                                              m0,
-                                             n0>(a_thread_vec.template AsType<half4_t>(),
-                                                 b_thread_vec.template AsType<half4_t>(),
+                                             n0>(a_thread_vec.template AsType<mfma_input_type>(),
+                                                 b_thread_vec.template AsType<mfma_input_type>(),
                                                  c_thread_buf);
                 });
             });
