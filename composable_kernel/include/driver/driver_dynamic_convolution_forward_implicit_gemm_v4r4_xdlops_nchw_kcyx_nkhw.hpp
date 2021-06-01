@@ -16,7 +16,7 @@ template <typename FloatAB,
           index_t GemmNPerBlock,
           index_t GemmMPerWave,
           index_t GemmNPerWave,
-          index_t GemmKPerWave,
+          index_t GemmKPack,
           typename... Wei,
           typename... In,
           typename... Out,
@@ -110,7 +110,7 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
 
     assert(GemmM % GemmMPerBlock == 0 && GemmN % GemmNPerBlock == 0 && GemmK % GemmKPerBlock == 0);
 
-    constexpr auto xdlops_gemm = XdlopsGemm<FloatAB, GemmMPerWave, GemmNPerWave, GemmKPerWave>{};
+    constexpr auto xdlops_gemm = XdlopsGemm<FloatAB, GemmMPerWave, GemmNPerWave, GemmKPack>{};
 
     constexpr auto CLayout = xdlops_gemm.GetCLayout();
 
