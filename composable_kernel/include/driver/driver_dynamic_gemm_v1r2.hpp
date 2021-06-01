@@ -50,18 +50,18 @@ template <index_t BlockSize,
           typename CGridIteratorHacks,
           typename AGridMoveSliceWindowIteratorHacks,
           typename BGridMoveSliceWindowIteratorHacks>
-__host__ float launch_kernel_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
-                                               const FloatAB* p_b_grid,
-                                               FloatC* p_c_grid,
-                                               const AKMGridDesc& a_k_m_grid_desc,
-                                               const BKNGridDesc& b_k_n_grid_desc,
-                                               const CMNGridDesc& c_m_n_grid_desc,
-                                               AGridIteratorHacks,
-                                               BGridIteratorHacks,
-                                               CGridIteratorHacks,
-                                               AGridMoveSliceWindowIteratorHacks,
-                                               BGridMoveSliceWindowIteratorHacks,
-                                               index_t nrepeat)
+__host__ float driver_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
+                                        const FloatAB* p_b_grid,
+                                        FloatC* p_c_grid,
+                                        const AKMGridDesc& a_k_m_grid_desc,
+                                        const BKNGridDesc& b_k_n_grid_desc,
+                                        const CMNGridDesc& c_m_n_grid_desc,
+                                        AGridIteratorHacks,
+                                        BGridIteratorHacks,
+                                        CGridIteratorHacks,
+                                        AGridMoveSliceWindowIteratorHacks,
+                                        BGridMoveSliceWindowIteratorHacks,
+                                        index_t nrepeat)
 
 {
     constexpr auto I0 = Number<0>{};
@@ -77,26 +77,6 @@ __host__ float launch_kernel_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
     {
         throw std::runtime_error("wrong! GEMM size no divisible");
     }
-
-    const auto M1Old = Number<M1PerThread * M1N1ThreadClusterM11 * M1N1ThreadClusterM10>{};
-    const auto N1Old = Number<N1PerThread * M1N1ThreadClusterN11 * M1N1ThreadClusterN10>{};
-
-    if(!(MPerBlock % M1Old == 0 && NPerBlock % N1Old == 0))
-    {
-        throw std::runtime_error("wrong! GEMM size no divisible");
-    }
-
-    const auto M0Old = M / M1Old;
-    const auto N0Old = N / N1Old;
-
-    const auto c_m0_m1_n0_n1_grid_desc = transform_dynamic_tensor_descriptor(
-        c_m_n_grid_desc,
-        make_tuple(make_unmerge_transform(make_tuple(M0Old, M1Old)),
-                   make_unmerge_transform(make_tuple(N0Old, N1Old))),
-        make_tuple(Sequence<0>{}, Sequence<1>{}),
-        make_tuple(Sequence<0, 1>{}, Sequence<2, 3>{}));
-
-    using CM0M1N0N1GridDesc = decltype(c_m0_m1_n0_n1_grid_desc);
 
     constexpr auto M1 = Number<MPerBlock>{};
     constexpr auto N1 = Number<NPerBlock>{};
@@ -134,9 +114,8 @@ __host__ float launch_kernel_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
                                                 CGlobalMemoryDataOperation,
                                                 AKMGridDesc,
                                                 BKNGridDesc,
-                                                CM0M1N0N1GridDesc,
-                                                CBlockClusterDesc,
                                                 CM0M10M11N0N10N11GridDesc,
+                                                CBlockClusterDesc,
                                                 MPerBlock,
                                                 NPerBlock,
                                                 KPerBlock,
@@ -184,13 +163,11 @@ __host__ float launch_kernel_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
     {
         const auto kernel = kernel_dynamic_gemm_v1r2<gridwise_gemm,
                                                      FloatAB,
-                                                     FloatAB,
                                                      FloatC,
                                                      remove_reference_t<AKMGridDesc>,
                                                      remove_reference_t<BKNGridDesc>,
-                                                     remove_reference_t<CM0M1N0N1GridDesc>,
-                                                     remove_reference_t<CBlockClusterDesc>,
                                                      remove_reference_t<CM0M10M11N0N10N11GridDesc>,
+                                                     remove_reference_t<CBlockClusterDesc>,
                                                      true,
                                                      true>;
 
@@ -205,21 +182,18 @@ __host__ float launch_kernel_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
                                           p_c_grid,
                                           a_k_m_grid_desc,
                                           b_k_n_grid_desc,
-                                          c_m0_m1_n0_n1_grid_desc,
-                                          c_block_cluster_desc,
-                                          c_m0_m10_m11_n0_n10_n11_grid_desc);
+                                          c_m0_m10_m11_n0_n10_n11_grid_desc,
+                                          c_block_cluster_desc);
     }
     else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
     {
         const auto kernel = kernel_dynamic_gemm_v1r2<gridwise_gemm,
                                                      FloatAB,
-                                                     FloatAB,
                                                      FloatC,
                                                      remove_reference_t<AKMGridDesc>,
                                                      remove_reference_t<BKNGridDesc>,
-                                                     remove_reference_t<CM0M1N0N1GridDesc>,
-                                                     remove_reference_t<CBlockClusterDesc>,
                                                      remove_reference_t<CM0M10M11N0N10N11GridDesc>,
+                                                     remove_reference_t<CBlockClusterDesc>,
                                                      true,
                                                      false>;
 
@@ -234,21 +208,18 @@ __host__ float launch_kernel_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
                                           p_c_grid,
                                           a_k_m_grid_desc,
                                           b_k_n_grid_desc,
-                                          c_m0_m1_n0_n1_grid_desc,
-                                          c_block_cluster_desc,
-                                          c_m0_m10_m11_n0_n10_n11_grid_desc);
+                                          c_m0_m10_m11_n0_n10_n11_grid_desc,
+                                          c_block_cluster_desc);
     }
     else if(!has_main_k_block_loop && has_double_tail_k_block_loop)
     {
         const auto kernel = kernel_dynamic_gemm_v1r2<gridwise_gemm,
                                                      FloatAB,
-                                                     FloatAB,
                                                      FloatC,
                                                      remove_reference_t<AKMGridDesc>,
                                                      remove_reference_t<BKNGridDesc>,
-                                                     remove_reference_t<CM0M1N0N1GridDesc>,
-                                                     remove_reference_t<CBlockClusterDesc>,
                                                      remove_reference_t<CM0M10M11N0N10N11GridDesc>,
+                                                     remove_reference_t<CBlockClusterDesc>,
                                                      false,
                                                      true>;
 
@@ -263,21 +234,18 @@ __host__ float launch_kernel_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
                                           p_c_grid,
                                           a_k_m_grid_desc,
                                           b_k_n_grid_desc,
-                                          c_m0_m1_n0_n1_grid_desc,
-                                          c_block_cluster_desc,
-                                          c_m0_m10_m11_n0_n10_n11_grid_desc);
+                                          c_m0_m10_m11_n0_n10_n11_grid_desc,
+                                          c_block_cluster_desc);
     }
     else
     {
         const auto kernel = kernel_dynamic_gemm_v1r2<gridwise_gemm,
                                                      FloatAB,
-                                                     FloatAB,
                                                      FloatC,
                                                      remove_reference_t<AKMGridDesc>,
                                                      remove_reference_t<BKNGridDesc>,
-                                                     remove_reference_t<CM0M1N0N1GridDesc>,
-                                                     remove_reference_t<CBlockClusterDesc>,
                                                      remove_reference_t<CM0M10M11N0N10N11GridDesc>,
+                                                     remove_reference_t<CBlockClusterDesc>,
                                                      false,
                                                      false>;
 
@@ -292,9 +260,8 @@ __host__ float launch_kernel_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
                                           p_c_grid,
                                           a_k_m_grid_desc,
                                           b_k_n_grid_desc,
-                                          c_m0_m1_n0_n1_grid_desc,
-                                          c_block_cluster_desc,
-                                          c_m0_m10_m11_n0_n10_n11_grid_desc);
+                                          c_m0_m10_m11_n0_n10_n11_grid_desc,
+                                          c_block_cluster_desc);
     }
 
     return ave_time;

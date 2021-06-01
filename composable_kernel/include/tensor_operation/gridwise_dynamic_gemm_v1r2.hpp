@@ -13,37 +13,39 @@
 namespace ck {
 
 template <typename GridwiseGemm,
-          typename FloatA,
-          typename FloatB,
+          typename FloatAB,
           typename FloatC,
           typename AKMGridDesc,
           typename BKNGridDesc,
-          typename CM10M11N10N11GridDesc,
-          typename CBlockClusterDesc,
           typename CM0M10M11N0N10N11GridDesc,
+          typename CBlockClusterDesc,
           bool HasMainKBlockLoop,
           bool HasDoubleTailKBlockLoop>
 __global__ void
 #if CK_USE_LAUNCH_BOUNDS
     __launch_bounds__(CK_MAX_THREAD_PER_BLOCK, CK_MIN_BLOCK_PER_CU)
 #endif
-        kernel_dynamic_gemm_v1r2(const FloatA* __restrict__ p_a_grid,
-                                 const FloatB* __restrict__ p_b_grid,
+        kernel_dynamic_gemm_v1r2(const FloatAB* __restrict__ p_a_grid,
+                                 const FloatAB* __restrict__ p_b_grid,
                                  FloatC* __restrict__ p_c_grid,
                                  const AKMGridDesc a_k_m_grid_desc,
                                  const BKNGridDesc b_k_n_grid_desc,
-                                 const CM10M11N10N11GridDesc c_m10_n10_m11_n11_grid_desc,
-                                 const CBlockClusterDesc c_block_cluster_desc,
-                                 const CM0M10M11N0N10N11GridDesc c_m0_m10_m11_n0_n10_n11_grid_desc)
+                                 const CM0M10M11N0N10N11GridDesc c_m0_m10_m11_n0_n10_n11_grid_desc,
+                                 const CBlockClusterDesc c_block_cluster_desc)
 {
+    constexpr index_t shared_block_size =
+        GridwiseGemm::GetSharedMemoryNumberOfByte() / sizeof(FloatAB);
+
+    __shared__ FloatAB p_shared_block[shared_block_size];
+
     GridwiseGemm::Run(p_a_grid,
                       p_b_grid,
                       p_c_grid,
+                      p_shared_block,
                       a_k_m_grid_desc,
                       b_k_n_grid_desc,
-                      c_m10_n10_m11_n11_grid_desc,
-                      c_block_cluster_desc,
                       c_m0_m10_m11_n0_n10_n11_grid_desc,
+                      c_block_cluster_desc,
                       integral_constant<bool, HasMainKBlockLoop>{},
                       integral_constant<bool, HasDoubleTailKBlockLoop>{});
 }
@@ -55,9 +57,8 @@ template <index_t BlockSize,
           InMemoryDataOperation CGlobalMemoryDataOperation,
           typename AKMGridDesc,
           typename BKNGridDesc,
-          typename CM10M11N10N11GridDesc,
-          typename CBlockClusterDesc,
           typename CM0M10M11N0N10N11GridDesc,
+          typename CBlockClusterDesc,
           index_t MPerBlock,
           index_t NPerBlock,
           index_t KPerBlock,
@@ -176,12 +177,11 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
     __device__ static void Run(const FloatAB* __restrict__ p_a_grid,
                                const FloatAB* __restrict__ p_b_grid,
                                FloatC* __restrict__ p_c_grid,
+                               FloatAB* __restrict__ p_shared_block,
                                const AKMGridDesc& a_k_m_grid_desc,
                                const BKNGridDesc& b_k_n_grid_desc,
-                               const CM10M11N10N11GridDesc& c_m10_n10_m11_n11_grid_desc,
+                               const CM0M10M11N0N10N11GridDesc& c_m0_m10_m11_n0_n10_n11_grid_desc,
                                const CBlockClusterDesc& c_block_cluster_desc,
-                               const CM0M10M11N0N10N11GridDesc c_m0_m10_m11_n0_n10_n11_grid_desc,
-                               FloatAB* __restrict__ p_shared_block,
                                integral_constant<bool, HasMainKBlockLoop>,
                                integral_constant<bool, HasDoubleTailKBlockLoop>)
     {
@@ -190,7 +190,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         const auto b_global_buf = make_dynamic_buffer<AddressSpace::Global>(
             p_b_grid, b_k_n_grid_desc.GetElementSpaceSize());
         auto c_grid_buf = make_dynamic_buffer<AddressSpace::Global>(
-            p_c_grid, c_m10_n10_m11_n11_grid_desc.GetElementSpaceSize());
+            p_c_grid, c_m0_m10_m11_n0_n10_n11_grid_desc.GetElementSpaceSize());
 
         const auto K = a_k_m_grid_desc.GetLength(I0);
         const auto M = a_k_m_grid_desc.GetLength(I1);
@@ -525,35 +525,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
                      c_grid_buf,
                      CGridIteratorHacks{});
         }
-    }
-
-    template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
-    __device__ static void Run(const FloatAB* __restrict__ p_a_grid,
-                               const FloatAB* __restrict__ p_b_grid,
-                               FloatC* __restrict__ p_c_grid,
-                               const AKMGridDesc& a_k_m_grid_desc,
-                               const BKNGridDesc& b_k_n_grid_desc,
-                               const CM10M11N10N11GridDesc& c_m10_n10_m11_n11_grid_desc,
-                               const CBlockClusterDesc& c_block_cluster_desc,
-                               const CM0M10M11N0N10N11GridDesc c_m0_m10_m11_n0_n10_n11_grid_desc,
-                               integral_constant<bool, HasMainKBlockLoop>,
-                               integral_constant<bool, HasDoubleTailKBlockLoop>)
-    {
-        constexpr index_t shared_block_size = GetSharedMemoryNumberOfByte() / sizeof(FloatAB);
-
-        __shared__ FloatAB p_shared_block[shared_block_size];
-
-        Run(p_a_grid,
-            p_b_grid,
-            p_c_grid,
-            a_k_m_grid_desc,
-            b_k_n_grid_desc,
-            c_m10_n10_m11_n11_grid_desc,
-            c_block_cluster_desc,
-            c_m0_m10_m11_n0_n10_n11_grid_desc,
-            p_shared_block,
-            integral_constant<bool, HasMainKBlockLoop>{},
-            integral_constant<bool, HasDoubleTailKBlockLoop>{});
     }
 };
 

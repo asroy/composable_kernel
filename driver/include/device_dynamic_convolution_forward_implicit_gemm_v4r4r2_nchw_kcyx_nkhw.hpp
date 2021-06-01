@@ -515,7 +515,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw(
 
     for(index_t i = 0; i < 5; ++i)
     {
-        float ave_time = launch_kernel_dynamic_gemm_v1r2<
+        float ave_time = driver_dynamic_gemm_v1r2<
             BlockSize,
             typename vector_type<TInWei, InWeiVectorSize>::type,
             TAcc,
