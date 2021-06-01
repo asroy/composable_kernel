@@ -324,6 +324,7 @@ struct mfma_info<mfma_instr::mfma_f32_4x4x4f16>
     }
 };
 
+#if 0
 template <>
 struct mfma_info<mfma_instr::mfma_f32_32x32x2bf16>
 {
@@ -489,6 +490,7 @@ struct mfma_info<mfma_instr::mfma_f32_4x4x2bf16>
         return intrin_mfma_f32_4x4x2bf16<MPerXdlops, NPerXdlops>::run(p_a, p_b, reg_c);
     }
 };
+#endif
 
 template <mfma_instr instr, index_t MPerXdlops_, index_t NPerXdlops_>
 struct xdlops_info

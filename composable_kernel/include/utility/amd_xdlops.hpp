@@ -5,153 +5,6 @@
 
 namespace ck {
 
-struct c_vec32_4_t
-{
-    union VecType
-    {
-        struct
-        {
-            float32_t x;
-            float32_t y;
-            float32_t z;
-            float32_t w;
-        } s;
-        float n[128];
-    };
-
-    __host__ __device__ static VecType CreateVecZero()
-    {
-        VecType c;
-        c.s.x = 0;
-        c.s.y = 0;
-        c.s.z = 0;
-        c.s.w = 0;
-        return c;
-    }
-};
-
-struct c_vec32_2_t
-{
-    union VecType
-    {
-        struct
-        {
-            float32_t x;
-            float32_t y;
-        } s;
-        float n[64];
-    } l;
-
-    __host__ __device__ static VecType CreateVecZero()
-    {
-        VecType c;
-        c.s.x = 0;
-        c.s.y = 0;
-        return c;
-    }
-};
-
-struct c_vec32_2_2_t
-{
-    union VecType
-    {
-        struct
-        {
-            c_vec32_2_t x;
-            c_vec32_2_t y;
-        } s;
-        float n[128];
-    };
-
-    __host__ __device__ static VecType CreateVecZero()
-    {
-        VecType c;
-        c.s.x.l.s.x = 0;
-        c.s.x.l.s.y = 0;
-        c.s.y.l.s.x = 0;
-        c.s.y.l.s.y = 0;
-        return c;
-    }
-};
-
-struct c_vec32_1_t
-{
-    union VecType
-    {
-        struct
-        {
-            float32_t x;
-        } s;
-        float n[32];
-    };
-
-    __host__ __device__ static VecType CreateVecZero()
-    {
-        VecType c;
-        c.s.x = 0;
-        return c;
-    }
-};
-
-struct c_vec16_1_t
-{
-    union VecType
-    {
-        struct
-        {
-            float16_t x;
-        } s;
-        float n[16];
-    };
-
-    __host__ __device__ static VecType CreateVecZero()
-    {
-        VecType c;
-        c.s.x = 0;
-        return c;
-    }
-};
-
-struct c_vec4_2_t
-{
-    union VecType
-    {
-        struct
-        {
-            float4_t x;
-            float4_t y;
-        } s;
-        float n[8];
-    };
-
-    __host__ __device__ static VecType CreateVecZero()
-    {
-        VecType c;
-        c.s.x = 0;
-        c.s.y = 0;
-        return c;
-    }
-};
-
-struct c_vec4_1_t
-{
-    union VecType
-    {
-        struct
-        {
-            float4_t x;
-        } s;
-        float n[4];
-    };
-
-    __host__ __device__ static VecType CreateVecZero()
-    {
-        VecType c;
-        c.s.x = 0;
-        return c;
-    }
-};
-
 // A, B, C, cbsz, abid, blgp
 extern "C" __device__ float32_t llvm_intrin_amdgcn_mfma_f32_32x32x1f32(
     float, float, float32_t, int, int, int) __asm("llvm.amdgcn.mfma.f32.32x32x1f32");
@@ -499,6 +352,7 @@ struct intrin_mfma_f32_4x4x4f16<8, 64, COffset>
     }
 };
 
+#if 0
 template <index_t MPerWave, index_t NPerWave, index_t AStride, index_t BStride>
 struct intrin_mfma_f32_32x32x2bf16;
 
@@ -638,5 +492,8 @@ struct intrin_mfma_f32_4x4x2bf16<8, 64>
         return reg_c;
     }
 };
+
+#endif
+
 } // namespace ck
 #endif
