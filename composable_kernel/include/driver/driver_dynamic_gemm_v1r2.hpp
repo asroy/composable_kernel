@@ -66,8 +66,6 @@ __host__ float driver_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
-    constexpr auto I2 = Number<2>{};
-    constexpr auto I3 = Number<3>{};
 
     // GEMM
     using GridwiseGemm =
@@ -134,11 +132,11 @@ __host__ float driver_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
 
     using CBlockClusterAdaptor = decltype(c_block_cluster_adaptor);
 
-    const auto GridSize = (M / MPerBlock) * (N / NPerBlock);
+    const index_t grid_size = GridwiseGemm::CalculateGridSize(M, N);
 
-    const bool has_main_k_block_loop = (K + KPerBlock) / (2 * KPerBlock) > 1;
+    const bool has_main_k_block_loop = GridwiseGemm::CalculateHasMainKBlockLoop(K);
 
-    const bool has_double_tail_k_block_loop = (K / KPerBlock) % 2 == 0;
+    const bool has_double_tail_k_block_loop = GridwiseGemm::CalculateHasDoubleTailKBlockLoop(K);
 
     float ave_time = 0;
 
@@ -156,7 +154,7 @@ __host__ float driver_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
 
         ave_time = launch_and_time_kernel(kernel,
                                           nrepeat,
-                                          dim3(GridSize),
+                                          dim3(grid_size),
                                           dim3(BlockSize),
                                           0,
                                           0,
@@ -182,7 +180,7 @@ __host__ float driver_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
 
         ave_time = launch_and_time_kernel(kernel,
                                           nrepeat,
-                                          dim3(GridSize),
+                                          dim3(grid_size),
                                           dim3(BlockSize),
                                           0,
                                           0,
@@ -208,7 +206,7 @@ __host__ float driver_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
 
         ave_time = launch_and_time_kernel(kernel,
                                           nrepeat,
-                                          dim3(GridSize),
+                                          dim3(grid_size),
                                           dim3(BlockSize),
                                           0,
                                           0,
@@ -234,7 +232,7 @@ __host__ float driver_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
 
         ave_time = launch_and_time_kernel(kernel,
                                           nrepeat,
-                                          dim3(GridSize),
+                                          dim3(grid_size),
                                           dim3(BlockSize),
                                           0,
                                           0,

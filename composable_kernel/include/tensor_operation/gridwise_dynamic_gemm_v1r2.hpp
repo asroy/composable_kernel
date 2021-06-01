@@ -126,6 +126,27 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         return 2 * (a_block_space_size + b_block_space_size) * sizeof(FloatAB);
     }
 
+    __host__ __device__ static constexpr index_t CalculateGridSize(index_t M, index_t N)
+    {
+        const index_t grid_size = (M / MPerBlock) * (N / NPerBlock);
+
+        return grid_size;
+    }
+
+    __host__ __device__ static constexpr bool CalculateHasMainKBlockLoop(index_t K)
+    {
+        const bool has_main_k_block_loop = (K + KPerBlock) / (2 * KPerBlock) > 1;
+
+        return has_main_k_block_loop;
+    }
+
+    __host__ __device__ static constexpr bool CalculateHasDoubleTailKBlockLoop(index_t K)
+    {
+        const bool has_double_tail_k_block_loop = (K / KPerBlock) % 2 == 0;
+
+        return has_double_tail_k_block_loop;
+    }
+
     __host__ __device__ static constexpr auto
     MakeAKM0M1GridDescriptor(const AKMGridDesc& a_k_m_grid_desc)
     {

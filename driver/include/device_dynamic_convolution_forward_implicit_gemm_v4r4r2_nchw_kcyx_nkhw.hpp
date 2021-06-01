@@ -482,22 +482,16 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw(
     const auto in_gemmk_gemmn_grid_desc  = descs[I1];
     const auto out_gemmm_gemmn_grid_desc = descs[I2];
 
-    // hack to control index calculation when iterating over wei_gemmk_gemmm_grid tensor
+    // HACK: hacks that control index calculation when iterating over A, B, C matrix
     constexpr auto wei_gemmk_gemmm_grid_iterator_hacks =
         make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
                    make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
 
-    constexpr auto wei_gemmk_gemmm_grid_move_slice_window_iterator_hacks = Sequence<0, 0, 0>{};
-
-    // hack to control index calculation when iterating over in_gemmk_gemmn_grid tensor
     constexpr auto in_gemmk_gemmn_grid_iterator_hacks =
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>{},
                               Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>{}),
                    make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0>{},
                               Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>{}));
-
-    constexpr auto in_gemmk_gemmn_grid_move_slice_window_iterator_hacks =
-        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2>{};
 
     constexpr auto out_gemmm0_gemmm10_gemmm11_gemmn0_gemmn10_gemmn11_grid_iterator_hacks =
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
@@ -512,6 +506,11 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw(
                               Sequence<0, 0, 2, 0, 0>{},
                               Sequence<0, 0, 2, 0, 0>{},
                               Sequence<0, 0, 2, 0, 0>{}));
+
+    constexpr auto wei_gemmk_gemmm_grid_move_slice_window_iterator_hacks = Sequence<0, 0, 0>{};
+
+    constexpr auto in_gemmk_gemmn_grid_move_slice_window_iterator_hacks =
+        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2>{};
 
     for(index_t i = 0; i < 5; ++i)
     {
