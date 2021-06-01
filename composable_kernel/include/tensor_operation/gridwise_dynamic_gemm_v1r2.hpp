@@ -206,12 +206,16 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         const auto block_work_idx =
             c_block_cluster_desc.CalculateBottomIndex(make_multi_index(get_block_1d_id()));
 
-        // HACK: this force m/n_block_data_idx_on_global into SGPR
+        // HACK: this force index data into SGPR
+        const index_t m_block_work_idx = __builtin_amdgcn_readfirstlane(block_work_idx[I0]);
+
+        const index_t n_block_work_idx = __builtin_amdgcn_readfirstlane(block_work_idx[I1]);
+
         const index_t m_block_data_idx_on_global =
-            __builtin_amdgcn_readfirstlane(block_work_idx[I0] * MPerBlock);
+            __builtin_amdgcn_readfirstlane(m_block_work_idx * MPerBlock);
 
         const index_t n_block_data_idx_on_global =
-            __builtin_amdgcn_readfirstlane(block_work_idx[I1] * NPerBlock);
+            __builtin_amdgcn_readfirstlane(n_block_work_idx * NPerBlock);
 
         // lds max alignment
         constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_M>{},
@@ -470,39 +474,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
 
         // output: register to global memory
         {
-#if 0
-            constexpr auto M11 = Number<M1PerThread * M1N1ThreadClusterM100 * M1N1ThreadClusterM101>{};
-            constexpr auto N11 = Number<N1PerThread * M1N1ThreadClusterN100 * M1N1ThreadClusterN101>{};
-
-            // hack to control index calculation when iterating over c_m10_n10_m11_n11_global tensor
-            constexpr auto c_m10_n10_m11_n11_global_tensor_iterator_hacks = CGridIteratorHacks{};
-
-            const auto c_thread_data_idx_on_block =
-                blockwise_gemm.CalculateCM0M1N0N1ThreadOriginIndex(get_thread_local_1d_id());
-
-            ThreadwiseDynamicTensorSliceTransfer_v1r3<FloatAcc,
-                                                      FloatC,
-                                                      decltype(c_m10_n10_m11_n11_thread_desc),
-                                                      decltype(c_m10_n10_m11_n11_grid_desc),
-                                                      decltype(c_m10_n10_m11_n11_thread_tensor_lengths),
-                                                      CThreadTransferSrcDstAccessOrder,
-                                                      CThreadTransferSrcDstVectorDim,
-                                                      CThreadTransferDstScalarPerVector,
-                                                      CGlobalMemoryDataOperation,
-                                                      1,
-                                                      true>{
-                c_m10_n10_m11_n11_grid_desc,
-                make_multi_index(m_block_data_idx_on_global / M11 + c_thread_data_idx_on_block[I0],
-                                 c_thread_data_idx_on_block[I1],
-                                 n_block_data_idx_on_global / N11 + c_thread_data_idx_on_block[I2],
-                                 c_thread_data_idx_on_block[I3])}
-                .Run(c_m10_n10_m11_n11_thread_desc,
-                     make_tuple(I0, I0, I0, I0),
-                     c_thread_buf,
-                     c_m10_n10_m11_n11_grid_desc,
-                     c_grid_buf,
-                     c_m10_n10_m11_n11_global_tensor_iterator_hacks);
-#else
             constexpr index_t M11 = M1PerThread * M1N1ThreadClusterM100 * M1N1ThreadClusterM101;
             constexpr index_t N11 = N1PerThread * M1N1ThreadClusterN100 * M1N1ThreadClusterN101;
 
@@ -541,10 +512,10 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
                 CGlobalMemoryDataOperation,
                 1,
                 true>{c_m0_m10_m11_n0_n10_n11_grid_desc,
-                      make_multi_index(__builtin_amdgcn_readfirstlane(block_work_idx[I0]),
+                      make_multi_index(m_block_work_idx,
                                        c_m10_m11_n10_n11_thread_origin_idx_on_block[I0],
                                        c_m10_m11_n10_n11_thread_origin_idx_on_block[I1],
-                                       __builtin_amdgcn_readfirstlane(block_work_idx[I1]),
+                                       n_block_work_idx,
                                        c_m10_m11_n10_n11_thread_origin_idx_on_block[I2],
                                        c_m10_m11_n10_n11_thread_origin_idx_on_block[I3])}
                 .Run(c_m0_m10_m11_n0_n10_n11_thread_desc,
@@ -553,7 +524,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
                      c_m0_m10_m11_n0_n10_n11_grid_desc,
                      c_grid_buf,
                      CGridIteratorHacks{});
-#endif
         }
     }
 
