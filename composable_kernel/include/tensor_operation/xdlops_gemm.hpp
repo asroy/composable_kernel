@@ -227,17 +227,13 @@ struct mfma_info<mfma_instr::mfma_f32_32x32x8f16>
 
     template <index_t MPerXdlops,
               index_t NPerXdlops,
-              index_t AStride,
-              index_t BStride,
+              index_t COffset,
               class FloatA,
               class FloatB,
               class FloatC>
-    __device__ FloatC run(const FloatA* a, const FloatB* b, FloatC reg_c) const
+    __device__ void run(const FloatA& a, const FloatB& b, FloatC& reg_c) const
     {
-        const auto p_a = reinterpret_cast<const half4_t*>(a);
-        const auto p_b = reinterpret_cast<const half4_t*>(b);
-
-        return intrin_mfma_f32_32x32x8f16(p_a, p_b, reg_c);
+        intrin_mfma_f32_32x32x8f16<MPerXdlops, NPerXdlops, COffset>::Run(a, b, reg_c);
     }
 };
 
@@ -589,19 +585,18 @@ struct XdlopsGemm
         return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 64>{};
     }
 
-#if 0
-    template <>
-    static constexpr auto GetXdlopsInfo<half_t, 64, 32>()
-    {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 64, 32, 1, 1, c_vec32_1_t>{};
-    }
-
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 32, 64>()
     {
-        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 32, 64, 1, 1, c_vec32_1_t>{};
+        return xdlops_info<mfma_instr::mfma_f32_32x32x4f16, 32, 64>{};
     }
 
+    template <>
+    static constexpr auto GetXdlopsInfo<half_t, 32, 32>()
+    {
+        return xdlops_info<mfma_instr::mfma_f32_32x32x8f16, 32, 32>{};
+    }
+#if 0
     template <>
     static constexpr auto GetXdlopsInfo<half_t, 64, 16>()
     {
@@ -759,12 +754,14 @@ struct XdlopsGemm
 
         constexpr index_t c_offset = CDesc{}.CalculateOffset(make_tuple(m0, n0)) * GetNumXdlops();
 
-        static_for<0, KPack / mfma_type.k_base, 1>{}([&](auto k) {
+        static_for<0, KPack, mfma_type.k_base>{}([&](auto k) {
             constexpr index_t a_offset = ADesc{}.CalculateOffset(make_tuple(0, m0, 0, k));
             constexpr index_t b_offset = BDesc{}.CalculateOffset(make_tuple(0, n0, 0, k));
 
             mfma_type.template run<MPerXdlops, NPerXdlops, c_offset>(
-                p_a_wave[Number<a_offset>{}], p_b_wave[Number<b_offset>{}], p_c_thread);
+                p_a_wave[Number<a_offset / mfma_type.k_base>{}],
+                p_b_wave[Number<b_offset / mfma_type.k_base>{}],
+                p_c_thread);
         });
     }
 

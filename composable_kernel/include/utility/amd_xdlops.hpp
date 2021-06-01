@@ -394,12 +394,25 @@ struct intrin_mfma_f32_32x32x4f16<32, 64, COffset>
     }
 };
 
-__device__ c_vec16_1_t::VecType
-intrin_mfma_f32_32x32x8f16(const half4_t* reg_a, const half4_t* reg_b, c_vec16_1_t::VecType reg_c)
+template <index_t MPerWave, index_t NPerWave, index_t COffset>
+struct intrin_mfma_f32_32x32x8f16;
+
+template <index_t COffset>
+struct intrin_mfma_f32_32x32x8f16<32, 32, COffset>
 {
-    reg_c.s.x = llvm_intrin_amdgcn_mfma_f32_32x32x8f16(reg_a[0], reg_b[0], reg_c.s.x, 0, 0, 0);
-    return reg_c;
-}
+    template <class FloatC>
+    __device__ static void Run(const half4_t& reg_a, const half4_t& reg_b, FloatC& reg_c)
+    {
+        reg_c(Number<COffset>{}).template AsType<float16_t>()(Number<0>{}) =
+            llvm_intrin_amdgcn_mfma_f32_32x32x8f16(
+                reg_a,
+                reg_b,
+                reg_c[Number<COffset>{}].template AsType<float16_t>()[Number<0>{}],
+                0,
+                0,
+                0);
+    }
+};
 
 __device__ c_vec4_1_t::VecType
 intrin_mfma_f32_16x16x16f16(const half4_t* reg_a, const half4_t* reg_b, c_vec4_1_t::VecType reg_c)
