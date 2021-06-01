@@ -551,8 +551,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw(
             GemmBBlockTransferDstScalarPerVector_GemmN,
             false, // don't move back src coordinate after threadwise copy, which will be fused with
                    // MoveSrcSliceWindow() to save addr computation
-            Sequence<2, 3, 0, 1>,
-            3,
+            Sequence<3, 4, 5, 0, 1, 2>, // CThreadTransferSrcDstAccessOrder
+            5,                          // CThreadTransferSrcDstVectorDim
             GemmCThreadTransferDstScalarPerVector_GemmN1,
             decltype(wei_gemmk_gemmm_grid_iterator_hacks),
             decltype(in_gemmk_gemmn_grid_iterator_hacks),
