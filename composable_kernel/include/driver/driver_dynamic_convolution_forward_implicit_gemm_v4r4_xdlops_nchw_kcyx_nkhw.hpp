@@ -64,12 +64,23 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
     const auto InRightPadH = in_right_pads[I0];
     const auto InRightPadW = in_right_pads[I1];
 
+    const auto GemmM = K;
+    const auto GemmN = N * Ho * Wo;
+    const auto GemmK = C * Y * X;
+
     // weight tensor
     const auto wei_gemmk_gemmm_global_desc = transform_dynamic_tensor_descriptor(
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, C * Y * X)),
         make_tuple(make_pass_through_transform(K), make_pass_through_transform(C * Y * X)),
         make_tuple(Sequence<0>{}, Sequence<1>{}),
         make_tuple(Sequence<1>{}, Sequence<0>{}));
+
+    const auto wei_gemmk0_gemmm_gemmk1_global_desc = transform_dynamic_tensor_descriptor(
+        wei_gemmk_gemmm_global_desc,
+        make_tuple(make_unmerge_transform(make_tuple(GemmK / GemmKPack, GemmKPack)),
+                   make_pass_through_transform(GemmM)),
+        make_tuple(Sequence<0>{}, Sequence<1>{}),
+        make_tuple(Sequence<0, 2>{}, Sequence<1>{}));
 
     // input tensor
     const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor(
@@ -97,6 +108,13 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
                                             make_tuple(Sequence<1, 2, 4>{}, Sequence<0, 3, 5>{}),
                                             make_tuple(Sequence<0>{}, Sequence<1>{}));
 
+    const auto in_gemmk0_gemmn_gemmk1_global_desc = transform_dynamic_tensor_descriptor(
+        in_gemmk_gemmn_global_desc,
+        make_tuple(make_unmerge_transform(make_tuple(GemmK / GemmKPack, GemmKPack)),
+                   make_pass_through_transform(GemmN)),
+        make_tuple(Sequence<0>{}, Sequence<1>{}),
+        make_tuple(Sequence<0, 2>{}, Sequence<1>{}));
+
     // output tensor
     const auto out_gemmm_gemmn_global_desc = transform_dynamic_tensor_descriptor(
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K, Ho * Wo)),
@@ -104,11 +122,11 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
         make_tuple(Sequence<1>{}, Sequence<0, 2>{}),
         make_tuple(Sequence<0>{}, Sequence<1>{}));
 
-    const auto GemmM = out_gemmm_gemmn_global_desc.GetLength(I0);
-    const auto GemmN = out_gemmm_gemmn_global_desc.GetLength(I1);
-    const auto GemmK = wei_gemmk_gemmm_global_desc.GetLength(I0);
+    assert(GemmM == out_gemmm_gemmn_global_desc.GetLength(I0));
+    assert(GemmN == out_gemmm_gemmn_global_desc.GetLength(I1));
+    const auto GemmK0 = wei_gemmk0_gemmm_gemmk1_global_desc.GetLength(I0);
 
-    assert(GemmM % GemmMPerBlock == 0 && GemmN % GemmNPerBlock == 0 && GemmK % GemmKPerBlock == 0);
+    assert(GemmM % GemmMPerBlock == 0 && GemmN % GemmNPerBlock == 0 && GemmK0 % GemmKPerBlock == 0);
 
     constexpr auto xdlops_gemm = XdlopsGemm<FloatAB, GemmMPerWave, GemmNPerWave, GemmKPack>{};
 
@@ -129,22 +147,26 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
     const auto out_gemm_block_cluster_desc = make_cluster_descriptor_v2(
         make_tuple(GemmM / Number<GemmMPerBlock>{}, GemmN / Number<GemmNPerBlock>{}));
 
-    // hack to control index calculation when iterating over wei_gemmk_gemmm_global tensor
-    constexpr auto wei_gemmk_gemmm_global_iterator_hacks =
-        make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
-                   make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
+    // hack to control index calculation when iterating over wei_gemmk0_gemmm_gemmk1_global tensor
+    constexpr auto wei_gemmk0_gemmm_gemmk1_global_iterator_hacks = make_tuple(
+        make_tuple(Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}),
+        make_tuple(
+            Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}));
 
-    constexpr auto wei_gemmk_gemmm_global_move_slice_window_iterator_hacks = Sequence<0, 0, 0>{};
+    constexpr auto wei_gemmk0_gemmm_gemmk1_global_move_slice_window_iterator_hacks =
+        Sequence<0, 0, 0, 0, 0>{};
 
-    // hack to control index calculation when iterating over in_gemmk_gemmn_global tensor
-    constexpr auto in_gemmk_gemmn_global_iterator_hacks =
-        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>{}),
-                   make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>{}));
+    // hack to control index calculation when iterating over in_gemmk0_gemmn_gemmk1_global tensor
+    constexpr auto in_gemmk0_gemmn_gemmk1_global_iterator_hacks =
+        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{}),
+                   make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0>{}));
 
-    constexpr auto in_gemmk_gemmn_global_move_slice_window_iterator_hacks =
-        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2>{};
+    constexpr auto in_gemmk0_gemmn_gemmk1_global_move_slice_window_iterator_hacks =
+        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0>{};
 
     // hack to control index calculation when iterating over out_gemmm0_gemmm1_gemmn0_gemmn1_global
     // tensor hack for NKHW format
@@ -158,15 +180,15 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
                               Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 2, 0, 0>{}));
 
-    return make_tuple(wei_gemmk_gemmm_global_desc,
-                      in_gemmk_gemmn_global_desc,
+    return make_tuple(wei_gemmk0_gemmm_gemmk1_global_desc,
+                      in_gemmk0_gemmn_gemmk1_global_desc,
                       out_m0_m1_m2_n_global_desc,
                       out_gemm_block_cluster_desc,
-                      wei_gemmk_gemmm_global_iterator_hacks,
-                      in_gemmk_gemmn_global_iterator_hacks,
+                      wei_gemmk0_gemmm_gemmk1_global_iterator_hacks,
+                      in_gemmk0_gemmn_gemmk1_global_iterator_hacks,
                       out_m0_m1_m2_n_global_iterator_hacks,
-                      wei_gemmk_gemmm_global_move_slice_window_iterator_hacks,
-                      in_gemmk_gemmn_global_move_slice_window_iterator_hacks);
+                      wei_gemmk0_gemmm_gemmk1_global_move_slice_window_iterator_hacks,
+                      in_gemmk0_gemmn_gemmk1_global_move_slice_window_iterator_hacks);
 }
 
 } // namespace ck
