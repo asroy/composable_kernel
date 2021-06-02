@@ -140,7 +140,8 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2
 
     public:
     __device__ BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2()
-        : c_thread_origin_data_idx_{CalculateCM0M1N0N1ThreadOriginIndex(get_thread_local_1d_id())},
+        : c_thread_origin_data_idx_{CalculateCM0M1N0N1ThreadOriginOnBlock(
+              get_thread_local_1d_id())},
           a_thread_copy_{
               make_tuple(0, c_thread_origin_data_idx_[I0], c_thread_origin_data_idx_[I1])},
           b_thread_copy_{
@@ -161,14 +162,14 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2
         static_assert(M0 == 2 && N0 == 2, "wrong");
     }
 
-    __device__ static CIndex CalculateCM0M1N0N1ThreadOriginIndex(index_t thread_id)
+    __device__ static CIndex CalculateCM0M1N0N1ThreadOriginOnBlock(index_t thread_id)
     {
-        // upper: [M0, M100, M101, M11, N0, N100, N101, N11]
         // lower: [M0, M1, N0, N1]
+        // upper: [M0, M100, M101, M11, N0, N100, N101, N11]
         constexpr auto adaptor0 = MakeCM0M100M101M11N0N100N101N11ToM0M1N0N1BlockAdaptor();
 
-        // upper: [Tid, M0, M11, N0, N11]
         // lower: [M0, M100, M101, M11, N0, N100, N101, N11]
+        // upper: [Tid, M0, M11, N0, N11]
         constexpr auto adaptor1 = make_single_stage_tensor_adaptor(
             make_tuple(make_merge_transform(make_tuple(M100, N100, M101, N101)),
                        make_pass_through_transform(M0),

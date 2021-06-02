@@ -17,21 +17,26 @@ template <typename GridwiseGemm,
           typename FloatC,
           typename AKMGridDesc,
           typename BKNGridDesc,
+          typename AKM0M1GridDesc,
+          typename BKN0N1GridDesc,
           typename CM0M10M11N0N10N11GridDesc,
-          typename CBlockClusterAdaptor,
+          typename CBlockIdToM0N0BlockClusterAdaptor,
           bool HasMainKBlockLoop,
           bool HasDoubleTailKBlockLoop>
 __global__ void
 #if CK_USE_LAUNCH_BOUNDS
     __launch_bounds__(CK_MAX_THREAD_PER_BLOCK, CK_MIN_BLOCK_PER_CU)
 #endif
-        kernel_dynamic_gemm_v1r2(const FloatAB* __restrict__ p_a_grid,
-                                 const FloatAB* __restrict__ p_b_grid,
-                                 FloatC* __restrict__ p_c_grid,
-                                 const AKMGridDesc a_k_m_grid_desc,
-                                 const BKNGridDesc b_k_n_grid_desc,
-                                 const CM0M10M11N0N10N11GridDesc c_m0_m10_m11_n0_n10_n11_grid_desc,
-                                 const CBlockClusterAdaptor c_block_cluster_desc)
+        kernel_dynamic_gemm_v1r2(
+            const FloatAB* __restrict__ p_a_grid,
+            const FloatAB* __restrict__ p_b_grid,
+            FloatC* __restrict__ p_c_grid,
+            const AKMGridDesc a_k_m_grid_desc,
+            const BKNGridDesc b_k_n_grid_desc,
+            const AKM0M1GridDesc a_k_m0_m1_grid_desc,
+            const BKN0N1GridDesc b_k_n0_n1_grid_desc,
+            const CM0M10M11N0N10N11GridDesc c_m0_m10_m11_n0_n10_n11_grid_desc,
+            const CBlockIdToM0N0BlockClusterAdaptor c_blockid_to_m0_n0_block_cluster_adaptor)
 {
     constexpr index_t shared_block_size =
         GridwiseGemm::GetSharedMemoryNumberOfByte() / sizeof(FloatAB);
@@ -44,8 +49,10 @@ __global__ void
                       p_shared_block,
                       a_k_m_grid_desc,
                       b_k_n_grid_desc,
+                      a_k_m0_m1_grid_desc,
+                      b_k_n0_n1_grid_desc,
                       c_m0_m10_m11_n0_n10_n11_grid_desc,
-                      c_block_cluster_desc,
+                      c_blockid_to_m0_n0_block_cluster_adaptor,
                       integral_constant<bool, HasMainKBlockLoop>{},
                       integral_constant<bool, HasDoubleTailKBlockLoop>{});
 }
@@ -227,7 +234,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
     }
 
     __host__ __device__ static constexpr auto
-    MakeCBlockClusterAdaptor(const CMNGridDesc& c_m_n_grid_desc)
+    MakeCBlockIdToM0N0BlockClusterAdaptor(const CMNGridDesc& c_m_n_grid_desc)
     {
         const auto M = c_m_n_grid_desc.GetLength(I0);
         const auto N = c_m_n_grid_desc.GetLength(I1);
@@ -238,27 +245,32 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         const auto M0 = M / M1;
         const auto N0 = N / N1;
 
-        const auto c_block_cluster_adaptor = make_cluster_descriptor_v2(make_tuple(M0, N0));
+        const auto c_blockid_to_m0_n0_block_cluster_adaptor =
+            make_cluster_descriptor_v2(make_tuple(M0, N0));
 
-        return c_block_cluster_adaptor;
+        return c_blockid_to_m0_n0_block_cluster_adaptor;
     }
 
     using AKM0M1GridDesc            = decltype(MakeAKM0M1GridDescriptor(AKMGridDesc{}));
     using BKN0N1GridDesc            = decltype(MakeBKN0N1GridDescriptor(BKNGridDesc{}));
     using CM0M10M11N0N10N11GridDesc = decltype(MakeCM0M10M11N0N10N11GridDescriptor(CMNGridDesc{}));
-    using CBlockClusterAdaptor      = decltype(MakeCBlockClusterAdaptor(CMNGridDesc{}));
+    using CBlockIdToM0N0BlockClusterAdaptor =
+        decltype(MakeCBlockIdToM0N0BlockClusterAdaptor(CMNGridDesc{}));
 
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
-    __device__ static void Run(const FloatAB* __restrict__ p_a_grid,
-                               const FloatAB* __restrict__ p_b_grid,
-                               FloatC* __restrict__ p_c_grid,
-                               FloatAB* __restrict__ p_shared_block,
-                               const AKMGridDesc& a_k_m_grid_desc,
-                               const BKNGridDesc& b_k_n_grid_desc,
-                               const CM0M10M11N0N10N11GridDesc& c_m0_m10_m11_n0_n10_n11_grid_desc,
-                               const CBlockClusterAdaptor& c_block_cluster_desc,
-                               integral_constant<bool, HasMainKBlockLoop>,
-                               integral_constant<bool, HasDoubleTailKBlockLoop>)
+    __device__ static void
+    Run(const FloatAB* __restrict__ p_a_grid,
+        const FloatAB* __restrict__ p_b_grid,
+        FloatC* __restrict__ p_c_grid,
+        FloatAB* __restrict__ p_shared_block,
+        const AKMGridDesc& a_k_m_grid_desc,
+        const BKNGridDesc& b_k_n_grid_desc,
+        const AKM0M1GridDesc& a_k_m0_m1_grid_desc,
+        const BKN0N1GridDesc& b_k_n0_n1_grid_desc,
+        const CM0M10M11N0N10N11GridDesc& c_m0_m10_m11_n0_n10_n11_grid_desc,
+        const CBlockIdToM0N0BlockClusterAdaptor& c_blockid_to_m0_n0_block_cluster_adaptor,
+        integral_constant<bool, HasMainKBlockLoop>,
+        integral_constant<bool, HasDoubleTailKBlockLoop>)
     {
         const auto a_global_buf = make_dynamic_buffer<AddressSpace::Global>(
             p_a_grid, a_k_m_grid_desc.GetElementSpaceSize());
@@ -271,15 +283,9 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         const auto M = a_k_m_grid_desc.GetLength(I1);
         const auto N = b_k_n_grid_desc.GetLength(I1);
 
-        constexpr auto M1 = Number<MPerBlock>{};
-        constexpr auto N1 = Number<NPerBlock>{};
-
-        const auto M0 = M / M1;
-        const auto N0 = N / N1;
-
         // divide block work by [M, N]
-        const auto block_work_idx =
-            c_block_cluster_desc.CalculateBottomIndex(make_multi_index(get_block_1d_id()));
+        const auto block_work_idx = c_blockid_to_m0_n0_block_cluster_adaptor.CalculateBottomIndex(
+            make_multi_index(get_block_1d_id()));
 
         // HACK: this force index data into SGPR
         const index_t m_block_work_idx = __builtin_amdgcn_readfirstlane(block_work_idx[I0]);
@@ -568,7 +574,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
                                Number<c_m10_n10_m11_n11_thread_tensor_lengths[I3]>{}));
 
             const auto c_m10_m11_n10_n11_thread_origin_idx_on_block =
-                blockwise_gemm.CalculateCM0M1N0N1ThreadOriginIndex(get_thread_local_1d_id());
+                blockwise_gemm.CalculateCM0M1N0N1ThreadOriginOnBlock(get_thread_local_1d_id());
 
             ThreadwiseDynamicTensorSliceTransfer_v1r3<
                 FloatAcc,
