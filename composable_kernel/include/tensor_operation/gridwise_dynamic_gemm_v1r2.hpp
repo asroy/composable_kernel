@@ -15,8 +15,6 @@ namespace ck {
 template <typename GridwiseGemm,
           typename FloatAB,
           typename FloatC,
-          typename AKMGridDesc,
-          typename BKNGridDesc,
           typename AKM0M1GridDesc,
           typename BKN0N1GridDesc,
           typename CM0M10M11N0N10N11GridDesc,
@@ -31,8 +29,6 @@ __global__ void
             const FloatAB* __restrict__ p_a_grid,
             const FloatAB* __restrict__ p_b_grid,
             FloatC* __restrict__ p_c_grid,
-            const AKMGridDesc a_k_m_grid_desc,
-            const BKNGridDesc b_k_n_grid_desc,
             const AKM0M1GridDesc a_k_m0_m1_grid_desc,
             const BKN0N1GridDesc b_k_n0_n1_grid_desc,
             const CM0M10M11N0N10N11GridDesc c_m0_m10_m11_n0_n10_n11_grid_desc,
@@ -47,8 +43,6 @@ __global__ void
                       p_b_grid,
                       p_c_grid,
                       p_shared_block,
-                      a_k_m_grid_desc,
-                      b_k_n_grid_desc,
                       a_k_m0_m1_grid_desc,
                       b_k_n0_n1_grid_desc,
                       c_m0_m10_m11_n0_n10_n11_grid_desc,
@@ -99,7 +93,7 @@ template <index_t BlockSize,
           typename CGridIteratorHacks,
           typename AGridMoveSliceWindowIteratorHacks,
           typename BGridMoveSliceWindowIteratorHacks>
-struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
+struct GridwiseDynamicGemm_km_kn_mn_v1r2
 {
     static constexpr auto I0 = Number<0>{};
     static constexpr auto I1 = Number<1>{};
@@ -124,13 +118,13 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
             make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}), max_lds_align);
 
         // LDS allocation for A and B: be careful of alignment
-        constexpr auto a_block_space_size =
+        constexpr auto a_block_aligned_space_size =
             math::integer_least_multiple(a_k_m_block_desc.GetElementSpaceSize(), max_lds_align);
 
-        constexpr auto b_block_space_size =
+        constexpr auto b_block_aligned_space_size =
             math::integer_least_multiple(b_k_n_block_desc.GetElementSpaceSize(), max_lds_align);
 
-        return 2 * (a_block_space_size + b_block_space_size) * sizeof(FloatAB);
+        return 2 * (a_block_aligned_space_size + b_block_aligned_space_size) * sizeof(FloatAB);
     }
 
     __host__ __device__ static constexpr bool CheckValidity(const AKMGridDesc& a_k_m_grid_desc,
@@ -178,13 +172,13 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         const auto M1 = Number<MPerBlock>{};
         const auto M0 = M / M1;
 
-        const auto a_k_m0_m1_block_clusterized_grid_desc = transform_dynamic_tensor_descriptor(
+        const auto a_k_m0_m1_grid_desc = transform_dynamic_tensor_descriptor(
             a_k_m_grid_desc,
             make_tuple(make_pass_through_transform(K), make_unmerge_transform(make_tuple(M0, M1))),
             make_tuple(Sequence<0>{}, Sequence<1>{}),
             make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
 
-        return a_k_m0_m1_block_clusterized_grid_desc;
+        return a_k_m0_m1_grid_desc;
     }
 
     __host__ __device__ static constexpr auto
@@ -196,13 +190,13 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         const auto N1 = Number<NPerBlock>{};
         const auto N0 = N / N1;
 
-        const auto b_k_n0_n1_block_clusterized_grid_desc = transform_dynamic_tensor_descriptor(
+        const auto b_k_n0_n1_grid_desc = transform_dynamic_tensor_descriptor(
             b_k_n_grid_desc,
             make_tuple(make_pass_through_transform(K), make_unmerge_transform(make_tuple(N0, N1))),
             make_tuple(Sequence<0>{}, Sequence<1>{}),
             make_tuple(Sequence<0>{}, Sequence<1, 2>{}));
 
-        return b_k_n0_n1_block_clusterized_grid_desc;
+        return b_k_n0_n1_grid_desc;
     }
 
     __host__ __device__ static constexpr auto
@@ -246,7 +240,9 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         const auto N0 = N / N1;
 
         const auto c_blockid_to_m0_n0_block_cluster_adaptor =
-            make_cluster_descriptor_v2(make_tuple(M0, N0));
+            make_single_stage_tensor_adaptor(make_tuple(make_merge_transform(make_tuple(M0, N0))),
+                                             make_tuple(Sequence<0, 1>{}),
+                                             make_tuple(Sequence<0>{}));
 
         return c_blockid_to_m0_n0_block_cluster_adaptor;
     }
@@ -263,8 +259,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         const FloatAB* __restrict__ p_b_grid,
         FloatC* __restrict__ p_c_grid,
         FloatAB* __restrict__ p_shared_block,
-        const AKMGridDesc& a_k_m_grid_desc,
-        const BKNGridDesc& b_k_n_grid_desc,
         const AKM0M1GridDesc& a_k_m0_m1_grid_desc,
         const BKN0N1GridDesc& b_k_n0_n1_grid_desc,
         const CM0M10M11N0N10N11GridDesc& c_m0_m10_m11_n0_n10_n11_grid_desc,
@@ -273,30 +267,22 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         integral_constant<bool, HasDoubleTailKBlockLoop>)
     {
         const auto a_global_buf = make_dynamic_buffer<AddressSpace::Global>(
-            p_a_grid, a_k_m_grid_desc.GetElementSpaceSize());
+            p_a_grid, a_k_m0_m1_grid_desc.GetElementSpaceSize());
         const auto b_global_buf = make_dynamic_buffer<AddressSpace::Global>(
-            p_b_grid, b_k_n_grid_desc.GetElementSpaceSize());
+            p_b_grid, b_k_n0_n1_grid_desc.GetElementSpaceSize());
         auto c_grid_buf = make_dynamic_buffer<AddressSpace::Global>(
             p_c_grid, c_m0_m10_m11_n0_n10_n11_grid_desc.GetElementSpaceSize());
 
-        const auto K = a_k_m_grid_desc.GetLength(I0);
-        const auto M = a_k_m_grid_desc.GetLength(I1);
-        const auto N = b_k_n_grid_desc.GetLength(I1);
+        const auto K = a_k_m0_m1_grid_desc.GetLength(I0);
 
         // divide block work by [M, N]
-        const auto block_work_idx = c_blockid_to_m0_n0_block_cluster_adaptor.CalculateBottomIndex(
-            make_multi_index(get_block_1d_id()));
+        const auto c_m0_n0_block_cluster_idx =
+            c_blockid_to_m0_n0_block_cluster_adaptor.CalculateBottomIndex(
+                make_multi_index(get_block_1d_id()));
 
         // HACK: this force index data into SGPR
-        const index_t m_block_work_idx = __builtin_amdgcn_readfirstlane(block_work_idx[I0]);
-
-        const index_t n_block_work_idx = __builtin_amdgcn_readfirstlane(block_work_idx[I1]);
-
-        const index_t m_block_data_idx_on_global =
-            __builtin_amdgcn_readfirstlane(m_block_work_idx * MPerBlock);
-
-        const index_t n_block_data_idx_on_global =
-            __builtin_amdgcn_readfirstlane(n_block_work_idx * NPerBlock);
+        const index_t m0_idx = __builtin_amdgcn_readfirstlane(c_m0_n0_block_cluster_idx[I0]);
+        const index_t n0_idx = __builtin_amdgcn_readfirstlane(c_m0_n0_block_cluster_idx[I1]);
 
         // lds max alignment
         constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_M>{},
@@ -314,59 +300,67 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         constexpr auto b_k_n_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
             make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}), max_lds_align);
 
+        // A matrix in LDS memory, dst of blockwise copy
+        //   be careful of LDS alignment
+        constexpr auto a_k_m0_m1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(Number<KPerBlock>{}, I1, Number<MPerBlock>{}), max_lds_align);
+
+        // B matrix in LDS memory, dst of blockwise copy
+        //   be careful of LDS alignment
+        constexpr auto b_k_n0_n1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(Number<KPerBlock>{}, I1, Number<NPerBlock>{}), max_lds_align);
+
         // A matrix blockwise copy
         auto a_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
                                                    InMemoryDataOperation::Set,
-                                                   Sequence<KPerBlock, MPerBlock>,
+                                                   Sequence<KPerBlock, 1, MPerBlock>,
                                                    ABlockTransferThreadSliceLengths_K_M,
                                                    ABlockTransferThreadClusterLengths_K_M,
                                                    ABlockTransferThreadClusterArrangeOrder,
                                                    FloatAB,
                                                    FloatAB,
-                                                   decltype(a_k_m_grid_desc),
-                                                   decltype(a_k_m_block_desc),
+                                                   decltype(a_k_m0_m1_grid_desc),
+                                                   decltype(a_k_m0_m1_block_desc),
                                                    ABlockTransferSrcAccessOrder,
-                                                   Sequence<0, 1>,
+                                                   Sequence<0, 1, 2>,
                                                    ABlockTransferSrcVectorDim,
-                                                   1,
+                                                   2,
                                                    ABlockTransferSrcScalarPerVector,
                                                    ABlockTransferDstScalarPerVector_M,
                                                    1,
                                                    1,
                                                    AThreadTransferSrcResetCoordinateAfterRun,
-                                                   true>(
-                a_k_m_grid_desc,
-                make_multi_index(0, m_block_data_idx_on_global),
-                a_k_m_block_desc,
-                make_multi_index(0, 0));
+                                                   true>(a_k_m0_m1_grid_desc,
+                                                         make_multi_index(0, m0_idx, 0),
+                                                         a_k_m0_m1_block_desc,
+                                                         make_multi_index(0, 0, 0));
 
         // B matrix blockwise copy
         auto b_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
                                                    InMemoryDataOperation::Set,
-                                                   Sequence<KPerBlock, NPerBlock>,
+                                                   Sequence<KPerBlock, 1, NPerBlock>,
                                                    BBlockTransferThreadSliceLengths_K_N,
                                                    BBlockTransferThreadClusterLengths_K_N,
                                                    BBlockTransferThreadClusterArrangeOrder,
                                                    FloatAB,
                                                    FloatAB,
-                                                   decltype(b_k_n_grid_desc),
-                                                   decltype(b_k_n_block_desc),
+                                                   decltype(b_k_n0_n1_grid_desc),
+                                                   decltype(b_k_n0_n1_block_desc),
                                                    BBlockTransferSrcAccessOrder,
-                                                   Sequence<0, 1>,
+                                                   Sequence<0, 1, 2>,
                                                    BBlockTransferSrcVectorDim,
-                                                   1,
+                                                   2,
                                                    BBlockTransferSrcScalarPerVector,
                                                    BBlockTransferDstScalarPerVector_N,
                                                    1,
                                                    1,
                                                    BThreadTransferSrcResetCoordinateAfterRun,
-                                                   true>(
-                b_k_n_grid_desc,
-                make_multi_index(0, n_block_data_idx_on_global),
-                b_k_n_block_desc,
-                make_multi_index(0, 0));
+                                                   true>(b_k_n0_n1_grid_desc,
+                                                         make_multi_index(0, n0_idx, 0),
+                                                         b_k_n0_n1_block_desc,
+                                                         make_multi_index(0, 0, 0));
 
         // GEMM definition
         //   c_mtx += transpose(a_mtx) * b_mtx
@@ -398,14 +392,14 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
                 sequence_to_tuple_of_number(c_m10_n10_m11_n11_thread_tensor_lengths));
 
         // LDS allocation for A and B: be careful of alignment
-        constexpr auto a_block_space_size =
-            math::integer_least_multiple(a_k_m_block_desc.GetElementSpaceSize(), max_lds_align);
+        constexpr auto a_block_aligned_space_size =
+            math::integer_least_multiple(a_k_m0_m1_block_desc.GetElementSpaceSize(), max_lds_align);
 
-        constexpr auto b_block_space_size =
-            math::integer_least_multiple(b_k_n_block_desc.GetElementSpaceSize(), max_lds_align);
+        constexpr auto b_block_aligned_space_size =
+            math::integer_least_multiple(b_k_n0_n1_block_desc.GetElementSpaceSize(), max_lds_align);
 
         FloatAB* p_a_block_double = p_shared_block;
-        FloatAB* p_b_block_double = p_shared_block + 2 * a_block_space_size;
+        FloatAB* p_b_block_double = p_shared_block + 2 * a_block_aligned_space_size;
 
         // register allocation for output
         auto c_thread_buf = make_static_buffer<AddressSpace::Vgpr, FloatAcc>(
@@ -419,37 +413,41 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
                  c_thread_buf,
                  FloatAcc{0});
 
-        constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0);
-        constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0);
+        constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0, 0);
+        constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0, 0);
 
         // hack to control index calculation when iterating over A and B matrix for threadwise copy
-        constexpr auto a_k_m_global_iterator_hacks = AGridIteratorHacks{};
-        constexpr auto b_k_n_global_iterator_hacks = BGridIteratorHacks{};
+        constexpr auto a_k_m0_m1_global_iterator_hacks = AGridIteratorHacks{};
+        constexpr auto b_k_n0_n1_global_iterator_hacks = BGridIteratorHacks{};
 
         // hack to control index calculation when move slice window for A and B matrix for
         // threadwise copy
-        constexpr auto a_k_m_global_move_slice_window_iterator_hack =
+        constexpr auto a_k_m0_m1_global_move_slice_window_iterator_hack =
             AGridMoveSliceWindowIteratorHacks{};
-        constexpr auto b_k_n_global_move_slice_window_iterator_hack =
+        constexpr auto b_k_n0_n1_global_move_slice_window_iterator_hack =
             BGridMoveSliceWindowIteratorHacks{};
 
         auto a_block_even_buf = make_dynamic_buffer<AddressSpace::Lds>(
-            p_a_block_double, a_k_m_block_desc.GetElementSpaceSize());
+            p_a_block_double, a_k_m0_m1_block_desc.GetElementSpaceSize());
         auto b_block_even_buf = make_dynamic_buffer<AddressSpace::Lds>(
-            p_b_block_double, b_k_n_block_desc.GetElementSpaceSize());
+            p_b_block_double, b_k_n0_n1_block_desc.GetElementSpaceSize());
 
-        auto a_block_odd_buf = make_dynamic_buffer<AddressSpace::Lds>(
-            p_a_block_double + a_block_space_size, a_k_m_block_desc.GetElementSpaceSize());
-        auto b_block_odd_buf = make_dynamic_buffer<AddressSpace::Lds>(
-            p_b_block_double + b_block_space_size, b_k_n_block_desc.GetElementSpaceSize());
+        auto a_block_odd_buf =
+            make_dynamic_buffer<AddressSpace::Lds>(p_a_block_double + a_block_aligned_space_size,
+                                                   a_k_m0_m1_block_desc.GetElementSpaceSize());
+        auto b_block_odd_buf =
+            make_dynamic_buffer<AddressSpace::Lds>(p_b_block_double + b_block_aligned_space_size,
+                                                   b_k_n0_n1_block_desc.GetElementSpaceSize());
 
         // LDS double buffer: preload data into LDS
         {
-            a_blockwise_copy.RunRead(a_k_m_grid_desc, a_global_buf, a_k_m_global_iterator_hacks);
-            b_blockwise_copy.RunRead(b_k_n_grid_desc, b_global_buf, b_k_n_global_iterator_hacks);
+            a_blockwise_copy.RunRead(
+                a_k_m0_m1_grid_desc, a_global_buf, a_k_m0_m1_global_iterator_hacks);
+            b_blockwise_copy.RunRead(
+                b_k_n0_n1_grid_desc, b_global_buf, b_k_n0_n1_global_iterator_hacks);
 
-            a_blockwise_copy.RunWrite(a_k_m_block_desc, a_block_even_buf);
-            b_blockwise_copy.RunWrite(b_k_n_block_desc, b_block_even_buf);
+            a_blockwise_copy.RunWrite(a_k_m0_m1_block_desc, a_block_even_buf);
+            b_blockwise_copy.RunWrite(b_k_n0_n1_block_desc, b_block_even_buf);
         }
 
         if constexpr(HasMainKBlockLoop)
@@ -461,20 +459,22 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
             do
             {
                 // even iteration
-                a_blockwise_copy.MoveSrcSliceWindow(a_k_m_grid_desc,
-                                                    a_block_slice_copy_step,
-                                                    a_k_m_global_move_slice_window_iterator_hack);
-                b_blockwise_copy.MoveSrcSliceWindow(b_k_n_grid_desc,
-                                                    b_block_slice_copy_step,
-                                                    b_k_n_global_move_slice_window_iterator_hack);
+                a_blockwise_copy.MoveSrcSliceWindow(
+                    a_k_m0_m1_grid_desc,
+                    a_block_slice_copy_step,
+                    a_k_m0_m1_global_move_slice_window_iterator_hack);
+                b_blockwise_copy.MoveSrcSliceWindow(
+                    b_k_n0_n1_grid_desc,
+                    b_block_slice_copy_step,
+                    b_k_n0_n1_global_move_slice_window_iterator_hack);
 
                 __syncthreads();
 
                 // LDS doubel buffer: load next data from device mem
                 a_blockwise_copy.RunRead(
-                    a_k_m_grid_desc, a_global_buf, a_k_m_global_iterator_hacks);
+                    a_k_m0_m1_grid_desc, a_global_buf, a_k_m0_m1_global_iterator_hacks);
                 b_blockwise_copy.RunRead(
-                    b_k_n_grid_desc, b_global_buf, b_k_n_global_iterator_hacks);
+                    b_k_n0_n1_grid_desc, b_global_buf, b_k_n0_n1_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
                 blockwise_gemm.Run(c_m10_n10_m11_n11_thread_desc,
@@ -483,32 +483,34 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
                                    c_thread_buf);
 
                 // LDS double buffer: store next data to LDS
-                a_blockwise_copy.RunWrite(a_k_m_block_desc, a_block_odd_buf);
-                b_blockwise_copy.RunWrite(b_k_n_block_desc, b_block_odd_buf);
+                a_blockwise_copy.RunWrite(a_k_m0_m1_block_desc, a_block_odd_buf);
+                b_blockwise_copy.RunWrite(b_k_n0_n1_block_desc, b_block_odd_buf);
 
                 // odd iteration
-                a_blockwise_copy.MoveSrcSliceWindow(a_k_m_grid_desc,
-                                                    a_block_slice_copy_step,
-                                                    a_k_m_global_move_slice_window_iterator_hack);
-                b_blockwise_copy.MoveSrcSliceWindow(b_k_n_grid_desc,
-                                                    b_block_slice_copy_step,
-                                                    b_k_n_global_move_slice_window_iterator_hack);
+                a_blockwise_copy.MoveSrcSliceWindow(
+                    a_k_m0_m1_grid_desc,
+                    a_block_slice_copy_step,
+                    a_k_m0_m1_global_move_slice_window_iterator_hack);
+                b_blockwise_copy.MoveSrcSliceWindow(
+                    b_k_n0_n1_grid_desc,
+                    b_block_slice_copy_step,
+                    b_k_n0_n1_global_move_slice_window_iterator_hack);
 
                 __syncthreads();
 
                 // LDS doubel buffer: load next data from device mem
                 a_blockwise_copy.RunRead(
-                    a_k_m_grid_desc, a_global_buf, a_k_m_global_iterator_hacks);
+                    a_k_m0_m1_grid_desc, a_global_buf, a_k_m0_m1_global_iterator_hacks);
                 b_blockwise_copy.RunRead(
-                    b_k_n_grid_desc, b_global_buf, b_k_n_global_iterator_hacks);
+                    b_k_n0_n1_grid_desc, b_global_buf, b_k_n0_n1_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
                 blockwise_gemm.Run(
                     c_m10_n10_m11_n11_thread_desc, a_block_odd_buf, b_block_odd_buf, c_thread_buf);
 
                 // LDS double buffer: store next data to LDS
-                a_blockwise_copy.RunWrite(a_k_m_block_desc, a_block_even_buf);
-                b_blockwise_copy.RunWrite(b_k_n_block_desc, b_block_even_buf);
+                a_blockwise_copy.RunWrite(a_k_m0_m1_block_desc, a_block_even_buf);
+                b_blockwise_copy.RunWrite(b_k_n0_n1_block_desc, b_block_even_buf);
 
                 k_block_data_begin += 2 * KPerBlock;
             } while(k_block_data_begin < K - 2 * KPerBlock);
@@ -517,26 +519,28 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
         // LDS double buffer: tail
         if constexpr(HasDoubleTailKBlockLoop) // if has 2 iteration left
         {
-            a_blockwise_copy.MoveSrcSliceWindow(a_k_m_grid_desc,
+            a_blockwise_copy.MoveSrcSliceWindow(a_k_m0_m1_grid_desc,
                                                 a_block_slice_copy_step,
-                                                a_k_m_global_move_slice_window_iterator_hack);
-            b_blockwise_copy.MoveSrcSliceWindow(b_k_n_grid_desc,
+                                                a_k_m0_m1_global_move_slice_window_iterator_hack);
+            b_blockwise_copy.MoveSrcSliceWindow(b_k_n0_n1_grid_desc,
                                                 b_block_slice_copy_step,
-                                                b_k_n_global_move_slice_window_iterator_hack);
+                                                b_k_n0_n1_global_move_slice_window_iterator_hack);
 
             __syncthreads();
 
             // LDS double buffer: load last data from device mem
-            a_blockwise_copy.RunRead(a_k_m_grid_desc, a_global_buf, a_k_m_global_iterator_hacks);
-            b_blockwise_copy.RunRead(b_k_n_grid_desc, b_global_buf, b_k_n_global_iterator_hacks);
+            a_blockwise_copy.RunRead(
+                a_k_m0_m1_grid_desc, a_global_buf, a_k_m0_m1_global_iterator_hacks);
+            b_blockwise_copy.RunRead(
+                b_k_n0_n1_grid_desc, b_global_buf, b_k_n0_n1_global_iterator_hacks);
 
             // LDS double buffer: GEMM on 2nd-last data
             blockwise_gemm.Run(
                 c_m10_n10_m11_n11_thread_desc, a_block_even_buf, b_block_even_buf, c_thread_buf);
 
             // LDS double buffer: store last data to LDS
-            a_blockwise_copy.RunWrite(a_k_m_block_desc, a_block_odd_buf);
-            b_blockwise_copy.RunWrite(b_k_n_block_desc, b_block_odd_buf);
+            a_blockwise_copy.RunWrite(a_k_m0_m1_block_desc, a_block_odd_buf);
+            b_blockwise_copy.RunWrite(b_k_n0_n1_block_desc, b_block_odd_buf);
 
             __syncthreads();
 
@@ -593,10 +597,10 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2
                 CGlobalMemoryDataOperation,
                 1,
                 true>{c_m0_m10_m11_n0_n10_n11_grid_desc,
-                      make_multi_index(m_block_work_idx,
+                      make_multi_index(m0_idx,
                                        c_m10_m11_n10_n11_thread_origin_idx_on_block[I0],
                                        c_m10_m11_n10_n11_thread_origin_idx_on_block[I1],
-                                       n_block_work_idx,
+                                       n0_idx,
                                        c_m10_m11_n10_n11_thread_origin_idx_on_block[I2],
                                        c_m10_m11_n10_n11_thread_origin_idx_on_block[I3])}
                 .Run(c_m0_m10_m11_n0_n10_n11_thread_desc,
