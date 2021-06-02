@@ -118,7 +118,7 @@ __host__ float driver_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
 
     if(!GridwiseGemm::CheckValidity(a_k_m_grid_desc, b_k_n_grid_desc, c_m_n_grid_desc))
     {
-        throw std::runtime_error("wrong! GEMM size no divisible");
+        throw std::runtime_error("wrong! GridwiseDynamicGemm_km_kn_m0m1n0n1_v1r2 has invalid setting");
     }
 
     // c_m0_m10_m11_n0_n10_n11_grid_desc
