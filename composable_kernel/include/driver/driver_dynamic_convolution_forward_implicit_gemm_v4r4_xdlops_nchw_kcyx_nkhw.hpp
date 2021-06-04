@@ -158,7 +158,7 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
     constexpr auto wei_gemmk0_gemmm_gemmk1_global_move_slice_window_iterator_hacks =
         Sequence<0, 0, 0, 0, 0>{};
 
-#if 0
+#if 1
     // hack to control index calculation when iterating over in_gemmk0_gemmn_gemmk1_global tensor
     constexpr auto in_gemmk0_gemmn_gemmk1_global_iterator_hacks =
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{},

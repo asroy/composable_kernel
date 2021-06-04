@@ -211,7 +211,7 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
                                                                 Sequence<1, MRepeat, 1, KPack>,
                                                                 Sequence<0, 1, 2, 3>,
                                                                 3,
-                                                                1, // KPack,
+                                                                KPack,
                                                                 1>;
 
     using BThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4<FloatAB,
@@ -221,7 +221,7 @@ struct BlockwiseGemmXdlops_km_kn_m0m1m2n_v1
                                                                 Sequence<1, NRepeat, 1, KPack>,
                                                                 Sequence<0, 1, 2, 3>,
                                                                 3,
-                                                                1, // KPack,
+                                                                KPack,
                                                                 1>;
 
     AThreadCopy a_thread_copy_;

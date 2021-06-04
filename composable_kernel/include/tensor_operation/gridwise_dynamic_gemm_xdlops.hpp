@@ -141,7 +141,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
 {
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
-        constexpr auto max_lds_align = KPack;
+        constexpr auto max_lds_align = Number<KPack>{};
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -204,7 +204,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
             __builtin_amdgcn_readfirstlane(block_work_idx[I1] * NPerBlock);
 
         // lds max alignment
-        constexpr auto max_lds_align = KPack;
+        constexpr auto max_lds_align = Number<KPack>{};
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -229,11 +229,11 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                                                    decltype(a_k0_m_k1_global_desc),
                                                    decltype(a_k0_m_k1_block_desc),
                                                    ABlockTransferSrcAccessOrder,
-                                                   Sequence<2, 0, 1>,
-                                                   2, // ABlockTransferSrcVectorDim,
+                                                   Sequence<1, 0, 2>,
+                                                   ABlockTransferSrcVectorDim,
                                                    2,
-                                                   1, // ABlockTransferSrcScalarPerVector,
-                                                   1, // ABlockTransferDstScalarPerVector_KPack,
+                                                   ABlockTransferSrcScalarPerVector,
+                                                   ABlockTransferDstScalarPerVector_KPack,
                                                    1,
                                                    1,
                                                    AThreadTransferSrcResetCoordinateAfterRun,
@@ -256,11 +256,11 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                                                    decltype(b_k0_n_k1_global_desc),
                                                    decltype(b_k0_n_k1_block_desc),
                                                    BBlockTransferSrcAccessOrder,
-                                                   Sequence<2, 0, 1>,
-                                                   1, // BBlockTransferSrcVectorDim,
+                                                   Sequence<1, 0, 2>,
+                                                   BBlockTransferSrcVectorDim,
                                                    2,
-                                                   1, // BBlockTransferSrcScalarPerVector,
-                                                   1, // BBlockTransferDstScalarPerVector_KPack,
+                                                   BBlockTransferSrcScalarPerVector,
+                                                   BBlockTransferDstScalarPerVector_KPack,
                                                    1,
                                                    1,
                                                    BThreadTransferSrcResetCoordinateAfterRun,
@@ -281,8 +281,6 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         static_assert(MPerBlock % (MPerWave * MRepeat) == 0 &&
                           NPerBlock % (NPerWave * NRepeat) == 0,
                       "wrong!");
-
-        static_assert(KPack == 1, "");
 
         constexpr auto a_k0_m0_m1_k1_block_desc = transform_dynamic_tensor_descriptor(
             a_k0_m_k1_block_desc,
