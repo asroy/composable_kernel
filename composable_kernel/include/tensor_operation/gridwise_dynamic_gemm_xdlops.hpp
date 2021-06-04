@@ -141,9 +141,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
 {
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
-        constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_KPack>{},
-                                                 Number<BBlockTransferDstScalarPerVector_KPack>{},
-                                                 Number<KPack>{});
+        constexpr auto max_lds_align = KPack;
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -192,6 +190,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         const auto K0 = a_k0_m_k1_global_desc.GetLength(I0);
         const auto M  = a_k0_m_k1_global_desc.GetLength(I1);
         const auto N  = b_k0_n_k1_global_desc.GetLength(I1);
+        const auto K1 = b_k0_n_k1_global_desc.GetLength(I2);
 
         // divide block work by [M, N]
         const auto block_work_idx =
@@ -205,9 +204,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
             __builtin_amdgcn_readfirstlane(block_work_idx[I1] * NPerBlock);
 
         // lds max alignment
-        constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_KPack>{},
-                                                 Number<BBlockTransferDstScalarPerVector_KPack>{},
-                                                 Number<KPack>{});
+        constexpr auto max_lds_align = KPack;
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment

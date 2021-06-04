@@ -64,9 +64,10 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
     const auto InRightPadH = in_right_pads[I0];
     const auto InRightPadW = in_right_pads[I1];
 
-    const auto GemmM = K;
-    const auto GemmN = N * Ho * Wo;
-    const auto GemmK = C * Y * X;
+    const auto GemmM  = K;
+    const auto GemmN  = N * Ho * Wo;
+    const auto GemmK  = C * Y * X;
+    const auto GemmK0 = GemmK / GemmKPack;
 
     // weight tensor
     const auto wei_gemmk_gemmm_global_desc = transform_dynamic_tensor_descriptor(
@@ -77,7 +78,7 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
 
     const auto wei_gemmk0_gemmm_gemmk1_global_desc = transform_dynamic_tensor_descriptor(
         wei_gemmk_gemmm_global_desc,
-        make_tuple(make_unmerge_transform(make_tuple(GemmK / GemmKPack, GemmKPack)),
+        make_tuple(make_unmerge_transform(make_tuple(GemmK0, GemmKPack)),
                    make_pass_through_transform(GemmM)),
         make_tuple(Sequence<0>{}, Sequence<1>{}),
         make_tuple(Sequence<0, 2>{}, Sequence<1>{}));
@@ -110,7 +111,7 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
 
     const auto in_gemmk0_gemmn_gemmk1_global_desc = transform_dynamic_tensor_descriptor(
         in_gemmk_gemmn_global_desc,
-        make_tuple(make_unmerge_transform(make_tuple(GemmK / GemmKPack, GemmKPack)),
+        make_tuple(make_unmerge_transform(make_tuple(GemmK0, GemmKPack)),
                    make_pass_through_transform(GemmN)),
         make_tuple(Sequence<0>{}, Sequence<1>{}),
         make_tuple(Sequence<0, 2>{}, Sequence<1>{}));
@@ -124,7 +125,8 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
 
     assert(GemmM == out_gemmm_gemmn_global_desc.GetLength(I0));
     assert(GemmN == out_gemmm_gemmn_global_desc.GetLength(I1));
-    const auto GemmK0 = wei_gemmk0_gemmm_gemmk1_global_desc.GetLength(I0);
+    assert(GemmK0 == in_gemmk0_gemmn_gemmk1_global_desc.GetLength(I0));
+    assert(GemmK0 == wei_gemmk0_gemmm_gemmk1_global_desc.GetLength(I0));
 
     assert(GemmM % GemmMPerBlock == 0 && GemmN % GemmNPerBlock == 0 && GemmK0 % GemmKPerBlock == 0);
 
@@ -156,6 +158,7 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
     constexpr auto wei_gemmk0_gemmm_gemmk1_global_move_slice_window_iterator_hacks =
         Sequence<0, 0, 0, 0, 0>{};
 
+#if 0
     // hack to control index calculation when iterating over in_gemmk0_gemmn_gemmk1_global tensor
     constexpr auto in_gemmk0_gemmn_gemmk1_global_iterator_hacks =
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{},
@@ -179,6 +182,31 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
                               Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 2, 0, 0>{}));
+#else
+    // hack to control index calculation when iterating over in_gemmk0_gemmn_gemmk1_global tensor
+    constexpr auto in_gemmk0_gemmn_gemmk1_global_iterator_hacks =
+        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{}),
+                   make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{}));
+
+    constexpr auto in_gemmk0_gemmn_gemmk1_global_move_slice_window_iterator_hacks =
+        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{};
+
+    // hack to control index calculation when iterating over out_gemmm0_gemmm1_gemmn0_gemmn1_global
+    // tensor hack for NKHW format
+    constexpr auto out_m0_m1_m2_n_global_iterator_hacks =
+        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{}),
+                   make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{}));
+#endif
 
     return make_tuple(wei_gemmk0_gemmm_gemmk1_global_desc,
                       in_gemmk0_gemmn_gemmk1_global_desc,
