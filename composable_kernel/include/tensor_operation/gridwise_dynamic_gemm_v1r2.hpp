@@ -283,8 +283,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
                 make_multi_index(get_block_1d_id()));
 
         // HACK: this force index data into SGPR
-        const index_t m0_idx = __builtin_amdgcn_readfirstlane(c_m0_n0_block_cluster_idx[I0]);
-        const index_t n0_idx = __builtin_amdgcn_readfirstlane(c_m0_n0_block_cluster_idx[I1]);
+        const index_t im0 = __builtin_amdgcn_readfirstlane(c_m0_n0_block_cluster_idx[I0]);
+        const index_t in0 = __builtin_amdgcn_readfirstlane(c_m0_n0_block_cluster_idx[I1]);
 
         // lds max alignment
         constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_M1>{},
@@ -334,7 +334,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
                                                    1,
                                                    AThreadTransferSrcResetCoordinateAfterRun,
                                                    true>(a_k_m0_m1_grid_desc,
-                                                         make_multi_index(0, m0_idx, 0),
+                                                         make_multi_index(0, im0, 0),
                                                          a_k_m0_m1_block_desc,
                                                          make_multi_index(0, 0, 0));
 
@@ -360,7 +360,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
                                                    1,
                                                    BThreadTransferSrcResetCoordinateAfterRun,
                                                    true>(b_k_n0_n1_grid_desc,
-                                                         make_multi_index(0, n0_idx, 0),
+                                                         make_multi_index(0, in0, 0),
                                                          b_k_n0_n1_block_desc,
                                                          make_multi_index(0, 0, 0));
 
@@ -386,12 +386,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
                                                            M11N11ThreadClusterN1101,
                                                            M1PerThreadM111,
                                                            N1PerThreadN111>{};
-        constexpr auto c_m10_n10_m11_n11_thread_tensor_lengths =
+        constexpr auto c_m10_m11_n10_n11_thread_tensor_lengths =
             decltype(blockwise_gemm)::GetCM0M1N0N1ThreadTensorLengths();
 
-        constexpr auto c_m10_n10_m11_n11_thread_desc =
+        constexpr auto c_m10_m11_n10_n11_thread_desc =
             make_dynamic_naive_tensor_descriptor_packed_v2(
-                sequence_to_tuple_of_number(c_m10_n10_m11_n11_thread_tensor_lengths));
+                sequence_to_tuple_of_number(c_m10_m11_n10_n11_thread_tensor_lengths));
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_aligned_space_size =
@@ -405,12 +405,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
 
         // register allocation for output
         auto c_thread_buf = make_static_buffer<AddressSpace::Vgpr, FloatAcc>(
-            c_m10_n10_m11_n11_thread_desc.GetElementSpaceSize());
+            c_m10_m11_n10_n11_thread_desc.GetElementSpaceSize());
 
         ThreadwiseDynamicTensorSliceSet_v1<FloatAcc,
-                                           decltype(c_m10_n10_m11_n11_thread_desc),
-                                           decltype(c_m10_n10_m11_n11_thread_tensor_lengths)>{}
-            .Run(c_m10_n10_m11_n11_thread_desc,
+                                           decltype(c_m10_m11_n10_n11_thread_desc),
+                                           decltype(c_m10_m11_n10_n11_thread_tensor_lengths)>{}
+            .Run(c_m10_m11_n10_n11_thread_desc,
                  make_tuple(I0, I0, I0, I0),
                  c_thread_buf,
                  FloatAcc{0});
@@ -479,7 +479,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
                     b_k_n0_n1_grid_desc, b_global_buf, b_k_n0_n1_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(c_m10_n10_m11_n11_thread_desc,
+                blockwise_gemm.Run(c_m10_m11_n10_n11_thread_desc,
                                    a_block_even_buf,
                                    b_block_even_buf,
                                    c_thread_buf);
@@ -508,7 +508,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
 
                 // LDS double buffer: GEMM on current data
                 blockwise_gemm.Run(
-                    c_m10_n10_m11_n11_thread_desc, a_block_odd_buf, b_block_odd_buf, c_thread_buf);
+                    c_m10_m11_n10_n11_thread_desc, a_block_odd_buf, b_block_odd_buf, c_thread_buf);
 
                 // LDS double buffer: store next data to LDS
                 a_blockwise_copy.RunWrite(a_k_m0_m1_block_desc, a_block_even_buf);
@@ -538,7 +538,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
 
             // LDS double buffer: GEMM on 2nd-last data
             blockwise_gemm.Run(
-                c_m10_n10_m11_n11_thread_desc, a_block_even_buf, b_block_even_buf, c_thread_buf);
+                c_m10_m11_n10_n11_thread_desc, a_block_even_buf, b_block_even_buf, c_thread_buf);
 
             // LDS double buffer: store last data to LDS
             a_blockwise_copy.RunWrite(a_k_m0_m1_block_desc, a_block_odd_buf);
@@ -548,7 +548,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
 
             // LDS double buffer: GEMM on last data
             blockwise_gemm.Run(
-                c_m10_n10_m11_n11_thread_desc, a_block_odd_buf, b_block_odd_buf, c_thread_buf);
+                c_m10_m11_n10_n11_thread_desc, a_block_odd_buf, b_block_odd_buf, c_thread_buf);
         }
         else // if has 1 iteration left
         {
@@ -556,7 +556,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
 
             // LDS double buffer: GEMM on last data
             blockwise_gemm.Run(
-                c_m10_n10_m11_n11_thread_desc, a_block_even_buf, b_block_even_buf, c_thread_buf);
+                c_m10_m11_n10_n11_thread_desc, a_block_even_buf, b_block_even_buf, c_thread_buf);
         }
 
         // output: register to global memory
@@ -574,12 +574,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
 
             constexpr auto c_m0_m10_m11_n0_n10_n11_thread_desc =
                 make_dynamic_naive_tensor_descriptor_packed_v2(
-                    make_tuple(Number<1>{},
-                               Number<c_m10_n10_m11_n11_thread_tensor_lengths[I0]>{},
-                               Number<c_m10_n10_m11_n11_thread_tensor_lengths[I1]>{},
-                               Number<1>{},
-                               Number<c_m10_n10_m11_n11_thread_tensor_lengths[I2]>{},
-                               Number<c_m10_n10_m11_n11_thread_tensor_lengths[I3]>{}));
+                    make_tuple(I1,
+                               Number<c_m10_m11_n10_n11_thread_tensor_lengths[I0]>{},
+                               Number<c_m10_m11_n10_n11_thread_tensor_lengths[I1]>{},
+                               I1,
+                               Number<c_m10_m11_n10_n11_thread_tensor_lengths[I2]>{},
+                               Number<c_m10_m11_n10_n11_thread_tensor_lengths[I3]>{}));
 
             const auto c_m10_m11_n10_n11_thread_origin_idx_on_block =
                 blockwise_gemm.CalculateCM0M1N0N1ThreadOriginOnBlock(get_thread_local_1d_id());
@@ -590,21 +590,21 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r2
                 decltype(c_m0_m10_m11_n0_n10_n11_thread_desc),
                 decltype(c_m0_m10_m11_n0_n10_n11_grid_desc),
                 Sequence<1,
-                         c_m10_n10_m11_n11_thread_tensor_lengths[I0],
-                         c_m10_n10_m11_n11_thread_tensor_lengths[I1],
+                         c_m10_m11_n10_n11_thread_tensor_lengths[I0],
+                         c_m10_m11_n10_n11_thread_tensor_lengths[I1],
                          1,
-                         c_m10_n10_m11_n11_thread_tensor_lengths[I2],
-                         c_m10_n10_m11_n11_thread_tensor_lengths[I3]>,
+                         c_m10_m11_n10_n11_thread_tensor_lengths[I2],
+                         c_m10_m11_n10_n11_thread_tensor_lengths[I3]>,
                 CThreadTransferSrcDstAccessOrder,
                 CThreadTransferSrcDstVectorDim,
                 CThreadTransferDstScalarPerVector,
                 CGlobalMemoryDataOperation,
                 1,
                 true>{c_m0_m10_m11_n0_n10_n11_grid_desc,
-                      make_multi_index(m0_idx,
+                      make_multi_index(im0,
                                        c_m10_m11_n10_n11_thread_origin_idx_on_block[I0],
                                        c_m10_m11_n10_n11_thread_origin_idx_on_block[I1],
-                                       n0_idx,
+                                       in0,
                                        c_m10_m11_n10_n11_thread_origin_idx_on_block[I2],
                                        c_m10_m11_n10_n11_thread_origin_idx_on_block[I3])}
                 .Run(c_m0_m10_m11_n0_n10_n11_thread_desc,
