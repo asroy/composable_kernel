@@ -67,6 +67,10 @@ driver_dynamic_contraction_v1r1(const FloatAB* p_a_grid,
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
+    constexpr auto I2 = Number<2>{};
+    constexpr auto I3 = Number<3>{};
+    constexpr auto I4 = Number<4>{};
+    constexpr auto I5 = Number<5>{};
 
     // GEMM
     using GridwiseContraction = GridwiseDynamicContraction_km0m1_kn0n1_m0m1n0n1_v1r1<
@@ -150,36 +154,23 @@ driver_dynamic_contraction_v1r1(const FloatAB* p_a_grid,
     const bool has_double_tail_k_block_loop =
         GridwiseContraction::CalculateHasDoubleTailKBlockLoop(K);
 
-#if 1
-    a_gk_gm0_gm10_gm11_grid_desc.Print();
-    printf("\n");
-    b_gk_gn0_gn10_gn11_grid_desc.Print();
-    printf("\n");
-    c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.Print();
-    printf("\n");
+    std::cout << "a_gk_gm0_gm10_gm11_grid_desc{" << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I0)
+              << ", " << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I1) << ", "
+              << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I2) << ", "
+              << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I3) << "}" << std::endl;
 
-    constexpr auto I2 = Number<2>{};
-    constexpr auto I3 = Number<3>{};
-    constexpr auto I4 = Number<4>{};
-    constexpr auto I5 = Number<5>{};
+    std::cout << "b_gk_gn0_gn10_gn11_grid_desc{" << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I0)
+              << ", " << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I1) << ", "
+              << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I2) << ", "
+              << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I3) << "}" << std::endl;
 
-    std::cout << "a: " << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I0) << ","
-              << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I1) << ","
-              << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I2) << ","
-              << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I3) << std::endl;
-
-    std::cout << "b: " << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I0) << ","
-              << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I1) << ","
-              << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I2) << ","
-              << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I3) << std::endl;
-
-    std::cout << "c: " << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I0) << ","
-              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I1) << ","
-              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I2) << ","
-              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I3) << ","
-              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I4) << ","
-              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I5) << std::endl;
-#endif
+    std::cout << "c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc{ "
+              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I0) << ", "
+              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I1) << ", "
+              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I2) << ", "
+              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I3) << ", "
+              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I4) << ", "
+              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I5) << "}" << std::endl;
 
     float ave_time = 0;
 
