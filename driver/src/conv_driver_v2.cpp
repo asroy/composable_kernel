@@ -81,14 +81,12 @@ int main(int argc, char* argv[])
     using out_data_t                 = float;
 #endif
 
-    Tensor<in_data_t> in_nchw(
-        HostTensorDescriptor(std::initializer_list<std::size_t>{N, C, Hi, Wi}));
-    Tensor<in_data_t> wei_kcyx(
-        HostTensorDescriptor(std::initializer_list<std::size_t>{K, C, Y, X}));
+    Tensor<in_data_t> in_nchw(HostTensorDescriptor(std::initializer_list<index_t>{N, C, Hi, Wi}));
+    Tensor<in_data_t> wei_kcyx(HostTensorDescriptor(std::initializer_list<index_t>{K, C, Y, X}));
     Tensor<out_data_t> out_nkhw_host(
-        HostTensorDescriptor(std::initializer_list<std::size_t>{N, K, Ho, Wo}));
+        HostTensorDescriptor(std::initializer_list<index_t>{N, K, Ho, Wo}));
     Tensor<out_data_t> out_nkhw_device(
-        HostTensorDescriptor(std::initializer_list<std::size_t>{N, K, Ho, Wo}));
+        HostTensorDescriptor(std::initializer_list<index_t>{N, K, Ho, Wo}));
 
     ostream_HostTensorDescriptor(in_nchw.mDesc, std::cout << "in_nchw_desc: ");
     ostream_HostTensorDescriptor(wei_kcyx.mDesc, std::cout << "wei_kcyx_desc: ");
