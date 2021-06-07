@@ -12,7 +12,7 @@
 #include "conv_common.hpp"
 #include "host_conv.hpp"
 #include "device_tensor.hpp"
-#include "device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw.hpp"
+#include "device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -36,7 +36,6 @@ int main(int argc, char* argv[])
     const bool do_log          = atoi(argv[3]);
     const int nrepeat          = atoi(argv[4]);
 
-#if 1
     const index_t N  = atoi(argv[5]);
     const index_t K  = atoi(argv[6]);
     const index_t C  = atoi(argv[7]);
@@ -49,36 +48,28 @@ int main(int argc, char* argv[])
     const auto conv_dilations = make_tuple(atoi(argv[14]), atoi(argv[15]));
     const auto in_left_pads   = make_tuple(atoi(argv[16]), atoi(argv[17]));
     const auto in_right_pads  = make_tuple(atoi(argv[18]), atoi(argv[19]));
-#else
-    const index_t N  = 128;
-    const index_t K  = 128;
-    const index_t C  = 8;
-    const index_t Y  = 3;
-    const index_t X  = 3;
-    const index_t Hi = 14;
-    const index_t Wi = 14;
 
-    const auto conv_strides   = make_tuple(1, 1);
-    const auto conv_dilations = make_tuple(1, 1);
-    const auto in_left_pads   = make_tuple(1, 1);
-    const auto in_right_pads  = make_tuple(1, 1);
-#endif
+    const auto YEff = (Y - I1) * conv_dilations[I0] + I1;
+    const auto XEff = (X - I1) * conv_dilations[I1] + I1;
 
-    const auto in_nchw_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, C, Hi, Wi));
-    const auto wei_kcyx_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, C, Y, X));
-    const auto out_nkhw_desc = get_convolution_output_default_4d_tensor_descriptor(
-        in_nchw_desc, wei_kcyx_desc, conv_strides, conv_dilations, in_left_pads, in_right_pads);
-
-    const index_t Ho = out_nkhw_desc.GetLength(I2);
-    const index_t Wo = out_nkhw_desc.GetLength(I3);
+    const auto Ho = (Hi + in_left_pads[I0] + in_right_pads[I0] - YEff) / conv_strides[I0] + I1;
+    const auto Wo = (Wi + in_left_pads[I1] + in_right_pads[I1] - XEff) / conv_strides[I1] + I1;
 
 #if 1
     using in_data_t                  = float;
     constexpr index_t in_vector_size = 1;
     using acc_data_t                 = float;
     using out_data_t                 = float;
+#elif 0
+    using in_data_t                  = float;
+    constexpr index_t in_vector_size = 1;
+    using acc_data_t                 = float;
+    using out_data_t                 = int8_t;
+#elif 1
+    using in_data_t                  = int8_t;
+    constexpr index_t in_vector_size = 16;
+    using acc_data_t                 = int32_t;
+    using out_data_t                 = int8_t;
 #endif
 
     Tensor<in_data_t> in_nchw(HostTensorDescriptor(std::initializer_list<index_t>{N, C, Hi, Wi}));
@@ -91,8 +82,9 @@ int main(int argc, char* argv[])
     ostream_HostTensorDescriptor(in_nchw.mDesc, std::cout << "in_nchw_desc: ");
     ostream_HostTensorDescriptor(wei_kcyx.mDesc, std::cout << "wei_kcyx_desc: ");
     ostream_HostTensorDescriptor(out_nkhw_host.mDesc, std::cout << "out_nkhw_desc: ");
-    print_array("LeftPads", in_left_pads);
-    print_array("RightPads", in_right_pads);
+
+    print_array("InLeftPads", in_left_pads);
+    print_array("InRightPads", in_right_pads);
     print_array("ConvStrides", conv_strides);
     print_array("ConvDilations", conv_dilations);
 
@@ -129,13 +121,13 @@ int main(int argc, char* argv[])
     }
 
 #if 1
-    device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw<in_data_t,
-                                                                           in_vector_size,
-                                                                           acc_data_t,
-                                                                           out_data_t>(
-        in_nchw_desc,
-        wei_kcyx_desc,
-        out_nkhw_desc,
+    device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw<in_data_t,
+                                                                         in_vector_size,
+                                                                         acc_data_t,
+                                                                         out_data_t>(
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, C, Hi, Wi)),
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, C, Y, X)),
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K, Ho, Wo)),
         conv_strides,
         conv_dilations,
         in_left_pads,

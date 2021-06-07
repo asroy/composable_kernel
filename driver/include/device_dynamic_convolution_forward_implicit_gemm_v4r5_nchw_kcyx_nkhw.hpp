@@ -16,16 +16,16 @@ template <class TInWei,
           class InLeftPads,
           class InRightPads>
 void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
-    InDesc,
+    const InDesc& in_n_c_hi_wi_desc,
+    const WeiDesc& wei_k_c_y_x_desc,
+    const OutDesc& out_n_k_ho_wo_desc,
+    const ConvStrides& conv_strides,
+    const ConvDilations& conv_dilations,
+    const InLeftPads& in_left_pads,
+    const InRightPads& in_right_pads,
     const Tensor<TInWei>& in_n_c_hi_wi,
-    WeiDesc,
     const Tensor<TInWei>& wei_k_c_y_x,
-    OutDesc,
     Tensor<TOut>& out_n_k_ho_wo,
-    ConvStrides,
-    ConvDilations,
-    InLeftPads,
-    InRightPads,
     ck::index_t nrepeat)
 {
     using namespace ck;
@@ -35,12 +35,6 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
     constexpr auto I2 = Number<2>{};
-    constexpr auto I3 = Number<3>{};
-    constexpr auto I4 = Number<4>{};
-    constexpr auto I5 = Number<5>{};
-    constexpr auto I6 = Number<6>{};
-    constexpr auto I7 = Number<7>{};
-    constexpr auto I8 = Number<8>{};
 
     DeviceMem in_n_c_hi_wi_device_buf(sizeof(TInWei) * in_n_c_hi_wi.mDesc.GetElementSpace());
     DeviceMem wei_k_c_y_x_device_buf(sizeof(TInWei) * wei_k_c_y_x.mDesc.GetElementSpace());
@@ -51,34 +45,38 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
     out_n_k_ho_wo_device_buf.ToDevice(out_n_k_ho_wo.mData.data());
 
 #if 1
-    // run-time variables
-    const auto in_n_c_hi_wi_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(InDesc::GetLengths()));
-    const auto wei_k_c_y_x_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(WeiDesc::GetLengths()));
-    const auto out_n_k_ho_wo_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(OutDesc::GetLengths()));
+    // cdata = 64, BlockSize = 256, [8, 1, 128] * [8, 4, 32] = [1, 128, 4, 32]
+    constexpr index_t BlockSize = 256;
 
-    const auto conv_strides   = to_multi_index(ConvStrides{});
-    const auto conv_dilations = to_multi_index(ConvDilations{});
-    const auto in_left_pads   = to_multi_index(InLeftPads{});
-    const auto in_right_pads  = to_multi_index(InRightPads{});
-#else
-    // compile-time variables
-    const auto in_n_c_hi_wi_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-        sequence_to_tuple_of_number(InDesc::GetLengths()));
-    const auto wei_k_c_y_x_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-        sequence_to_tuple_of_number(WeiDesc::GetLengths()));
-    const auto out_n_k_ho_wo_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-        sequence_to_tuple_of_number(OutDesc::GetLengths()));
+    constexpr index_t N0 = 4;
 
-    const auto conv_strides   = sequence_to_tuple_of_number(ConvStrides{});
-    const auto conv_dilations = sequence_to_tuple_of_number(ConvDilations{});
-    const auto in_left_pads   = sequence_to_tuple_of_number(InLeftPads{});
-    const auto in_right_pads  = sequence_to_tuple_of_number(InRightPads{});
-#endif
+    constexpr index_t GemmGM1PerBlockGM11 = 128;
+    constexpr index_t GemmGN1PerBlockGN11 = 32;
+    constexpr index_t GemmKPerBlock       = 8;
 
-#if 1
+    constexpr index_t GemmM1PerThreadM111 = 4;
+    constexpr index_t GemmN1PerThreadN111 = 4;
+    constexpr index_t GemmKPerThread      = 1;
+
+    constexpr index_t GemmM11N11ThreadClusterM1101 = 2;
+    constexpr index_t GemmM11N11ThreadClusterN1101 = 2;
+    constexpr index_t GemmM11N11ThreadClusterM1100 = 8;
+    constexpr index_t GemmM11N11ThreadClusterN1100 = 8;
+
+    using GemmABlockTransferThreadSliceLengths_GK_GM0_GM10_GM11   = Sequence<4, 1, 1, 1>;
+    using GemmABlockTransferThreadClusterLengths_GK_GM0_GM10_GM11 = Sequence<2, 1, 1, 128>;
+
+    constexpr index_t GemmABlockTransferSrcScalarPerVector_GK   = 4;
+    constexpr index_t GemmABlockTransferDstScalarPerVector_GM11 = 1;
+
+    using GemmBBlockTransferThreadSliceLengths_GK_GN0_GN10_GN11   = Sequence<1, 4, 1, 1>;
+    using GemmBBlockTransferThreadClusterLengths_GK_GN0_GN10_GN11 = Sequence<8, 1, 1, 32>;
+
+    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GN11 = 1;
+    constexpr index_t GemmBBlockTransferDstScalarPerVector_GN11 = 1;
+
+    constexpr index_t GemmCThreadTransferDstScalarPerVector_BN1 = 1;
+#elif 1
     // cdata = 64, BlockSize = 256, [8, 1, 128] * [8, 8, 16] = [1, 128, 8, 16]
     constexpr index_t BlockSize = 256;
 
@@ -136,7 +134,6 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
                               Sequence<0, 0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0, 0>{}));
 
-#if 0
     constexpr auto in_gk_gn0_gn10_gn11_grid_iterator_hacks =
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
@@ -146,19 +143,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
                               Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0>{}));
-#else
-    constexpr auto in_gk_gn0_gn10_gn11_grid_iterator_hacks =
-        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{}),
-                   make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{}));
-#endif
 
-#if 0
     constexpr auto out_gm10_bm0_bm1_gn10_bn0_bn1_grid_iterator_hacks = make_tuple(
         make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
                    Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0>{},
@@ -172,32 +157,12 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
                    Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
                    Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0>{},
                    Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0>{}));
-#else
-    constexpr auto out_gm10_bm0_bm1_gn10_bn0_bn1_grid_iterator_hacks = make_tuple(
-        make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{}),
-        make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{}));
-#endif
 
     constexpr auto wei_gk_gm0_gm10_gm11_grid_move_slice_window_iterator_hacks =
         Sequence<0, 0, 0, 0, 0, 0>{};
 
-#if 0
     constexpr auto in_gk_gn0_gn10_gn11_grid_move_slice_window_iterator_hacks =
         Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0>{};
-#else
-    constexpr auto in_gk_gn0_gn10_gn11_grid_move_slice_window_iterator_hacks =
-        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{};
-#endif
 
     for(index_t i = 0; i < 5; ++i)
     {
