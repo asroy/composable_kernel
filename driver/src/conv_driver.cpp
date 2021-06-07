@@ -166,7 +166,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 1
+#elif 0
     // 3x3, 71x71
     constexpr index_t N  = 128;
     constexpr index_t C  = 192;
@@ -181,7 +181,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<1, 1>;
     using RightPads = Sequence<1, 1>;
-#elif 1
+#elif 0
     // 1x1, 8x8
     constexpr index_t N  = 128;
     constexpr index_t C  = 1536;
@@ -226,7 +226,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<1, 1>;
     using RightPads = Sequence<1, 1>;
-#elif 1
+#elif 0
     // 3x3, 71x71
     constexpr index_t N  = 128;
     constexpr index_t C  = 192;
@@ -438,7 +438,7 @@ int main(int argc, char* argv[])
     using RightPads = Sequence<0, 0>;
 #elif 0
     // 1x1, 14x14, stride 2
-    constexpr index_t N  = 128;
+    constexpr index_t N  = 256;
     constexpr index_t C  = 1024;
     constexpr index_t HI = 14;
     constexpr index_t WI = 14;
@@ -451,9 +451,9 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
+#elif 1
     // 1x1, 14x14
-    constexpr index_t N  = 128;
+    constexpr index_t N  = 256;
     constexpr index_t C  = 1024;
     constexpr index_t HI = 14;
     constexpr index_t WI = 14;
@@ -646,7 +646,7 @@ int main(int argc, char* argv[])
     print_array("ConvStrides", to_multi_index(ConvStrides{}));
     print_array("ConvDilations", to_multi_index(ConvDilations{}));
 
-#if 1
+#if 0
     using in_data_t                  = float;
     constexpr index_t in_vector_size = 1;
     using acc_data_t                 = float;
@@ -824,6 +824,7 @@ int main(int argc, char* argv[])
 
         check_error(out_nkhw_host, out_nkhw_device);
 
+#if 0
         if(do_log)
         {
             LogRange(std::cout << "in_nchw : ", in_nchw.mData, ",") << std::endl;
@@ -831,5 +832,6 @@ int main(int argc, char* argv[])
             LogRange(std::cout << "out_nkhw_host  : ", out_nkhw_host.mData, ",") << std::endl;
             LogRange(std::cout << "out_nkhw_device: ", out_nkhw_device.mData, ",") << std::endl;
         }
+#endif
     }
 }

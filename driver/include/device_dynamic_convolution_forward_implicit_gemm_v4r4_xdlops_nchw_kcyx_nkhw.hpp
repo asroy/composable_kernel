@@ -88,21 +88,21 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
 
     constexpr index_t GemmMPerWave = 64;
     constexpr index_t GemmNPerWave = 64;
-    constexpr index_t GemmKPack    = 4;
+    constexpr index_t GemmKPack    = 8;
 
     constexpr index_t MRepeat = 1;
     constexpr index_t NRepeat = 1;
 
-    using GemmABlockTransferThreadSliceLengths_GemmK0_GemmM_GemmK1   = Sequence<1, 2, 4>;
+    using GemmABlockTransferThreadSliceLengths_GemmK0_GemmM_GemmK1   = Sequence<1, 2, 8>;
     using GemmABlockTransferThreadClusterLengths_GemmK0_GemmM_GemmK1 = Sequence<4, 64, 1>;
 
-    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 4;
-    constexpr index_t GemmABlockTransferDstScalarPerVector_KPack = 4;
+    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 8;
+    constexpr index_t GemmABlockTransferDstScalarPerVector_KPack = 8;
 
-    using GemmBBlockTransferThreadSliceLengths_GemmK0_GemmN_GemmK1   = Sequence<1, 2, 4>;
-    using GemmBBlockTransferThreadClusterLengths_GemmK0_GemmN_GemmK1 = Sequence<4, 64, 1>;
+    using GemmBBlockTransferThreadSliceLengths_GemmK0_GemmN_GemmK1   = Sequence<1, 4, 4>;
+    using GemmBBlockTransferThreadClusterLengths_GemmK0_GemmN_GemmK1 = Sequence<4, 32, 2>;
 
-    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmN = 1;
+    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmN = 4;
     constexpr index_t GemmBBlockTransferDstScalarPerVector_KPack = 4;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 1;
@@ -136,12 +136,12 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
 #endif
 
     const auto descs =
-        transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad<TInWei,
-                                                                               GemmMPerBlock,
-                                                                               GemmNPerBlock,
-                                                                               GemmMPerWave,
-                                                                               GemmNPerWave,
-                                                                               GemmKPack>(
+#if 0
+        transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad
+#else
+        transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_1x1
+#endif
+        <TInWei, GemmMPerBlock, GemmNPerBlock, GemmMPerWave, GemmNPerWave, GemmKPack>(
             wei_k_c_y_x_desc,
             in_n_c_hi_wi_desc,
             out_n_k_ho_wo_desc,
