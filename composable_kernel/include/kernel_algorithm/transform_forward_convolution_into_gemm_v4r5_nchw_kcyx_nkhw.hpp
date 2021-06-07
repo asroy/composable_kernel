@@ -93,7 +93,7 @@ transform_forward_convolution_into_contraction_v4r5_nchw_kcyx_nkhw_pad(
         make_tuple(make_merge_transform(make_tuple(C, Y, X)),
                    make_pass_through_transform(N0),
                    make_merge_transform(make_tuple(N1, Ho, Wo))),
-        make_tuple(Sequence<2, 3, 5>{}, Sequence<1>{}, Sequence<1, 4, 6>{}),
+        make_tuple(Sequence<2, 3, 5>{}, Sequence<0>{}, Sequence<1, 4, 6>{}),
         make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}));
 
     // output tensor
