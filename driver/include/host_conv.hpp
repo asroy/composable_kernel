@@ -6,20 +6,22 @@ template <class TIn,
           class TOut,
           class ConvStrides,
           class ConvDilations,
-          class LowerPads,
-          class UpperPads>
+          class InLeftPads,
+          class InRightPads>
 void host_direct_convolution(const Tensor<TIn>& in_nchw,
                              const Tensor<TWei>& wei_kcyx,
                              Tensor<TOut>& out_nkhw,
-                             ConvStrides,
-                             ConvDilations,
-                             LowerPads,
-                             UpperPads)
+                             const ConvStrides& conv_strides,
+                             const ConvDilations& conv_dilations,
+                             const InLeftPads& in_left_pads,
+                             const InRightPads& in_right_pads)
 {
     using namespace ck;
 
-    index_t h_pad_low = LowerPads{}.Get(Number<0>{});
-    index_t w_pad_low = LowerPads{}.Get(Number<1>{});
+    constexpr auto I0 = Number<0>{};
+    constexpr auto I1 = Number<1>{};
+    constexpr auto I2 = Number<2>{};
+    constexpr auto I3 = Number<3>{};
 
     auto f = [&](auto n, auto k, auto ho, auto wo) {
         double v = 0;
@@ -27,10 +29,10 @@ void host_direct_convolution(const Tensor<TIn>& in_nchw,
         {
             for(int y = 0; y < wei_kcyx.mDesc.GetLengths()[2]; ++y)
             {
-                int hi = ho * ConvStrides{}[0] + y * ConvDilations{}[0] - h_pad_low;
+                int hi = ho * conv_strides[I0] + y * conv_dilations[I0] - in_left_pads[I0];
                 for(int x = 0; x < wei_kcyx.mDesc.GetLengths()[3]; ++x)
                 {
-                    int wi = wo * ConvStrides{}[1] + x * ConvDilations{}[1] - w_pad_low;
+                    int wi = wo * conv_strides[I1] + x * conv_dilations[I1] - in_left_pads[I1];
                     if(hi >= 0 && hi < in_nchw.mDesc.GetLengths()[2] && wi >= 0 &&
                        wi < in_nchw.mDesc.GetLengths()[3])
                     {
@@ -52,12 +54,12 @@ void host_direct_convolution(const Tensor<TIn>& in_nchw,
     f_par(std::thread::hardware_concurrency());
 }
 
-template <class TIn, class TWei, class TOut, class LowerPads, class UpperPads>
+template <class TIn, class TWei, class TOut, class InLeftPads, class InRightPads>
 void host_winograd_3x3_convolution(const Tensor<TIn>& in_nchw,
                                    const Tensor<TWei>& wei_kcyx,
                                    Tensor<TOut>& out_nkhw,
-                                   LowerPads,
-                                   UpperPads)
+                                   InLeftPads,
+                                   InRightPads)
 {
     using namespace ck;
 
@@ -76,8 +78,8 @@ void host_winograd_3x3_convolution(const Tensor<TIn>& in_nchw,
     std::size_t HO = out_nkhw.mDesc.GetLengths()[2];
     std::size_t WO = out_nkhw.mDesc.GetLengths()[3];
 
-    index_t h_pad_low = LowerPads{}.Get(Number<0>{});
-    index_t w_pad_low = LowerPads{}.Get(Number<1>{});
+    index_t h_pad_low = InLeftPads{}.Get(Number<0>{});
+    index_t w_pad_low = InLeftPads{}.Get(Number<1>{});
 
     std::size_t HiPerTile = HoPerTile + Y - 1;
     std::size_t WiPerTile = WoPerTile + X - 1;

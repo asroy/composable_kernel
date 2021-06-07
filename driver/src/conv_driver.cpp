@@ -24,20 +24,20 @@ int main(int argc, char* argv[])
 {
     using namespace ck;
 
-#if 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 16;
-    constexpr index_t HI = 1080;
-    constexpr index_t WI = 1920;
-    constexpr index_t K  = 16;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
+#if 1
+    constexpr index_t N  = 8;
+    constexpr index_t C  = 8;
+    constexpr index_t HI = 4;
+    constexpr index_t WI = 8;
+    constexpr index_t K  = 256;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
 
     using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;
 
-    using LeftPads  = Sequence<0, 0>;
-    using RightPads = Sequence<0, 0>;
+    using LeftPads  = Sequence<1, 1>;
+    using RightPads = Sequence<1, 1>;
 #elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
@@ -674,7 +674,7 @@ int main(int argc, char* argv[])
 #elif 0
         in_nchw.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-#elif 0
+#elif 1
         in_nchw.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
         wei_kcyx.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
 #elif 1
