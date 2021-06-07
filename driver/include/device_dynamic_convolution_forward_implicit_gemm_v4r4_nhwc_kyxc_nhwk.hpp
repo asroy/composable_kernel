@@ -4,28 +4,27 @@
 #include "transform_forward_convolution_into_gemm_v4r4_nhwc_kyxc_nhwk.hpp"
 #include "driver_dynamic_gemm_v1r1.hpp"
 
-template <class TInWei,
-          ck::index_t InWeiVectorSize,
-          class TAcc,
-          class TOut,
-          class InDesc,
-          class WeiDesc,
-          class OutDesc,
-          class ConvStrides,
-          class ConvDilations,
-          class InLeftPads,
-          class InRightPads>
+template <typename TInWei,
+          typename TAcc,
+          typename TOut,
+          typename InLengths,
+          typename WeiLengths,
+          typename OutLengths,
+          typename ConvStrides,
+          typename ConvDilations,
+          typename InLeftPads,
+          typename InRightPads>
 void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
-    InDesc,
-    const Tensor<TInWei>& in_n_c_hi_wi,
-    WeiDesc,
-    const Tensor<TInWei>& wei_k_c_y_x,
-    OutDesc,
-    Tensor<TOut>& out_n_k_ho_wo,
-    ConvStrides,
-    ConvDilations,
-    InLeftPads,
-    InRightPads,
+    const InLengths& in_n_hi_wi_c_lengths,
+    const WeiLengths& wei_k_y_x_c_lengths,
+    const OutLengths& out_n_ho_wo_k_lengths,
+    const ConvStrides& conv_strides,
+    const ConvDilations& conv_dilations,
+    const InLeftPads& in_left_pads,
+    const InRightPads& in_right_pads,
+    const Tensor<TInWei>& in_n_hi_wi_c,
+    const Tensor<TInWei>& wei_k_y_x_c,
+    Tensor<TOut>& out_n_ho_wo_k,
     ck::index_t nrepeat)
 {
     using namespace ck;
@@ -42,72 +41,18 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
     constexpr auto I7 = Number<7>{};
     constexpr auto I8 = Number<8>{};
 
-    constexpr auto N = OutDesc::GetLengths()[I0];
-    constexpr auto K = OutDesc::GetLengths()[I1];
-    constexpr auto C = WeiDesc::GetLengths()[I1];
+    const auto N = out_n_ho_wo_k_lengths[I0];
+    const auto K = out_n_ho_wo_k_lengths[I3];
+    const auto C = wei_k_y_x_c_lengths[I3];
 
-    constexpr auto Hi = InDesc::GetLengths()[I2];
-    constexpr auto Wi = InDesc::GetLengths()[I3];
+    const auto Hi = in_n_hi_wi_c_lengths[I1];
+    const auto Wi = in_n_hi_wi_c_lengths[I2];
 
-    constexpr auto Ho = OutDesc::GetLengths()[I2];
-    constexpr auto Wo = OutDesc::GetLengths()[I3];
+    const auto Ho = out_n_ho_wo_k_lengths[I1];
+    const auto Wo = out_n_ho_wo_k_lengths[I2];
 
-    constexpr auto Y = WeiDesc::GetLengths()[I2];
-    constexpr auto X = WeiDesc::GetLengths()[I3];
-
-    constexpr auto C0 = C / Number<InWeiVectorSize>{};
-    constexpr auto C1 = Number<InWeiVectorSize>{};
-
-#if 1
-    // run-time variables
-    constexpr auto in_n_hi_wi_c0_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(N, Hi, Wi, C0));
-    constexpr auto wei_k_y_x_c0_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(K, Y, X, C0));
-    constexpr auto out_n_ho_wo_k_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_multi_index(N, Ho, Wo, K));
-
-    const auto conv_strides   = to_multi_index(ConvStrides{});
-    const auto conv_dilations = to_multi_index(ConvDilations{});
-    const auto in_left_pads   = to_multi_index(InLeftPads{});
-    const auto in_right_pads  = to_multi_index(InRightPads{});
-#else
-    // compile-time variables
-    constexpr auto in_n_hi_wi_c0_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, Hi, Wi, C0));
-    constexpr auto wei_k_y_x_c0_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, Y, X, C0));
-    constexpr auto out_n_ho_wo_k_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, Ho, Wo, K));
-
-    const auto conv_strides   = sequence_to_tuple_of_number(ConvStrides{});
-    const auto conv_dilations = sequence_to_tuple_of_number(ConvDilations{});
-    const auto in_left_pads   = sequence_to_tuple_of_number(InLeftPads{});
-    const auto in_right_pads  = sequence_to_tuple_of_number(InRightPads{});
-#endif
-
-    Tensor<TInWei> in_n_hi_wi_c(
-        make_HostTensorDescriptor(make_native_tensor_descriptor_packed(Sequence<N, Hi, Wi, C>{})));
-    Tensor<TInWei> wei_k_y_x_c(
-        make_HostTensorDescriptor(make_native_tensor_descriptor_packed(Sequence<K, Y, X, C>{})));
-    Tensor<TOut> out_n_ho_wo_k(
-        make_HostTensorDescriptor(make_native_tensor_descriptor_packed(Sequence<N, Ho, Wo, K>{})));
-
-    auto f_nchw2nhwc = [&](auto n, auto hi, auto wi, auto c) {
-        in_n_hi_wi_c(n, hi, wi, c) = in_n_c_hi_wi(n, c, hi, wi);
-    };
-
-    auto f_kcyx2kyxc = [&](auto k, auto y, auto x, auto c) {
-        wei_k_y_x_c(k, y, x, c) = wei_k_c_y_x(k, c, y, x);
-    };
-
-    auto f_nkhw2nhwk = [&](auto n, auto ho, auto wo, auto k) {
-        out_n_ho_wo_k(n, ho, wo, k) = out_n_k_ho_wo(n, k, ho, wo);
-    };
-
-    make_ParallelTensorFunctor(f_nchw2nhwc, N, Hi, Wi, C)();
-    make_ParallelTensorFunctor(f_kcyx2kyxc, K, Y, X, C)();
-    make_ParallelTensorFunctor(f_nkhw2nhwk, N, Ho, Wo, K)();
+    const auto Y = wei_k_y_x_c_lengths[I1];
+    const auto X = wei_k_y_x_c_lengths[I2];
 
     DeviceMem in_n_hi_wi_c_device_buf(sizeof(TInWei) * in_n_hi_wi_c.mDesc.GetElementSpace());
     DeviceMem wei_k_y_x_c_device_buf(sizeof(TInWei) * wei_k_y_x_c.mDesc.GetElementSpace());
@@ -117,7 +62,14 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
     wei_k_y_x_c_device_buf.ToDevice(wei_k_y_x_c.mData.data());
     out_n_ho_wo_k_device_buf.ToDevice(out_n_ho_wo_k.mData.data());
 
-#if 1
+    const auto in_n_hi_wi_c_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(in_n_hi_wi_c_lengths);
+    const auto wei_k_y_x_c_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(wei_k_y_x_c_lengths);
+    const auto out_n_ho_wo_k_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(out_n_ho_wo_k_lengths);
+
+#if 0
     // cdata = 16, BlockSize = 64, 16x64x4
     constexpr index_t BlockSize = 64;
 
@@ -388,8 +340,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
 #else
         transform_forward_convolution_into_gemm_v4r4_nhwc_kyxc_nhwk_1x1
 #endif
-        <GemmMPerBlock, GemmNPerBlock, GemmM1, GemmN1>(wei_k_y_x_c0_desc,
-                                                       in_n_hi_wi_c0_desc,
+        <GemmMPerBlock, GemmNPerBlock, GemmM1, GemmN1>(wei_k_y_x_c_desc,
+                                                       in_n_hi_wi_c_desc,
                                                        out_n_ho_wo_k_desc,
                                                        conv_strides,
                                                        conv_dilations,
@@ -400,7 +352,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
     {
         float ave_time = launch_kernel_dynamic_gemm_v1r1<
             BlockSize,
-            typename vector_type<TInWei, InWeiVectorSize>::type,
+            TInWei,
             TAcc,
             TOut,
             InMemoryDataOperation::Set,
@@ -442,10 +394,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
             decltype(descs[I5]),
             decltype(descs[I6]),
             decltype(descs[I7]),
-            decltype(descs[I8])>(static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
-                                     wei_k_y_x_c_device_buf.GetDeviceBuffer()),
-                                 static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
-                                     in_n_hi_wi_c_device_buf.GetDeviceBuffer()),
+            decltype(descs[I8])>(static_cast<TInWei*>(wei_k_y_x_c_device_buf.GetDeviceBuffer()),
+                                 static_cast<TInWei*>(in_n_hi_wi_c_device_buf.GetDeviceBuffer()),
                                  static_cast<TOut*>(out_n_ho_wo_k_device_buf.GetDeviceBuffer()),
                                  descs[I0],
                                  descs[I1],
@@ -466,10 +416,4 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk(
 
     // copy result back to host
     out_n_ho_wo_k_device_buf.FromDevice(out_n_ho_wo_k.mData.data());
-
-    auto f_nhwk2nkhw = [&](auto n, auto k, auto ho, auto wo) {
-        out_n_k_ho_wo(n, k, ho, wo) = out_n_ho_wo_k(n, ho, wo, k);
-    };
-
-    make_ParallelTensorFunctor(f_nhwk2nkhw, N, K, Ho, Wo)();
 }

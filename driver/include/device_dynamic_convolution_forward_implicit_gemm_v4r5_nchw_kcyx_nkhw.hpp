@@ -4,17 +4,17 @@
 #include "transform_forward_convolution_into_gemm_v4r5_nchw_kcyx_nkhw.hpp"
 #include "driver_dynamic_contraction_v1r1.hpp"
 
-template <class TInWei,
+template <typename TInWei,
           ck::index_t InWeiVectorSize,
-          class TAcc,
-          class TOut,
-          class InDesc,
-          class WeiDesc,
-          class OutDesc,
-          class ConvStrides,
-          class ConvDilations,
-          class InLeftPads,
-          class InRightPads>
+          typename TAcc,
+          typename TOut,
+          typename InDesc,
+          typename WeiDesc,
+          typename OutDesc,
+          typename ConvStrides,
+          typename ConvDilations,
+          typename InLeftPads,
+          typename InRightPads>
 void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
     const InDesc& in_n_c_hi_wi_desc,
     const WeiDesc& wei_k_c_y_x_desc,

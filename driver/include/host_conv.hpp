@@ -8,13 +8,14 @@ template <class TIn,
           class ConvDilations,
           class InLeftPads,
           class InRightPads>
-void host_direct_convolution(const Tensor<TIn>& in_nchw,
-                             const Tensor<TWei>& wei_kcyx,
-                             Tensor<TOut>& out_nkhw,
+void host_direct_convolution(const Tensor<TIn>& in,
+                             const Tensor<TWei>& wei,
+                             Tensor<TOut>& out,
                              const ConvStrides& conv_strides,
                              const ConvDilations& conv_dilations,
                              const InLeftPads& in_left_pads,
-                             const InRightPads& in_right_pads)
+                             const InRightPads& in_right_pads,
+                             const ConvTensorLayout layout = ConvTensorLayout::NCHW)
 {
     using namespace ck;
 
@@ -23,35 +24,68 @@ void host_direct_convolution(const Tensor<TIn>& in_nchw,
     constexpr auto I2 = Number<2>{};
     constexpr auto I3 = Number<3>{};
 
-    auto f = [&](auto n, auto k, auto ho, auto wo) {
+    auto f_nchw = [&](auto n, auto k, auto ho, auto wo) {
         double v = 0;
-        for(int c = 0; c < wei_kcyx.mDesc.GetLengths()[1]; ++c)
+        for(int c = 0; c < wei.mDesc.GetLengths()[1]; ++c)
         {
-            for(int y = 0; y < wei_kcyx.mDesc.GetLengths()[2]; ++y)
+            for(int y = 0; y < wei.mDesc.GetLengths()[2]; ++y)
             {
                 int hi = ho * conv_strides[I0] + y * conv_dilations[I0] - in_left_pads[I0];
-                for(int x = 0; x < wei_kcyx.mDesc.GetLengths()[3]; ++x)
+                for(int x = 0; x < wei.mDesc.GetLengths()[3]; ++x)
                 {
                     int wi = wo * conv_strides[I1] + x * conv_dilations[I1] - in_left_pads[I1];
-                    if(hi >= 0 && hi < in_nchw.mDesc.GetLengths()[2] && wi >= 0 &&
-                       wi < in_nchw.mDesc.GetLengths()[3])
+                    if(hi >= 0 && hi < in.mDesc.GetLengths()[2] && wi >= 0 &&
+                       wi < in.mDesc.GetLengths()[3])
                     {
-                        v += static_cast<const double>(in_nchw(n, c, hi, wi)) *
-                             static_cast<const double>(wei_kcyx(k, c, y, x));
+                        v += static_cast<const double>(in(n, c, hi, wi)) *
+                             static_cast<const double>(wei(k, c, y, x));
                     }
                 }
             }
         }
-        out_nkhw(n, k, ho, wo) = v;
+        out(n, k, ho, wo) = v;
     };
 
-    auto f_par = make_ParallelTensorFunctor(f,
-                                            out_nkhw.mDesc.GetLengths()[0],
-                                            out_nkhw.mDesc.GetLengths()[1],
-                                            out_nkhw.mDesc.GetLengths()[2],
-                                            out_nkhw.mDesc.GetLengths()[3]);
+    auto f_nhwc = [&](auto n, auto ho, auto wo, auto k) {
+        double v = 0;
+        for(int c = 0; c < wei.mDesc.GetLengths()[3]; ++c)
+        {
+            for(int y = 0; y < wei.mDesc.GetLengths()[1]; ++y)
+            {
+                int hi = ho * conv_strides[I0] + y * conv_dilations[I0] - in_left_pads[I0];
+                for(int x = 0; x < wei.mDesc.GetLengths()[2]; ++x)
+                {
+                    int wi = wo * conv_strides[I1] + x * conv_dilations[I1] - in_left_pads[I1];
+                    if(hi >= 0 && hi < in.mDesc.GetLengths()[1] && wi >= 0 &&
+                       wi < in.mDesc.GetLengths()[2])
+                    {
+                        v += static_cast<const double>(in(n, hi, wi, c)) *
+                             static_cast<const double>(wei(k, y, x, c));
+                    }
+                }
+            }
+        }
+        out(n, ho, wo, k) = v;
+    };
 
-    f_par(std::thread::hardware_concurrency());
+    switch(layout)
+    {
+    case ConvTensorLayout::NCHW:
+        make_ParallelTensorFunctor(f_nchw,
+                                   out.mDesc.GetLengths()[0],
+                                   out.mDesc.GetLengths()[1],
+                                   out.mDesc.GetLengths()[2],
+                                   out.mDesc.GetLengths()[3])(std::thread::hardware_concurrency());
+        break;
+    case ConvTensorLayout::NHWC:
+        make_ParallelTensorFunctor(f_nhwc,
+                                   out.mDesc.GetLengths()[0],
+                                   out.mDesc.GetLengths()[1],
+                                   out.mDesc.GetLengths()[2],
+                                   out.mDesc.GetLengths()[3])(std::thread::hardware_concurrency());
+        break;
+    default: throw std::runtime_error("wrong! not supported layout");
+    }
 }
 
 template <class TIn, class TWei, class TOut, class InLeftPads, class InRightPads>

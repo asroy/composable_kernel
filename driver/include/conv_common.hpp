@@ -4,6 +4,15 @@
 #include "tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 
+enum ConvTensorLayout
+{
+    NCHW,
+    NHWC,
+    CHWN,
+    NCHWc,
+    NHWCc
+};
+
 template <class InDesc,
           class WeiDesc,
           class ConvStrides,
