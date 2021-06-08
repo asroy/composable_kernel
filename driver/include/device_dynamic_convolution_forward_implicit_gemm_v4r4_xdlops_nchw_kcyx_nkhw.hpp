@@ -152,7 +152,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
 
     for(index_t i = 0; i < 5; ++i)
     {
-        float ave_time = launch_kernel_dynamic_gemm_xdlops_v1<
+        float ave_time = launch_kernel_dynamic_gemm_xdlops_v2<
             BlockSize,
             TInWei,
             TAcc,

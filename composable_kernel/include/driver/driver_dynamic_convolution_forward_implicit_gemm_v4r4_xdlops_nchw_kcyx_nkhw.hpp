@@ -5,6 +5,7 @@
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
 #include "driver_dynamic_gemm_xdlops_v1.hpp"
+#include "driver_dynamic_gemm_xdlops_v2.hpp"
 
 namespace ck {
 

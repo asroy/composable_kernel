@@ -1,5 +1,5 @@
-#ifndef CK_GRIDWISE_DYNAMIC_GEMM_XDLOPS_HPP
-#define CK_GRIDWISE_DYNAMIC_GEMM_XDLOPS_HPP
+#ifndef CK_GRIDWISE_DYNAMIC_GEMM_XDLOPS_V2_HPP
+#define CK_GRIDWISE_DYNAMIC_GEMM_XDLOPS_V2_HPP
 
 #include "common_header.hpp"
 #include "dynamic_multi_index_transform_helper.hpp"
@@ -20,14 +20,12 @@ template <typename GridwiseGemm,
           typename AGlobalDesc,
           typename BGlobalDesc,
           typename CGlobalDesc,
-          typename CBlockClusterDesc,
-          bool HasMainKBlockLoop,
-          bool HasDoubleTailKBlockLoop>
+          typename CBlockClusterDesc>
 __global__ void
 #if CK_USE_LAUNCH_BOUNDS
     __launch_bounds__(CK_MAX_THREAD_PER_BLOCK, CK_MIN_BLOCK_PER_CU)
 #endif
-        kernel_dynamic_gemm_xdlops_v1(const FloatA* __restrict__ p_a_global,
+        kernel_dynamic_gemm_xdlops_v2(const FloatA* __restrict__ p_a_global,
                                       const FloatB* __restrict__ p_b_global,
                                       FloatC* __restrict__ p_c_global,
                                       const AGlobalDesc a_k0_m_k1_global_desc,
@@ -41,9 +39,7 @@ __global__ void
                       a_k0_m_k1_global_desc,
                       b_k0_n_k1_global_desc,
                       c_m0_m1_m2_n_global_desc,
-                      c_block_cluster_desc,
-                      integral_constant<bool, HasMainKBlockLoop>{},
-                      integral_constant<bool, HasDoubleTailKBlockLoop>{});
+                      c_block_cluster_desc);
 }
 #elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER
 // pass tensor descriptor by __CONSTANT__ void pointer
@@ -56,14 +52,12 @@ template <typename GridwiseGemm,
           typename AGlobalDesc,
           typename BGlobalDesc,
           typename CGlobalDesc,
-          typename CBlockClusterDesc,
-          bool HasMainKBlockLoop,
-          bool HasDoubleTailKBlockLoop>
+          typename CBlockClusterDesc>
 __global__ void
 #if CK_USE_LAUNCH_BOUNDS
     __launch_bounds__(CK_MAX_THREAD_PER_BLOCK, CK_MIN_BLOCK_PER_CU)
 #endif
-        kernel_dynamic_gemm_xdlops_v1(const FloatA* __restrict__ p_a_global,
+        kernel_dynamic_gemm_xdlops_v2(const FloatA* __restrict__ p_a_global,
                                       const FloatB* __restrict__ p_b_global,
                                       FloatC* __restrict__ p_c_global,
                                       const void __CONSTANT__* p_a_k0_m_k1_global_desc,
@@ -137,7 +131,7 @@ template <index_t BlockSize,
           typename CGlobalIteratorHacks,
           typename AGlobalMoveSliceWindowIteratorHacks,
           typename BGlobalMoveSliceWindowIteratorHacks>
-struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
+struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v2
 {
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
@@ -160,10 +154,9 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         constexpr auto b_block_space_size =
             math::integer_least_multiple(b_k0_n_k1_block_desc.GetElementSpaceSize(), max_lds_align);
 
-        return 2 * (a_block_space_size + b_block_space_size) * sizeof(FloatAB);
+        return (a_block_space_size + b_block_space_size) * sizeof(FloatAB);
     }
 
-    template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ static void Run(const FloatAB* __restrict__ p_a_global,
                                const FloatAB* __restrict__ p_b_global,
                                FloatC* __restrict__ p_c_global,
@@ -171,9 +164,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                                const BGlobalDesc& b_k0_n_k1_global_desc,
                                const CGlobalDesc& c_m0_m1_m2_n_global_desc,
                                const CBlockClusterDesc& c_block_cluster_desc,
-                               FloatAB* __restrict__ p_shared_block,
-                               integral_constant<bool, HasMainKBlockLoop>,
-                               integral_constant<bool, HasDoubleTailKBlockLoop>)
+                               FloatAB* __restrict__ p_shared_block)
     {
         constexpr auto I0 = Number<0>{};
         constexpr auto I1 = Number<1>{};
@@ -333,8 +324,8 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         constexpr auto b_block_space_size =
             math::integer_least_multiple(b_k0_n_k1_block_desc.GetElementSpaceSize(), max_lds_align);
 
-        FloatAB* p_a_block_double = p_shared_block;
-        FloatAB* p_b_block_double = p_shared_block + 2 * a_block_space_size;
+        FloatAB* p_a_block = p_shared_block;
+        FloatAB* p_b_block = p_shared_block + a_block_space_size;
 
         // register allocation for output
         // auto c_thread_buf = make_static_buffer<AddressSpace::Vgpr, FloatAcc>(
@@ -359,95 +350,25 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         constexpr auto b_k0_n_k1_global_move_slice_window_iterator_hack =
             BGlobalMoveSliceWindowIteratorHacks{};
 
-        auto a_block_even_buf = make_dynamic_buffer<AddressSpace::Lds>(
-            p_a_block_double, a_k0_m_k1_block_desc.GetElementSpaceSize());
-        auto b_block_even_buf = make_dynamic_buffer<AddressSpace::Lds>(
-            p_b_block_double, b_k0_n_k1_block_desc.GetElementSpaceSize());
+        auto a_block_buf = make_dynamic_buffer<AddressSpace::Lds>(
+            p_a_block, a_k0_m_k1_block_desc.GetElementSpaceSize());
+        auto b_block_buf = make_dynamic_buffer<AddressSpace::Lds>(
+            p_b_block, b_k0_n_k1_block_desc.GetElementSpaceSize());
 
-        auto a_block_odd_buf = make_dynamic_buffer<AddressSpace::Lds>(
-            p_a_block_double + a_block_space_size, a_k0_m_k1_block_desc.GetElementSpaceSize());
-        auto b_block_odd_buf = make_dynamic_buffer<AddressSpace::Lds>(
-            p_b_block_double + b_block_space_size, b_k0_n_k1_block_desc.GetElementSpaceSize());
-
-        // LDS double buffer: preload data into LDS
+        // preload data into LDS
         {
             a_blockwise_copy.RunRead(
                 a_k0_m_k1_global_desc, a_global_buf, a_k0_m_k1_global_iterator_hacks);
             b_blockwise_copy.RunRead(
                 b_k0_n_k1_global_desc, b_global_buf, b_k0_n_k1_global_iterator_hacks);
 
-            a_blockwise_copy.RunWrite(a_k0_m_k1_block_desc, a_block_even_buf);
-            b_blockwise_copy.RunWrite(b_k0_n_k1_block_desc, b_block_even_buf);
+            a_blockwise_copy.RunWrite(a_k0_m_k1_block_desc, a_block_buf);
+            b_blockwise_copy.RunWrite(b_k0_n_k1_block_desc, b_block_buf);
         }
 
-        if constexpr(HasMainKBlockLoop)
-        {
-            index_t k_block_data_begin = 0;
-
-            // LDS double buffer: main body
-            // use Do-While loop instead of For loop to simplify control flow
-            do
-            {
-                // even iteration
-                a_blockwise_copy.MoveSrcSliceWindow(
-                    a_k0_m_k1_global_desc,
-                    a_block_slice_copy_step,
-                    a_k0_m_k1_global_move_slice_window_iterator_hack);
-                b_blockwise_copy.MoveSrcSliceWindow(
-                    b_k0_n_k1_global_desc,
-                    b_block_slice_copy_step,
-                    b_k0_n_k1_global_move_slice_window_iterator_hack);
-
-                __syncthreads();
-
-                // LDS doubel buffer: load next data from device mem
-                a_blockwise_copy.RunRead(
-                    a_k0_m_k1_global_desc, a_global_buf, a_k0_m_k1_global_iterator_hacks);
-                b_blockwise_copy.RunRead(
-                    b_k0_n_k1_global_desc, b_global_buf, b_k0_n_k1_global_iterator_hacks);
-
-                asm volatile("s_nop 0");
-
-                // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(a_block_even_buf, b_block_even_buf, c_thread_buf);
-
-                // LDS double buffer: store next data to LDS
-                a_blockwise_copy.RunWrite(a_k0_m_k1_block_desc, a_block_odd_buf);
-                b_blockwise_copy.RunWrite(b_k0_n_k1_block_desc, b_block_odd_buf);
-
-                // odd iteration
-                a_blockwise_copy.MoveSrcSliceWindow(
-                    a_k0_m_k1_global_desc,
-                    a_block_slice_copy_step,
-                    a_k0_m_k1_global_move_slice_window_iterator_hack);
-                b_blockwise_copy.MoveSrcSliceWindow(
-                    b_k0_n_k1_global_desc,
-                    b_block_slice_copy_step,
-                    b_k0_n_k1_global_move_slice_window_iterator_hack);
-
-                __syncthreads();
-
-                // LDS doubel buffer: load next data from device mem
-                a_blockwise_copy.RunRead(
-                    a_k0_m_k1_global_desc, a_global_buf, a_k0_m_k1_global_iterator_hacks);
-                b_blockwise_copy.RunRead(
-                    b_k0_n_k1_global_desc, b_global_buf, b_k0_n_k1_global_iterator_hacks);
-
-                asm volatile("s_nop 0");
-
-                // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(a_block_odd_buf, b_block_odd_buf, c_thread_buf);
-
-                // LDS double buffer: store next data to LDS
-                a_blockwise_copy.RunWrite(a_k0_m_k1_block_desc, a_block_even_buf);
-                b_blockwise_copy.RunWrite(b_k0_n_k1_block_desc, b_block_even_buf);
-
-                k_block_data_begin += 2 * KPerBlock;
-            } while(k_block_data_begin < K0 - 2 * KPerBlock);
-        }
-
-        // LDS double buffer: tail
-        if constexpr(HasDoubleTailKBlockLoop) // if has 2 iteration left
+        // main body
+        for(index_t k_block_data_begin = 0; k_block_data_begin < K0 - KPerBlock;
+            k_block_data_begin += KPerBlock)
         {
             a_blockwise_copy.MoveSrcSliceWindow(a_k0_m_k1_global_desc,
                                                 a_block_slice_copy_step,
@@ -456,32 +377,26 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
                                                 b_block_slice_copy_step,
                                                 b_k0_n_k1_global_move_slice_window_iterator_hack);
 
-            __syncthreads();
-
-            // LDS double buffer: load last data from device mem
             a_blockwise_copy.RunRead(
                 a_k0_m_k1_global_desc, a_global_buf, a_k0_m_k1_global_iterator_hacks);
             b_blockwise_copy.RunRead(
                 b_k0_n_k1_global_desc, b_global_buf, b_k0_n_k1_global_iterator_hacks);
 
-            // LDS double buffer: GEMM on 2nd-last data
-            blockwise_gemm.Run(a_block_even_buf, b_block_even_buf, c_thread_buf);
+            block_sync_lds();
 
-            // LDS double buffer: store last data to LDS
-            a_blockwise_copy.RunWrite(a_k0_m_k1_block_desc, a_block_odd_buf);
-            b_blockwise_copy.RunWrite(b_k0_n_k1_block_desc, b_block_odd_buf);
+            blockwise_gemm.Run(a_block_buf, b_block_buf, c_thread_buf);
 
-            __syncthreads();
+            block_sync_lds();
 
-            // LDS double buffer: GEMM on last data
-            blockwise_gemm.Run(a_block_odd_buf, b_block_odd_buf, c_thread_buf);
+            a_blockwise_copy.RunWrite(a_k0_m_k1_block_desc, a_block_buf);
+            b_blockwise_copy.RunWrite(b_k0_n_k1_block_desc, b_block_buf);
         }
-        else // if has 1 iteration left
-        {
-            __syncthreads();
 
-            // LDS double buffer: GEMM on last data
-            blockwise_gemm.Run(a_block_even_buf, b_block_even_buf, c_thread_buf);
+        // tail
+        {
+            block_sync_lds();
+
+            blockwise_gemm.Run(a_block_buf, b_block_buf, c_thread_buf);
         }
 
         // output: register to global memory
@@ -553,16 +468,13 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
         }
     }
 
-    template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ static void Run(const FloatAB* __restrict__ p_a_global,
                                const FloatAB* __restrict__ p_b_global,
                                FloatC* __restrict__ p_c_global,
                                const AGlobalDesc& a_k0_m_k1_global_desc,
                                const BGlobalDesc& b_k0_n_k1_global_desc,
                                const CGlobalDesc& c_m0_m1_m2_n_global_desc,
-                               const CBlockClusterDesc& c_block_cluster_desc,
-                               integral_constant<bool, HasMainKBlockLoop>,
-                               integral_constant<bool, HasDoubleTailKBlockLoop>)
+                               const CBlockClusterDesc& c_block_cluster_desc)
     {
         constexpr index_t shared_block_size = GetSharedMemoryNumberOfByte() / sizeof(FloatAB);
 
@@ -575,9 +487,7 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v1
             b_k0_n_k1_global_desc,
             c_m0_m1_m2_n_global_desc,
             c_block_cluster_desc,
-            p_shared_block,
-            integral_constant<bool, HasMainKBlockLoop>{},
-            integral_constant<bool, HasDoubleTailKBlockLoop>{});
+            p_shared_block);
     }
 };
 
