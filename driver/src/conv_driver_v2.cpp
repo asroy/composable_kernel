@@ -14,7 +14,6 @@
 #include "device_tensor.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk.hpp"
-#include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
@@ -186,9 +185,9 @@ int main(int argc, char* argv[])
         throw std::runtime_error("wrong! layout");
     }
 
-    device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk<in_data_t,
-                                                                           acc_data_t,
-                                                                           out_data_t>(
+    device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<in_data_t,
+                                                                         acc_data_t,
+                                                                         out_data_t>(
         make_tuple(N, Hi, Wi, C),
         make_tuple(K, Y, X, C),
         make_tuple(N, Ho, Wo, K),
