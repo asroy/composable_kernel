@@ -14,6 +14,7 @@
 #include "device_tensor.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk.hpp"
+#include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
@@ -76,26 +77,42 @@ int main(int argc, char* argv[])
     using out_data_t                 = int8_t;
 #endif
 
-    std::vector<std::size_t> in_lengths, wei_lengths, out_lengths;
+    std::vector<std::size_t> in_lengths(4), wei_lengths(4), out_lengths(4);
 
     switch(layout)
     {
     case ConvTensorLayout::NCHW:
         // NCHW
-        in_lengths  = std::initializer_list<std::size_t>{N, C, Hi, Wi};
-        wei_lengths = std::initializer_list<std::size_t>{K, C, Y, X};
-        out_lengths = std::initializer_list<std::size_t>{N, K, Ho, Wo};
+        in_lengths[0]  = static_cast<std::size_t>(N);
+        in_lengths[1]  = static_cast<std::size_t>(C);
+        in_lengths[2]  = static_cast<std::size_t>(Hi);
+        in_lengths[3]  = static_cast<std::size_t>(Wi);
+        wei_lengths[0] = static_cast<std::size_t>(K);
+        wei_lengths[1] = static_cast<std::size_t>(C);
+        wei_lengths[2] = static_cast<std::size_t>(Y);
+        wei_lengths[3] = static_cast<std::size_t>(X);
+        out_lengths[0] = static_cast<std::size_t>(N);
+        out_lengths[1] = static_cast<std::size_t>(K);
+        out_lengths[2] = static_cast<std::size_t>(Ho);
+        out_lengths[3] = static_cast<std::size_t>(Wo);
         break;
     case ConvTensorLayout::NHWC:
-        // NCHW
-        in_lengths  = std::initializer_list<std::size_t>{N, Hi, Wi, C};
-        wei_lengths = std::initializer_list<std::size_t>{K, Y, X, C};
-        out_lengths = std::initializer_list<std::size_t>{N, Ho, Wo, K};
+        // NHWC
+        in_lengths[0]  = static_cast<std::size_t>(N);
+        in_lengths[1]  = static_cast<std::size_t>(Hi);
+        in_lengths[2]  = static_cast<std::size_t>(Wi);
+        in_lengths[3]  = static_cast<std::size_t>(C);
+        wei_lengths[0] = static_cast<std::size_t>(K);
+        wei_lengths[1] = static_cast<std::size_t>(Y);
+        wei_lengths[2] = static_cast<std::size_t>(X);
+        wei_lengths[3] = static_cast<std::size_t>(C);
+        out_lengths[0] = static_cast<std::size_t>(N);
+        out_lengths[1] = static_cast<std::size_t>(Ho);
+        out_lengths[2] = static_cast<std::size_t>(Wo);
+        out_lengths[3] = static_cast<std::size_t>(K);
         break;
     default:
-        in_lengths  = std::initializer_list<std::size_t>{N, C, Hi, Wi};
-        wei_lengths = std::initializer_list<std::size_t>{K, C, Y, X};
-        out_lengths = std::initializer_list<std::size_t>{N, K, Ho, Wo};
+        throw std::runtime_error("wrong! not implemented");
     }
 
     Tensor<in_data_t> in(in_lengths);
@@ -145,7 +162,7 @@ int main(int argc, char* argv[])
     }
 
 #if 0
-    if(layout != ConvTensorLayout::NCHW);
+    if(layout != ConvTensorLayout::NCHW)
     {
         throw std::runtime_error("wrong! layout");
     }
@@ -165,16 +182,14 @@ int main(int argc, char* argv[])
         out_device,
         nrepeat);
 #elif 1
-#if 0
-    if(layout != ConvTensorLayout::NHWC);
+    if(layout != ConvTensorLayout::NHWC)
     {
         throw std::runtime_error("wrong! layout");
     }
-#endif
 
-    device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<in_data_t,
-                                                                         acc_data_t,
-                                                                         out_data_t>(
+    device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk<in_data_t,
+                                                                           acc_data_t,
+                                                                           out_data_t>(
         make_tuple(N, Hi, Wi, C),
         make_tuple(K, Y, X, C),
         make_tuple(N, Ho, Wo, K),
@@ -188,7 +203,6 @@ int main(int argc, char* argv[])
         nrepeat);
 #elif 0
     if(layout != ConvTensorLayout::NCHW)
-        ;
     {
         throw std::runtime_error("wrong! layout");
     }

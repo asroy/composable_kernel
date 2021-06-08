@@ -69,10 +69,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
     constexpr index_t GemmN1PerThreadN111 = 4;
     constexpr index_t GemmKPerThread      = 1;
 
-    constexpr index_t GemmM11N11ThreadClusterM1101 = 2;
-    constexpr index_t GemmM11N11ThreadClusterN1101 = 2;
     constexpr index_t GemmM11N11ThreadClusterM1100 = 8;
     constexpr index_t GemmM11N11ThreadClusterN1100 = 8;
+    constexpr index_t GemmM11N11ThreadClusterM1101 = 2;
+    constexpr index_t GemmM11N11ThreadClusterN1101 = 2;
 
     using GemmABlockTransferThreadSliceLengths_K_M0_M1   = Sequence<4, 1, 1>;
     using GemmABlockTransferThreadClusterLengths_K_M0_M1 = Sequence<2, 1, 128>;
@@ -97,10 +97,6 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
                                                                         conv_dilations,
                                                                         in_left_pads,
                                                                         in_right_pads);
-
-    const auto wei_gemmk_gemmm_grid_desc = descs[I0];
-    const auto in_gemmk_gemmn_grid_desc  = descs[I1];
-    const auto out_gemmm_gemmn_grid_desc = descs[I2];
 
     // HACK: hacks that control index calculation when iterating over A, B, C matrix
     constexpr auto wei_gemmk_gemmm0_gemmn1_grid_iterator_hacks =
@@ -140,6 +136,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
 
     constexpr auto in_gemmk_gemmn0_gemmn1_grid_move_slice_window_iterator_hacks =
         Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0>{};
+
+    const auto wei_gemmk_gemmm_grid_desc = descs[I0];
+    const auto in_gemmk_gemmn_grid_desc  = descs[I1];
+    const auto out_gemmm_gemmn_grid_desc = descs[I2];
 
     for(index_t i = 0; i < 5; ++i)
     {
