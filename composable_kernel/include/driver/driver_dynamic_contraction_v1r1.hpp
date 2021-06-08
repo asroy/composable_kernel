@@ -154,23 +154,25 @@ driver_dynamic_contraction_v1r1(const FloatAB* p_a_grid,
     const bool has_double_tail_k_block_loop =
         GridwiseContraction::CalculateHasDoubleTailKBlockLoop(K);
 
-    std::cout << "a_gk_gm0_gm10_gm11_grid_desc{" << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I0)
-              << ", " << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I1) << ", "
-              << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I2) << ", "
-              << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I3) << "}" << std::endl;
+    {
+        std::cout << "a_gk_gm0_gm10_gm11_grid_desc{" << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I0)
+                  << ", " << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I1) << ", "
+                  << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I2) << ", "
+                  << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I3) << "}" << std::endl;
 
-    std::cout << "b_gk_gn0_gn10_gn11_grid_desc{" << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I0)
-              << ", " << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I1) << ", "
-              << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I2) << ", "
-              << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I3) << "}" << std::endl;
+        std::cout << "b_gk_gn0_gn10_gn11_grid_desc{" << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I0)
+                  << ", " << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I1) << ", "
+                  << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I2) << ", "
+                  << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I3) << "}" << std::endl;
 
-    std::cout << "c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc{ "
-              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I0) << ", "
-              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I1) << ", "
-              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I2) << ", "
-              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I3) << ", "
-              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I4) << ", "
-              << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I5) << "}" << std::endl;
+        std::cout << "c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc{ "
+                  << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I0) << ", "
+                  << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I1) << ", "
+                  << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I2) << ", "
+                  << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I3) << ", "
+                  << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I4) << ", "
+                  << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I5) << "}" << std::endl;
+    }
 
     float ave_time = 0;
 

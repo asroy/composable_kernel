@@ -111,8 +111,7 @@ int main(int argc, char* argv[])
         out_lengths[2] = static_cast<std::size_t>(Wo);
         out_lengths[3] = static_cast<std::size_t>(K);
         break;
-    default:
-        throw std::runtime_error("wrong! not implemented");
+    default: throw std::runtime_error("wrong! not implemented");
     }
 
     Tensor<in_data_t> in(in_lengths);

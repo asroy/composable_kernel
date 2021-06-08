@@ -66,6 +66,10 @@ __host__ float driver_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
+    constexpr auto I2 = Number<2>{};
+    constexpr auto I3 = Number<3>{};
+    constexpr auto I4 = Number<4>{};
+    constexpr auto I5 = Number<5>{};
 
     // GEMM
     using GridwiseGemm =
@@ -144,6 +148,24 @@ __host__ float driver_dynamic_gemm_v1r2(const FloatAB* p_a_grid,
     const bool has_main_k_block_loop = GridwiseGemm::CalculateHasMainKBlockLoop(K);
 
     const bool has_double_tail_k_block_loop = GridwiseGemm::CalculateHasDoubleTailKBlockLoop(K);
+
+    {
+        std::cout << "a_k_m0_m1_grid_desc{" << a_k_m0_m1_grid_desc.GetLength(I0) << ", "
+                  << a_k_m0_m1_grid_desc.GetLength(I1) << ", " << a_k_m0_m1_grid_desc.GetLength(I2)
+                  << "}" << std::endl;
+
+        std::cout << "b_k_n0_n1_grid_desc{" << b_k_n0_n1_grid_desc.GetLength(I0) << ", "
+                  << b_k_n0_n1_grid_desc.GetLength(I1) << ", " << b_k_n0_n1_grid_desc.GetLength(I2)
+                  << "}" << std::endl;
+
+        std::cout << "c_m0_m10_m11_n0_n10_n11_grid_desc{ "
+                  << c_m0_m10_m11_n0_n10_n11_grid_desc.GetLength(I0) << ", "
+                  << c_m0_m10_m11_n0_n10_n11_grid_desc.GetLength(I1) << ", "
+                  << c_m0_m10_m11_n0_n10_n11_grid_desc.GetLength(I2) << ", "
+                  << c_m0_m10_m11_n0_n10_n11_grid_desc.GetLength(I3) << ", "
+                  << c_m0_m10_m11_n0_n10_n11_grid_desc.GetLength(I4) << ", "
+                  << c_m0_m10_m11_n0_n10_n11_grid_desc.GetLength(I5) << "}" << std::endl;
+    }
 
     float ave_time = 0;
 
