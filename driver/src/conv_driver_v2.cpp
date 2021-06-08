@@ -179,7 +179,7 @@ int main(int argc, char* argv[])
         wei,
         out_device,
         nrepeat);
-#elif 1
+#elif 0
     if(layout != ConvTensorLayout::NHWC)
     {
         throw std::runtime_error("wrong! layout");
@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
         wei,
         out_device,
         nrepeat);
-#elif 0
+#elif 1
     if(layout != ConvTensorLayout::NCHW)
     {
         throw std::runtime_error("wrong! layout");

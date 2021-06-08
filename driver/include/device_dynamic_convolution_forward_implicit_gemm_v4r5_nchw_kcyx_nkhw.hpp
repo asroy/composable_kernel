@@ -5,20 +5,19 @@
 #include "driver_dynamic_contraction_v1r1.hpp"
 
 template <typename TInWei,
-          ck::index_t InWeiVectorSize,
           typename TAcc,
           typename TOut,
-          typename InDesc,
-          typename WeiDesc,
-          typename OutDesc,
+          typename InLengths,
+          typename WeiLengths,
+          typename OutLengths,
           typename ConvStrides,
           typename ConvDilations,
           typename InLeftPads,
           typename InRightPads>
 void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
-    const InDesc& in_n_c_hi_wi_desc,
-    const WeiDesc& wei_k_c_y_x_desc,
-    const OutDesc& out_n_k_ho_wo_desc,
+    const InLengths& in_n_c_hi_wi_lengths,
+    const WeiLengths& wei_k_c_y_x_lengths,
+    const OutLengths& out_n_k_ho_wo_lengths,
     const ConvStrides& conv_strides,
     const ConvDilations& conv_dilations,
     const InLeftPads& in_left_pads,
@@ -43,6 +42,13 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
     in_n_c_hi_wi_device_buf.ToDevice(in_n_c_hi_wi.mData.data());
     wei_k_c_y_x_device_buf.ToDevice(wei_k_c_y_x.mData.data());
     out_n_k_ho_wo_device_buf.ToDevice(out_n_k_ho_wo.mData.data());
+
+    const auto in_n_c_hi_wi_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(in_n_c_hi_wi_lengths);
+    const auto wei_k_c_y_x_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(wei_k_c_y_x_lengths);
+    const auto out_n_k_ho_wo_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(out_n_k_ho_wo_lengths);
 
 #if 1
     // cdata = 64, BlockSize = 256, [8, 1, 128] * [8, 4, 32] = [1, 128, 4, 32]
@@ -168,7 +174,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
     {
         float ave_time = driver_dynamic_contraction_v1r1<
             BlockSize,
-            typename vector_type<TInWei, InWeiVectorSize>::type,
+            TInWei,
             TAcc,
             TOut,
             InMemoryDataOperation::Set,
@@ -209,10 +215,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
             decltype(out_gm10_bm0_bm1_gn10_bn0_bn1_grid_iterator_hacks),
             decltype(wei_gk_gm0_gm10_gm11_grid_move_slice_window_iterator_hacks),
             decltype(in_gk_gn0_gn10_gn11_grid_move_slice_window_iterator_hacks)>(
-            static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
-                wei_k_c_y_x_device_buf.GetDeviceBuffer()),
-            static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
-                in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
+            static_cast<TInWei*>(wei_k_c_y_x_device_buf.GetDeviceBuffer()),
+            static_cast<TInWei*>(in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
             static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()),
             wei_gk_gm0_gm1_grid_desc,
             in_gk_gn0_gn1_grid_desc,
