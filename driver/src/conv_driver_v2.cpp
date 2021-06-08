@@ -16,6 +16,13 @@
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw.hpp"
 
+enum ConvForwardAlgo
+{
+    V4R4NCHW,
+    V4R4NHWC,
+    V4R5NCHW
+};
+
 int main(int argc, char* argv[])
 {
     using namespace ck;
@@ -25,33 +32,32 @@ int main(int argc, char* argv[])
     constexpr auto I2 = Number<2>{};
     constexpr auto I3 = Number<3>{};
 
-    if(argc != 21)
+    if(argc != 22)
     {
-        printf("arg1: layout, arg2: do_verification, arg3: do_log, arg4: init_method, arg5: "
-               "nrepeat\n");
+        printf("arg1 to 5: layout, algo, do_verification, init_method, do_log, nrepeat\n");
         printf("rest: N, K, C, Y, X, Hi, Wi, Sy, Sx, Dy, Dx, LeftPy, LeftPx, RightPy, RightPx\n");
         exit(1);
     }
 
-    const ConvTensorLayout layout =
-        atoi(argv[1]) == 0 ? ConvTensorLayout::NCHW : ConvTensorLayout::NHWC;
-    const bool do_verification = atoi(argv[2]);
-    const int init_method      = atoi(argv[3]);
-    const bool do_log          = atoi(argv[4]);
-    const int nrepeat          = atoi(argv[5]);
+    const ConvTensorLayout layout = static_cast<ConvTensorLayout>(atoi(argv[1]));
+    const ConvForwardAlgo algo    = static_cast<ConvForwardAlgo>(atoi(argv[2]));
+    const bool do_verification    = atoi(argv[3]);
+    const int init_method         = atoi(argv[4]);
+    const bool do_log             = atoi(argv[5]);
+    const int nrepeat             = atoi(argv[6]);
 
-    const index_t N  = atoi(argv[6]);
-    const index_t K  = atoi(argv[7]);
-    const index_t C  = atoi(argv[8]);
-    const index_t Y  = atoi(argv[9]);
-    const index_t X  = atoi(argv[10]);
-    const index_t Hi = atoi(argv[11]);
-    const index_t Wi = atoi(argv[12]);
+    const index_t N  = atoi(argv[7]);
+    const index_t K  = atoi(argv[8]);
+    const index_t C  = atoi(argv[9]);
+    const index_t Y  = atoi(argv[10]);
+    const index_t X  = atoi(argv[11]);
+    const index_t Hi = atoi(argv[12]);
+    const index_t Wi = atoi(argv[13]);
 
-    const auto conv_strides   = make_tuple(atoi(argv[13]), atoi(argv[14]));
-    const auto conv_dilations = make_tuple(atoi(argv[15]), atoi(argv[16]));
-    const auto in_left_pads   = make_tuple(atoi(argv[17]), atoi(argv[18]));
-    const auto in_right_pads  = make_tuple(atoi(argv[19]), atoi(argv[20]));
+    const auto conv_strides   = make_tuple(atoi(argv[14]), atoi(argv[15]));
+    const auto conv_dilations = make_tuple(atoi(argv[16]), atoi(argv[17]));
+    const auto in_left_pads   = make_tuple(atoi(argv[18]), atoi(argv[19]));
+    const auto in_right_pads  = make_tuple(atoi(argv[20]), atoi(argv[21]));
 
     const auto YEff = (Y - I1) * conv_dilations[I0] + I1;
     const auto XEff = (X - I1) * conv_dilations[I1] + I1;
@@ -159,67 +165,79 @@ int main(int argc, char* argv[])
         }
     }
 
-#if 0
-    if(layout != ConvTensorLayout::NCHW)
+    switch(algo)
     {
-        throw std::runtime_error("wrong! layout");
-    }
+    case ConvForwardAlgo::V4R4NCHW:
+        if(layout != ConvTensorLayout::NCHW)
+        {
+            throw std::runtime_error("wrong! layout");
+        }
 
-    device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw<in_data_t,
-                                                                         acc_data_t,
-                                                                         out_data_t>(
-        make_tuple(N, C, Hi, Wi),
-        make_tuple(K, C, Y, X),
-        make_tuple(N, K, Ho, Wo),
-        conv_strides,
-        conv_dilations,
-        in_left_pads,
-        in_right_pads,
-        in,
-        wei,
-        out_device,
-        nrepeat);
-#elif 0
-    if(layout != ConvTensorLayout::NHWC)
-    {
-        throw std::runtime_error("wrong! layout");
-    }
+        device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw<in_data_t,
+                                                                             acc_data_t,
+                                                                             out_data_t>(
+            make_tuple(N, C, Hi, Wi),
+            make_tuple(K, C, Y, X),
+            make_tuple(N, K, Ho, Wo),
+            conv_strides,
+            conv_dilations,
+            in_left_pads,
+            in_right_pads,
+            in,
+            wei,
+            out_device,
+            nrepeat);
 
-    device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<in_data_t,
-                                                                         acc_data_t,
-                                                                         out_data_t>(
-        make_tuple(N, Hi, Wi, C),
-        make_tuple(K, Y, X, C),
-        make_tuple(N, Ho, Wo, K),
-        conv_strides,
-        conv_dilations,
-        in_left_pads,
-        in_right_pads,
-        in,
-        wei,
-        out_device,
-        nrepeat);
-#elif 1
-    if(layout != ConvTensorLayout::NCHW)
-    {
-        throw std::runtime_error("wrong! layout");
-    }
+        break;
 
-    device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw<in_data_t,
-                                                                         acc_data_t,
-                                                                         out_data_t>(
-        make_tuple(N, C, Hi, Wi),
-        make_tuple(K, C, Y, X),
-        make_tuple(N, K, Ho, Wo),
-        conv_strides,
-        conv_dilations,
-        in_left_pads,
-        in_right_pads,
-        in,
-        wei,
-        out_device,
-        nrepeat);
-#endif
+    case ConvForwardAlgo::V4R4NHWC:
+        if(layout != ConvTensorLayout::NHWC)
+        {
+            throw std::runtime_error("wrong! layout");
+        }
+
+        device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<in_data_t,
+                                                                             acc_data_t,
+                                                                             out_data_t>(
+            make_tuple(N, Hi, Wi, C),
+            make_tuple(K, Y, X, C),
+            make_tuple(N, Ho, Wo, K),
+            conv_strides,
+            conv_dilations,
+            in_left_pads,
+            in_right_pads,
+            in,
+            wei,
+            out_device,
+            nrepeat);
+
+        break;
+
+    case ConvForwardAlgo::V4R5NCHW:
+        if(layout != ConvTensorLayout::NCHW)
+        {
+            throw std::runtime_error("wrong! layout");
+        }
+
+        device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw<in_data_t,
+                                                                             acc_data_t,
+                                                                             out_data_t>(
+            make_tuple(N, C, Hi, Wi),
+            make_tuple(K, C, Y, X),
+            make_tuple(N, K, Ho, Wo),
+            conv_strides,
+            conv_dilations,
+            in_left_pads,
+            in_right_pads,
+            in,
+            wei,
+            out_device,
+            nrepeat);
+
+        break;
+
+    default: throw std::runtime_error("wrong! not implemented");
+    }
 
     if(do_verification)
     {
