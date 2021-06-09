@@ -367,8 +367,10 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v2
         }
 
         // main body
-        for(index_t k_block_data_begin = 0; k_block_data_begin < K0 - KPerBlock;
-            k_block_data_begin += KPerBlock)
+        // for(index_t k_block_data_begin = 0; k_block_data_begin < K0 - KPerBlock;
+        // k_block_data_begin += KPerBlock)
+        int k_block_data_begin = 0;
+        do
         {
             a_blockwise_copy.MoveSrcSliceWindow(a_k0_m_k1_global_desc,
                                                 a_block_slice_copy_step,
@@ -390,7 +392,9 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v2
 
             a_blockwise_copy.RunWrite(a_k0_m_k1_block_desc, a_block_buf);
             b_blockwise_copy.RunWrite(b_k0_n_k1_block_desc, b_block_buf);
-        }
+
+            k_block_data_begin += KPerBlock;
+        } while(k_block_data_begin < (K0 - KPerBlock));
 
         // tail
         {
