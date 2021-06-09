@@ -269,7 +269,7 @@ amd_buffer_load_impl_v2(int32x4_t src_wave_buffer_resource,
         else if constexpr(N == 8)
         {
 
-#if 1
+#if 0
             vector_type<half_t, 8> tmp;
 
             tmp.AsType<half4_t>()(Number<0>{}) = __llvm_amdgcn_raw_buffer_load_fp16x4(
