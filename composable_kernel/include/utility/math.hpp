@@ -61,7 +61,7 @@ struct integer_divide_ceiler
     {
         static_assert(is_same<T, index_t>{} || is_same<T, int>{}, "wrong type");
 
-        return (a + b - 1) / b;
+        return (a + b - Number<1>{}) / b;
     }
 };
 
@@ -74,7 +74,7 @@ __host__ __device__ constexpr auto integer_divide_floor(X x, Y y)
 template <class X, class Y>
 __host__ __device__ constexpr auto integer_divide_ceil(X x, Y y)
 {
-    return (x + y - 1) / y;
+    return (x + y - Number<1>{}) / y;
 }
 
 template <class X, class Y>

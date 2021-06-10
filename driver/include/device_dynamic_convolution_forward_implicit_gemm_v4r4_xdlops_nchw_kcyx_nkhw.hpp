@@ -80,65 +80,68 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
 #endif
 
 #if 0
-    constexpr index_t BlockSize = 64;
+    constexpr index_t BlockSize = 256;
 
-    constexpr index_t GemmMPerBlock = 64;
-    constexpr index_t GemmNPerBlock = 64;
-    constexpr index_t GemmKPerBlock = 8;
+    constexpr index_t GemmMPerBlock = 128;
+    constexpr index_t GemmNPerBlock = 128;
+    constexpr index_t GemmKPerBlock = 4;
 
     constexpr index_t GemmMPerWave = 64;
     constexpr index_t GemmNPerWave = 64;
-    constexpr index_t GemmKPack = 1;
+    constexpr index_t GemmKPack    = 8;
 
-    using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<4, 2>;
-    using GemmABlockTransferThreadClusterLengths_GemmK_GemmM = Sequence<2, 32>;
+    constexpr index_t MRepeat = 1;
+    constexpr index_t NRepeat = 1;
 
-    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 1;
-    constexpr index_t GemmABlockTransferDstScalarPerVector_GemmM = 1;
+    using GemmABlockTransferThreadSliceLengths_GemmK0_GemmM_GemmK1   = Sequence<1, 2, 8>;
+    using GemmABlockTransferThreadClusterLengths_GemmK0_GemmM_GemmK1 = Sequence<4, 64, 1>;
 
-    using GemmBBlockTransferThreadSliceLengths_GemmK_GemmN   = Sequence<4, 2>;
-    using GemmBBlockTransferThreadClusterLengths_GemmK_GemmN = Sequence<2, 32>;
+    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 8;
+    constexpr index_t GemmABlockTransferDstScalarPerVector_KPack = 8;
 
-    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmN = 1;
-    constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmN = 1;
+    using GemmBBlockTransferThreadSliceLengths_GemmK0_GemmN_GemmK1   = Sequence<1, 4, 4>;
+    using GemmBBlockTransferThreadClusterLengths_GemmK0_GemmN_GemmK1 = Sequence<4, 32, 2>;
+
+    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmN = 4;
+    constexpr index_t GemmBBlockTransferDstScalarPerVector_KPack = 4;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 1;
 #else
     constexpr index_t BlockSize = 256;
 
-    constexpr index_t GemmMPerBlock = 128;
+    constexpr index_t GemmMPerBlock = 256;
     constexpr index_t GemmNPerBlock = 128;
-    constexpr index_t GemmKPerBlock = 16;
+    constexpr index_t GemmKPerBlock = 4;
 
-    constexpr index_t GemmMPerWave = 32;
-    constexpr index_t GemmNPerWave = 32;
-    constexpr index_t GemmKPack    = 4;
+    constexpr index_t GemmMPerWave = 64;
+    constexpr index_t GemmNPerWave = 64;
+    constexpr index_t GemmKPack    = 8;
 
     constexpr index_t MRepeat = 2;
-    constexpr index_t NRepeat = 2;
+    constexpr index_t NRepeat = 1;
 
-    using GemmABlockTransferThreadSliceLengths_GemmK_GemmM   = Sequence<4, 2>;
-    using GemmABlockTransferThreadClusterLengths_GemmK_GemmM = Sequence<4, 64>;
+    using GemmABlockTransferThreadSliceLengths_GemmK0_GemmM_GemmK1   = Sequence<1, 4, 8>;
+    using GemmABlockTransferThreadClusterLengths_GemmK0_GemmM_GemmK1 = Sequence<4, 64, 1>;
 
-    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 4;
-    constexpr index_t GemmABlockTransferDstScalarPerVector_GemmM = 1;
+    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK = 8;
+    constexpr index_t GemmABlockTransferDstScalarPerVector_KPack = 8;
 
-    using GemmBBlockTransferThreadSliceLengths_GemmK_GemmN   = Sequence<2, 4>;
-    using GemmBBlockTransferThreadClusterLengths_GemmK_GemmN = Sequence<8, 32>;
+    using GemmBBlockTransferThreadSliceLengths_GemmK0_GemmN_GemmK1   = Sequence<1, 4, 4>;
+    using GemmBBlockTransferThreadClusterLengths_GemmK0_GemmN_GemmK1 = Sequence<4, 32, 2>;
 
     constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmN = 4;
-    constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmN = 4;
+    constexpr index_t GemmBBlockTransferDstScalarPerVector_KPack = 4;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 1;
 #endif
 
     const auto descs =
-        transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad<TInWei,
-                                                                               GemmMPerBlock,
-                                                                               GemmNPerBlock,
-                                                                               GemmMPerWave,
-                                                                               GemmNPerWave,
-                                                                               GemmKPack>(
+#if 0
+        transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad
+#else
+        transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_1x1
+#endif
+        <TInWei, GemmMPerBlock, GemmNPerBlock, GemmMPerWave, GemmNPerWave, GemmKPack>(
             wei_k_c_y_x_desc,
             in_n_c_hi_wi_desc,
             out_n_k_ho_wo_desc,
@@ -149,61 +152,65 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
 
     for(index_t i = 0; i < 5; ++i)
     {
-        float ave_time = launch_kernel_dynamic_gemm_xdlops_v1<
-            BlockSize,
-            TInWei,
-            TAcc,
-            TOut,
-            InMemoryDataOperation::Set,
-            decltype(descs[I0]),
-            decltype(descs[I1]),
-            decltype(descs[I2]),
-            decltype(descs[I3]),
-            GemmMPerBlock,
-            GemmNPerBlock,
-            GemmKPerBlock,
-            GemmMPerWave,
-            GemmNPerWave,
-            GemmKPack,
-            MRepeat,
-            NRepeat,
-            GemmABlockTransferThreadSliceLengths_GemmK_GemmM,
-            GemmABlockTransferThreadClusterLengths_GemmK_GemmM,
-            Sequence<1, 0>,
-            Sequence<1, 0>,
-            0,
-            GemmABlockTransferSrcScalarPerVector_GemmK,
-            GemmABlockTransferDstScalarPerVector_GemmM,
-            false, // don't move back src coordinate after threadwise copy
-            GemmBBlockTransferThreadSliceLengths_GemmK_GemmN,
-            GemmBBlockTransferThreadClusterLengths_GemmK_GemmN,
-            Sequence<0, 1>,
-            Sequence<0, 1>,
-            1,
-            GemmBBlockTransferSrcScalarPerVector_GemmN,
-            GemmBBlockTransferDstScalarPerVector_GemmN,
-            false, // don't move back src coordinate after threadwise copy, which will be fused with
-                   // MoveSrcSliceWindow() to save addr computation
-            Sequence<2, 3, 0, 1>,
-            3,
-            GemmCThreadTransferDstScalarPerVector_GemmN1,
-            decltype(descs[I4]),
-            decltype(descs[I5]),
-            decltype(descs[I6]),
-            decltype(descs[I7]),
-            decltype(descs[I8])>(static_cast<TInWei*>(wei_k_c_y_x_device_buf.GetDeviceBuffer()),
-                                 static_cast<TInWei*>(in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
-                                 static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()),
-                                 descs[I0],
-                                 descs[I1],
-                                 descs[I2],
-                                 descs[I3],
-                                 descs[I4],
-                                 descs[I5],
-                                 descs[I6],
-                                 descs[I7],
-                                 descs[I8],
-                                 nrepeat);
+#if 0
+        float ave_time = launch_kernel_dynamic_gemm_xdlops_v1
+#else
+        float ave_time = launch_kernel_dynamic_gemm_xdlops_v2
+#endif
+        <BlockSize,
+         TInWei,
+         TAcc,
+         TOut,
+         InMemoryDataOperation::Set,
+         decltype(descs[I0]),
+         decltype(descs[I1]),
+         decltype(descs[I2]),
+         decltype(descs[I3]),
+         GemmMPerBlock,
+         GemmNPerBlock,
+         GemmKPerBlock,
+         GemmMPerWave,
+         GemmNPerWave,
+         GemmKPack,
+         MRepeat,
+         NRepeat,
+         GemmABlockTransferThreadSliceLengths_GemmK0_GemmM_GemmK1,
+         GemmABlockTransferThreadClusterLengths_GemmK0_GemmM_GemmK1,
+         Sequence<1, 0, 2>,
+         Sequence<1, 0, 2>,
+         2,
+         GemmABlockTransferSrcScalarPerVector_GemmK,
+         GemmABlockTransferDstScalarPerVector_KPack,
+         false, // don't move back src coordinate after threadwise copy
+         GemmBBlockTransferThreadSliceLengths_GemmK0_GemmN_GemmK1,
+         GemmBBlockTransferThreadClusterLengths_GemmK0_GemmN_GemmK1,
+         Sequence<0, 2, 1>,
+         Sequence<1, 0, 2>,
+         1,
+         GemmBBlockTransferSrcScalarPerVector_GemmN,
+         GemmBBlockTransferDstScalarPerVector_KPack,
+         false, // don't move back src coordinate after threadwise copy, which will be fused
+                // with MoveSrcSliceWindow() to save addr computation
+         Sequence<2, 3, 0, 1>,
+         3,
+         GemmCThreadTransferDstScalarPerVector_GemmN1,
+         decltype(descs[I4]),
+         decltype(descs[I5]),
+         decltype(descs[I6]),
+         decltype(descs[I7]),
+         decltype(descs[I8])>(static_cast<TInWei*>(wei_k_c_y_x_device_buf.GetDeviceBuffer()),
+                              static_cast<TInWei*>(in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
+                              static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()),
+                              descs[I0],
+                              descs[I1],
+                              descs[I2],
+                              descs[I3],
+                              descs[I4],
+                              descs[I5],
+                              descs[I6],
+                              descs[I7],
+                              descs[I8],
+                              nrepeat);
 
         float perf = (float)calculate_convolution_flops(
                          in_n_c_hi_wi_desc, wei_k_c_y_x_desc, out_n_k_ho_wo_desc) /
