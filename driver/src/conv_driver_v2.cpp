@@ -122,17 +122,12 @@ int main(int argc, char* argv[])
 
 #if 1
     constexpr index_t in_vector_size = 1;
-    using in_data_t                  = typename vector_type<float, in_vector_size>::type;
+    using in_data_t                  = float;
     using acc_data_t                 = float;
     using out_data_t                 = float;
-#elif 0
-    constexpr index_t in_vector_size = 1;
-    using in_data_t                  = typename vector_type<float, in_vector_size>::type;
-    using acc_data_t                 = float;
-    using out_data_t                 = int8_t;
 #elif 1
     constexpr index_t in_vector_size = 16;
-    using in_data_t                  = typename vector_type<int8_t, in_vector_size>::type;
+    using in_data_t                  = int8_t;
     using acc_data_t                 = int32_t;
     using out_data_t                 = int8_t;
 #endif
@@ -377,18 +372,17 @@ int main(int argc, char* argv[])
         device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw<in_data_t,
                                                                              in_vector_size,
                                                                              acc_data_t,
-                                                                             out_data_t>(
-            in_nchw_desc,
-            in_nchw,
-            wei_kcyx_desc,
-            wei_kcyx,
-            out_nkhw_desc,
-            out_nkhw_device,
-            ConvStrides{},
-            ConvDilations{},
-            InLeftPads{},
-            InRightPads{},
-            nrepeat);
+                                                                             out_data_t>(tmp[I0],
+                                                                                         tmp[I1],
+                                                                                         tmp[I2],
+                                                                                         tmp[I3],
+                                                                                         tmp[I4],
+                                                                                         tmp[I5],
+                                                                                         tmp[I6],
+                                                                                         in,
+                                                                                         wei,
+                                                                                         out_device,
+                                                                                         nrepeat);
     }
 #endif
 
