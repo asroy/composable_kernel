@@ -14,11 +14,6 @@
 #include "device_convolution_forward_implicit_gemm_v4r1_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "device_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk.hpp"
-#include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
-#include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw.hpp"
-#include "device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw.hpp"
-#include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk.hpp"
-#include "device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -163,7 +158,7 @@ int main(int argc, char* argv[])
 
     using InLeftPads  = Sequence<0, 0>;
     using InRightPads = Sequence<0, 0>;
-#elif 1
+#elif 0
     // 3x3, 71x71
     constexpr index_t N  = 128;
     constexpr index_t C  = 192;
@@ -178,7 +173,7 @@ int main(int argc, char* argv[])
 
     using InLeftPads  = Sequence<1, 1>;
     using InRightPads = Sequence<1, 1>;
-#elif 1
+#elif 0
     // 1x1, 8x8
     constexpr index_t N  = 128;
     constexpr index_t C  = 1536;
@@ -223,7 +218,7 @@ int main(int argc, char* argv[])
 
     using InLeftPads  = Sequence<1, 1>;
     using InRightPads = Sequence<1, 1>;
-#elif 1
+#elif 0
     // 3x3, 71x71
     constexpr index_t N  = 128;
     constexpr index_t C  = 192;
@@ -253,7 +248,7 @@ int main(int argc, char* argv[])
 
     using InLeftPads  = Sequence<3, 0>;
     using InRightPads = Sequence<3, 0>;
-#elif 0
+#elif 1
     // 1x7, 17x17
     constexpr index_t N  = 128;
     constexpr index_t C  = 128;
@@ -637,18 +632,18 @@ int main(int argc, char* argv[])
     constexpr index_t Wo = (Wi + InLeftPads{}[1] + InRightPads{}[1] - XEff) / ConvStrides{}[1] + 1;
 
 #if 1
-    using in_data_t                  = float;
     constexpr index_t in_vector_size = 1;
+    using in_data_t                  = typename vector_type<float, in_vector_size>::type;
     using acc_data_t                 = float;
     using out_data_t                 = float;
 #elif 0
-    using in_data_t                  = float;
     constexpr index_t in_vector_size = 1;
+    using in_data_t                  = typename vector_type<float, in_vector_size>::type;
     using acc_data_t                 = float;
     using out_data_t                 = int8_t;
 #elif 1
-    using in_data_t                  = int8_t;
     constexpr index_t in_vector_size = 16;
+    using in_data_t                  = typename vector_type<int8_t, in_vector_size>::type;
     using acc_data_t                 = int32_t;
     using out_data_t                 = int8_t;
 #endif
@@ -701,7 +696,11 @@ int main(int argc, char* argv[])
         }
     }
 
-#if 0
+    constexpr auto in_nchw_desc  = make_native_tensor_descriptor_packed(Sequence<N, C, Hi, Wi>{});
+    constexpr auto wei_kcyx_desc = make_native_tensor_descriptor_packed(Sequence<K, C, Y, X>{});
+    constexpr auto out_nkhw_desc = make_native_tensor_descriptor_packed(Sequence<N, K, Ho, Wo>{});
+
+#if 1
     device_convolution_forward_implicit_gemm_v4r1_nchw_kcyx_nkhw(in_nchw_desc,
                                                                  in_nchw,
                                                                  wei_kcyx_desc,
@@ -737,115 +736,6 @@ int main(int argc, char* argv[])
                                                                  InLeftPads{},
                                                                  InRightPads{},
                                                                  nrepeat);
-#elif 0
-    device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw<in_data_t,
-                                                                         in_vector_size,
-                                                                         acc_data_t,
-                                                                         out_data_t>(
-        in_nchw_desc,
-        in_nchw,
-        wei_kcyx_desc,
-        wei_kcyx,
-        out_nkhw_desc,
-        out_nkhw_device,
-        ConvStrides{},
-        ConvDilations{},
-        InLeftPads{},
-        InRightPads{},
-        nrepeat);
-#elif 0
-    device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nchw_kcyx_nkhw<in_data_t,
-                                                                           in_vector_size,
-                                                                           acc_data_t,
-                                                                           out_data_t>(
-        in_nchw_desc,
-        in_nchw,
-        wei_kcyx_desc,
-        wei_kcyx,
-        out_nkhw_desc,
-        out_nkhw_device,
-        ConvStrides{},
-        ConvDilations{},
-        InLeftPads{},
-        InRightPads{},
-        nrepeat);
-#elif 1
-#if 0
-    // run-time variables
-    const auto in_nchw_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, C, Hi, Wi));
-    const auto wei_kcyx_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, C, Y, X));
-    const auto out_nkhw_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K, Ho, Wo));
-
-    const auto conv_strides   = to_multi_index(ConvStrides{});
-    const auto conv_dilations = to_multi_index(ConvDilations{});
-    const auto in_left_pads   = to_multi_index(InLeftPads{});
-    const auto in_right_pads  = to_multi_index(InRightPads{});
-#else
-    // compile-time variables
-    const auto in_nchw_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-        make_tuple(Number<N>{}, Number<C>{}, Number<Hi>{}, Number<Wi>{}));
-    const auto wei_kcyx_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-        make_tuple(Number<K>{}, Number<C>{}, Number<Y>{}, Number<X>{}));
-    const auto out_nkhw_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-        make_tuple(Number<N>{}, Number<K>{}, Number<Ho>{}, Number<Wo>{}));
-
-    const auto conv_strides   = sequence_to_tuple_of_number(ConvStrides{});
-    const auto conv_dilations = sequence_to_tuple_of_number(ConvDilations{});
-    const auto in_left_pads   = sequence_to_tuple_of_number(InLeftPads{});
-    const auto in_right_pads  = sequence_to_tuple_of_number(InRightPads{});
-#endif
-
-    device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw<in_data_t,
-                                                                         in_vector_size,
-                                                                         acc_data_t,
-                                                                         out_data_t>(
-        in_nchw_desc,
-        wei_kcyx_desc,
-        out_nkhw_desc,
-        conv_strides,
-        conv_dilations,
-        in_left_pads,
-        in_right_pads,
-        in_nchw,
-        wei_kcyx,
-        out_nkhw_device,
-        nrepeat);
-#elif 1
-    device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk<in_data_t,
-                                                                         in_vector_size,
-                                                                         acc_data_t,
-                                                                         out_data_t>
-
-        (in_nchw_desc,
-         in_nchw,
-         wei_kcyx_desc,
-         wei_kcyx,
-         out_nkhw_desc,
-         out_nkhw_device,
-         ConvStrides{},
-         ConvDilations{},
-         InLeftPads{},
-         InRightPads{},
-         nrepeat);
-#elif 1
-    device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw<in_data_t,
-                                                                         in_vector_size,
-                                                                         acc_data_t,
-                                                                         out_data_t>(
-        in_nchw_desc,
-        in_nchw,
-        wei_kcyx_desc,
-        wei_kcyx,
-        out_nkhw_desc,
-        out_nkhw_device,
-        ConvStrides{},
-        ConvDilations{},
-        InLeftPads{},
-        InRightPads{},
-        nrepeat);
 #endif
 
     if(do_verification)
