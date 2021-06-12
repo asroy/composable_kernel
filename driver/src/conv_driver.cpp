@@ -50,8 +50,8 @@ int main(int argc, char* argv[])
     using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;
 
-    using LeftPads                   = Sequence<0, 0>;
-    using RightPads                  = Sequence<0, 0>;
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
 #elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
@@ -64,8 +64,8 @@ int main(int argc, char* argv[])
     using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;
 
-    using LeftPads                   = Sequence<0, 0>;
-    using RightPads                  = Sequence<0, 0>;
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
 #elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
@@ -78,8 +78,8 @@ int main(int argc, char* argv[])
     using ConvStrides   = Sequence<1, 1>;
     using ConvDilations = Sequence<1, 1>;
 
-    using LeftPads                   = Sequence<0, 0>;
-    using RightPads                  = Sequence<0, 0>;
+    using LeftPads  = Sequence<0, 0>;
+    using RightPads = Sequence<0, 0>;
 #elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;

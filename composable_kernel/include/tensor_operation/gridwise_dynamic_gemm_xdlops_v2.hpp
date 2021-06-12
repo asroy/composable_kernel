@@ -367,9 +367,8 @@ struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v2
         }
 
         // main body
-        // for(index_t k_block_data_begin = 0; k_block_data_begin < K0 - KPerBlock;
-        // k_block_data_begin += KPerBlock)
-        int k_block_data_begin = 0;
+        index_t k_block_data_begin = 0;
+
         do
         {
             a_blockwise_copy.MoveSrcSliceWindow(a_k0_m_k1_global_desc,
