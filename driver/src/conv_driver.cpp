@@ -166,13 +166,13 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 0
+#elif 1
     // 3x3, 71x71
     constexpr index_t N  = 128;
     constexpr index_t C  = 192;
     constexpr index_t HI = 71;
     constexpr index_t WI = 71;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 256;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -451,7 +451,7 @@ int main(int argc, char* argv[])
 
     using LeftPads  = Sequence<0, 0>;
     using RightPads = Sequence<0, 0>;
-#elif 1
+#elif 0
     // 1x1, 14x14
     constexpr index_t N  = 256;
     constexpr index_t C  = 1024;
@@ -487,7 +487,7 @@ int main(int argc, char* argv[])
     constexpr index_t C  = 128;
     constexpr index_t HI = 28;
     constexpr index_t WI = 28;
-    constexpr index_t K  = 128;
+    constexpr index_t K  = 256;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -646,7 +646,7 @@ int main(int argc, char* argv[])
     print_array("ConvStrides", to_multi_index(ConvStrides{}));
     print_array("ConvDilations", to_multi_index(ConvDilations{}));
 
-#if 0
+#if 1
     using in_data_t                  = float;
     constexpr index_t in_vector_size = 1;
     using acc_data_t                 = float;

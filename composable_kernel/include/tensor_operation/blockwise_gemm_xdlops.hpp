@@ -2,9 +2,7 @@
 #define CK_BLOCKWISE_GEMM_XDLOPS_HPP
 
 #include "common_header.hpp"
-#include "ConstantMatrixDescriptor.hpp"
 #include "xdlops_gemm.hpp"
-#include "threadwise_gemm.hpp"
 
 namespace ck {
 
