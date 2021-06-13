@@ -17,6 +17,7 @@
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
+#include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nkhw.hpp"
 
 #define USE_DYNAMIC_MODE 1
 #define USE_CONV_FWD_V4R4_NCHW 0
@@ -100,21 +101,21 @@ int main(int argc, char* argv[])
     const int nrepeat             = atoi(argv[6]);
 
     constexpr index_t N  = 128;
-    constexpr index_t C  = 128;
-    constexpr index_t Hi = 17;
-    constexpr index_t Wi = 17;
-    constexpr index_t K  = 128;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 7;
+    constexpr index_t C  = 192;
+    constexpr index_t Hi = 71;
+    constexpr index_t Wi = 71;
+    constexpr index_t K  = 256;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
 
-    const index_t conv_stride_h   = 1;
-    const index_t conv_stride_w   = 1;
+    const index_t conv_stride_h   = 2;
+    const index_t conv_stride_w   = 2;
     const index_t conv_dilation_h = 1;
     const index_t conv_dilation_w = 1;
-    const index_t in_left_pad_h   = 0;
-    const index_t in_left_pad_w   = 3;
-    const index_t in_right_pad_h  = 0;
-    const index_t in_right_pad_w  = 3;
+    const index_t in_left_pad_h   = 1;
+    const index_t in_left_pad_w   = 1;
+    const index_t in_right_pad_h  = 1;
+    const index_t in_right_pad_w  = 1;
 
     const index_t YEff = (Y - 1) * conv_dilation_h + 1;
     const index_t XEff = (X - 1) * conv_dilation_w + 1;
@@ -128,6 +129,11 @@ int main(int argc, char* argv[])
     using in_data_t                  = float;
     using acc_data_t                 = float;
     using out_data_t                 = float;
+#elif 1
+    constexpr index_t in_vector_size = 1;
+    using in_data_t                  = half_t;
+    using acc_data_t                 = float;
+    using out_data_t                 = half_t;
 #elif 1
     constexpr index_t in_vector_size = 16;
     using in_data_t                  = int8_t;
@@ -399,9 +405,9 @@ int main(int argc, char* argv[])
 
         const auto tmp = f_make_for_device_nchw();
 
-        device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw<in_data_t,
-                                                                                    acc_data_t,
-                                                                                    out_data_t>(
+        device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nkhw<in_data_t,
+                                                                                      acc_data_t,
+                                                                                      out_data_t>(
             tmp[I0],
             tmp[I1],
             tmp[I2],
@@ -429,6 +435,7 @@ int main(int argc, char* argv[])
 
         check_error(out_host, out_device);
 
+#if 0
         if(do_log)
         {
             LogRange(std::cout << "in : ", in.mData, ",") << std::endl;
@@ -436,5 +443,6 @@ int main(int argc, char* argv[])
             LogRange(std::cout << "out_host  : ", out_host.mData, ",") << std::endl;
             LogRange(std::cout << "out_device: ", out_device.mData, ",") << std::endl;
         }
+#endif
     }
 }
