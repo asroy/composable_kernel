@@ -37,6 +37,7 @@ transform_forward_convolution_into_gemm_v4r4r2_nchw_kcyx_nkhw_pad(
 #if 0 // debug
     // somehow, use Number<...> will change instruction scheduling inside loop, and get worse
     // performance
+    // TODO: turn this on
     constexpr auto GemmK1 = Number<GemmK1Value>{};
 #else
     constexpr index_t GemmK1 = GemmK1Value;
