@@ -3,28 +3,27 @@
 #include "host_tensor.hpp"
 #include "driver_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
 
-template <class TInWei,
-          ck::index_t InWeiVectorSize,
-          class TAcc,
-          class TOut,
-          class InDesc,
-          class WeiDesc,
-          class OutDesc,
-          class ConvStrides,
-          class ConvDilations,
-          class InLeftPads,
-          class InRightPads>
+template <typename TInWei,
+          typename TAcc,
+          typename TOut,
+          typename InLengths,
+          typename WeiLengths,
+          typename OutLengths,
+          typename ConvStrides,
+          typename ConvDilations,
+          typename InLeftPads,
+          typename InRightPads>
 void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw(
-    InDesc,
+    const InLengths& in_n_c_hi_wi_lengths,
+    const WeiLengths& wei_k_c_y_x_lengths,
+    const OutLengths& out_n_k_ho_wo_lengths,
+    const ConvStrides& conv_strides,
+    const ConvDilations& conv_dilations,
+    const InLeftPads& in_left_pads,
+    const InRightPads& in_right_pads,
     const Tensor<TInWei>& in_n_c_hi_wi,
-    WeiDesc,
     const Tensor<TInWei>& wei_k_c_y_x,
-    OutDesc,
     Tensor<TOut>& out_n_k_ho_wo,
-    ConvStrides,
-    ConvDilations,
-    InLeftPads,
-    InRightPads,
     ck::index_t nrepeat)
 {
     using namespace ck;
@@ -49,35 +48,12 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
     wei_k_c_y_x_device_buf.ToDevice(wei_k_c_y_x.mData.data());
     out_n_k_ho_wo_device_buf.ToDevice(out_n_k_ho_wo.mData.data());
 
-    static_assert(1 == InWeiVectorSize, "support InWeiVectorSize == 1 only!");
-
-#if 1
-    // run-time variables
     const auto in_n_c_hi_wi_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(InDesc::GetLengths()));
+        make_dynamic_naive_tensor_descriptor_packed_v2(in_n_c_hi_wi_lengths);
     const auto wei_k_c_y_x_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(WeiDesc::GetLengths()));
+        make_dynamic_naive_tensor_descriptor_packed_v2(wei_k_c_y_x_lengths);
     const auto out_n_k_ho_wo_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(to_multi_index(OutDesc::GetLengths()));
-
-    const auto conv_strides   = to_multi_index(ConvStrides{});
-    const auto conv_dilations = to_multi_index(ConvDilations{});
-    const auto in_left_pads   = to_multi_index(InLeftPads{});
-    const auto in_right_pads  = to_multi_index(InRightPads{});
-#else
-    // compile-time variables
-    const auto in_n_c_hi_wi_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-        sequence_to_tuple_of_number(InDesc::GetLengths()));
-    const auto wei_k_c_y_x_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-        sequence_to_tuple_of_number(WeiDesc::GetLengths()));
-    const auto out_n_k_ho_wo_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-        sequence_to_tuple_of_number(OutDesc::GetLengths()));
-
-    const auto conv_strides   = sequence_to_tuple_of_number(ConvStrides{});
-    const auto conv_dilations = sequence_to_tuple_of_number(ConvDilations{});
-    const auto in_left_pads   = sequence_to_tuple_of_number(InLeftPads{});
-    const auto in_right_pads  = sequence_to_tuple_of_number(InRightPads{});
-#endif
+        make_dynamic_naive_tensor_descriptor_packed_v2(out_n_k_ho_wo_lengths);
 
 #if 0
     constexpr index_t BlockSize = 256;
