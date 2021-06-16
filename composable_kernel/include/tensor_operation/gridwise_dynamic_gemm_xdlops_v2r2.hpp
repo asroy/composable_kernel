@@ -86,7 +86,7 @@ template <index_t BlockSize,
           typename CGridIteratorHacks,
           typename AGridMoveSliceWindowIteratorHacks,
           typename BGridMoveSliceWindowIteratorHacks>
-struct GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v2r2
+struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r2
 {
     static constexpr auto I0 = Number<0>{};
     static constexpr auto I1 = Number<1>{};

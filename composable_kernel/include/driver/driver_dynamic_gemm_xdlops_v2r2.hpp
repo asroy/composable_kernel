@@ -62,8 +62,15 @@ __host__ float driver_dynamic_gemm_xdlops_v2r2(const FloatAB* p_a_grid,
                                                index_t nrepeat)
 
 {
+    constexpr auto I0 = Number<0>{};
+    constexpr auto I1 = Number<1>{};
+    constexpr auto I2 = Number<2>{};
+    constexpr auto I3 = Number<3>{};
+    constexpr auto I4 = Number<4>{};
+    constexpr auto I5 = Number<5>{};
+
     using GridwiseGemm =
-        GridwiseDynamicGemm_km_kn_m0m1n0n1_xdlops_v2r2<BlockSize,
+        GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r2<BlockSize,
                                                        FloatAB,
                                                        FloatAcc,
                                                        FloatC,
@@ -103,6 +110,19 @@ __host__ float driver_dynamic_gemm_xdlops_v2r2(const FloatAB* p_a_grid,
                                                        CGridIteratorHacks,
                                                        AGridMoveSliceWindowIteratorHacks,
                                                        BGridMoveSliceWindowIteratorHacks>;
+
+    {
+        std::cout << "a_k0_m_k1_grid_desc{" << a_k0_m_k1_grid_desc.GetLength(I0) << ", "
+                  << a_k0_m_k1_grid_desc.GetLength(I1) << ", " << a_k0_m_k1_grid_desc.GetLength(I2)
+                  << "}" << std::endl;
+
+        std::cout << "b_k0_n_k1_grid_desc{" << b_k0_n_k1_grid_desc.GetLength(I0) << ", "
+                  << b_k0_n_k1_grid_desc.GetLength(I1) << ", " << b_k0_n_k1_grid_desc.GetLength(I2)
+                  << "}" << std::endl;
+
+        std::cout << "c_m_n_grid_desc{ " << c_m_n_grid_desc.GetLength(I0) << ", "
+                  << c_m_n_grid_desc.GetLength(I1) << "}" << std::endl;
+    }
 
     if(!GridwiseGemm::CheckValidity(a_k0_m_k1_grid_desc, b_k0_n_k1_grid_desc, c_m_n_grid_desc))
     {
