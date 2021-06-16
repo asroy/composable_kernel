@@ -421,10 +421,11 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r2
                                                 b_block_slice_copy_step,
                                                 b_k0_n_k1_grid_move_slice_window_iterator_hack);
 
-            block_sync_lds();
-
             a_blockwise_copy.RunRead(
                 a_k0_m_k1_grid_desc, a_grid_buf, a_k0_m_k1_grid_iterator_hacks);
+
+            block_sync_lds();
+
             b_blockwise_copy.RunRead(
                 b_k0_n_k1_grid_desc, b_grid_buf, b_k0_n_k1_grid_iterator_hacks);
 
