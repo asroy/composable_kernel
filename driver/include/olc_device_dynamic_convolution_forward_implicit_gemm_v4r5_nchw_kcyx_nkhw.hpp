@@ -309,7 +309,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_olc(
 	 kernel2_times.push_back(timer2.GetElapsedTime()); 
     }
     {
-         auto ave_time = Driver::get_effective_average(kernel1_times) + Driver::get_effective_average(kernel2_times);
+         auto ave_time1 = Driver::get_effective_average(kernel1_times);
+         auto ave_time2 = Driver::get_effective_average(kernel2_times);
 
          const auto N = in_nchw_lengths[0];
          const auto C = in_nchw_lengths[1];
@@ -321,9 +322,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_olc(
          const auto Y = wei_kcyx_lengths[2];
          const auto X = wei_kcyx_lengths[3];
 
-         float perf = (float)(std::size_t(2) * N * K * Ho * Wo * C * Y * X) / (std::size_t(1000) * 1000 * 1000) / ave_time;
+         float perf = (float)(std::size_t(2) * N * K * Ho * Wo * C * Y * X) / (std::size_t(1000) * 1000 * 1000) / (ave_time1+ave_time2);
 
-         std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s" << std::endl;
+         std::cout << "Average time : " << ave_time1 + ave_time2 << " ms(" << ave_time1 << ", " << ave_time2 << "), " << perf << " TFlop/s" << std::endl;	 
     };
 
     // copy result back to host
