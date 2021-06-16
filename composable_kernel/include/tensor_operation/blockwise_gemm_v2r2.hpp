@@ -2,6 +2,7 @@
 #define CK_BLOCKWISE_GEMM_V2R2_HPP
 
 #include "common_header.hpp"
+#include "tensor_adaptor.hpp"
 #include "threadwise_dynamic_tensor_slice_transfer.hpp"
 #include "threadwise_gemm_v2.hpp"
 
@@ -184,6 +185,10 @@ struct BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2
 
         return adaptor.CalculateBottomIndex(make_multi_index(get_thread_local_1d_id(), 0, 0, 0, 0));
     }
+
+    __host__ __device__ static constexpr index_t GetABlockAlignment() { return M1PerThreadM11; }
+
+    __host__ __device__ static constexpr auto GetBBlockAlignment() { return N1PerThreadN11; }
 
     template <typename CM0M1N0N1ThreadDesc,
               typename ABlockBuffer,
