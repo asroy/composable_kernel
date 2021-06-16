@@ -34,14 +34,7 @@ transform_forward_convolution_into_gemm_v4r4r2_nhwc_kyxc_nhwk_pad(
     constexpr auto I2 = Number<2>{};
     constexpr auto I3 = Number<3>{};
 
-#if 1 // debug
-    // somehow, use Number<...> will change instruction scheduling inside loop, and get worse
-    // performance
-    // TODO: turn this on
     constexpr auto GemmK1 = Number<GemmK1Value>{};
-#else
-    constexpr index_t GemmK1 = GemmK1Value;
-#endif
 
     const auto N = in_n_hi_wi_c_grid_desc.GetLength(I0);
     const auto C = in_n_hi_wi_c_grid_desc.GetLength(I3);

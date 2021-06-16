@@ -83,7 +83,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nhwc_kyxc_nh
     constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmK1 = 8;
     constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmK1 = 8;
 
-    constexpr index_t GemmCThreadTransferDstScalarPerVector_GemmN1 = 1;
+    constexpr index_t GemmCThreadTransferDstScalarPerVector = 4;
 #endif
 
     const auto descs =
@@ -166,8 +166,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nhwc_kyxc_nh
             GemmBBlockTransferDstScalarPerVector_GemmK1,
             false, // don't move back src coordinate after threadwise copy
             Sequence<2, 3, 0, 1>,
-            3,
-            GemmCThreadTransferDstScalarPerVector_GemmN1,
+            2,
+            GemmCThreadTransferDstScalarPerVector,
             decltype(wei_gemmk0_gemmm_gemmk1_grid_iterator_hacks),
             decltype(in_gemmk0_gemmn_gemmk1_grid_iterator_hacks),
             decltype(out_m0_m1_m2_n_grid_iterator_hacks),
