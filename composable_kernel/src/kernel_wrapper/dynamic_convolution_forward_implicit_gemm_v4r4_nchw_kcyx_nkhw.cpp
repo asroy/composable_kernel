@@ -164,10 +164,12 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
     auto c_m0_m10_m11_n0_n10_n11_grid_desc = GridwiseGemm::MakeCM0M10M11N0N10N11GridDescriptor(c_m_n_grid_desc);
     auto c_blockid_to_m0_n0_block_cluster_adaptor = GridwiseGemm::MakeCBlockIdToM0N0BlockClusterAdaptor(c_m_n_grid_desc);
 
-    *static_cast<decltype(a_k_m0_m1_grid_desc)*>(p_a_k_m0_m1_grid_desc) = a_k_m0_m1_grid_desc; 
-    *static_cast<decltype(b_k_n0_n1_grid_desc)*>(p_b_k_n0_n1_grid_desc) = b_k_n0_n1_grid_desc;
-    *static_cast<decltype(c_m0_m10_m11_n0_n10_n11_grid_desc)*>(p_c_m0_m10_m11_n0_n10_n11_grid_desc) = c_m0_m10_m11_n0_n10_n11_grid_desc; 
-    *static_cast<decltype(c_blockid_to_m0_n0_block_cluster_adaptor)*>(p_c_blockid_to_m0_n0_block_cluster_adaptor) = c_blockid_to_m0_n0_block_cluster_adaptor; 
+    if ( hipThreadIdx_x == 0 ) {
+        *static_cast<decltype(a_k_m0_m1_grid_desc)*>(p_a_k_m0_m1_grid_desc) = a_k_m0_m1_grid_desc; 
+        *static_cast<decltype(b_k_n0_n1_grid_desc)*>(p_b_k_n0_n1_grid_desc) = b_k_n0_n1_grid_desc;
+        *static_cast<decltype(c_m0_m10_m11_n0_n10_n11_grid_desc)*>(p_c_m0_m10_m11_n0_n10_n11_grid_desc) = c_m0_m10_m11_n0_n10_n11_grid_desc; 
+        *static_cast<decltype(c_blockid_to_m0_n0_block_cluster_adaptor)*>(p_c_blockid_to_m0_n0_block_cluster_adaptor) = c_blockid_to_m0_n0_block_cluster_adaptor; 
+    }; 
 }; 
 
 

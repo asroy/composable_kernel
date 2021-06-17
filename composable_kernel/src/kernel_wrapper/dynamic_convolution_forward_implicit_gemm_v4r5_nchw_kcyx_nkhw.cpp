@@ -172,10 +172,12 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5_nchw_k
     auto c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc = GridwiseContraction::MakeCGM10BM0BM1GN10BN0BN1GridDescriptor(c_gm0_gm1_gn0_gn1_grid_desc);
     auto c_blockid_to_gm10_gn10_block_cluster_adaptor = GridwiseContraction::MakeCBlockIdToGM10GN10BlockClusterAdaptor(c_gm0_gm1_gn0_gn1_grid_desc);
 
-    *static_cast<decltype(a_gk_gm0_gm10_gm11_grid_desc)*>(p_a_gk_gm0_gm10_gm11_grid_desc) = a_gk_gm0_gm10_gm11_grid_desc; 
-    *static_cast<decltype(b_gk_gn0_gn10_gn11_grid_desc)*>(p_b_gk_gn0_gn10_gn11_grid_desc) = b_gk_gn0_gn10_gn11_grid_desc;
-    *static_cast<decltype(c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc)*>(p_c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc) = c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc;
-    *static_cast<decltype(c_blockid_to_gm10_gn10_block_cluster_adaptor)*>(p_c_blockid_to_gm10_gn10_block_cluster_adaptor) = c_blockid_to_gm10_gn10_block_cluster_adaptor;
+    if ( hipThreadIdx_x == 0 ) {
+        *static_cast<decltype(a_gk_gm0_gm10_gm11_grid_desc)*>(p_a_gk_gm0_gm10_gm11_grid_desc) = a_gk_gm0_gm10_gm11_grid_desc; 
+        *static_cast<decltype(b_gk_gn0_gn10_gn11_grid_desc)*>(p_b_gk_gn0_gn10_gn11_grid_desc) = b_gk_gn0_gn10_gn11_grid_desc;
+        *static_cast<decltype(c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc)*>(p_c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc) = c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc;
+        *static_cast<decltype(c_blockid_to_gm10_gn10_block_cluster_adaptor)*>(p_c_blockid_to_gm10_gn10_block_cluster_adaptor) = c_blockid_to_gm10_gn10_block_cluster_adaptor;
+    }; 
 }; 
 
 
