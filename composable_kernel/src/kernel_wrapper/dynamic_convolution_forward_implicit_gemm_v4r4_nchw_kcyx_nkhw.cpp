@@ -52,7 +52,7 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
         int n, int c, int hi, int wi, int k, int y, int x,
         int convStrideH, int convStrideW, int convDilationY, int convDilationX,
         int leftPadH, int leftPadW, int rightPadH, int rightPadW,
-        void* p_a_k_m0_m1_grid_desc, void* p_b_k_n0_n1_grid_desc, void* p_c_m0_m10_m11_n0_n10_n11_grid_desc, void* p_c_blockid_to_m0_n0_block_cluster_adaptor)
+        void* p_a_k_m_grid_desc, void* p_b_k_n_grid_desc, void* p_c_m_n_grid_desc)
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -73,102 +73,14 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
                                                                                        make_tuple(leftPadH, leftPadW),
                                                                                        make_tuple(rightPadH, rightPadW));
 
-    const auto a_k_m_grid_desc = descs[I0];
-    const auto b_k_n_grid_desc = descs[I1];
-    const auto c_m_n_grid_desc = descs[I2];
-
-    using AKMGridDesc = decltype(a_k_m_grid_desc);
-    using BKNGridDesc = decltype(b_k_n_grid_desc);
-    using CMNGridDesc = decltype(c_m_n_grid_desc);
-
-    using AGridIteratorHacks = decltype(
-        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{}),
-                   make_tuple(Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{})) );
-
-    using BGridIteratorHacks = decltype(
-        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0>{}),
-                   make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0>{})) );
-
-    using CGridIteratorHacks = decltype(
-        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 1, 0, 0>{},
-                              Sequence<0, 0, 1, 0, 0>{},
-                              Sequence<0, 0, 1, 0, 0>{}),
-                   make_tuple(Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 2, 0, 0>{},
-                              Sequence<0, 0, 2, 0, 0>{},
-                              Sequence<0, 0, 2, 0, 0>{})) );
-
-    using AGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0>;
-    using BGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0>;
-
-    using GridwiseGemm = GridwiseDynamicGemm_km_kn_mn_v1r2<BlockSize,
-                                          FloatAB,
-                                          FloatAcc,
-                                          FloatC,
-                                          InMemoryDataOperation::Set,  /* ToDo tunable */ 
-                                          AKMGridDesc,
-                                          BKNGridDesc,
-                                          CMNGridDesc,
-                                          MPerBlock,
-                                          NPerBlock,
-                                          KPerBlock,
-                                          M1PerThread,
-                                          N1PerThread,
-                                          KPerThread,
-                                          M1N1ThreadClusterM10,
-                                          M1N1ThreadClusterN10,
-                                          M1N1ThreadClusterM11,
-                                          M1N1ThreadClusterN11,
-                                          ABlockTransferThreadSliceLengths_K_M0_M1,
-                                          ABlockTransferThreadClusterLengths_K_M0_M1,
-                                          ABlockTransferThreadClusterArrangeOrder,
-                                          ABlockTransferSrcAccessOrder,
-                                          ABlockTransferSrcVectorDim,
-                                          ABlockTransferSrcScalarPerVector,
-                                          ABlockTransferDstScalarPerVector_M1,
-                                          AThreadTransferSrcResetCoordinateAfterRun,
-                                          BBlockTransferThreadSliceLengths_K_N0_N1,
-                                          BBlockTransferThreadClusterLengths_K_N0_N1,
-                                          BBlockTransferThreadClusterArrangeOrder,
-                                          BBlockTransferSrcAccessOrder,
-                                          BBlockTransferSrcVectorDim,
-                                          BBlockTransferSrcScalarPerVector,
-                                          BBlockTransferDstScalarPerVector_N1,
-                                          BThreadTransferSrcResetCoordinateAfterRun,
-                                          CThreadTransferSrcDstAccessOrder,
-                                          CThreadTransferSrcDstVectorDim,
-                                          CThreadTransferDstScalarPerVector,
-                                          AGridIteratorHacks,
-                                          BGridIteratorHacks,
-                                          CGridIteratorHacks,
-                                          AGridMoveSliceWindowIteratorHacks,
-                                          BGridMoveSliceWindowIteratorHacks>;
-
-    auto a_k_m0_m1_grid_desc = GridwiseGemm::MakeAKM0M1GridDescriptor(a_k_m_grid_desc);
-    auto b_k_n0_n1_grid_desc = GridwiseGemm::MakeBKN0N1GridDescriptor(b_k_n_grid_desc);
-    auto c_m0_m10_m11_n0_n10_n11_grid_desc = GridwiseGemm::MakeCM0M10M11N0N10N11GridDescriptor(c_m_n_grid_desc);
-    auto c_blockid_to_m0_n0_block_cluster_adaptor = GridwiseGemm::MakeCBlockIdToM0N0BlockClusterAdaptor(c_m_n_grid_desc);
+    auto a_k_m_grid_desc = descs[I0];
+    auto b_k_n_grid_desc = descs[I1];
+    auto c_m_n_grid_desc = descs[I2];
 
     if ( hipThreadIdx_x == 0 ) {
-        *static_cast<decltype(a_k_m0_m1_grid_desc)*>(p_a_k_m0_m1_grid_desc) = a_k_m0_m1_grid_desc; 
-        *static_cast<decltype(b_k_n0_n1_grid_desc)*>(p_b_k_n0_n1_grid_desc) = b_k_n0_n1_grid_desc;
-        *static_cast<decltype(c_m0_m10_m11_n0_n10_n11_grid_desc)*>(p_c_m0_m10_m11_n0_n10_n11_grid_desc) = c_m0_m10_m11_n0_n10_n11_grid_desc; 
-        *static_cast<decltype(c_blockid_to_m0_n0_block_cluster_adaptor)*>(p_c_blockid_to_m0_n0_block_cluster_adaptor) = c_blockid_to_m0_n0_block_cluster_adaptor; 
+        *static_cast<decltype(a_k_m_grid_desc)*>(p_a_k_m_grid_desc) = a_k_m_grid_desc; 
+        *static_cast<decltype(b_k_n_grid_desc)*>(p_b_k_n_grid_desc) = b_k_n_grid_desc;
+        *static_cast<decltype(c_m_n_grid_desc)*>(p_c_m_n_grid_desc) = c_m_n_grid_desc; 
     }; 
 }; 
 
@@ -178,7 +90,7 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
         int convStrideH, int convStrideW, int convDilationY, int convDilationX, 
         int leftPadH, int leftPadW, int rightPadH, int rightPadW,	
         const void* p_a_grid, const void* p_b_grid, void* p_c_grid,
-	const void* p_a_k_m0_m1_grid_desc, const void* p_b_k_n0_n1_grid_desc, const void* p_c_m0_m10_m11_n0_n10_n11_grid_desc, const void* p_c_blockid_to_m0_n0_block_cluster_adaptor)
+	const void* p_a_k_m_grid_desc, const void* p_b_k_n_grid_desc, const void* p_c_m_n_grid_desc)
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -199,15 +111,15 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
                                                                                        make_tuple(leftPadH, leftPadW),
                                                                                        make_tuple(rightPadH, rightPadW));
 
-    const auto a_k_m_grid_desc = descs[I0];
-    const auto b_k_n_grid_desc = descs[I1];
-    const auto c_m_n_grid_desc = descs[I2];
+    using AKMGridDesc = std::remove_reference<decltype(descs[I0])>::type; 
+    using BKNGridDesc = std::remove_reference<decltype(descs[I1])>::type; 
+    using CMNGridDesc = std::remove_reference<decltype(descs[I2])>::type; 
+
+    const auto a_k_m_grid_desc = *static_cast<AKMGridDesc *>(p_a_k_m_grid_desc);  
+    const auto b_k_n_grid_desc = *static_cast<BKNGridDesc *>(p_b_k_n_grid_desc);
+    const auto c_m_n_grid_desc = *static_cast<CMNGridDesc *>(p_c_m_n_grid_desc); 
 
     const auto K = a_k_m_grid_desc.GetLength(I0);
-
-    using AKMGridDesc = decltype(a_k_m_grid_desc); 
-    using BKNGridDesc = decltype(b_k_n_grid_desc); 
-    using CMNGridDesc = decltype(c_m_n_grid_desc); 
 
     using AGridIteratorHacks = decltype(
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
@@ -287,15 +199,15 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
                                           AGridMoveSliceWindowIteratorHacks,
                                           BGridMoveSliceWindowIteratorHacks>;
 
-    using AKM0M1GridDesc = decltype( GridwiseGemm::MakeAKM0M1GridDescriptor(a_k_m_grid_desc) );
-    using BKN0N1GridDesc = decltype( GridwiseGemm::MakeBKN0N1GridDescriptor(b_k_n_grid_desc) ); 
-    using CM0M10M11N0N10N11GridDesc = decltype( GridwiseGemm::MakeCM0M10M11N0N10N11GridDescriptor(c_m_n_grid_desc) );
-    using CBlockIdToM0N0BlockClusterAdaptor = decltype( GridwiseGemm::MakeCBlockIdToM0N0BlockClusterAdaptor(c_m_n_grid_desc) ); 
+    const auto a_k_m0_m1_grid_desc = GridwiseGemm::MakeAKM0M1GridDescriptor(a_k_m_grid_desc);
+    const auto b_k_n0_n1_grid_desc = GridwiseGemm::MakeBKN0N1GridDescriptor(b_k_n_grid_desc); 
+    const auto c_m0_m10_m11_n0_n10_n11_grid_desc = GridwiseGemm::MakeCM0M10M11N0N10N11GridDescriptor(c_m_n_grid_desc);
+    const auto c_blockid_to_m0_n0_block_cluster_adaptor = GridwiseGemm::MakeCBlockIdToM0N0BlockClusterAdaptor(c_m_n_grid_desc); 
 
-    const auto a_k_m0_m1_grid_desc = *static_cast<const AKM0M1GridDesc*>(p_a_k_m0_m1_grid_desc); 
-    const auto b_k_n0_n1_grid_desc = *static_cast<const BKN0N1GridDesc*>(p_b_k_n0_n1_grid_desc); 
-    const auto c_m0_m10_m11_n0_n10_n11_grid_desc = *static_cast<const CM0M10M11N0N10N11GridDesc*>(p_c_m0_m10_m11_n0_n10_n11_grid_desc); 
-    const auto c_blockid_to_m0_n0_block_cluster_adaptor = *static_cast<const CBlockIdToM0N0BlockClusterAdaptor*>(p_c_blockid_to_m0_n0_block_cluster_adaptor); 
+    using AKM0M1GridDesc = decltype( a_k_m0_m1_grid_desc );
+    using BKN0N1GridDesc = decltype( b_k_n0_n1_grid_desc ); 
+    using CM0M10M11N0N10N11GridDesc = decltype( c_m0_m10_m11_n0_n10_n11_grid_desc );
+    using CBlockIdToM0N0BlockClusterAdaptor = decltype( c_blockid_to_m0_n0_block_cluster_adaptor ); 
 
     const bool has_main_k_block_loop = GridwiseGemm::CalculateHasMainKBlockLoop(K);
     const bool has_double_tail_k_block_loop = GridwiseGemm::CalculateHasDoubleTailKBlockLoop(K);

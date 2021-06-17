@@ -230,10 +230,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
     // these are workspace buffers that should be expressed to the user by the corresponding workspace API
     DeviceMem workspace_buf(4096); 
 
-    void *a_k_m0_m1_grid_desc_dev_buf = workspace_buf.GetDeviceBuffer();
-    void *b_k_n0_n1_grid_desc_dev_buf = static_cast<void*>( static_cast<unsigned char *>(workspace_buf.GetDeviceBuffer()) + 1024 );
-    void *c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf = static_cast<void*>( static_cast<unsigned char *>(workspace_buf.GetDeviceBuffer()) + 2048 );
-    void *c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf = static_cast<void*>( static_cast<unsigned char *>(workspace_buf.GetDeviceBuffer()) + 3072 );
+    void *a_k_m_grid_desc_dev_buf = workspace_buf.GetDeviceBuffer();
+    void *b_k_n_grid_desc_dev_buf = static_cast<void*>( static_cast<unsigned char *>(workspace_buf.GetDeviceBuffer()) + 1024 );
+    void *c_m_n_grid_desc_dev_buf = static_cast<void*>( static_cast<unsigned char *>(workspace_buf.GetDeviceBuffer()) + 2048 );
 
     const std::vector<size_t> vld = {static_cast<size_t>(tunable->BlockSize), 1, 1};
     const std::vector<size_t> vgd1 = {static_cast<size_t>(tunable->BlockSize), 1, 1};
@@ -265,10 +264,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
                           static_cast<int>(wei_kcyx_lengths[0]), static_cast<int>(wei_kcyx_lengths[2]), static_cast<int>(wei_kcyx_lengths[3]),
                           conv_strides[I0], conv_strides[I1], conv_dilations[I0], conv_dilations[I1],
                           in_left_pads[I0], in_left_pads[I1], in_right_pads[I0], in_right_pads[I1],
-                          a_k_m0_m1_grid_desc_dev_buf,
-                          b_k_n0_n1_grid_desc_dev_buf,
-                          c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf,
-                          c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf
+                          a_k_m_grid_desc_dev_buf,
+                          b_k_n_grid_desc_dev_buf,
+                          c_m_n_grid_desc_dev_buf
                           );
          timer1.End(); 	
 
@@ -284,10 +282,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
                           static_cast<const void *>(wei_k_c_y_x_dev_buf.GetDeviceBuffer()),
                           static_cast<const void *>(in_n_c_hi_wi_dev_buf.GetDeviceBuffer()),
                           static_cast<const void *>(out_n_k_ho_wo_dev_buf.GetDeviceBuffer()),
-                          static_cast<const void *>(a_k_m0_m1_grid_desc_dev_buf),
-                          static_cast<const void *>(b_k_n0_n1_grid_desc_dev_buf),
-                          static_cast<const void *>(c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf),
-			  static_cast<const void *>(c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf)
+                          static_cast<const void *>(a_k_m_grid_desc_dev_buf),
+                          static_cast<const void *>(b_k_n_grid_desc_dev_buf),
+                          static_cast<const void *>(c_m_n_grid_desc_dev_buf)
                           );
          timer2.End(); 
 			  
