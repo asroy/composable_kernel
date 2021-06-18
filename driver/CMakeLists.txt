@@ -4,7 +4,8 @@ set(CMAKE_CXX_COMPILER /opt/rocm/llvm/bin/clang++)
 ## for online-compiling of HIP kernels
 set(OLC_HIP_COMPILER ${CMAKE_CXX_COMPILER} CACHE PATH "")
 
-set(CMAKE_CXX_FLAGS "-gline-tables-only -save-temps=/tmp/ -ftemplate-backtrace-limit=0 -fPIC")
+## reset to avoid the C++ options from the parent project
+set(CMAKE_CXX_FLAGS "")
 message("Compiling options for library and kernels: ${CMAKE_CXX_FLAGS}")
 
 # look for and register clang-offload-bundler
