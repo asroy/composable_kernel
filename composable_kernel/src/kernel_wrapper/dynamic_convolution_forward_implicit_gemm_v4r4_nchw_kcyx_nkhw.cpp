@@ -52,7 +52,7 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
         int n, int c, int hi, int wi, int k, int y, int x,
         int convStrideH, int convStrideW, int convDilationY, int convDilationX,
         int leftPadH, int leftPadW, int rightPadH, int rightPadW,
-        void* p_a_k_m0_m1_grid_desc, void* p_b_k_n0_n1_grid_desc, void* p_c_m0_m10_m11_n0_n10_n11_grid_desc, void* p_c_blockid_to_m0_n0_block_cluster_adaptor)
+        void* p_a_k_m0_m1_grid_desc, void* p_b_k_n0_n1_grid_desc, void* p_c_m0_m10_m11_n0_n10_n11_grid_desc, void* p_c_blockid_to_m0_n0_block_cluster_adaptor, void *p_gemm_k_val)
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -80,6 +80,8 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
     using AKMGridDesc = decltype(a_k_m_grid_desc);
     using BKNGridDesc = decltype(b_k_n_grid_desc);
     using CMNGridDesc = decltype(c_m_n_grid_desc);
+
+    const auto K = a_k_m_grid_desc.GetLength(I0);
 
     using AGridIteratorHacks = decltype(
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
@@ -169,6 +171,7 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
         *static_cast<decltype(b_k_n0_n1_grid_desc)*>(p_b_k_n0_n1_grid_desc) = b_k_n0_n1_grid_desc;
         *static_cast<decltype(c_m0_m10_m11_n0_n10_n11_grid_desc)*>(p_c_m0_m10_m11_n0_n10_n11_grid_desc) = c_m0_m10_m11_n0_n10_n11_grid_desc; 
         *static_cast<decltype(c_blockid_to_m0_n0_block_cluster_adaptor)*>(p_c_blockid_to_m0_n0_block_cluster_adaptor) = c_blockid_to_m0_n0_block_cluster_adaptor; 
+        *static_cast<int *>(p_gemm_k_val) = K; 
     }; 
 }; 
 
@@ -178,32 +181,28 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
         int convStrideH, int convStrideW, int convDilationY, int convDilationX, 
         int leftPadH, int leftPadW, int rightPadH, int rightPadW,	
         const void* p_a_grid, const void* p_b_grid, void* p_c_grid,
-	const void* p_a_k_m0_m1_grid_desc, const void* p_b_k_n0_n1_grid_desc, const void* p_c_m0_m10_m11_n0_n10_n11_grid_desc, const void* p_c_blockid_to_m0_n0_block_cluster_adaptor)
+	const void* p_a_k_m0_m1_grid_desc, const void* p_b_k_n0_n1_grid_desc, const void* p_c_m0_m10_m11_n0_n10_n11_grid_desc, const void* p_c_blockid_to_m0_n0_block_cluster_adaptor,
+	const void *p_gemm_k_val)
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
     constexpr auto I2 = Number<2>{};
 
-    const index_t ho = (hi + leftPadH + rightPadH - convDilationY * (y - 1) - 1) / convStrideH + 1;
-    const index_t wo = (wi + leftPadW + rightPadW - convDilationX * (x - 1) - 1) / convStrideW + 1;
+    constexpr auto in_n_c_hi_wi_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(2, 2, 2, 2));
+    constexpr auto wei_k_c_y_x_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(2, 2, 2, 2));
+    constexpr auto out_n_k_ho_wo_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(2, 2, 2, 2));
 
-    const auto in_n_c_hi_wi_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(n, c, hi, wi));
-    const auto wei_k_c_y_x_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(k, c, y, x));
-    const auto out_n_k_ho_wo_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(n, k, ho, wo));
-
-    const auto descs = transform_forward_convolution_into_gemm_v4r4_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
+    constexpr auto descs = transform_forward_convolution_into_gemm_v4r4_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
                                                                                        in_n_c_hi_wi_desc,
                                                                                        out_n_k_ho_wo_desc,
-                                                                                       make_tuple(convStrideH, convStrideW),
-                                                                                       make_tuple(convDilationY, convDilationX),
-                                                                                       make_tuple(leftPadH, leftPadW),
-                                                                                       make_tuple(rightPadH, rightPadW));
+                                                                                       make_tuple(2, 2),
+                                                                                       make_tuple(2, 2),
+                                                                                       make_tuple(2, 2),
+                                                                                       make_tuple(2, 2));
 
-    const auto a_k_m_grid_desc = descs[I0];
-    const auto b_k_n_grid_desc = descs[I1];
-    const auto c_m_n_grid_desc = descs[I2];
-
-    const auto K = a_k_m_grid_desc.GetLength(I0);
+    constexpr auto a_k_m_grid_desc = descs[I0];
+    constexpr auto b_k_n_grid_desc = descs[I1];
+    constexpr auto c_m_n_grid_desc = descs[I2];
 
     using AKMGridDesc = decltype(a_k_m_grid_desc); 
     using BKNGridDesc = decltype(b_k_n_grid_desc); 
@@ -296,6 +295,7 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
     const auto b_k_n0_n1_grid_desc = *static_cast<const BKN0N1GridDesc*>(p_b_k_n0_n1_grid_desc); 
     const auto c_m0_m10_m11_n0_n10_n11_grid_desc = *static_cast<const CM0M10M11N0N10N11GridDesc*>(p_c_m0_m10_m11_n0_n10_n11_grid_desc); 
     const auto c_blockid_to_m0_n0_block_cluster_adaptor = *static_cast<const CBlockIdToM0N0BlockClusterAdaptor*>(p_c_blockid_to_m0_n0_block_cluster_adaptor); 
+    const int K = *static_cast<const int *>(p_gemm_k_val); 
 
     const bool has_main_k_block_loop = GridwiseGemm::CalculateHasMainKBlockLoop(K);
     const bool has_double_tail_k_block_loop = GridwiseGemm::CalculateHasDoubleTailKBlockLoop(K);
