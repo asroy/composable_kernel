@@ -48,11 +48,14 @@ using CThreadTransferSrcDstAccessOrder = Sequence<CK_PARAM_CThreadTransferSrcDst
 constexpr index_t CThreadTransferSrcDstVectorDim = CK_PARAM_CThreadTransferSrcDstVectorDim;
 constexpr index_t CThreadTransferDstScalarPerVector = CK_PARAM_CThreadTransferDstScalarPerVector; 
 
+constexpr bool hasMainKBlockLoop = static_cast<bool>(CK_PARAM_HAS_MAIN_KBLOCK_LOOP); 
+constexpr bool hasDoubleTailKBlockLoop = static_cast<bool>(CK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP);  
+
 extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_prepare(
         int n, int c, int hi, int wi, int k, int y, int x,
         int convStrideH, int convStrideW, int convDilationY, int convDilationX,
         int leftPadH, int leftPadW, int rightPadH, int rightPadW,
-        void* p_a_k_m0_m1_grid_desc, void* p_b_k_n0_n1_grid_desc, void* p_c_m0_m10_m11_n0_n10_n11_grid_desc, void* p_c_blockid_to_m0_n0_block_cluster_adaptor, void *p_gemm_k_val)
+        void* p_a_k_m0_m1_grid_desc, void* p_b_k_n0_n1_grid_desc, void* p_c_m0_m10_m11_n0_n10_n11_grid_desc, void* p_c_blockid_to_m0_n0_block_cluster_adaptor)
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -80,8 +83,6 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
     using AKMGridDesc = decltype(a_k_m_grid_desc);
     using BKNGridDesc = decltype(b_k_n_grid_desc);
     using CMNGridDesc = decltype(c_m_n_grid_desc);
-
-    const auto K = a_k_m_grid_desc.GetLength(I0);
 
     using AGridIteratorHacks = decltype(
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
@@ -171,7 +172,6 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
         *static_cast<decltype(b_k_n0_n1_grid_desc)*>(p_b_k_n0_n1_grid_desc) = b_k_n0_n1_grid_desc;
         *static_cast<decltype(c_m0_m10_m11_n0_n10_n11_grid_desc)*>(p_c_m0_m10_m11_n0_n10_n11_grid_desc) = c_m0_m10_m11_n0_n10_n11_grid_desc; 
         *static_cast<decltype(c_blockid_to_m0_n0_block_cluster_adaptor)*>(p_c_blockid_to_m0_n0_block_cluster_adaptor) = c_blockid_to_m0_n0_block_cluster_adaptor; 
-        *static_cast<int *>(p_gemm_k_val) = K; 
     }; 
 }; 
 
@@ -181,24 +181,24 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
         int convStrideH, int convStrideW, int convDilationY, int convDilationX, 
         int leftPadH, int leftPadW, int rightPadH, int rightPadW,	
         const void* p_a_grid, const void* p_b_grid, void* p_c_grid,
-	const void* p_a_k_m0_m1_grid_desc, const void* p_b_k_n0_n1_grid_desc, const void* p_c_m0_m10_m11_n0_n10_n11_grid_desc, const void* p_c_blockid_to_m0_n0_block_cluster_adaptor,
-	const void *p_gemm_k_val)
+	const void __CONSTANT__ *p_a_k_m0_m1_grid_desc, const void __CONSTANT__ *p_b_k_n0_n1_grid_desc, 
+	const void __CONSTANT__ *p_c_m0_m10_m11_n0_n10_n11_grid_desc, const void __CONSTANT__ *p_c_blockid_to_m0_n0_block_cluster_adaptor)
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
     constexpr auto I2 = Number<2>{};
 
-    constexpr auto in_n_c_hi_wi_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(2, 2, 2, 2));
-    constexpr auto wei_k_c_y_x_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(2, 2, 2, 2));
-    constexpr auto out_n_k_ho_wo_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(2, 2, 2, 2));
+    constexpr auto in_n_c_hi_wi_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(64, 4, 35, 35));
+    constexpr auto wei_k_c_y_x_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(8, 4, 3, 3));
+    constexpr auto out_n_k_ho_wo_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(64, 8, 18, 18));
 
     constexpr auto descs = transform_forward_convolution_into_gemm_v4r4_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
                                                                                        in_n_c_hi_wi_desc,
                                                                                        out_n_k_ho_wo_desc,
                                                                                        make_tuple(2, 2),
-                                                                                       make_tuple(2, 2),
-                                                                                       make_tuple(2, 2),
-                                                                                       make_tuple(2, 2));
+                                                                                       make_tuple(1, 1),
+                                                                                       make_tuple(1, 1),
+                                                                                       make_tuple(1, 1));
 
     constexpr auto a_k_m_grid_desc = descs[I0];
     constexpr auto b_k_n_grid_desc = descs[I1];
@@ -291,62 +291,19 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
     using CM0M10M11N0N10N11GridDesc = decltype( GridwiseGemm::MakeCM0M10M11N0N10N11GridDescriptor(c_m_n_grid_desc) );
     using CBlockIdToM0N0BlockClusterAdaptor = decltype( GridwiseGemm::MakeCBlockIdToM0N0BlockClusterAdaptor(c_m_n_grid_desc) ); 
 
-    const auto a_k_m0_m1_grid_desc = *static_cast<const AKM0M1GridDesc*>(p_a_k_m0_m1_grid_desc); 
-    const auto b_k_n0_n1_grid_desc = *static_cast<const BKN0N1GridDesc*>(p_b_k_n0_n1_grid_desc); 
-    const auto c_m0_m10_m11_n0_n10_n11_grid_desc = *static_cast<const CM0M10M11N0N10N11GridDesc*>(p_c_m0_m10_m11_n0_n10_n11_grid_desc); 
-    const auto c_blockid_to_m0_n0_block_cluster_adaptor = *static_cast<const CBlockIdToM0N0BlockClusterAdaptor*>(p_c_blockid_to_m0_n0_block_cluster_adaptor); 
-    const int K = *static_cast<const int *>(p_gemm_k_val); 
+    const auto a_k_m0_m1_grid_desc = *reinterpret_cast<const AKM0M1GridDesc *>((const void*)p_a_k_m0_m1_grid_desc); 
+    const auto b_k_n0_n1_grid_desc = *reinterpret_cast<const BKN0N1GridDesc *>((const void*)p_b_k_n0_n1_grid_desc); 
+    const auto c_m0_m10_m11_n0_n10_n11_grid_desc = *reinterpret_cast<const CM0M10M11N0N10N11GridDesc *>((const void*)p_c_m0_m10_m11_n0_n10_n11_grid_desc); 
+    const auto c_blockid_to_m0_n0_block_cluster_adaptor = *reinterpret_cast<const CBlockIdToM0N0BlockClusterAdaptor *>((const void*)p_c_blockid_to_m0_n0_block_cluster_adaptor); 
 
-    const bool has_main_k_block_loop = GridwiseGemm::CalculateHasMainKBlockLoop(K);
-    const bool has_double_tail_k_block_loop = GridwiseGemm::CalculateHasDoubleTailKBlockLoop(K);
+    const auto kernel = kernel_dynamic_gemm_v1r2<GridwiseGemm, FloatAB, FloatC,
+                                                 remove_reference_t<AKM0M1GridDesc>,
+                                                 remove_reference_t<BKN0N1GridDesc>,
+                                                 remove_reference_t<CM0M10M11N0N10N11GridDesc>,
+                                                 remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
+                                                 hasMainKBlockLoop, hasDoubleTailKBlockLoop>;
 
-    if(has_main_k_block_loop && has_double_tail_k_block_loop)
-    {
-        const auto kernel = kernel_dynamic_gemm_v1r2<GridwiseGemm, FloatAB, FloatC,
-                                                     remove_reference_t<AKM0M1GridDesc>,
-                                                     remove_reference_t<BKN0N1GridDesc>,
-                                                     remove_reference_t<CM0M10M11N0N10N11GridDesc>,
-                                                     remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
-                                                     true, true>;
-
-        kernel(static_cast<const FloatAB*>(p_a_grid), static_cast<const FloatAB*>(p_b_grid), static_cast<FloatC*>(p_c_grid),
-			   a_k_m0_m1_grid_desc, b_k_n0_n1_grid_desc, c_m0_m10_m11_n0_n10_n11_grid_desc, c_blockid_to_m0_n0_block_cluster_adaptor);
-    }
-    else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
-    {
-        const auto kernel = kernel_dynamic_gemm_v1r2<GridwiseGemm, FloatAB, FloatC,
-                                                     remove_reference_t<AKM0M1GridDesc>,
-                                                     remove_reference_t<BKN0N1GridDesc>,
-                                                     remove_reference_t<CM0M10M11N0N10N11GridDesc>,
-                                                     remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
-                                                     true, false>;
-
-        kernel(static_cast<const FloatAB*>(p_a_grid), static_cast<const FloatAB*>(p_b_grid), static_cast<FloatC*>(p_c_grid),
-                           a_k_m0_m1_grid_desc, b_k_n0_n1_grid_desc, c_m0_m10_m11_n0_n10_n11_grid_desc, c_blockid_to_m0_n0_block_cluster_adaptor);
-    }
-    else if(!has_main_k_block_loop && has_double_tail_k_block_loop)
-    {
-        const auto kernel = kernel_dynamic_gemm_v1r2<GridwiseGemm, FloatAB, FloatC,
-                                                     remove_reference_t<AKM0M1GridDesc>,
-                                                     remove_reference_t<BKN0N1GridDesc>,
-                                                     remove_reference_t<CM0M10M11N0N10N11GridDesc>,
-                                                     remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
-                                                     false, true>;
-
-        kernel(static_cast<const FloatAB*>(p_a_grid), static_cast<const FloatAB*>(p_b_grid), static_cast<FloatC*>(p_c_grid),
-                           a_k_m0_m1_grid_desc, b_k_n0_n1_grid_desc, c_m0_m10_m11_n0_n10_n11_grid_desc, c_blockid_to_m0_n0_block_cluster_adaptor);
-    }
-    else
-    {
-        const auto kernel = kernel_dynamic_gemm_v1r2<GridwiseGemm, FloatAB, FloatC,
-                                                     remove_reference_t<AKM0M1GridDesc>,
-                                                     remove_reference_t<BKN0N1GridDesc>,
-                                                     remove_reference_t<CM0M10M11N0N10N11GridDesc>,
-                                                     remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
-                                                     false, false>;
-
-        kernel(static_cast<const FloatAB*>(p_a_grid), static_cast<const FloatAB*>(p_b_grid), static_cast<FloatC*>(p_c_grid),
-                           a_k_m0_m1_grid_desc, b_k_n0_n1_grid_desc, c_m0_m10_m11_n0_n10_n11_grid_desc, c_blockid_to_m0_n0_block_cluster_adaptor);
-    }
+    kernel(static_cast<const FloatAB*>(p_a_grid), static_cast<const FloatAB*>(p_b_grid), static_cast<FloatC*>(p_c_grid),
+            a_k_m0_m1_grid_desc, b_k_n0_n1_grid_desc, c_m0_m10_m11_n0_n10_n11_grid_desc, c_blockid_to_m0_n0_block_cluster_adaptor);
 };
 

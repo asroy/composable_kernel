@@ -191,8 +191,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
     using namespace detail_dyn_conv_fwd_v4r4_nchw_kcyx_nkhw;
     using size_t = std::size_t;
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////
-    // The follow codes are only used for computing the grid_size 
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // The follow codes are only used for computing the grid_size, hasMainKBlockLoop, hasDoubleTailKBlockLoop
     
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -210,13 +210,16 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
                                                                         conv_dilations,
                                                                         in_left_pads,
                                                                         in_right_pads);
-
+    const auto a_k_m_grid_desc = descs[I0];
     const auto c_m_n_grid_desc = descs[I2]; 
     const auto M = c_m_n_grid_desc.GetLength(I0);
     const auto N = c_m_n_grid_desc.GetLength(I1);
+    const auto K = a_k_m_grid_desc.GetLength(I0);
 
     const index_t grid_size = (M / tunable->MPerBlock) * (N / tunable->NPerBlock);
-    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    const bool hasMainKBlockLoop = ((K + tunable->KPerBlock) / (2 * tunable->KPerBlock) > 1 );
+    const bool hasDoubleTailKBlockLoop = ((K / tunable->KPerBlock) % 2 == 0 ); 
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // these buffers are usually provided by the user application
     DeviceMem in_n_c_hi_wi_dev_buf(sizeof(TInWei) * in_n_c_hi_wi.mDesc.GetElementSpace());
@@ -234,7 +237,6 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
     void *b_k_n0_n1_grid_desc_dev_buf = static_cast<void*>( static_cast<unsigned char *>(workspace_buf.GetDeviceBuffer()) + 1024 );
     void *c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf = static_cast<void*>( static_cast<unsigned char *>(workspace_buf.GetDeviceBuffer()) + 2048 );
     void *c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf = static_cast<void*>( static_cast<unsigned char *>(workspace_buf.GetDeviceBuffer()) + 3072 );
-    void *gemm_k_val_buf = static_cast<void*>( static_cast<unsigned char *>(workspace_buf.GetDeviceBuffer()) + 4096 - sizeof(long) );
 
     const std::vector<size_t> vld = {static_cast<size_t>(tunable->BlockSize), 1, 1};
     const std::vector<size_t> vgd1 = {static_cast<size_t>(tunable->BlockSize), 1, 1};
@@ -246,8 +248,11 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
     std::string param = " -std=c++17 "; 
     std::string network_config;
 
-    param += get_definition_string_from_types<TInWei, TAcc, TOut>() + " " + get_definition_string_from_tunable(tunable); 
-    network_config = get_network_config_string_from_types<TInWei, TAcc, TOut>() + "_" + get_network_config_string_from_tunable(tunable); 
+    param += get_definition_string_from_types<TInWei, TAcc, TOut>() + " " + get_definition_string_from_tunable(tunable) + 
+	     " -DCK_PARAM_HAS_MAIN_KBLOCK_LOOP=" + std::to_string(hasMainKBlockLoop) +
+	     " -DCK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP=" + std::to_string(hasDoubleTailKBlockLoop); 
+    network_config = get_network_config_string_from_types<TInWei, TAcc, TOut>() + "_" + get_network_config_string_from_tunable(tunable) +
+	             "_" + std::to_string(hasMainKBlockLoop) + "_" + std::to_string(hasDoubleTailKBlockLoop);
 
     std::vector<float> kernel1_times; 
     std::vector<float> kernel2_times;  
@@ -269,8 +274,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
                           a_k_m0_m1_grid_desc_dev_buf,
                           b_k_n0_n1_grid_desc_dev_buf,
                           c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf,
-                          c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf,
-			  gemm_k_val_buf
+                          c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf
                           );
          timer1.End(); 	
 
@@ -286,11 +290,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
                           static_cast<const void *>(wei_k_c_y_x_dev_buf.GetDeviceBuffer()),
                           static_cast<const void *>(in_n_c_hi_wi_dev_buf.GetDeviceBuffer()),
                           static_cast<const void *>(out_n_k_ho_wo_dev_buf.GetDeviceBuffer()),
-                          static_cast<const void *>(a_k_m0_m1_grid_desc_dev_buf),
-                          static_cast<const void *>(b_k_n0_n1_grid_desc_dev_buf),
-                          static_cast<const void *>(c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf),
-			  static_cast<const void *>(c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf),
-			  static_cast<const void *>(gemm_k_val_buf)
+                          (const void *)(a_k_m0_m1_grid_desc_dev_buf),
+                          (const void *)(b_k_n0_n1_grid_desc_dev_buf),
+                          (const void *)(c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf),
+			  (const void *)(c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf)
                           );
          timer2.End(); 
 			  
