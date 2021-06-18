@@ -52,6 +52,9 @@ using CThreadTransferSrcDstAccessOrder = Sequence<CK_PARAM_CThreadTransferSrcDst
 constexpr index_t CThreadTransferSrcDstVectorDim = CK_PARAM_CThreadTransferSrcDstVectorDim;
 constexpr index_t CThreadTransferDstScalarPerVector = CK_PARAM_CThreadTransferDstScalarPerVector; 
 
+constexpr bool hasMainKBlockLoop = static_cast<bool>(CK_PARAM_HAS_MAIN_KBLOCK_LOOP); 
+constexpr bool hasDoubleTailKBlockLoop = static_cast<bool>(CK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP);  
+
 extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_prepare(
         int n, int c, int hi, int wi, int k, int y, int x,
         int convStrideH, int convStrideW, int convDilationY, int convDilationX,
@@ -193,24 +196,21 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5_nchw_k
     constexpr auto I1 = Number<1>{};
     constexpr auto I2 = Number<2>{};
 
-    const index_t ho = (hi + leftPadH + rightPadH - convDilationY * (y - 1) - 1) / convStrideH + 1;
-    const index_t wo = (wi + leftPadW + rightPadW - convDilationX * (x - 1) - 1) / convStrideW + 1;
+    constexpr auto in_n_c_hi_wi_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(64, 4, 35, 35));
+    constexpr auto wei_k_c_y_x_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(8, 4, 3, 3));
+    constexpr auto out_n_k_ho_wo_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(64, 8, 18, 18));
 
-    const auto in_n_c_hi_wi_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(n, c, hi, wi));
-    const auto wei_k_c_y_x_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(k, c, y, x));
-    const auto out_n_k_ho_wo_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(n, k, ho, wo));
-
-    const auto descs = transform_forward_convolution_into_contraction_v4r5_nchw_kcyx_nkhw_pad<N0>(wei_k_c_y_x_desc,
+    constexpr auto descs = transform_forward_convolution_into_contraction_v4r5_nchw_kcyx_nkhw_pad<N0>(wei_k_c_y_x_desc,
                                                                                        in_n_c_hi_wi_desc,
                                                                                        out_n_k_ho_wo_desc,
-                                                                                       make_tuple(convStrideH, convStrideW),
-                                                                                       make_tuple(convDilationY, convDilationX),
-                                                                                       make_tuple(leftPadH, leftPadW),
-                                                                                       make_tuple(rightPadH, rightPadW));
+                                                                                       make_tuple(2, 2),
+                                                                                       make_tuple(1, 1),
+                                                                                       make_tuple(1, 1),
+                                                                                       make_tuple(1, 1));
 
-    const auto a_gk_gm0_gm1_grid_desc = descs[I0];
-    const auto b_gk_gn0_gn1_grid_desc = descs[I1];
-    const auto c_gm0_gm1_gn0_gn1_grid_desc = descs[I2];
+    constexpr auto a_gk_gm0_gm1_grid_desc = descs[I0];
+    constexpr auto b_gk_gn0_gn1_grid_desc = descs[I1];
+    constexpr auto c_gm0_gm1_gn0_gn1_grid_desc = descs[I2];
 
     using AGKGM0GM1GridDesc = decltype(a_gk_gm0_gm1_grid_desc);
     using BGKGN0GN1GridDesc = decltype(b_gk_gn0_gn1_grid_desc);
@@ -297,80 +297,26 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5_nchw_k
         AGridMoveSliceWindowIteratorHacks,
         BGridMoveSliceWindowIteratorHacks>;    
 
-    const auto K = a_gk_gm0_gm1_grid_desc.GetLength(I0);
-
     using AGKGM0GM10GM11GridDesc = decltype(GridwiseContraction::MakeAGKGM0GM10GM11GridDescriptor(a_gk_gm0_gm1_grid_desc));
     using BGKGN0GN10GN11GridDesc = decltype(GridwiseContraction::MakeBGKGN0GN10GN11GridDescriptor(b_gk_gn0_gn1_grid_desc));
     using CGM10BM0BM1GN10BN0BN1GridDesc = decltype(GridwiseContraction::MakeCGM10BM0BM1GN10BN0BN1GridDescriptor(c_gm0_gm1_gn0_gn1_grid_desc));
     using CBlockIdToGM10GN10BlockClusterAdaptor = decltype(GridwiseContraction::MakeCBlockIdToGM10GN10BlockClusterAdaptor(c_gm0_gm1_gn0_gn1_grid_desc));
 
-    const auto a_gk_gm0_gm10_gm11_grid_desc = *static_cast<const AGKGM0GM10GM11GridDesc *>(p_a_gk_gm0_gm10_gm11_grid_desc); 
-    const auto b_gk_gn0_gn10_gn11_grid_desc = *static_cast<const BGKGN0GN10GN11GridDesc *>(p_b_gk_gn0_gn10_gn11_grid_desc);
-    const auto c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc = *static_cast<const CGM10BM0BM1GN10BN0BN1GridDesc *>(p_c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc);
-    const auto c_blockid_to_gm10_gn10_block_cluster_adaptor = *static_cast<const CBlockIdToGM10GN10BlockClusterAdaptor *>(p_c_blockid_to_gm10_gn10_block_cluster_adaptor); 
+    const auto a_gk_gm0_gm10_gm11_grid_desc = *reinterpret_cast<const AGKGM0GM10GM11GridDesc *>((const void*)p_a_gk_gm0_gm10_gm11_grid_desc); 
+    const auto b_gk_gn0_gn10_gn11_grid_desc = *reinterpret_cast<const BGKGN0GN10GN11GridDesc *>((const void*)p_b_gk_gn0_gn10_gn11_grid_desc);
+    const auto c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc = *reinterpret_cast<const CGM10BM0BM1GN10BN0BN1GridDesc *>((const void*)p_c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc);
+    const auto c_blockid_to_gm10_gn10_block_cluster_adaptor = *reinterpret_cast<const CBlockIdToGM10GN10BlockClusterAdaptor *>((const void*)p_c_blockid_to_gm10_gn10_block_cluster_adaptor); 
 
-    const bool has_main_k_block_loop = GridwiseContraction::CalculateHasMainKBlockLoop(K);
-    const bool has_double_tail_k_block_loop = GridwiseContraction::CalculateHasDoubleTailKBlockLoop(K);
+    const auto kernel = kernel_dynamic_contraction_v1r1<GridwiseContraction,
+                                                        FloatAB,
+                                                        FloatC,
+                                                        remove_reference_t<AGKGM0GM10GM11GridDesc>,
+                                                        remove_reference_t<BGKGN0GN10GN11GridDesc>,
+                                                        remove_reference_t<CGM10BM0BM1GN10BN0BN1GridDesc>,
+                                                        remove_reference_t<CBlockIdToGM10GN10BlockClusterAdaptor>,
+                                                        hasMainKBlockLoop, hasDoubleTailKBlockLoop>;
 
-    if(has_main_k_block_loop && has_double_tail_k_block_loop)
-    {
-        const auto kernel = kernel_dynamic_contraction_v1r1<GridwiseContraction,
-                                                            FloatAB,
-                                                            FloatC,
-                                                            remove_reference_t<AGKGM0GM10GM11GridDesc>,
-                                                            remove_reference_t<BGKGN0GN10GN11GridDesc>,
-                                                            remove_reference_t<CGM10BM0BM1GN10BN0BN1GridDesc>,
-                                                            remove_reference_t<CBlockIdToGM10GN10BlockClusterAdaptor>,
-                                                            true,
-                                                            true>;
-
-        kernel(static_cast<const FloatAB*>(p_a_grid), static_cast<const FloatAB*>(p_b_grid), static_cast<FloatC*>(p_c_grid),
-			   a_gk_gm0_gm10_gm11_grid_desc, b_gk_gn0_gn10_gn11_grid_desc, c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc, c_blockid_to_gm10_gn10_block_cluster_adaptor);
-    }
-    else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
-    {
-        const auto kernel = kernel_dynamic_contraction_v1r1<GridwiseContraction,
-                                                            FloatAB,
-                                                            FloatC,
-                                                            remove_reference_t<AGKGM0GM10GM11GridDesc>,
-                                                            remove_reference_t<BGKGN0GN10GN11GridDesc>,
-                                                            remove_reference_t<CGM10BM0BM1GN10BN0BN1GridDesc>,
-                                                            remove_reference_t<CBlockIdToGM10GN10BlockClusterAdaptor>,
-                                                            true,
-                                                            false>;
-
-        kernel(static_cast<const FloatAB*>(p_a_grid), static_cast<const FloatAB*>(p_b_grid), static_cast<FloatC*>(p_c_grid),
-                           a_gk_gm0_gm10_gm11_grid_desc, b_gk_gn0_gn10_gn11_grid_desc, c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc, c_blockid_to_gm10_gn10_block_cluster_adaptor);
-    }
-    else if(!has_main_k_block_loop && has_double_tail_k_block_loop)
-    {
-        const auto kernel = kernel_dynamic_contraction_v1r1<GridwiseContraction,
-                                                            FloatAB,
-                                                            FloatC,
-                                                            remove_reference_t<AGKGM0GM10GM11GridDesc>,
-                                                            remove_reference_t<BGKGN0GN10GN11GridDesc>,
-                                                            remove_reference_t<CGM10BM0BM1GN10BN0BN1GridDesc>,
-                                                            remove_reference_t<CBlockIdToGM10GN10BlockClusterAdaptor>,
-                                                            false,
-                                                            true>;
-
-        kernel(static_cast<const FloatAB*>(p_a_grid), static_cast<const FloatAB*>(p_b_grid), static_cast<FloatC*>(p_c_grid),
-                           a_gk_gm0_gm10_gm11_grid_desc, b_gk_gn0_gn10_gn11_grid_desc, c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc, c_blockid_to_gm10_gn10_block_cluster_adaptor);
-    }
-    else
-    {
-        const auto kernel = kernel_dynamic_contraction_v1r1<GridwiseContraction,
-                                                            FloatAB,
-                                                            FloatC,
-                                                            remove_reference_t<AGKGM0GM10GM11GridDesc>,
-                                                            remove_reference_t<BGKGN0GN10GN11GridDesc>,
-                                                            remove_reference_t<CGM10BM0BM1GN10BN0BN1GridDesc>,
-                                                            remove_reference_t<CBlockIdToGM10GN10BlockClusterAdaptor>,
-                                                            false,
-                                                            false>;
-
-        kernel(static_cast<const FloatAB*>(p_a_grid), static_cast<const FloatAB*>(p_b_grid), static_cast<FloatC*>(p_c_grid),
-                           a_gk_gm0_gm10_gm11_grid_desc, b_gk_gn0_gn10_gn11_grid_desc, c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc, c_blockid_to_gm10_gn10_block_cluster_adaptor);
-    }
+    kernel(static_cast<const FloatAB*>(p_a_grid), static_cast<const FloatAB*>(p_b_grid), static_cast<FloatC*>(p_c_grid),
+ 	    a_gk_gm0_gm10_gm11_grid_desc, b_gk_gn0_gn10_gn11_grid_desc, c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc, c_blockid_to_gm10_gn10_block_cluster_adaptor);
 };
 

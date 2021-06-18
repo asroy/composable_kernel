@@ -202,9 +202,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_olc(
 
     constexpr index_t N0 = 4;   // this could not be a tunable so far
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////
-    // The follow codes are only used for computing the grid_size 
-    
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // The follow codes are only used for computing the grid_size, hasMainKBlockLoop, hasDoubleTailKBlockLoop
+
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
     constexpr auto I2 = Number<2>{};
@@ -222,11 +222,18 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_olc(
                                                                                       conv_dilations,
                                                                                       in_left_pads,
                                                                                       in_right_pads);
-    const auto out_gm0_gm1_gn0_gn1_grid_desc = descs[I2];
+    const auto a_gk_gm0_gm1_grid_desc = descs[I0];
+    const auto c_gm0_gm1_gn0_gn1_grid_desc = descs[I2];
 
-    const index_t grid_size = (out_gm0_gm1_gn0_gn1_grid_desc.GetLength(I1) / tunable->GM1PerBlockGM11) *
-	                      (out_gm0_gm1_gn0_gn1_grid_desc.GetLength(I3) / tunable->GN1PerBlockGN11);
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    const auto M = c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I0);
+    const auto N = c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I1);
+    const auto K = a_gk_gm0_gm1_grid_desc.GetLength(I0);
+
+    const index_t grid_size = (M / tunable->GM1PerBlockGM11) * (N / tunable->GN1PerBlockGN11);
+    const bool hasMainKBlockLoop = ((K + tunable->KPerBlock) / (2 * tunable->KPerBlock) > 1 );
+    const bool hasDoubleTailKBlockLoop = ((K / tunable->KPerBlock) % 2 == 0 );    
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // these buffers are usually provided by the user application
     DeviceMem in_n_c_hi_wi_dev_buf(sizeof(TInWei) * in_n_c_hi_wi.mDesc.GetElementSpace());
@@ -255,12 +262,15 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_olc(
     std::string param = " -std=c++17 ";
     std::string network_config;
 
-    param += get_definition_string_from_types<TInWei, TAcc, TOut>() + " -DCK_PARAM_InWeiVectorSize=" + std::to_string(InWeiVectorSize)
-                                                                   + " -DCK_PARAM_N0=" + std::to_string(N0)
-	                                                           + " " + get_definition_string_from_tunable(tunable);
+    param += get_definition_string_from_types<TInWei, TAcc, TOut>() + " -DCK_PARAM_InWeiVectorSize=" + std::to_string(InWeiVectorSize) 
+	                                                            + " -DCK_PARAM_HAS_MAIN_KBLOCK_LOOP=" + std::to_string(hasMainKBlockLoop) 
+ 	                                                            + " -DCK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP=" + std::to_string(hasDoubleTailKBlockLoop) 
+                                                                    + " -DCK_PARAM_N0=" + std::to_string(N0) + " " 
+								    + get_definition_string_from_tunable(tunable);
     network_config = get_network_config_string_from_types<TInWei, TAcc, TOut>() + "_V" + std::to_string(InWeiVectorSize) 
-                                                                   + "_" + std::to_string(N0)
-	                                                           + "_" + get_network_config_string_from_tunable(tunable);
+                                                                   + std::to_string(hasMainKBlockLoop) + "_" + std::to_string(hasDoubleTailKBlockLoop)
+                                                                   + "_" + std::to_string(N0) + "_" 
+								   + get_network_config_string_from_tunable(tunable);
 
     std::vector<float> kernel1_times;
     std::vector<float> kernel2_times;
@@ -298,10 +308,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_olc(
                           static_cast<const void *>(wei_k_c_y_x_dev_buf.GetDeviceBuffer()),
                           static_cast<const void *>(in_n_c_hi_wi_dev_buf.GetDeviceBuffer()),
                           static_cast<const void *>(out_n_k_ho_wo_dev_buf.GetDeviceBuffer()),
-                          static_cast<const void *>(a_gk_gm0_gm10_gm11_grid_desc_dev_buf),
-                          static_cast<const void *>(b_gk_gn0_gn10_gn11_grid_desc_dev_buf),
-                          static_cast<const void *>(c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc_dev_buf),
-                          static_cast<const void *>(c_blockid_to_gm10_gn10_block_cluster_adaptor_dev_buf)
+                          (const void *)(a_gk_gm0_gm10_gm11_grid_desc_dev_buf),
+                          (const void *)(b_gk_gn0_gn10_gn11_grid_desc_dev_buf),
+                          (const void *)(c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc_dev_buf),
+                          (const void *)(c_blockid_to_gm10_gn10_block_cluster_adaptor_dev_buf)
                           );
          timer2.End(); 
 
