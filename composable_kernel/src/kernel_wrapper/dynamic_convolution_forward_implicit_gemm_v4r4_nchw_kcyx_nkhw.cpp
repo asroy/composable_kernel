@@ -2,7 +2,7 @@
 #include "type_helper.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
-#include "gridwise_dynamic_gemm_v1r2_olc.hpp"
+#include "gridwise_dynamic_gemm_v1r2.hpp"
 #include "transform_forward_convolution_into_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 
 using namespace ck;
@@ -58,8 +58,8 @@ using CThreadTransferSrcDstAccessOrder = Sequence<CK_PARAM_CThreadTransferSrcDst
 constexpr index_t CThreadTransferSrcDstVectorDim    = CK_PARAM_CThreadTransferSrcDstVectorDim;
 constexpr index_t CThreadTransferDstScalarPerVector = CK_PARAM_CThreadTransferDstScalarPerVector;
 
-constexpr bool hasMainKBlockLoop       = static_cast<bool>(CK_PARAM_HAS_MAIN_KBLOCK_LOOP);
-constexpr bool hasDoubleTailKBlockLoop = static_cast<bool>(CK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP);
+constexpr bool HasMainKBlockLoop       = static_cast<bool>(CK_PARAM_HAS_MAIN_KBLOCK_LOOP);
+constexpr bool HasDoubleTailKBlockLoop = static_cast<bool>(CK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP);
 
 extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_prepare(
     int n,
@@ -209,21 +209,6 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
 };
 
 extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
-    int n,
-    int c,
-    int hi,
-    int wi,
-    int k,
-    int y,
-    int x,
-    int convStrideH,
-    int convStrideW,
-    int convDilationY,
-    int convDilationX,
-    int leftPadH,
-    int leftPadW,
-    int rightPadH,
-    int rightPadW,
     const void* p_a_grid,
     const void* p_b_grid,
     void* p_c_grid,
@@ -355,22 +340,19 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
         *reinterpret_cast<const CBlockIdToM0N0BlockClusterAdaptor*>(
             (const void*)p_c_blockid_to_m0_n0_block_cluster_adaptor);
 
-    const auto kernel =
-        kernel_dynamic_gemm_v1r2<GridwiseGemm,
-                                 FloatAB,
-                                 FloatC,
-                                 remove_reference_t<AKM0M1GridDesc>,
-                                 remove_reference_t<BKN0N1GridDesc>,
-                                 remove_reference_t<CM0M10M11N0N10N11GridDesc>,
-                                 remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
-                                 hasMainKBlockLoop,
-                                 hasDoubleTailKBlockLoop>;
+    constexpr index_t shared_block_size =
+        GridwiseGemm::GetSharedMemoryNumberOfByte() / sizeof(FloatAB);
 
-    kernel(static_cast<const FloatAB*>(p_a_grid),
-           static_cast<const FloatAB*>(p_b_grid),
-           static_cast<FloatC*>(p_c_grid),
-           a_k_m0_m1_grid_desc,
-           b_k_n0_n1_grid_desc,
-           c_m0_m10_m11_n0_n10_n11_grid_desc,
-           c_blockid_to_m0_n0_block_cluster_adaptor);
+    __shared__ FloatAB p_shared_block[shared_block_size];
+
+    GridwiseGemm::Run(reinterpret_cast<const FloatAB*>(p_a_grid),
+                      reinterpret_cast<const FloatAB*>(p_b_grid),
+                      reinterpret_cast<FloatC*>(p_c_grid),
+                      p_shared_block,
+                      a_k_m0_m1_grid_desc,
+                      b_k_n0_n1_grid_desc,
+                      c_m0_m10_m11_n0_n10_n11_grid_desc,
+                      c_blockid_to_m0_n0_block_cluster_adaptor,
+                      integral_constant<bool, HasMainKBlockLoop>{},
+                      integral_constant<bool, HasDoubleTailKBlockLoop>{});
 };

@@ -29,6 +29,8 @@
 #include <boost/filesystem.hpp>
 #include <logger.hpp>
 
+OLC_DECLARE_ENV_VAR(OLC_DEBUG_SAVE_TEMP_DIR)
+
 namespace olCompile {
 
 void SystemCmd(std::string cmd)
@@ -53,6 +55,12 @@ void TmpDir::Execute(std::string exe, std::string args) const
     SystemCmd(cmd);
 }
 
-TmpDir::~TmpDir() { boost::filesystem::remove_all(this->path); }
+TmpDir::~TmpDir()
+{
+    if(olCompile::IsEnabled(OLC_DEBUG_SAVE_TEMP_DIR{}))
+    {
+        boost::filesystem::remove_all(this->path);
+    }
+}
 
 } // namespace olCompile
