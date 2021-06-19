@@ -22,14 +22,14 @@
 int main(int argc, char* argv[])
 {
     using namespace ck;
-    using size_t = std::size_t; 
+    using size_t = std::size_t;
 
     hipStream_t stream;
-    olCompile::Handle *handle;
+    olCompile::Handle* handle;
 
-    MY_HIP_CHECK( hipStreamCreate(&stream) ); 
+    MY_HIP_CHECK(hipStreamCreate(&stream));
 
-    handle = new olCompile::Handle(stream); 
+    handle = new olCompile::Handle(stream);
 
     if(argc != 21)
     {
@@ -44,7 +44,8 @@ int main(int argc, char* argv[])
     constexpr auto I2 = Number<2>{};
     constexpr auto I3 = Number<3>{};
 
-    const ConvTensorLayout layout = atoi(argv[1]) == 0 ? ConvTensorLayout::NCHW : ConvTensorLayout::NHWC;
+    const ConvTensorLayout layout =
+        atoi(argv[1]) == 0 ? ConvTensorLayout::NCHW : ConvTensorLayout::NHWC;
     const bool do_verification = atoi(argv[2]);
     const int init_method      = atoi(argv[3]);
     const bool do_log          = atoi(argv[4]);
@@ -92,20 +93,47 @@ int main(int argc, char* argv[])
     {
     case ConvTensorLayout::NCHW:
         // NCHW
-        in_lengths  = std::initializer_list<size_t>{static_cast<size_t>(N), static_cast<size_t>(C), static_cast<size_t>(Hi), static_cast<size_t>(Wi)};
-        wei_lengths = std::initializer_list<size_t>{static_cast<size_t>(K), static_cast<size_t>(C), static_cast<size_t>(Y), static_cast<size_t>(X)};
-        out_lengths = std::initializer_list<size_t>{static_cast<size_t>(N), static_cast<size_t>(K), static_cast<size_t>(Ho), static_cast<size_t>(Wo)};
+        in_lengths  = std::initializer_list<size_t>{static_cast<size_t>(N),
+                                                   static_cast<size_t>(C),
+                                                   static_cast<size_t>(Hi),
+                                                   static_cast<size_t>(Wi)};
+        wei_lengths = std::initializer_list<size_t>{static_cast<size_t>(K),
+                                                    static_cast<size_t>(C),
+                                                    static_cast<size_t>(Y),
+                                                    static_cast<size_t>(X)};
+        out_lengths = std::initializer_list<size_t>{static_cast<size_t>(N),
+                                                    static_cast<size_t>(K),
+                                                    static_cast<size_t>(Ho),
+                                                    static_cast<size_t>(Wo)};
         break;
     case ConvTensorLayout::NHWC:
         // NCHW
-        in_lengths  = std::initializer_list<size_t>{static_cast<size_t>(N), static_cast<size_t>(Hi), static_cast<size_t>(Wi), static_cast<size_t>(C)};
-        wei_lengths = std::initializer_list<size_t>{static_cast<size_t>(K), static_cast<size_t>(Y), static_cast<size_t>(X), static_cast<size_t>(C)};
-        out_lengths = std::initializer_list<size_t>{static_cast<size_t>(N), static_cast<size_t>(Ho), static_cast<size_t>(Wo), static_cast<size_t>(K)};
+        in_lengths  = std::initializer_list<size_t>{static_cast<size_t>(N),
+                                                   static_cast<size_t>(Hi),
+                                                   static_cast<size_t>(Wi),
+                                                   static_cast<size_t>(C)};
+        wei_lengths = std::initializer_list<size_t>{static_cast<size_t>(K),
+                                                    static_cast<size_t>(Y),
+                                                    static_cast<size_t>(X),
+                                                    static_cast<size_t>(C)};
+        out_lengths = std::initializer_list<size_t>{static_cast<size_t>(N),
+                                                    static_cast<size_t>(Ho),
+                                                    static_cast<size_t>(Wo),
+                                                    static_cast<size_t>(K)};
         break;
     default:
-        in_lengths  = std::initializer_list<size_t>{static_cast<size_t>(N), static_cast<size_t>(C), static_cast<size_t>(Hi), static_cast<size_t>(Wi)};
-        wei_lengths = std::initializer_list<size_t>{static_cast<size_t>(K), static_cast<size_t>(C), static_cast<size_t>(Y), static_cast<size_t>(X)};
-        out_lengths = std::initializer_list<size_t>{static_cast<size_t>(N), static_cast<size_t>(K), static_cast<size_t>(Ho), static_cast<size_t>(Wo)};
+        in_lengths  = std::initializer_list<size_t>{static_cast<size_t>(N),
+                                                   static_cast<size_t>(C),
+                                                   static_cast<size_t>(Hi),
+                                                   static_cast<size_t>(Wi)};
+        wei_lengths = std::initializer_list<size_t>{static_cast<size_t>(K),
+                                                    static_cast<size_t>(C),
+                                                    static_cast<size_t>(Y),
+                                                    static_cast<size_t>(X)};
+        out_lengths = std::initializer_list<size_t>{static_cast<size_t>(N),
+                                                    static_cast<size_t>(K),
+                                                    static_cast<size_t>(Ho),
+                                                    static_cast<size_t>(Wo)};
     }
 
     Tensor<in_data_t> in(in_lengths);
@@ -154,32 +182,13 @@ int main(int argc, char* argv[])
         }
     }
 
-#if 1    
-    tunable_dyn_conv_fwd_v4r4_nchw_kcyx_nkhw  *tunable = &default_tunable_dyn_conv_fwd_v4r4_nchw_kcyx_nkhw;
+#if 1
+    tunable_dyn_conv_fwd_v4r4_nchw_kcyx_nkhw* tunable =
+        &default_tunable_dyn_conv_fwd_v4r4_nchw_kcyx_nkhw;
 
     device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc<in_data_t,
-                                                                         acc_data_t,
-                                                                         out_data_t>(
-        handle,											 
-        in_lengths,
-        wei_lengths,
-        out_lengths,
-        conv_strides,
-        conv_dilations,
-        in_left_pads,
-        in_right_pads,
-        in,
-        wei,
-        out_device,
-        tunable,
-        nrepeat);
-#elif 0 
-    tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw  *tunable = &default_tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw;
-
-    device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_olc<in_data_t,
-                                                                         1,
-                                                                         acc_data_t,
-                                                                         out_data_t>(
+                                                                             acc_data_t,
+                                                                             out_data_t>(
         handle,
         in_lengths,
         wei_lengths,
@@ -193,7 +202,28 @@ int main(int argc, char* argv[])
         out_device,
         tunable,
         nrepeat);
-#endif    
+#elif 0
+    tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw* tunable =
+        &default_tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw;
+
+    device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_olc<in_data_t,
+                                                                             1,
+                                                                             acc_data_t,
+                                                                             out_data_t>(
+        handle,
+        in_lengths,
+        wei_lengths,
+        out_lengths,
+        conv_strides,
+        conv_dilations,
+        in_left_pads,
+        in_right_pads,
+        in,
+        wei,
+        out_device,
+        tunable,
+        nrepeat);
+#endif
 
     if(do_verification)
     {
@@ -212,5 +242,5 @@ int main(int argc, char* argv[])
     }
 
     delete handle;
-    MY_HIP_CHECK( hipStreamDestroy(stream) ); 
+    MY_HIP_CHECK(hipStreamDestroy(stream));
 }

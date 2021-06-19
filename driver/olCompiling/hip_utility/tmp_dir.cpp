@@ -33,8 +33,8 @@ namespace olCompile {
 
 void SystemCmd(std::string cmd)
 {
-    fdt_log(LogLevel::Info, "SystemCmd", cmd.c_str()); 
-    fdt_log_flush(); 
+    fdt_log(LogLevel::Info, "SystemCmd", cmd.c_str());
+    fdt_log_flush();
     if(std::system(cmd.c_str()) != 0)
         throw std::runtime_error("Can't execute " + cmd);
 }
@@ -53,9 +53,6 @@ void TmpDir::Execute(std::string exe, std::string args) const
     SystemCmd(cmd);
 }
 
-TmpDir::~TmpDir()
-{
-    boost::filesystem::remove_all(this->path);
-}
+TmpDir::~TmpDir() { boost::filesystem::remove_all(this->path); }
 
 } // namespace olCompile

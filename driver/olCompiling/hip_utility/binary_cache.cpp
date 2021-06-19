@@ -59,19 +59,15 @@ boost::filesystem::path GetCachePath()
 {
     static const boost::filesystem::path user_path = ComputeCachePath();
 
-    return user_path; 
+    return user_path;
 }
 
-static bool IsCacheDisabled()
-{
-    return olCompile::IsEnabled(OLC_DISABLE_CACHE{});
-}
+static bool IsCacheDisabled() { return olCompile::IsEnabled(OLC_DISABLE_CACHE{}); }
 
-boost::filesystem::path GetCacheFile(const std::string& device,
-                                     const std::string& name,
-                                     const std::string& args)
+boost::filesystem::path
+GetCacheFile(const std::string& device, const std::string& name, const std::string& args)
 {
-    //std::string filename = (is_kernel_str ? olCompile::md5(name) : name) + ".o";
+    // std::string filename = (is_kernel_str ? olCompile::md5(name) : name) + ".o";
     std::string filename = name + ".o";
     return GetCachePath() / olCompile::md5(device + ":" + args) / filename;
 }
@@ -113,4 +109,4 @@ void SaveBinary(const boost::filesystem::path& binary_path,
     }
 }
 
-} // namespace miopen
+} // namespace olCompile

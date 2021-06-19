@@ -83,20 +83,47 @@ int main(int argc, char* argv[])
     {
     case ConvTensorLayout::NCHW:
         // NCHW
-        in_lengths  = std::initializer_list<size_t>{static_cast<size_t>(N), static_cast<size_t>(C), static_cast<size_t>(Hi), static_cast<size_t>(Wi)};
-        wei_lengths = std::initializer_list<size_t>{static_cast<size_t>(K), static_cast<size_t>(C), static_cast<size_t>(Y), static_cast<size_t>(X)};
-        out_lengths = std::initializer_list<size_t>{static_cast<size_t>(N), static_cast<size_t>(K), static_cast<size_t>(Ho), static_cast<size_t>(Wo)};
+        in_lengths  = std::initializer_list<size_t>{static_cast<size_t>(N),
+                                                   static_cast<size_t>(C),
+                                                   static_cast<size_t>(Hi),
+                                                   static_cast<size_t>(Wi)};
+        wei_lengths = std::initializer_list<size_t>{static_cast<size_t>(K),
+                                                    static_cast<size_t>(C),
+                                                    static_cast<size_t>(Y),
+                                                    static_cast<size_t>(X)};
+        out_lengths = std::initializer_list<size_t>{static_cast<size_t>(N),
+                                                    static_cast<size_t>(K),
+                                                    static_cast<size_t>(Ho),
+                                                    static_cast<size_t>(Wo)};
         break;
     case ConvTensorLayout::NHWC:
         // NCHW
-        in_lengths  = std::initializer_list<size_t>{static_cast<size_t>(N), static_cast<size_t>(Hi), static_cast<size_t>(Wi), static_cast<size_t>(C)};
-        wei_lengths = std::initializer_list<size_t>{static_cast<size_t>(K), static_cast<size_t>(Y), static_cast<size_t>(X), static_cast<size_t>(C)};
-        out_lengths = std::initializer_list<size_t>{static_cast<size_t>(N), static_cast<size_t>(Ho), static_cast<size_t>(Wo), static_cast<size_t>(K)};
+        in_lengths  = std::initializer_list<size_t>{static_cast<size_t>(N),
+                                                   static_cast<size_t>(Hi),
+                                                   static_cast<size_t>(Wi),
+                                                   static_cast<size_t>(C)};
+        wei_lengths = std::initializer_list<size_t>{static_cast<size_t>(K),
+                                                    static_cast<size_t>(Y),
+                                                    static_cast<size_t>(X),
+                                                    static_cast<size_t>(C)};
+        out_lengths = std::initializer_list<size_t>{static_cast<size_t>(N),
+                                                    static_cast<size_t>(Ho),
+                                                    static_cast<size_t>(Wo),
+                                                    static_cast<size_t>(K)};
         break;
     default:
-        in_lengths  = std::initializer_list<size_t>{static_cast<size_t>(N), static_cast<size_t>(C), static_cast<size_t>(Hi), static_cast<size_t>(Wi)};
-        wei_lengths = std::initializer_list<size_t>{static_cast<size_t>(K), static_cast<size_t>(C), static_cast<size_t>(Y), static_cast<size_t>(X)};
-        out_lengths = std::initializer_list<size_t>{static_cast<size_t>(N), static_cast<size_t>(K), static_cast<size_t>(Ho), static_cast<size_t>(Wo)};
+        in_lengths  = std::initializer_list<size_t>{static_cast<size_t>(N),
+                                                   static_cast<size_t>(C),
+                                                   static_cast<size_t>(Hi),
+                                                   static_cast<size_t>(Wi)};
+        wei_lengths = std::initializer_list<size_t>{static_cast<size_t>(K),
+                                                    static_cast<size_t>(C),
+                                                    static_cast<size_t>(Y),
+                                                    static_cast<size_t>(X)};
+        out_lengths = std::initializer_list<size_t>{static_cast<size_t>(N),
+                                                    static_cast<size_t>(K),
+                                                    static_cast<size_t>(Ho),
+                                                    static_cast<size_t>(Wo)};
     }
 
     Tensor<in_data_t> in(in_lengths);

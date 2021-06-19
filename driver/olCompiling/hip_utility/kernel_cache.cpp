@@ -48,7 +48,8 @@
 
 namespace olCompile {
 
-const std::vector<Kernel>& KernelCache::GetKernels(const std::string& algorithm, const std::string& network_config)
+const std::vector<Kernel>& KernelCache::GetKernels(const std::string& algorithm,
+                                                   const std::string& network_config)
 {
 
     std::pair<std::string, std::string> key = std::make_pair(algorithm, network_config);
@@ -66,13 +67,14 @@ const std::vector<Kernel>& KernelCache::GetKernels(const std::string& algorithm,
 bool KernelCache::HasKernels(const std::string& algorithm, const std::string& network_config) const
 {
     const auto key = std::make_pair(algorithm, network_config);
-    const auto it = kernel_map.find(key);
+    const auto it  = kernel_map.find(key);
     if(it == kernel_map.end())
         return false;
 
     if(it->second.empty())
     {
-        throw std::runtime_error("There should be at least one kernel in kernel cache if an entry exists");
+        throw std::runtime_error(
+            "There should be at least one kernel in kernel cache if an entry exists");
     }
 
     return true;
@@ -110,7 +112,7 @@ Kernel KernelCache::AddKernel(const Handle& h,
     }
     else
     {
-        program = h.LoadProgram(program_name, params);
+        program                                           = h.LoadProgram(program_name, params);
         program_map[std::make_pair(program_name, params)] = program;
     }
 
@@ -142,7 +144,7 @@ void KernelCache::ClearKernels(const std::string& algorithm, const std::string& 
         throw std::runtime_error("Network config or algorithm empty.");
     }
     const std::pair<std::string, std::string> key = std::make_pair(algorithm, network_config);
-    auto&& v = this->kernel_map[key];
+    auto&& v                                      = this->kernel_map[key];
     if(!v.empty())
     {
     }
@@ -151,4 +153,4 @@ void KernelCache::ClearKernels(const std::string& algorithm, const std::string& 
 
 KernelCache::KernelCache() {}
 
-} // namespace miopen
+} // namespace olCompile

@@ -40,6 +40,6 @@ using Kernel       = HIPOCKernel;
 using KernelInvoke = HIPOCKernelInvoke;
 using Program      = HIPOCProgram;
 
-} // namespace olCompile 
+} // namespace olCompile
 
 #endif

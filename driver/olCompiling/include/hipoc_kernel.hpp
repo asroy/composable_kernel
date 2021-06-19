@@ -42,7 +42,7 @@ using HipEventPtr = OLC_MANAGE_PTR(hipEvent_t, hipEventDestroy);
 inline HipEventPtr make_hip_event()
 {
     hipEvent_t result = nullptr;
-    MY_HIP_CHECK( hipEventCreate(&result) );
+    MY_HIP_CHECK(hipEventCreate(&result));
     return HipEventPtr{result};
 }
 
@@ -89,8 +89,8 @@ struct KernelArgs
 
 struct HIPOCKernelInvoke
 {
-    hipStream_t stream = nullptr;
-    hipFunction_t fun  = nullptr;
+    hipStream_t stream          = nullptr;
+    hipFunction_t fun           = nullptr;
     std::array<size_t, 3> ldims = {};
     std::array<size_t, 3> gdims = {};
     std::string name;
@@ -162,10 +162,11 @@ struct HIPOCKernel
         std::copy(global_dims.begin(), global_dims.end(), gdims.begin());
 
         kernel_module = name;
-        MY_HIP_CHECK( hipModuleGetFunction(&fun, program.GetModule(), kernel_module.c_str()) );
+        MY_HIP_CHECK(hipModuleGetFunction(&fun, program.GetModule(), kernel_module.c_str()));
     }
 
-    HIPOCKernelInvoke Invoke(hipStream_t stream, std::function<void(hipEvent_t, hipEvent_t)> callback = nullptr) const;
+    HIPOCKernelInvoke Invoke(hipStream_t stream,
+                             std::function<void(hipEvent_t, hipEvent_t)> callback = nullptr) const;
 };
 
 } // namespace olCompile

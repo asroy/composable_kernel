@@ -63,7 +63,7 @@ struct Handle
                            const std::vector<size_t>& vld,
                            const std::vector<size_t>& vgd,
                            const std::string& params,
-                           std::size_t cache_index  = 0) const;
+                           std::size_t cache_index = 0) const;
 
     bool HasKernel(const std::string& algorithm, const std::string& network_config) const;
 
@@ -79,7 +79,8 @@ struct Handle
         auto ks = this->GetKernelsImpl(algorithm, network_config);
         if(ks.empty())
         {
-            throw std::runtime_error("looking for default kernel (does not exist): " + algorithm + ", " + network_config);
+            throw std::runtime_error("looking for default kernel (does not exist): " + algorithm +
+                                     ", " + network_config);
         }
         return this->Run(ks.front());
     }
@@ -108,11 +109,12 @@ struct Handle
     std::string GetDeviceName() const;
     const TargetProperties& GetTargetProperties() const;
 
-private:
+    private:
     std::string GetDeviceNameImpl() const;
-    const std::vector<Kernel>& GetKernelsImpl(const std::string& algorithm, const std::string& network_config) const;
+    const std::vector<Kernel>& GetKernelsImpl(const std::string& algorithm,
+                                              const std::string& network_config) const;
 
-public:
+    public:
     std::ostream& Print(std::ostream& os) const;
 
     static std::string GetDbBasename(const TargetProperties& target, size_t num_cu)
@@ -134,11 +136,10 @@ public:
     }
 
     std::unique_ptr<HandleImpl> impl;
-
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Handle& handle) { return handle.Print(os); }
 
-} // namespace olCompile 
+} // namespace olCompile
 
 #endif // GUARD_OLC_HANDLE_HPP_

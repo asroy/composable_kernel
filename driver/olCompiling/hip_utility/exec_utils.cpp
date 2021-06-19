@@ -53,7 +53,8 @@ int Run(const std::string& p, std::istream* in, std::ostream* out)
     OLC_MANAGE_PTR(FILE*, pclose) pipe{popen(p.c_str(), file_mode)};
 
     if(!pipe)
-        throw std::runtime_error("olCompile::exec::Run(): popen(" + p + ", " + file_mode + ") failed");
+        throw std::runtime_error("olCompile::exec::Run(): popen(" + p + ", " + file_mode +
+                                 ") failed");
 
     if(redirect_stdin || redirect_stdout)
     {
@@ -73,7 +74,7 @@ int Run(const std::string& p, std::istream* in, std::ostream* out)
                 buffer[in->gcount()] = 0;
 
                 if(fputs(buffer.data(), pipe.get()) == EOF)
-                   throw std::runtime_error("olCompile::exec::Run(): fputs() failed");
+                    throw std::runtime_error("olCompile::exec::Run(): fputs() failed");
             }
         }
     }

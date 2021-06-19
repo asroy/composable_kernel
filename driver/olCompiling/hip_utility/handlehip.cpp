@@ -55,7 +55,7 @@ namespace olCompile {
 std::size_t GetAvailableMemory()
 {
     size_t free, total;
-    MY_HIP_CHECK( hipMemGetInfo(&free, &total) );
+    MY_HIP_CHECK(hipMemGetInfo(&free, &total));
     return free;
 }
 
@@ -63,21 +63,18 @@ int get_device_id() // Get random device
 {
     int device;
 
-    MY_HIP_CHECK( hipGetDevice(&device) ); 
+    MY_HIP_CHECK(hipGetDevice(&device));
 
     return device;
 }
 
-void set_device(int id)
-{
-    MY_HIP_CHECK( hipSetDevice(id) ); 
-}
+void set_device(int id) { MY_HIP_CHECK(hipSetDevice(id)); }
 
 int set_default_device()
 {
     int n;
 
-    MY_HIP_CHECK( hipGetDeviceCount(&n) ); 
+    MY_HIP_CHECK(hipGetDeviceCount(&n));
 
     // Pick device based on process id
     auto pid = ::getpid();
@@ -96,7 +93,7 @@ struct HandleImpl
     {
         hipStream_t result;
 
-        MY_HIP_CHECK( hipStreamCreate(&result) );
+        MY_HIP_CHECK(hipStreamCreate(&result));
 
         return StreamPtr{result, &hipStreamDestroy};
     }
@@ -107,14 +104,14 @@ struct HandleImpl
     {
         hipDeviceProp_t props;
 
-        MY_HIP_CHECK( hipGetDeviceProperties(&props, device) );
+        MY_HIP_CHECK(hipGetDeviceProperties(&props, device));
 
         const std::string name(props.gcnArchName);
-        return name; 
+        return name;
     }
 
-    StreamPtr stream       = nullptr;
-    int device             = -1;
+    StreamPtr stream = nullptr;
+    int device       = -1;
     KernelCache cache;
     TargetProperties target_properties;
 };
@@ -160,15 +157,8 @@ KernelInvoke Handle::AddKernel(const std::string& algorithm,
                                std::size_t cache_index) const
 {
 
-    auto obj = this->impl->cache.AddKernel(*this,
-                                           algorithm,
-                                           network_config,
-                                           program_name,
-                                           kernel_name,
-                                           vld,
-                                           vgd,
-                                           params,
-                                           cache_index);
+    auto obj = this->impl->cache.AddKernel(
+        *this, algorithm, network_config, program_name, kernel_name, vld, vgd, params, cache_index);
     return this->Run(obj);
 }
 
@@ -188,27 +178,23 @@ bool Handle::HasKernel(const std::string& algorithm, const std::string& network_
     return this->impl->cache.HasKernels(algorithm, network_config);
 }
 
-KernelInvoke Handle::Run(Kernel k) const
-{
-    return k.Invoke(this->GetStream());
-}
+KernelInvoke Handle::Run(Kernel k) const { return k.Invoke(this->GetStream()); }
 
 Program Handle::LoadProgram(const std::string& program_name, std::string params) const
 {
-    if((!olCompile::EndsWith(program_name, ".mlir-cpp")) && (!olCompile::EndsWith(program_name, ".mlir")))
+    if((!olCompile::EndsWith(program_name, ".mlir-cpp")) &&
+       (!olCompile::EndsWith(program_name, ".mlir")))
     {
         params += " -mcpu=" + this->GetTargetProperties().Name();
     }
 
-    auto hsaco = olCompile::LoadBinary(this->GetTargetProperties(),
-                                    this->GetMaxComputeUnits(),
-                                    program_name,
-                                    params);
+    auto hsaco = olCompile::LoadBinary(
+        this->GetTargetProperties(), this->GetMaxComputeUnits(), program_name, params);
     if(hsaco.empty())
     {
-        auto p = HIPOCProgram{ program_name, params, this->GetTargetProperties()};
+        auto p = HIPOCProgram{program_name, params, this->GetTargetProperties()};
 
-        auto path   = olCompile::GetCachePath() / boost::filesystem::unique_path();
+        auto path = olCompile::GetCachePath() / boost::filesystem::unique_path();
         if(p.IsCodeObjectInMemory())
             olCompile::WriteFile(p.GetCodeObjectBlob(), path);
         else
@@ -228,21 +214,21 @@ bool Handle::HasProgram(const std::string& program_name, const std::string& para
     return this->impl->cache.HasProgram(program_name, params);
 }
 
-void Handle::AddProgram(Program prog, const std::string& program_name, const std::string& params) const
+void Handle::AddProgram(Program prog,
+                        const std::string& program_name,
+                        const std::string& params) const
 {
     this->impl->cache.AddProgram(prog, program_name, params);
 }
 
-void Handle::Finish() const
-{
-    MY_HIP_CHECK( hipStreamSynchronize(this->GetStream()) ); 
-}
+void Handle::Finish() const { MY_HIP_CHECK(hipStreamSynchronize(this->GetStream())); }
 
 std::size_t Handle::GetLocalMemorySize() const
 {
     int result;
 
-    MY_HIP_CHECK( hipDeviceGetAttribute(&result, hipDeviceAttributeMaxSharedMemoryPerBlock, this->impl->device) ); 
+    MY_HIP_CHECK(hipDeviceGetAttribute(
+        &result, hipDeviceAttributeMaxSharedMemoryPerBlock, this->impl->device));
 
     return result;
 }
@@ -251,7 +237,7 @@ std::size_t Handle::GetGlobalMemorySize() const
 {
     size_t result;
 
-    MY_HIP_CHECK( hipDeviceTotalMem(&result, this->impl->device) ); 
+    MY_HIP_CHECK(hipDeviceTotalMem(&result, this->impl->device));
 
     return result;
 }
@@ -265,7 +251,8 @@ std::size_t Handle::GetMaxComputeUnits() const
         return boost::lexical_cast<std::size_t>(num_cu);
     }
 
-    MY_HIP_CHECK( hipDeviceGetAttribute(&result, hipDeviceAttributeMultiprocessorCount, this->impl->device) ); 
+    MY_HIP_CHECK(
+        hipDeviceGetAttribute(&result, hipDeviceAttributeMultiprocessorCount, this->impl->device));
 
     return result;
 }
@@ -274,7 +261,7 @@ std::size_t Handle::GetWavefrontWidth() const
 {
     hipDeviceProp_t props{};
 
-    MY_HIP_CHECK( hipGetDeviceProperties(&props, this->impl->device) ); 
+    MY_HIP_CHECK(hipGetDeviceProperties(&props, this->impl->device));
 
     auto result = static_cast<size_t>(props.warpSize);
     return result;
@@ -295,4 +282,4 @@ std::ostream& Handle::Print(std::ostream& os) const
     return os;
 }
 
-} // namespace olCompile 
+} // namespace olCompile

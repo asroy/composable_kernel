@@ -29,7 +29,6 @@ struct get_type_from_type_id<'D'>
     using type = double;
 };
 
-}   // namespace ck
+} // namespace ck
 
 #endif
-

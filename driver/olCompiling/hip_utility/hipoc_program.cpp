@@ -44,7 +44,7 @@ namespace olCompile {
 static hipModulePtr CreateModule(const boost::filesystem::path& hsaco_file)
 {
     hipModule_t raw_m;
-    MY_HIP_CHECK( hipModuleLoad(&raw_m, hsaco_file.string().c_str()) );
+    MY_HIP_CHECK(hipModuleLoad(&raw_m, hsaco_file.string().c_str()));
     hipModulePtr m{raw_m};
     return m;
 }
@@ -53,7 +53,7 @@ template <typename T> /// intended for std::string and std::vector<char>
 hipModulePtr CreateModuleInMem(const T& blob)
 {
     hipModule_t raw_m;
-    MY_HIP_CHECK( hipModuleLoadData(&raw_m, reinterpret_cast<const void*>(blob.data())) ); 
+    MY_HIP_CHECK(hipModuleLoadData(&raw_m, reinterpret_cast<const void*>(blob.data())));
     hipModulePtr m{raw_m};
     return m;
 }
@@ -81,7 +81,9 @@ HIPOCProgramImpl::HIPOCProgramImpl(const std::string& program_name,
     }
 }
 
-void HIPOCProgramImpl::BuildCodeObjectInFile(std::string& params, const std::string& src, const std::string& filename)
+void HIPOCProgramImpl::BuildCodeObjectInFile(std::string& params,
+                                             const std::string& src,
+                                             const std::string& filename)
 {
 
     this->dir.emplace(filename);
@@ -91,8 +93,8 @@ void HIPOCProgramImpl::BuildCodeObjectInFile(std::string& params, const std::str
     {
         hsaco_file = HipBuild(dir, filename, src, params, target);
     }
-    else 
-	throw std::runtime_error("Only HIP kernel source of .cpp file is supported"); 
+    else
+        throw std::runtime_error("Only HIP kernel source of .cpp file is supported");
 
     if(!boost::filesystem::exists(hsaco_file))
         throw std::runtime_error("Cant find file: " + hsaco_file.string());
@@ -114,11 +116,9 @@ HIPOCProgram::HIPOCProgram() {}
 HIPOCProgram::HIPOCProgram(const std::string& program_name,
                            std::string params,
                            const TargetProperties& target)
-    : impl(std::make_shared<HIPOCProgramImpl>(
-          program_name, params, target))
+    : impl(std::make_shared<HIPOCProgramImpl>(program_name, params, target))
 {
 }
-
 
 HIPOCProgram::HIPOCProgram(const std::string& program_name, const boost::filesystem::path& hsaco)
     : impl(std::make_shared<HIPOCProgramImpl>(program_name, hsaco))
@@ -136,4 +136,4 @@ std::string HIPOCProgram::GetCodeObjectBlob() const
 
 bool HIPOCProgram::IsCodeObjectInMemory() const { return !impl->binary.empty(); };
 
-} // namespace olCompile 
+} // namespace olCompile

@@ -41,9 +41,7 @@ static inline bool EndsWith(const std::string& value, const std::string& suffix)
 
 const std::map<std::string, std::string>& kernel_includes()
 {
-    static const std::map<std::string, std::string> data{
-        ${INIT_KERNELS}
-    };
+    static const std::map<std::string, std::string> data{${INIT_KERNELS}};
     return data;
 }
 
@@ -79,4 +77,4 @@ std::vector<std::string> GetHipKernelIncList()
     return keys;
 }
 
-} // namespace hipFDT
+} // namespace olCompile
