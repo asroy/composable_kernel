@@ -43,7 +43,7 @@ else()
     endif()
 endif()
 
-option(Boost_USE_STATIC_LIBS "Use boost static libraries" ON)
+option(Boost_USE_STATIC_LIBS "Use boost static libraries" OFF)
 set(BOOST_COMPONENTS filesystem)
 add_definitions(-DBOOST_ALL_NO_LIB=1)
 find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
@@ -199,5 +199,3 @@ target_compile_features(modConv PUBLIC)
 set_target_properties(modConv PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 install(TARGETS modConv LIBRARY DESTINATION lib) 
-
-
