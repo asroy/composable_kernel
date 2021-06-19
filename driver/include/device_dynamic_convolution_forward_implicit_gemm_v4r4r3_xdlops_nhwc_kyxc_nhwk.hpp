@@ -118,18 +118,18 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r3_xdlops_nhwc_kyxc_nh
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 1, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 1, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 1, 0, 0>{}),
                    make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                              Sequence<0, 0, 2, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 2, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 2, 0, 0>{},
                               Sequence<0, 0, 2, 0, 0>{}));
 
     constexpr auto wei_gemmk0_gemmm_gemmk1_grid_move_slice_window_iterator_hacks =
@@ -173,8 +173,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r3_xdlops_nhwc_kyxc_nh
             GemmBBlockTransferSrcScalarPerVector_GemmK1,
             GemmBBlockTransferDstScalarPerVector_GemmK1,
             false, // don't move back src coordinate after threadwise copy
-            Sequence<2, 6, 0, 1, 3, 4, 5, 7>,
-            5,
+            Sequence<2, 3, 0, 1, 4, 5, 6, 7>,
+            6,
             GemmCThreadTransferDstScalarPerVector,
             decltype(wei_gemmk0_gemmm_gemmk1_grid_iterator_hacks),
             decltype(in_gemmk0_gemmn_gemmk1_grid_iterator_hacks),

@@ -178,7 +178,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
             make_tuple(make_unmerge_transform(make_tuple(MRepeat, MWaves, M0, M1, M2)),
                        make_unmerge_transform(make_tuple(NRepeat, NWaves, N1))),
             make_tuple(Sequence<0>{}, Sequence<1>{}),
-            make_tuple(Sequence<0, 2, 3, 4, 5>{}, Sequence<1, 6, 7>{}));
+            make_tuple(Sequence<0, 2, 4, 5, 6>{}, Sequence<1, 3, 7>{}));
 
         return c_m0_m1_m2_n_grid_desc;
     }
@@ -460,16 +460,14 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
             constexpr index_t N0 = CLayout.N1();
             constexpr index_t N1 = CLayout.N0();
 
-            static_assert(M0 == 4 && M1 == 2 && M2 == 4 && N0 == 2 && N1 == 32, "");
-
             constexpr auto c_m0_m1_m2_n_thread_desc =
                 make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(Number<MRepeat>{},
                                                                           Number<NRepeat>{},
                                                                           Number<1>{},
+                                                                          Number<1>{},
                                                                           Number<M0>{},
                                                                           Number<1>{},
                                                                           Number<M2>{},
-                                                                          Number<1>{},
                                                                           Number<1>{}));
 
             StaticBuffer<AddressSpace::Vgpr, FloatC, c_m0_m1_m2_n_thread_desc.GetElementSpaceSize()>
@@ -510,7 +508,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
                 FloatC,
                 decltype(c_m0_m1_m2_n_thread_desc),
                 decltype(c_m0_m1_m2_n_grid_desc),
-                Sequence<MRepeat, NRepeat, 1, M0, 1, M2, 1, 1>,
+                Sequence<MRepeat, NRepeat, 1, 1, M0, 1, M2, 1>,
                 CThreadTransferSrcDstAccessOrder,
                 CThreadTransferSrcDstVectorDim,
                 CThreadTransferDstScalarPerVector,
@@ -521,10 +519,10 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
                 make_multi_index(m_thread_data_on_grid / (M2 * M1 * M0 * MWaves),
                                  n_thread_data_on_grid / (N1 * NWaves),
                                  m_thread_data_on_grid % (M2 * M1 * M0 * MWaves) / (M2 * M1 * M0),
+                                 n_thread_data_on_grid % (N1 * NWaves) / N1,
                                  m_thread_data_on_grid % (M2 * M1 * M0) / (M2 * M1),
                                  m_thread_data_on_grid % (M2 * M1) / M2,
                                  m_thread_data_on_grid % M2,
-                                 n_thread_data_on_grid % (N1 * NWaves) / N1,
                                  n_thread_data_on_grid % N1)}
                 .Run(c_m0_m1_m2_n_thread_desc,
                      make_tuple(I0, I0, I0, I0, I0, I0, I0, I0),
