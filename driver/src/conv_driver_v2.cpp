@@ -19,6 +19,7 @@
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nhwc_kyxc_nhwk.hpp"
+#include "device_dynamic_convolution_forward_implicit_gemm_v4r4r3_xdlops_nhwc_kyxc_nhwk.hpp"
 
 #define USE_DYNAMIC_MODE 1
 #define USE_CONV_FWD_V4R4_NCHW 0
@@ -435,20 +436,22 @@ int main(int argc, char* argv[])
 
         const auto tmp = f_make_for_device_nhwc();
 
-        device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nhwc_kyxc_nhwk<in_data_t,
-                                                                                      acc_data_t,
-                                                                                      out_data_t>(
-            tmp[I0],
-            tmp[I1],
-            tmp[I2],
-            tmp[I3],
-            tmp[I4],
-            tmp[I5],
-            tmp[I6],
-            in,
-            wei,
-            out_device,
-            nrepeat);
+#if 1
+        device_dynamic_convolution_forward_implicit_gemm_v4r4r3_xdlops_nhwc_kyxc_nhwk
+#else
+        device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nhwc_kyxc_nhwk
+#endif
+            <in_data_t, acc_data_t, out_data_t>(tmp[I0],
+                                                tmp[I1],
+                                                tmp[I2],
+                                                tmp[I3],
+                                                tmp[I4],
+                                                tmp[I5],
+                                                tmp[I6],
+                                                in,
+                                                wei,
+                                                out_device,
+                                                nrepeat);
     }
 #endif
 
