@@ -340,9 +340,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
 
         timer2.Start();
         handle->AddKernel(algo_name, network_config_2, program_name, kernel_name, vld, vgd2, param)(
-            static_cast<const void*>(wei_k_c_y_x_dev_buf.GetDeviceBuffer()),
-            static_cast<const void*>(in_n_c_hi_wi_dev_buf.GetDeviceBuffer()),
-            static_cast<const void*>(out_n_k_ho_wo_dev_buf.GetDeviceBuffer()),
+            reinterpret_cast<const TInWei*>(wei_k_c_y_x_dev_buf.GetDeviceBuffer()),
+            reinterpret_cast<const TInWei*>(in_n_c_hi_wi_dev_buf.GetDeviceBuffer()),
+            reinterpret_cast<TOut*>(out_n_k_ho_wo_dev_buf.GetDeviceBuffer()),
             (const void*)(a_k_m0_m1_grid_desc_dev_buf),
             (const void*)(b_k_n0_n1_grid_desc_dev_buf),
             (const void*)(c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf),

@@ -11,6 +11,7 @@ using FloatAB  = typename get_type_from_type_id<static_cast<char>(CK_PARAM_IN_WE
 using FloatC   = typename get_type_from_type_id<static_cast<char>(CK_PARAM_OUT_DATATYPE)>::type;
 using FloatAcc = typename get_type_from_type_id<static_cast<char>(CK_PARAM_CONV_COMPTYPE)>::type;
 
+#if 0
 constexpr index_t BlockSize = CK_PARAM_BlockSize;
 
 constexpr index_t MPerBlock            = CK_PARAM_MPerBlock;
@@ -60,6 +61,47 @@ constexpr index_t CThreadTransferDstScalarPerVector = CK_PARAM_CThreadTransferDs
 
 constexpr bool HasMainKBlockLoop       = static_cast<bool>(CK_PARAM_HAS_MAIN_KBLOCK_LOOP);
 constexpr bool HasDoubleTailKBlockLoop = static_cast<bool>(CK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP);
+#else
+constexpr index_t BlockSize = 256;
+
+constexpr index_t MPerBlock            = 128;
+constexpr index_t NPerBlock            = 128;
+constexpr index_t KPerBlock            = 8;
+constexpr index_t M1PerThread          = 4;
+constexpr index_t N1PerThread          = 4;
+constexpr index_t KPerThread           = 1;
+constexpr index_t M1N1ThreadClusterM10 = 8;
+constexpr index_t M1N1ThreadClusterN10 = 8;
+constexpr index_t M1N1ThreadClusterM11 = 2;
+constexpr index_t M1N1ThreadClusterN11 = 2;
+
+using ABlockTransferThreadSliceLengths_K_M0_M1   = Sequence<4, 1, 1>;
+using ABlockTransferThreadClusterLengths_K_M0_M1 = Sequence<2, 1, 128>;
+using ABlockTransferThreadClusterArrangeOrder    = Sequence<2, 1, 0>;
+using ABlockTransferSrcAccessOrder               = Sequence<2, 1, 0>;
+
+constexpr index_t ABlockTransferSrcVectorDim             = 0;
+constexpr index_t ABlockTransferSrcScalarPerVector       = 4;
+constexpr index_t ABlockTransferDstScalarPerVector_M1    = 1;
+constexpr bool AThreadTransferSrcResetCoordinateAfterRun = false;
+
+using BBlockTransferThreadSliceLengths_K_N0_N1   = Sequence<4, 1, 1>;
+using BBlockTransferThreadClusterLengths_K_N0_N1 = Sequence<2, 1, 128>;
+using BBlockTransferThreadClusterArrangeOrder    = Sequence<0, 1, 2>;
+using BBlockTransferSrcAccessOrder               = Sequence<0, 1, 2>;
+
+constexpr index_t BBlockTransferSrcVectorDim             = 2;
+constexpr index_t BBlockTransferSrcScalarPerVector       = 1;
+constexpr index_t BBlockTransferDstScalarPerVector_N1    = 1;
+constexpr bool BThreadTransferSrcResetCoordinateAfterRun = false;
+
+using CThreadTransferSrcDstAccessOrder              = Sequence<3, 4, 5, 0, 1, 2>;
+constexpr index_t CThreadTransferSrcDstVectorDim    = 5;
+constexpr index_t CThreadTransferDstScalarPerVector = 1;
+
+constexpr bool HasMainKBlockLoop       = true;
+constexpr bool HasDoubleTailKBlockLoop = true;
+#endif
 
 extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_prepare(
     int n,
@@ -208,14 +250,18 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
     };
 };
 
-extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
-    const void* p_a_grid,
-    const void* p_b_grid,
-    void* p_c_grid,
-    const void __CONSTANT__* p_a_k_m0_m1_grid_desc,
-    const void __CONSTANT__* p_b_k_n0_n1_grid_desc,
-    const void __CONSTANT__* p_c_m0_m10_m11_n0_n10_n11_grid_desc,
-    const void __CONSTANT__* p_c_blockid_to_m0_n0_block_cluster_adaptor)
+extern "C" __global__ void
+#if CK_USE_LAUNCH_BOUNDS
+    __launch_bounds__(CK_MAX_THREAD_PER_BLOCK, CK_MIN_BLOCK_PER_CU)
+#endif
+        dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
+            const FloatAB* __restrict__ p_a_grid,
+            const FloatAB* __restrict__ p_b_grid,
+            FloatC* __restrict__ p_c_grid,
+            const void __CONSTANT__* p_a_k_m0_m1_grid_desc,
+            const void __CONSTANT__* p_b_k_n0_n1_grid_desc,
+            const void __CONSTANT__* p_c_m0_m10_m11_n0_n10_n11_grid_desc,
+            const void __CONSTANT__* p_c_blockid_to_m0_n0_block_cluster_adaptor)
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -322,12 +368,20 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
                                           AGridMoveSliceWindowIteratorHacks,
                                           BGridMoveSliceWindowIteratorHacks>;
 
-    using AKM0M1GridDesc = decltype(GridwiseGemm::MakeAKM0M1GridDescriptor(a_k_m_grid_desc));
-    using BKN0N1GridDesc = decltype(GridwiseGemm::MakeBKN0N1GridDescriptor(b_k_n_grid_desc));
-    using CM0M10M11N0N10N11GridDesc =
-        decltype(GridwiseGemm::MakeCM0M10M11N0N10N11GridDescriptor(c_m_n_grid_desc));
+    constexpr auto a_k_m0_m1_grid_desc_tmp =
+        GridwiseGemm::MakeAKM0M1GridDescriptor(a_k_m_grid_desc);
+    constexpr auto b_k_n0_n1_grid_desc_tmp =
+        GridwiseGemm::MakeBKN0N1GridDescriptor(b_k_n_grid_desc);
+    constexpr auto c_m0_m10_m11_n0_n10_n11_grid_desc_tmp =
+        GridwiseGemm::MakeCM0M10M11N0N10N11GridDescriptor(c_m_n_grid_desc);
+    constexpr auto c_blockid_to_m0_n0_block_cluster_adaptor_tmp =
+        GridwiseGemm::MakeCBlockIdToM0N0BlockClusterAdaptor(c_m_n_grid_desc);
+
+    using AKM0M1GridDesc            = decltype(a_k_m0_m1_grid_desc_tmp);
+    using BKN0N1GridDesc            = decltype(b_k_n0_n1_grid_desc_tmp);
+    using CM0M10M11N0N10N11GridDesc = decltype(c_m0_m10_m11_n0_n10_n11_grid_desc_tmp);
     using CBlockIdToM0N0BlockClusterAdaptor =
-        decltype(GridwiseGemm::MakeCBlockIdToM0N0BlockClusterAdaptor(c_m_n_grid_desc));
+        decltype(c_blockid_to_m0_n0_block_cluster_adaptor_tmp);
 
     const auto a_k_m0_m1_grid_desc =
         *reinterpret_cast<const AKM0M1GridDesc*>((const void*)p_a_k_m0_m1_grid_desc);
@@ -345,9 +399,9 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
 
     __shared__ FloatAB p_shared_block[shared_block_size];
 
-    GridwiseGemm::Run(reinterpret_cast<const FloatAB*>(p_a_grid),
-                      reinterpret_cast<const FloatAB*>(p_b_grid),
-                      reinterpret_cast<FloatC*>(p_c_grid),
+    GridwiseGemm::Run(p_a_grid,
+                      p_b_grid,
+                      p_c_grid,
                       p_shared_block,
                       a_k_m0_m1_grid_desc,
                       b_k_n0_n1_grid_desc,

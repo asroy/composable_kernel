@@ -57,7 +57,7 @@ void TmpDir::Execute(std::string exe, std::string args) const
 
 TmpDir::~TmpDir()
 {
-    if(olCompile::IsEnabled(OLC_DEBUG_SAVE_TEMP_DIR{}))
+    if(!olCompile::IsEnabled(OLC_DEBUG_SAVE_TEMP_DIR{}))
     {
         boost::filesystem::remove_all(this->path);
     }

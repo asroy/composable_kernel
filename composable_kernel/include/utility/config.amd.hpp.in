@@ -14,7 +14,7 @@
 #define CK_DEVICE_BACKEND_AMD 1
 
 // GPU ID
-#if 1
+#if 0
 #define CK_AMD_GPU_GFX906 1
 #elif 1
 #define CK_AMD_GPU_GFX908 1
@@ -112,8 +112,8 @@
 #endif
 
 // pass tensor descriptor by value or void*
-#define CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VALUE 1
-#define CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER 0
+#define CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VALUE 0
+#define CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER 1
 
 // merge transformation use magic number division
 #define CK_EXPERIMENTAL_MERGE_USE_MAGIC_DIVISION 0

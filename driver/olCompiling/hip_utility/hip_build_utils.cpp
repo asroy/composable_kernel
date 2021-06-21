@@ -38,6 +38,8 @@
 #include <string>
 #include <stdexcept>
 
+#include <iostream>
+
 OLC_DECLARE_ENV_VAR(OLC_DEBUG_HIP_VERBOSE)
 OLC_DECLARE_ENV_VAR(OLC_DEBUG_HIP_DUMP)
 
@@ -177,6 +179,8 @@ static boost::filesystem::path HipBuildImpl(boost::optional<TmpDir>& tmp_dir,
 
     params += " ";
     auto bin_file = tmp_dir->path / (filename + ".o");
+
+    std::cout << __func__ << "params " << params << std::endl;
 
     // compile
     const std::string redirector = testing_mode ? " 1>/dev/null 2>&1" : "";
