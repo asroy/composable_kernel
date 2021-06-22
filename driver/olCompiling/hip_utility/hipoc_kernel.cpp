@@ -55,23 +55,23 @@ void HIPOCKernelInvoke::run(void* args, std::size_t size) const
         stop  = make_hip_event();
     }
 
-    MY_HIP_CHECK( hipExtModuleLaunchKernel(fun,
-                                           gdims[0],
-                                           gdims[1],
-                                           gdims[2],
-                                           ldims[0],
-                                           ldims[1],
-                                           ldims[2],
-                                           0,
-                                           stream,
-                                           nullptr,
-                                           reinterpret_cast<void**>(&config),
-                                           start.get(),
-                                           stop.get()) );
+    MY_HIP_CHECK(hipExtModuleLaunchKernel(fun,
+                                          gdims[0],
+                                          gdims[1],
+                                          gdims[2],
+                                          ldims[0],
+                                          ldims[1],
+                                          ldims[2],
+                                          0,
+                                          stream,
+                                          nullptr,
+                                          reinterpret_cast<void**>(&config),
+                                          start.get(),
+                                          stop.get()));
 
     if(callback)
     {
-        MY_HIP_CHECK( hipEventSynchronize(stop.get()) );
+        MY_HIP_CHECK(hipEventSynchronize(stop.get()));
         callback(start.get(), stop.get());
     }
 }
@@ -81,4 +81,4 @@ HIPOCKernelInvoke HIPOCKernel::Invoke(hipStream_t stream,
 {
     return HIPOCKernelInvoke{stream, fun, ldims, gdims, name, callback};
 }
-} // namespace olCompile 
+} // namespace olCompile

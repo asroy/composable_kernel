@@ -67,10 +67,8 @@ static std::string GetDeviceNameFromMap(const std::string& in)
 
 void TargetProperties::Init(const Handle* const handle)
 {
-    const auto rawName = [&]() -> std::string {
-        return handle->GetDeviceNameImpl();
-    }();
-    name = GetDeviceNameFromMap(rawName);
+    const auto rawName = [&]() -> std::string { return handle->GetDeviceNameImpl(); }();
+    name               = GetDeviceNameFromMap(rawName);
     // DKMS driver older than 5.9 may report incorrect state of SRAMECC feature.
     // Therefore we compute default SRAMECC and rely on it for now.
     sramecc = [&]() -> boost::optional<bool> {

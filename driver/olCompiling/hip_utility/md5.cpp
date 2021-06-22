@@ -316,4 +316,4 @@ std::string md5(std::string s)
 
     return sout.str();
 }
-} // namespace olCompile 
+} // namespace olCompile

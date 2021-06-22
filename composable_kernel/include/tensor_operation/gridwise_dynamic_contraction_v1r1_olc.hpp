@@ -22,14 +22,13 @@ template <typename GridwiseContraction,
           bool HasMainKBlockLoop,
           bool HasDoubleTailKBlockLoop>
 __host__ __device__ void kernel_dynamic_contraction_v1r1(
-            const FloatAB* __restrict__ p_a_grid,
-            const FloatAB* __restrict__ p_b_grid,
-            FloatC* __restrict__ p_c_grid,
-            const AGKGM0GM10GM11GridDesc a_gk_gm0_gm10_gm11_grid_desc,
-            const BGKGN0GN10GN11GridDesc b_gk_gn0_gn10_gn11_grid_desc,
-            const CGM10BM0BM1GN10BN0BN1GridDesc c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
-            const CBlockIdToGM10GN10BlockClusterAdaptor
-                c_blockid_to_gm10_gn10_block_cluster_adaptor)
+    const FloatAB* __restrict__ p_a_grid,
+    const FloatAB* __restrict__ p_b_grid,
+    FloatC* __restrict__ p_c_grid,
+    const AGKGM0GM10GM11GridDesc a_gk_gm0_gm10_gm11_grid_desc,
+    const BGKGN0GN10GN11GridDesc b_gk_gn0_gn10_gn11_grid_desc,
+    const CGM10BM0BM1GN10BN0BN1GridDesc c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
+    const CBlockIdToGM10GN10BlockClusterAdaptor c_blockid_to_gm10_gn10_block_cluster_adaptor)
 {
     constexpr index_t shared_block_size =
         GridwiseContraction::GetSharedMemoryNumberOfByte() / sizeof(FloatAB);

@@ -57,7 +57,7 @@ namespace olCompile {
  */
 class KernelCache
 {
-public:
+    public:
     using Key        = std::pair<std::string, std::string>;
     using KernelMap  = std::unordered_map<Key, std::vector<Kernel>, SimpleHash>;
     using ProgramMap = std::unordered_map<Key, Program, SimpleHash>;
@@ -69,14 +69,15 @@ public:
                      const std::string& kernel_name,
                      const std::vector<size_t>& vld,
                      const std::vector<size_t>& vgd,
-                     std::string params            = "",
-                     std::size_t cache_index       = 0);
+                     std::string params      = "",
+                     std::size_t cache_index = 0);
 
     void AddKernel(Key key, Kernel k, std::size_t cache_index);
 
     void ClearKernels(const std::string& algorithm, const std::string& network_config);
 
-    const std::vector<Kernel>& GetKernels(const std::string& algorithm, const std::string& network_config);
+    const std::vector<Kernel>& GetKernels(const std::string& algorithm,
+                                          const std::string& network_config);
 
     bool HasKernels(const std::string& algorithm, const std::string& network_config) const;
 
@@ -86,7 +87,7 @@ public:
 
     KernelCache();
 
-private:
+    private:
     KernelMap kernel_map;
     ProgramMap program_map;
 };

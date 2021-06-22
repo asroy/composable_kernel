@@ -22,13 +22,13 @@ template <typename GridwiseGemm,
           bool HasMainKBlockLoop,
           bool HasDoubleTailKBlockLoop>
 __host__ __device__ void kernel_dynamic_gemm_v1r2(
-            const FloatAB* __restrict__ p_a_grid,
-            const FloatAB* __restrict__ p_b_grid,
-            FloatC* __restrict__ p_c_grid,
-            const AKM0M1GridDesc a_k_m0_m1_grid_desc,
-            const BKN0N1GridDesc b_k_n0_n1_grid_desc,
-            const CM0M10M11N0N10N11GridDesc c_m0_m10_m11_n0_n10_n11_grid_desc,
-            const CBlockIdToM0N0BlockClusterAdaptor c_blockid_to_m0_n0_block_cluster_adaptor)
+    const FloatAB* __restrict__ p_a_grid,
+    const FloatAB* __restrict__ p_b_grid,
+    FloatC* __restrict__ p_c_grid,
+    const AKM0M1GridDesc a_k_m0_m1_grid_desc,
+    const BKN0N1GridDesc b_k_n0_n1_grid_desc,
+    const CM0M10M11N0N10N11GridDesc c_m0_m10_m11_n0_n10_n11_grid_desc,
+    const CBlockIdToM0N0BlockClusterAdaptor c_blockid_to_m0_n0_block_cluster_adaptor)
 {
     constexpr index_t shared_block_size =
         GridwiseGemm::GetSharedMemoryNumberOfByte() / sizeof(FloatAB);

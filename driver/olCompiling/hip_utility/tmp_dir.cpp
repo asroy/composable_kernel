@@ -35,8 +35,8 @@ namespace olCompile {
 
 void SystemCmd(std::string cmd)
 {
-    fdt_log(LogLevel::Info, "SystemCmd", cmd.c_str()); 
-    fdt_log_flush(); 
+    fdt_log(LogLevel::Info, "SystemCmd", cmd.c_str());
+    fdt_log_flush();
     if(std::system(cmd.c_str()) != 0)
         throw std::runtime_error("Can't execute " + cmd);
 }
@@ -57,9 +57,9 @@ void TmpDir::Execute(std::string exe, std::string args) const
 
 TmpDir::~TmpDir()
 {
-    if( !olCompile::IsEnabled(OLC_DEBUG_SAVE_TEMP_DIR{}) )
+    if(!olCompile::IsEnabled(OLC_DEBUG_SAVE_TEMP_DIR{}))
     {
-       boost::filesystem::remove_all(this->path);
+        boost::filesystem::remove_all(this->path);
     };
 }
 

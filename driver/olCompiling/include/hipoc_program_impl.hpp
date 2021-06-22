@@ -53,9 +53,9 @@ struct HIPOCProgramImpl
     boost::optional<TmpDir> dir;
     std::vector<char> binary;
 
-    void BuildCodeObjectInFile(std::string& params, const std::string& src, const std::string& filename);
+    void
+    BuildCodeObjectInFile(std::string& params, const std::string& src, const std::string& filename);
     void BuildCodeObject(std::string params);
 };
 } // namespace olCompile
 #endif // GUARD_OLC_HIPOC_PROGRAM_IMPL_HPP
-

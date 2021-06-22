@@ -36,7 +36,7 @@ namespace olCompile {
 /// \todo Rework: Case-insensitive string compare, ODR, (?) move to .cpp
 
 // Declare a cached environment variable
-#define OLC_DECLARE_ENV_VAR(x)                 \
+#define OLC_DECLARE_ENV_VAR(x)                    \
     struct x                                      \
     {                                             \
         static const char* value() { return #x; } \

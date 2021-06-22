@@ -110,7 +110,9 @@ inline std::vector<std::string> SplitSpaceSeparated(const std::string& in,
     std::string s;
     while(ss >> s)
     {
-        if(std::any_of(dontSplitAfter.begin(), dontSplitAfter.end(), [&](const auto& dont) { return dont == s; }))
+        if(std::any_of(dontSplitAfter.begin(), dontSplitAfter.end(), [&](const auto& dont) {
+               return dont == s;
+           }))
         {
             std::string s2;
             if(ss >> s2)
@@ -126,6 +128,6 @@ inline std::vector<std::string> SplitSpaceSeparated(const std::string& in,
     return rv;
 }
 
-} // namespace olCompile 
+} // namespace olCompile
 
 #endif // GUARD_OLC_STRINGUTILS_HPP

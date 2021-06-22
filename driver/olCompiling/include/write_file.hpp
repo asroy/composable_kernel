@@ -25,6 +25,6 @@ inline void WriteFile(const std::vector<char>& content, const boost::filesystem:
         throw std::runtime_error("Failed to write to file");
 }
 
-} // namepace olCompile
+} // namespace olCompile
 
 #endif
