@@ -534,61 +534,116 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
 
             StaticBuffer<AddressSpace::Vgpr, FloatC, BlkSize> c_blk_buf_;
 
-            static_for<0, MRepeat, 1>{}([&](auto mr_i) {
-                static_for<0, NRepeat, 1>{}([&](auto nr_i) {
-                    constexpr auto blk_off =
-                        c_mr_nr_blk_desc.CalculateOffset(make_tuple(mr_i, nr_i));
+            // calculate origin of thread output tensor on global memory
+            //     blockwise GEMM c matrix starting index
+            const auto c_thread_mtx_on_block =
+                blockwise_gemm.CalculateCThreadOriginDataIndex(I0, I0, I0, I0);
 
-                    static_for<0, BlkSize, 1>{}([&](auto j) {
-                        c_blk_buf_(Number<j>{}) = c_thread_buf[Number<blk_off>{}]
-                                                      .template AsType<FloatAcc>()[Number<j>{}];
-                    });
+            const index_t m_thread_data_on_grid =
+                m_block_data_idx_on_grid + c_thread_mtx_on_block[I0];
 
-                    // calculate origin of thread output tensor on global memory
-                    //     blockwise GEMM c matrix starting index
-                    const auto c_thread_mtx_on_block =
-                        blockwise_gemm.CalculateCThreadOriginDataIndex(mr_i, nr_i, I0, I0);
+            const index_t n_thread_data_on_grid =
+                n_block_data_idx_on_grid + c_thread_mtx_on_block[I1];
 
-                    const index_t m_thread_data_on_grid =
-                        m_block_data_idx_on_grid + c_thread_mtx_on_block[I0];
+            constexpr auto c_m0_m1_m2_n_grid_tensor_iterator_hacks = CGridIteratorHacks{};
 
-                    const index_t n_thread_data_on_grid =
-                        n_block_data_idx_on_grid + c_thread_mtx_on_block[I1];
+            auto c_thread_copy =
+                ThreadwiseDynamicTensorSliceTransfer_v1r3<FloatC,
+                                                          FloatC,
+                                                          decltype(c_m0_m1_m2_n_thread_desc),
+                                                          decltype(c_m0_m1_m2_n_grid_desc),
+                                                          Sequence<1, 1, 1, 1, M0, 1, M2, 1>,
+                                                          CThreadTransferSrcDstAccessOrder,
+                                                          CThreadTransferSrcDstVectorDim,
+                                                          CThreadTransferDstScalarPerVector,
+                                                          CGlobalMemoryDataOperation,
+                                                          1,
+                                                          true>{
+                    c_m0_m1_m2_n_grid_desc,
+                    make_multi_index(0,
+                                     0,
+                                     0,
+                                     0,
+                                     m_thread_data_on_grid / (M2 * M1),
+                                     m_thread_data_on_grid % (M2 * M1) / M2,
+                                     m_thread_data_on_grid % M2,
+                                     n_thread_data_on_grid)};
 
-                    constexpr auto c_m0_m1_m2_n_grid_tensor_iterator_hacks = CGridIteratorHacks{};
+            constexpr auto nrepeat_step_plus  = make_multi_index(0, 1, 0, 0, 0, 0, 0, 0);
+            constexpr auto nrepeat_step_minus = make_multi_index(0, -1, 0, 0, 0, 0, 0, 0);
+            constexpr auto mrepeat_step_plus  = make_multi_index(1, 0, 0, 0, 0, 0, 0, 0);
 
-                    ThreadwiseDynamicTensorSliceTransfer_v1r3<FloatC,
-                                                              FloatC,
-                                                              decltype(c_m0_m1_m2_n_thread_desc),
-                                                              decltype(c_m0_m1_m2_n_grid_desc),
-                                                              Sequence<1, 1, 1, 1, M0, 1, M2, 1>,
-                                                              CThreadTransferSrcDstAccessOrder,
-                                                              CThreadTransferSrcDstVectorDim,
-                                                              CThreadTransferDstScalarPerVector,
-                                                              CGlobalMemoryDataOperation,
-                                                              1,
-                                                              true>{
-                        c_m0_m1_m2_n_grid_desc,
-                        make_multi_index(0,
-                                         0,
-                                         0,
-                                         0,
-                                         m_thread_data_on_grid / (M2 * M1),
-                                         m_thread_data_on_grid % (M2 * M1) / M2,
-                                         m_thread_data_on_grid % M2,
-                                         n_thread_data_on_grid)}
-                        .Run(c_m0_m1_m2_n_thread_desc,
-                             make_tuple(I0, I0, I0, I0, I0, I0, I0, I0),
-                             c_blk_buf_,
-                             c_m0_m1_m2_n_grid_desc,
-                             c_grid_buf,
-                             c_m0_m1_m2_n_grid_tensor_iterator_hacks);
+            {
+                constexpr auto blk_off = c_mr_nr_blk_desc.CalculateOffset(make_tuple(I0, I0));
+
+                static_for<0, BlkSize, 1>{}([&](auto j) {
+                    c_blk_buf_(Number<j>{}) =
+                        c_thread_buf[Number<blk_off>{}].template AsType<FloatAcc>()[Number<j>{}];
                 });
-            });
-        }
+
+                c_thread_copy.Run(c_m0_m1_m2_n_thread_desc,
+                                  make_tuple(I0, I0, I0, I0, I0, I0, I0, I0),
+                                  c_blk_buf_,
+                                  c_m0_m1_m2_n_grid_desc,
+                                  c_grid_buf,
+                                  c_m0_m1_m2_n_grid_tensor_iterator_hacks);
+            }
+
+            {
+                c_thread_copy.MoveDstSliceWindow(c_m0_m1_m2_n_grid_desc, nrepeat_step_plus);
+                constexpr auto blk_off = c_mr_nr_blk_desc.CalculateOffset(make_tuple(I0, I1));
+
+                static_for<0, BlkSize, 1>{}([&](auto j) {
+                    c_blk_buf_(Number<j>{}) =
+                        c_thread_buf[Number<blk_off>{}].template AsType<FloatAcc>()[Number<j>{}];
+                });
+
+                c_thread_copy.Run(c_m0_m1_m2_n_thread_desc,
+                                  make_tuple(I0, I0, I0, I0, I0, I0, I0, I0),
+                                  c_blk_buf_,
+                                  c_m0_m1_m2_n_grid_desc,
+                                  c_grid_buf,
+                                  c_m0_m1_m2_n_grid_tensor_iterator_hacks);
+            }
+
+            {
+                c_thread_copy.MoveDstSliceWindow(c_m0_m1_m2_n_grid_desc, mrepeat_step_plus);
+                constexpr auto blk_off = c_mr_nr_blk_desc.CalculateOffset(make_tuple(I1, I1));
+
+                static_for<0, BlkSize, 1>{}([&](auto j) {
+                    c_blk_buf_(Number<j>{}) =
+                        c_thread_buf[Number<blk_off>{}].template AsType<FloatAcc>()[Number<j>{}];
+                });
+
+                c_thread_copy.Run(c_m0_m1_m2_n_thread_desc,
+                                  make_tuple(I0, I0, I0, I0, I0, I0, I0, I0),
+                                  c_blk_buf_,
+                                  c_m0_m1_m2_n_grid_desc,
+                                  c_grid_buf,
+                                  c_m0_m1_m2_n_grid_tensor_iterator_hacks);
+            }
+
+            {
+
+                c_thread_copy.MoveDstSliceWindow(c_m0_m1_m2_n_grid_desc, nrepeat_step_minus);
+                constexpr auto blk_off = c_mr_nr_blk_desc.CalculateOffset(make_tuple(I1, I0));
+
+                static_for<0, BlkSize, 1>{}([&](auto j) {
+                    c_blk_buf_(Number<j>{}) =
+                        c_thread_buf[Number<blk_off>{}].template AsType<FloatAcc>()[Number<j>{}];
+                });
+
+                c_thread_copy.Run(c_m0_m1_m2_n_thread_desc,
+                                  make_tuple(I0, I0, I0, I0, I0, I0, I0, I0),
+                                  c_blk_buf_,
+                                  c_m0_m1_m2_n_grid_desc,
+                                  c_grid_buf,
+                                  c_m0_m1_m2_n_grid_tensor_iterator_hacks);
+            }
 #endif
     }
-};
+}
+}; // namespace ck
 
 } // namespace ck
 #endif
