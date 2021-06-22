@@ -79,4 +79,4 @@ std::vector<std::string> GetHipKernelIncList()
     return keys;
 }
 
-} // namespace hipFDT
+} // namespace olCompile 
