@@ -151,6 +151,8 @@ static boost::filesystem::path HipBuildImpl(boost::optional<TmpDir>& tmp_dir,
     else if(IsHipClangCompiler())
     {
         params += " -mllvm --amdgpu-spill-vgpr-to-agpr=0";
+        params += " -mllvm -amdgpu-early-inline-all=true";
+        params += " -mllvm -amdgpu-function-calls=false";
     }
 
     if(olCompile::IsEnabled(OLC_DEBUG_HIP_VERBOSE{}))
