@@ -370,15 +370,6 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r2
         FloatAB* p_a_block = p_shared_block;
         FloatAB* p_b_block = p_shared_block + a_block_space_size;
 
-        // register allocation for output
-        // auto c_thread_buf = make_static_buffer<AddressSpace::Vgpr, FloatAcc>(
-        // c_m0_m1_n0_n1_thread_desc.GetElementSpaceSize());
-
-        // ThreadwiseDynamicTensorSliceSet_v1<FloatAcc,
-        // decltype(c_m0_m1_n0_n1_thread_desc),
-        // Sequence<MRepeat, MPerThread, NRepeat, NPerThread>>{}
-        //.Run(c_m0_m1_n0_n1_thread_desc, make_tuple(I0, I0, I0, I0), c_thread_buf, FloatAcc{0});
-
         constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0, 0);
         constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0, 0);
 

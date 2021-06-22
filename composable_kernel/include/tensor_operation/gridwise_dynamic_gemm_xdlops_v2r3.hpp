@@ -375,15 +375,6 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
         FloatAB* p_a_block = p_shared_block;
         FloatAB* p_b_block = p_shared_block + a_block_space_size;
 
-        // register allocation for output
-        // auto c_thread_buf = make_static_buffer<AddressSpace::Vgpr, FloatAcc>(
-        // c_m0_m1_n0_n1_thread_desc.GetElementSpaceSize());
-
-        // ThreadwiseDynamicTensorSliceSet_v1<FloatAcc,
-        // decltype(c_m0_m1_n0_n1_thread_desc),
-        // Sequence<MRepeat, MPerThread, NRepeat, NPerThread>>{}
-        //.Run(c_m0_m1_n0_n1_thread_desc, make_tuple(I0, I0, I0, I0), c_thread_buf, FloatAcc{0});
-
         constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0, 0);
         constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0, 0);
 
@@ -451,6 +442,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
             blockwise_gemm.Run(a_block_buf, b_block_buf, c_thread_buf);
         }
 
+#if 0
         // output: register to global memory
         {
             constexpr index_t M0 = CLayout.M1();
@@ -486,7 +478,6 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
                 });
             });
 
-#if 1
             // calculate origin of thread output tensor on global memory
             //     blockwise GEMM c matrix starting index
             const auto c_thread_mtx_on_block =
@@ -530,8 +521,72 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
                      c_m0_m1_m2_n_grid_desc,
                      c_grid_buf,
                      c_m0_m1_m2_n_grid_tensor_iterator_hacks);
-#endif
         }
+#else
+        {
+            constexpr index_t M0 = CLayout.M1();
+            constexpr index_t M1 = CLayout.N1();
+            constexpr index_t M2 = CLayout.M0();
+
+            constexpr auto c_m0_m1_m2_n_thread_desc =
+                make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
+                    I1, I1, I1, I1, Number<M0>{}, Number<1>{}, Number<M2>{}, Number<1>{}));
+
+            StaticBuffer<AddressSpace::Vgpr, FloatC, BlkSize> c_blk_buf_;
+
+            static_for<0, MRepeat, 1>{}([&](auto mr_i) {
+                static_for<0, NRepeat, 1>{}([&](auto nr_i) {
+                    constexpr auto blk_off =
+                        c_mr_nr_blk_desc.CalculateOffset(make_tuple(mr_i, nr_i));
+
+                    static_for<0, BlkSize, 1>{}([&](auto j) {
+                        c_blk_buf_(Number<j>{}) = c_thread_buf[Number<blk_off>{}]
+                                                      .template AsType<FloatAcc>()[Number<j>{}];
+                    });
+
+                    // calculate origin of thread output tensor on global memory
+                    //     blockwise GEMM c matrix starting index
+                    const auto c_thread_mtx_on_block =
+                        blockwise_gemm.CalculateCThreadOriginDataIndex(mr_i, nr_i, I0, I0);
+
+                    const index_t m_thread_data_on_grid =
+                        m_block_data_idx_on_grid + c_thread_mtx_on_block[I0];
+
+                    const index_t n_thread_data_on_grid =
+                        n_block_data_idx_on_grid + c_thread_mtx_on_block[I1];
+
+                    constexpr auto c_m0_m1_m2_n_grid_tensor_iterator_hacks = CGridIteratorHacks{};
+
+                    ThreadwiseDynamicTensorSliceTransfer_v1r3<FloatC,
+                                                              FloatC,
+                                                              decltype(c_m0_m1_m2_n_thread_desc),
+                                                              decltype(c_m0_m1_m2_n_grid_desc),
+                                                              Sequence<1, 1, 1, 1, M0, 1, M2, 1>,
+                                                              CThreadTransferSrcDstAccessOrder,
+                                                              CThreadTransferSrcDstVectorDim,
+                                                              CThreadTransferDstScalarPerVector,
+                                                              CGlobalMemoryDataOperation,
+                                                              1,
+                                                              true>{
+                        c_m0_m1_m2_n_grid_desc,
+                        make_multi_index(0,
+                                         0,
+                                         0,
+                                         0,
+                                         m_thread_data_on_grid / (M2 * M1),
+                                         m_thread_data_on_grid % (M2 * M1) / M2,
+                                         m_thread_data_on_grid % M2,
+                                         n_thread_data_on_grid)}
+                        .Run(c_m0_m1_m2_n_thread_desc,
+                             make_tuple(I0, I0, I0, I0, I0, I0, I0, I0),
+                             c_blk_buf_,
+                             c_m0_m1_m2_n_grid_desc,
+                             c_grid_buf,
+                             c_m0_m1_m2_n_grid_tensor_iterator_hacks);
+                });
+            });
+        }
+#endif
     }
 };
 
