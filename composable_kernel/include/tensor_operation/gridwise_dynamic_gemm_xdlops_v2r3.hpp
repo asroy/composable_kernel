@@ -442,7 +442,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
             blockwise_gemm.Run(a_block_buf, b_block_buf, c_thread_buf);
         }
 
-#if 0
+#if 1
         // output: register to global memory
         {
             constexpr index_t M0 = CLayout.M1();
@@ -640,9 +640,9 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
                                   c_grid_buf,
                                   c_m0_m1_m2_n_grid_tensor_iterator_hacks);
             }
+        }
 #endif
     }
-}
 }; // namespace ck
 
 } // namespace ck
