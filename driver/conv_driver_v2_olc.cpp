@@ -16,9 +16,7 @@
 #include "olc_device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw.hpp"
 
 #define USE_CONV_FWD_V4R4_NCHW 1
-#define USE_CONV_FWD_V4R4_NHWC 0
 #define USE_CONV_FWD_V4R5_NCHW 1
-#define USE_CONV_FWD_V5R1_NCHW 0
 
 #include "conv_tunables.hpp"
 #include "handle.hpp"
@@ -185,40 +183,25 @@ int main(int argc, char* argv[])
     }
 
     auto f_make_for_device_nchw = [&]() {
-        const auto in_lengths_dev     = make_tuple(N, C, Hi, Wi);
-        const auto wei_lengths_dev    = make_tuple(K, C, Y, X);
-        const auto out_lengths_dev    = make_tuple(N, K, Ho, Wo);
-        const auto conv_strides_dev   = make_tuple(conv_stride_h, conv_stride_w);
-        const auto conv_dilations_dev = make_tuple(conv_dilation_h, conv_dilation_w);
-        const auto in_left_pads_dev   = make_tuple(in_left_pad_h, in_left_pad_w);
-        const auto in_right_pads_dev  = make_tuple(in_right_pad_h, in_right_pad_w);
+        const auto in_lengths_dev  = make_tuple(N, C, Hi, Wi);
+        const auto wei_lengths_dev = make_tuple(K, C, Y, X);
+        const auto out_lengths_dev = make_tuple(N, K, Ho, Wo);
 
-        return make_tuple(in_lengths_dev,
-                          wei_lengths_dev,
-                          out_lengths_dev,
-                          conv_strides_dev,
-                          conv_dilations_dev,
-                          in_left_pads_dev,
-                          in_right_pads_dev);
+        return make_tuple(in_lengths_dev, wei_lengths_dev, out_lengths_dev);
     };
 
     auto f_make_for_device_nhwc = [&]() {
-        const auto in_lengths_dev     = make_tuple(N, Hi, Wi, C);
-        const auto wei_lengths_dev    = make_tuple(K, Y, X, C);
-        const auto out_lengths_dev    = make_tuple(N, Ho, Wo, K);
-        const auto conv_strides_dev   = make_tuple(conv_stride_h, conv_stride_w);
-        const auto conv_dilations_dev = make_tuple(conv_dilation_h, conv_dilation_w);
-        const auto in_left_pads_dev   = make_tuple(in_left_pad_h, in_left_pad_w);
-        const auto in_right_pads_dev  = make_tuple(in_right_pad_h, in_right_pad_w);
+        const auto in_lengths_dev  = make_tuple(N, Hi, Wi, C);
+        const auto wei_lengths_dev = make_tuple(K, Y, X, C);
+        const auto out_lengths_dev = make_tuple(N, Ho, Wo, K);
 
-        return make_tuple(in_lengths_dev,
-                          wei_lengths_dev,
-                          out_lengths_dev,
-                          conv_strides_dev,
-                          conv_dilations_dev,
-                          in_left_pads_dev,
-                          in_right_pads_dev);
+        return make_tuple(in_lengths_dev, wei_lengths_dev, out_lengths_dev);
     };
+
+    const auto conv_strides   = make_tuple(conv_stride_h, conv_stride_w);
+    const auto conv_dilations = make_tuple(conv_dilation_h, conv_dilation_w);
+    const auto in_left_pads   = make_tuple(in_left_pad_h, in_left_pad_w);
+    const auto in_right_pads  = make_tuple(in_right_pad_h, in_right_pad_w);
 
 #if USE_CONV_FWD_V4R4_NCHW
     if(algo == ConvForwardAlgo::V4R4NCHW)
@@ -240,10 +223,10 @@ int main(int argc, char* argv[])
             tmp[I0],
             tmp[I1],
             tmp[I2],
-            tmp[I3],
-            tmp[I4],
-            tmp[I5],
-            tmp[I6],
+            conv_strides,
+            conv_dilations,
+            in_left_pads,
+            in_right_pads,
             in,
             wei,
             out_device,
@@ -252,38 +235,42 @@ int main(int argc, char* argv[])
     }
 #endif
 
-#if 0
-    tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw* tunable =
-        &default_tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw;
+#if USE_CONV_FWD_V4R5_NCHW
+    if(algo == ConvForwardAlgo::V4R5NCHW)
+    {
+        if(layout != ConvTensorLayout::NCHW)
+        {
+            throw std::runtime_error("wrong! layout");
+        }
 
-    device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_olc<in_data_t,
-                                                                             1,
-                                                                             acc_data_t,
-                                                                             out_data_t>(
-        handle,
-        in_lengths,
-        wei_lengths,
-        out_lengths,
-        conv_strides,
-        conv_dilations,
-        in_left_pads,
-        in_right_pads,
-        in,
-        wei,
-        out_device,
-        tunable,
-        nrepeat);
+        const auto tmp = f_make_for_device_nchw();
+
+        tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw* tunable =
+            &default_tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw;
+
+        device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_olc<in_data_t,
+                                                                                 acc_data_t,
+                                                                                 out_data_t>(
+            handle,
+            tmp[I0],
+            tmp[I1],
+            tmp[I2],
+            conv_strides,
+            conv_dilations,
+            in_left_pads,
+            in_right_pads,
+            in,
+            wei,
+            out_device,
+            tunable,
+            nrepeat);
+    }
 #endif
 
     if(do_verification)
     {
-        host_direct_convolution(in,
-                                wei,
-                                out_host,
-                                make_tuple(conv_stride_h, conv_stride_w),
-                                make_tuple(conv_dilation_h, conv_dilation_w),
-                                make_tuple(in_left_pad_h, in_left_pad_w),
-                                make_tuple(in_right_pad_h, in_right_pad_w));
+        host_direct_convolution(
+            in, wei, out_host, conv_strides, conv_dilations, in_left_pads, in_right_pads);
 
         check_error(out_host, out_device);
 
