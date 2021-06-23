@@ -27,4 +27,4 @@ REPEAT=$6
 #driver/conv_driver_v2 $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128 256 256 3 3  14   14     1 1       1 1      1 1       1 1
 
 #./conv_driver_v2      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128 128 192 3 3  71   71     2 2       1 1      1 1       1 1
- ./conv_driver_v2_olc  $LAYOUT       $VERIFY $INIT $LOG $REPEAT  128 128 192 3 3  71   71     2 2       1 1      1 1       1 1
+ ./conv_driver_v2_olc  $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128 128 192 3 3  71   71     2 2       1 1      1 1       1 1
