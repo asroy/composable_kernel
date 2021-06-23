@@ -60,7 +60,7 @@ TmpDir::~TmpDir()
     if(!olCompile::IsEnabled(OLC_DEBUG_SAVE_TEMP_DIR{}))
     {
         boost::filesystem::remove_all(this->path);
-    };
+    }
 }
 
 } // namespace olCompile

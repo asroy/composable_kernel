@@ -204,15 +204,18 @@ get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_nchw_kcyx_nkh
 template <typename TInWei,
           typename TAcc,
           typename TOut,
+          typename InLengths,
+          typename WeiLengths,
+          typename OutLengths,
           typename ConvStrides,
           typename ConvDilations,
           typename InLeftPads,
           typename InRightPads>
 void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
     olCompile::Handle* handle,
-    const std::vector<std::size_t>& in_nchw_lengths,
-    const std::vector<std::size_t>& wei_kcyx_lengths,
-    const std::vector<std::size_t>& out_nkhw_lengths,
+    const InLengths& in_n_c_hi_wi_lengths,
+    const WeiLengths& wei_k_c_y_x_lengths,
+    const OutLengths& out_n_k_ho_wo_lengths,
     const ConvStrides& conv_strides,
     const ConvDilations& conv_dilations,
     const InLeftPads& in_left_pads,
@@ -234,13 +237,14 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
     constexpr auto I2 = Number<2>{};
+    constexpr auto I3 = Number<3>{};
 
-    const auto in_n_c_hi_wi_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-        make_tuple(in_nchw_lengths[0], in_nchw_lengths[1], in_nchw_lengths[2], in_nchw_lengths[3]));
-    const auto wei_k_c_y_x_desc   = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
-        wei_kcyx_lengths[0], wei_kcyx_lengths[1], wei_kcyx_lengths[2], wei_kcyx_lengths[3]));
-    const auto out_n_k_ho_wo_desc = make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
-        out_nkhw_lengths[0], out_nkhw_lengths[1], out_nkhw_lengths[2], out_nkhw_lengths[3]));
+    const auto in_n_c_hi_wi_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(in_n_c_hi_wi_lengths);
+    const auto wei_k_c_y_x_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(wei_k_c_y_x_lengths);
+    const auto out_n_k_ho_wo_desc =
+        make_dynamic_naive_tensor_descriptor_packed_v2(out_n_k_ho_wo_lengths);
 
     const auto descs =
         transform_forward_convolution_into_gemm_v4r4_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
@@ -314,13 +318,13 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
 
         timer1.Start();
         handle->AddKernel(algo_name, network_config_1, program_name, kernel_name, vld, vgd1, param)(
-            static_cast<int>(in_nchw_lengths[0]),
-            static_cast<int>(in_nchw_lengths[1]),
-            static_cast<int>(in_nchw_lengths[2]),
-            static_cast<int>(in_nchw_lengths[3]),
-            static_cast<int>(wei_kcyx_lengths[0]),
-            static_cast<int>(wei_kcyx_lengths[2]),
-            static_cast<int>(wei_kcyx_lengths[3]),
+            static_cast<index_t>(in_n_c_hi_wi_lengths[I0]),
+            static_cast<index_t>(in_n_c_hi_wi_lengths[I1]),
+            static_cast<index_t>(in_n_c_hi_wi_lengths[I2]),
+            static_cast<index_t>(in_n_c_hi_wi_lengths[I3]),
+            static_cast<index_t>(wei_k_c_y_x_lengths[I0]),
+            static_cast<index_t>(wei_k_c_y_x_lengths[I2]),
+            static_cast<index_t>(wei_k_c_y_x_lengths[I3]),
             conv_strides[I0],
             conv_strides[I1],
             conv_dilations[I0],
@@ -340,24 +344,9 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
 
         timer2.Start();
         handle->AddKernel(algo_name, network_config_2, program_name, kernel_name, vld, vgd2, param)(
-            static_cast<int>(in_nchw_lengths[0]),
-            static_cast<int>(in_nchw_lengths[1]),
-            static_cast<int>(in_nchw_lengths[2]),
-            static_cast<int>(in_nchw_lengths[3]),
-            static_cast<int>(wei_kcyx_lengths[0]),
-            static_cast<int>(wei_kcyx_lengths[2]),
-            static_cast<int>(wei_kcyx_lengths[3]),
-            conv_strides[I0],
-            conv_strides[I1],
-            conv_dilations[I0],
-            conv_dilations[I1],
-            in_left_pads[I0],
-            in_left_pads[I1],
-            in_right_pads[I0],
-            in_right_pads[I1],
-            static_cast<const void*>(wei_k_c_y_x_dev_buf.GetDeviceBuffer()),
-            static_cast<const void*>(in_n_c_hi_wi_dev_buf.GetDeviceBuffer()),
-            static_cast<const void*>(out_n_k_ho_wo_dev_buf.GetDeviceBuffer()),
+            reinterpret_cast<const TInWei*>(wei_k_c_y_x_dev_buf.GetDeviceBuffer()),
+            reinterpret_cast<const TInWei*>(in_n_c_hi_wi_dev_buf.GetDeviceBuffer()),
+            reinterpret_cast<TOut*>(out_n_k_ho_wo_dev_buf.GetDeviceBuffer()),
             (const void*)(a_k_m0_m1_grid_desc_dev_buf),
             (const void*)(b_k_n0_n1_grid_desc_dev_buf),
             (const void*)(c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf),
@@ -367,19 +356,20 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_olc(
         kernel1_times.push_back(timer1.GetElapsedTime());
         kernel2_times.push_back(timer2.GetElapsedTime());
     }
+
     {
         auto ave_time1 = Driver::get_effective_average(kernel1_times);
         auto ave_time2 = Driver::get_effective_average(kernel2_times);
 
-        const auto N = in_nchw_lengths[0];
-        const auto C = in_nchw_lengths[1];
+        const auto N = in_n_c_hi_wi_lengths[I0];
+        const auto C = in_n_c_hi_wi_lengths[I1];
 
-        const auto K  = out_nkhw_lengths[1];
-        const auto Ho = out_nkhw_lengths[2];
-        const auto Wo = out_nkhw_lengths[I2];
+        const auto K  = out_n_k_ho_wo_lengths[I1];
+        const auto Ho = out_n_k_ho_wo_lengths[I2];
+        const auto Wo = out_n_k_ho_wo_lengths[I3];
 
-        const auto Y = wei_kcyx_lengths[2];
-        const auto X = wei_kcyx_lengths[3];
+        const auto Y = wei_k_c_y_x_lengths[I2];
+        const auto X = wei_k_c_y_x_lengths[I3];
 
         float perf = (float)(std::size_t(2) * N * K * Ho * Wo * C * Y * X) /
                      (std::size_t(1000) * 1000 * 1000) / (ave_time1 + ave_time2);

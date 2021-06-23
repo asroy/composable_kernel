@@ -2,7 +2,7 @@
 #include "type_helper.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
-#include "gridwise_dynamic_gemm_v1r2_olc.hpp"
+#include "gridwise_dynamic_gemm_v1r2.hpp"
 #include "transform_forward_convolution_into_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 
 using namespace ck;
@@ -58,8 +58,8 @@ using CThreadTransferSrcDstAccessOrder = Sequence<CK_PARAM_CThreadTransferSrcDst
 constexpr index_t CThreadTransferSrcDstVectorDim    = CK_PARAM_CThreadTransferSrcDstVectorDim;
 constexpr index_t CThreadTransferDstScalarPerVector = CK_PARAM_CThreadTransferDstScalarPerVector;
 
-constexpr bool hasMainKBlockLoop       = static_cast<bool>(CK_PARAM_HAS_MAIN_KBLOCK_LOOP);
-constexpr bool hasDoubleTailKBlockLoop = static_cast<bool>(CK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP);
+constexpr bool HasMainKBlockLoop       = static_cast<bool>(CK_PARAM_HAS_MAIN_KBLOCK_LOOP);
+constexpr bool HasDoubleTailKBlockLoop = static_cast<bool>(CK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP);
 
 extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_prepare(
     int n,
@@ -208,29 +208,18 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
     };
 };
 
-extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
-    int n,
-    int c,
-    int hi,
-    int wi,
-    int k,
-    int y,
-    int x,
-    int convStrideH,
-    int convStrideW,
-    int convDilationY,
-    int convDilationX,
-    int leftPadH,
-    int leftPadW,
-    int rightPadH,
-    int rightPadW,
-    const void* p_a_grid,
-    const void* p_b_grid,
-    void* p_c_grid,
-    const void __CONSTANT__* p_a_k_m0_m1_grid_desc,
-    const void __CONSTANT__* p_b_k_n0_n1_grid_desc,
-    const void __CONSTANT__* p_c_m0_m10_m11_n0_n10_n11_grid_desc,
-    const void __CONSTANT__* p_c_blockid_to_m0_n0_block_cluster_adaptor)
+extern "C" __global__ void
+#if CK_USE_LAUNCH_BOUNDS
+    __launch_bounds__(CK_MAX_THREAD_PER_BLOCK, CK_MIN_BLOCK_PER_CU)
+#endif
+        dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw(
+            const FloatAB* __restrict__ p_a_grid,
+            const FloatAB* __restrict__ p_b_grid,
+            FloatC* __restrict__ p_c_grid,
+            const void __CONSTANT__* p_a_k_m0_m1_grid_desc,
+            const void __CONSTANT__* p_b_k_n0_n1_grid_desc,
+            const void __CONSTANT__* p_c_m0_m10_m11_n0_n10_n11_grid_desc,
+            const void __CONSTANT__* p_c_blockid_to_m0_n0_block_cluster_adaptor)
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -337,12 +326,20 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
                                           AGridMoveSliceWindowIteratorHacks,
                                           BGridMoveSliceWindowIteratorHacks>;
 
-    using AKM0M1GridDesc = decltype(GridwiseGemm::MakeAKM0M1GridDescriptor(a_k_m_grid_desc));
-    using BKN0N1GridDesc = decltype(GridwiseGemm::MakeBKN0N1GridDescriptor(b_k_n_grid_desc));
-    using CM0M10M11N0N10N11GridDesc =
-        decltype(GridwiseGemm::MakeCM0M10M11N0N10N11GridDescriptor(c_m_n_grid_desc));
+    constexpr auto a_k_m0_m1_grid_desc_tmp =
+        GridwiseGemm::MakeAKM0M1GridDescriptor(a_k_m_grid_desc);
+    constexpr auto b_k_n0_n1_grid_desc_tmp =
+        GridwiseGemm::MakeBKN0N1GridDescriptor(b_k_n_grid_desc);
+    constexpr auto c_m0_m10_m11_n0_n10_n11_grid_desc_tmp =
+        GridwiseGemm::MakeCM0M10M11N0N10N11GridDescriptor(c_m_n_grid_desc);
+    constexpr auto c_blockid_to_m0_n0_block_cluster_adaptor_tmp =
+        GridwiseGemm::MakeCBlockIdToM0N0BlockClusterAdaptor(c_m_n_grid_desc);
+
+    using AKM0M1GridDesc            = decltype(a_k_m0_m1_grid_desc_tmp);
+    using BKN0N1GridDesc            = decltype(b_k_n0_n1_grid_desc_tmp);
+    using CM0M10M11N0N10N11GridDesc = decltype(c_m0_m10_m11_n0_n10_n11_grid_desc_tmp);
     using CBlockIdToM0N0BlockClusterAdaptor =
-        decltype(GridwiseGemm::MakeCBlockIdToM0N0BlockClusterAdaptor(c_m_n_grid_desc));
+        decltype(c_blockid_to_m0_n0_block_cluster_adaptor_tmp);
 
     const auto a_k_m0_m1_grid_desc =
         *reinterpret_cast<const AKM0M1GridDesc*>((const void*)p_a_k_m0_m1_grid_desc);
@@ -355,22 +352,19 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_k
         *reinterpret_cast<const CBlockIdToM0N0BlockClusterAdaptor*>(
             (const void*)p_c_blockid_to_m0_n0_block_cluster_adaptor);
 
-    const auto kernel =
-        kernel_dynamic_gemm_v1r2<GridwiseGemm,
-                                 FloatAB,
-                                 FloatC,
-                                 remove_reference_t<AKM0M1GridDesc>,
-                                 remove_reference_t<BKN0N1GridDesc>,
-                                 remove_reference_t<CM0M10M11N0N10N11GridDesc>,
-                                 remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
-                                 hasMainKBlockLoop,
-                                 hasDoubleTailKBlockLoop>;
+    constexpr index_t shared_block_size =
+        GridwiseGemm::GetSharedMemoryNumberOfByte() / sizeof(FloatAB);
 
-    kernel(static_cast<const FloatAB*>(p_a_grid),
-           static_cast<const FloatAB*>(p_b_grid),
-           static_cast<FloatC*>(p_c_grid),
-           a_k_m0_m1_grid_desc,
-           b_k_n0_n1_grid_desc,
-           c_m0_m10_m11_n0_n10_n11_grid_desc,
-           c_blockid_to_m0_n0_block_cluster_adaptor);
+    __shared__ FloatAB p_shared_block[shared_block_size];
+
+    GridwiseGemm::Run(p_a_grid,
+                      p_b_grid,
+                      p_c_grid,
+                      p_shared_block,
+                      a_k_m0_m1_grid_desc,
+                      b_k_n0_n1_grid_desc,
+                      c_m0_m10_m11_n0_n10_n11_grid_desc,
+                      c_blockid_to_m0_n0_block_cluster_adaptor,
+                      integral_constant<bool, HasMainKBlockLoop>{},
+                      integral_constant<bool, HasDoubleTailKBlockLoop>{});
 };

@@ -2,15 +2,12 @@
 #include "type_helper.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
-#include "gridwise_dynamic_contraction_v1r1_olc.hpp"
+#include "gridwise_dynamic_contraction_v1r1.hpp"
 #include "transform_forward_convolution_into_gemm_v4r5_nchw_kcyx_nkhw.hpp"
 
 using namespace ck;
 
-constexpr index_t InWeiVectorSize = CK_PARAM_InWeiVectorSize;
-using TInWei  = typename get_type_from_type_id<static_cast<char>(CK_PARAM_IN_WEI_DATATYPE)>::type;
-using FloatAB = typename vector_type<TInWei, InWeiVectorSize>::type;
-
+using FloatAB  = typename get_type_from_type_id<static_cast<char>(CK_PARAM_IN_WEI_DATATYPE)>::type;
 using FloatC   = typename get_type_from_type_id<static_cast<char>(CK_PARAM_OUT_DATATYPE)>::type;
 using FloatAcc = typename get_type_from_type_id<static_cast<char>(CK_PARAM_CONV_COMPTYPE)>::type;
 
@@ -62,8 +59,8 @@ using CThreadTransferSrcDstAccessOrder = Sequence<CK_PARAM_CThreadTransferSrcDst
 constexpr index_t CThreadTransferSrcDstVectorDim    = CK_PARAM_CThreadTransferSrcDstVectorDim;
 constexpr index_t CThreadTransferDstScalarPerVector = CK_PARAM_CThreadTransferDstScalarPerVector;
 
-constexpr bool hasMainKBlockLoop       = static_cast<bool>(CK_PARAM_HAS_MAIN_KBLOCK_LOOP);
-constexpr bool hasDoubleTailKBlockLoop = static_cast<bool>(CK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP);
+constexpr bool HasMainKBlockLoop       = static_cast<bool>(CK_PARAM_HAS_MAIN_KBLOCK_LOOP);
+constexpr bool HasDoubleTailKBlockLoop = static_cast<bool>(CK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP);
 
 extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_prepare(
     int n,
@@ -221,29 +218,18 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5_nchw_k
     };
 };
 
-extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
-    int n,
-    int c,
-    int hi,
-    int wi,
-    int k,
-    int y,
-    int x,
-    int convStrideH,
-    int convStrideW,
-    int convDilationY,
-    int convDilationX,
-    int leftPadH,
-    int leftPadW,
-    int rightPadH,
-    int rightPadW,
-    const void* p_a_grid,
-    const void* p_b_grid,
-    void* p_c_grid,
-    const void* p_a_gk_gm0_gm10_gm11_grid_desc,
-    const void* p_b_gk_gn0_gn10_gn11_grid_desc,
-    const void* p_c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
-    const void* p_c_blockid_to_gm10_gn10_block_cluster_adaptor)
+extern "C" __global__ void
+#if CK_USE_LAUNCH_BOUNDS
+    __launch_bounds__(CK_MAX_THREAD_PER_BLOCK, CK_MIN_BLOCK_PER_CU)
+#endif
+        dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw(
+            const FloatAB* __restrict__ p_a_grid,
+            const FloatAB* __restrict__ p_b_grid,
+            FloatC* __restrict__ p_c_grid,
+            const void __CONSTANT__* p_a_gk_gm0_gm10_gm11_grid_desc,
+            const void __CONSTANT__* p_b_gk_gn0_gn10_gn11_grid_desc,
+            const void __CONSTANT__* p_c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
+            const void __CONSTANT__* p_c_blockid_to_gm10_gn10_block_cluster_adaptor)
 {
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -375,22 +361,19 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5_nchw_k
         *reinterpret_cast<const CBlockIdToGM10GN10BlockClusterAdaptor*>(
             (const void*)p_c_blockid_to_gm10_gn10_block_cluster_adaptor);
 
-    const auto kernel =
-        kernel_dynamic_contraction_v1r1<GridwiseContraction,
-                                        FloatAB,
-                                        FloatC,
-                                        remove_reference_t<AGKGM0GM10GM11GridDesc>,
-                                        remove_reference_t<BGKGN0GN10GN11GridDesc>,
-                                        remove_reference_t<CGM10BM0BM1GN10BN0BN1GridDesc>,
-                                        remove_reference_t<CBlockIdToGM10GN10BlockClusterAdaptor>,
-                                        hasMainKBlockLoop,
-                                        hasDoubleTailKBlockLoop>;
+    constexpr index_t shared_block_size =
+        GridwiseContraction::GetSharedMemoryNumberOfByte() / sizeof(FloatAB);
 
-    kernel(static_cast<const FloatAB*>(p_a_grid),
-           static_cast<const FloatAB*>(p_b_grid),
-           static_cast<FloatC*>(p_c_grid),
-           a_gk_gm0_gm10_gm11_grid_desc,
-           b_gk_gn0_gn10_gn11_grid_desc,
-           c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
-           c_blockid_to_gm10_gn10_block_cluster_adaptor);
+    __shared__ FloatAB p_shared_block[shared_block_size];
+
+    GridwiseContraction::Run(p_a_grid,
+                             p_b_grid,
+                             p_c_grid,
+                             p_shared_block,
+                             a_gk_gm0_gm10_gm11_grid_desc,
+                             b_gk_gn0_gn10_gn11_grid_desc,
+                             c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
+                             c_blockid_to_gm10_gn10_block_cluster_adaptor,
+                             integral_constant<bool, HasMainKBlockLoop>{},
+                             integral_constant<bool, HasDoubleTailKBlockLoop>{});
 };
