@@ -11,7 +11,6 @@ using FloatAB  = typename get_type_from_type_id<static_cast<char>(CK_PARAM_IN_WE
 using FloatC   = typename get_type_from_type_id<static_cast<char>(CK_PARAM_OUT_DATATYPE)>::type;
 using FloatAcc = typename get_type_from_type_id<static_cast<char>(CK_PARAM_CONV_COMPTYPE)>::type;
 
-#if 0
 constexpr index_t BlockSize = CK_PARAM_BlockSize;
 
 constexpr index_t MPerBlock            = CK_PARAM_MPerBlock;
@@ -61,47 +60,6 @@ constexpr index_t CThreadTransferDstScalarPerVector = CK_PARAM_CThreadTransferDs
 
 constexpr bool HasMainKBlockLoop       = static_cast<bool>(CK_PARAM_HAS_MAIN_KBLOCK_LOOP);
 constexpr bool HasDoubleTailKBlockLoop = static_cast<bool>(CK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP);
-#else
-constexpr index_t BlockSize = 256;
-
-constexpr index_t MPerBlock            = 128;
-constexpr index_t NPerBlock            = 128;
-constexpr index_t KPerBlock            = 8;
-constexpr index_t M1PerThread          = 4;
-constexpr index_t N1PerThread          = 4;
-constexpr index_t KPerThread           = 1;
-constexpr index_t M1N1ThreadClusterM10 = 8;
-constexpr index_t M1N1ThreadClusterN10 = 8;
-constexpr index_t M1N1ThreadClusterM11 = 2;
-constexpr index_t M1N1ThreadClusterN11 = 2;
-
-using ABlockTransferThreadSliceLengths_K_M0_M1   = Sequence<4, 1, 1>;
-using ABlockTransferThreadClusterLengths_K_M0_M1 = Sequence<2, 1, 128>;
-using ABlockTransferThreadClusterArrangeOrder    = Sequence<2, 1, 0>;
-using ABlockTransferSrcAccessOrder               = Sequence<2, 1, 0>;
-
-constexpr index_t ABlockTransferSrcVectorDim             = 0;
-constexpr index_t ABlockTransferSrcScalarPerVector       = 4;
-constexpr index_t ABlockTransferDstScalarPerVector_M1    = 1;
-constexpr bool AThreadTransferSrcResetCoordinateAfterRun = false;
-
-using BBlockTransferThreadSliceLengths_K_N0_N1   = Sequence<4, 1, 1>;
-using BBlockTransferThreadClusterLengths_K_N0_N1 = Sequence<2, 1, 128>;
-using BBlockTransferThreadClusterArrangeOrder    = Sequence<0, 1, 2>;
-using BBlockTransferSrcAccessOrder               = Sequence<0, 1, 2>;
-
-constexpr index_t BBlockTransferSrcVectorDim             = 2;
-constexpr index_t BBlockTransferSrcScalarPerVector       = 1;
-constexpr index_t BBlockTransferDstScalarPerVector_N1    = 1;
-constexpr bool BThreadTransferSrcResetCoordinateAfterRun = false;
-
-using CThreadTransferSrcDstAccessOrder              = Sequence<3, 4, 5, 0, 1, 2>;
-constexpr index_t CThreadTransferSrcDstVectorDim    = 5;
-constexpr index_t CThreadTransferDstScalarPerVector = 1;
-
-constexpr bool HasMainKBlockLoop       = true;
-constexpr bool HasDoubleTailKBlockLoop = true;
-#endif
 
 extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw_prepare(
     int n,

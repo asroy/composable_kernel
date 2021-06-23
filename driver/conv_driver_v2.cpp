@@ -279,8 +279,6 @@ int main(int argc, char* argv[])
                           in_right_pads_dev);
     };
 
-    const auto nhwc_desc = f_make_for_device_nhwc();
-
 #if USE_CONV_FWD_V4R4_NCHW
     if(algo == ConvForwardAlgo::V4R4NCHW)
     {
