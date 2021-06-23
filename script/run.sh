@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
  export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 
  export OLC_DEBUG_HIP_VERBOSE=1
