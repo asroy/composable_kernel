@@ -182,8 +182,6 @@ static boost::filesystem::path HipBuildImpl(boost::optional<TmpDir>& tmp_dir,
     params += " ";
     auto bin_file = tmp_dir->path / (filename + ".o");
 
-    std::cout << __func__ << "params " << params << std::endl;
-
     // compile
     const std::string redirector = testing_mode ? " 1>/dev/null 2>&1" : "";
     tmp_dir->Execute(env + std::string(" ") + OLC_HIP_COMPILER,
