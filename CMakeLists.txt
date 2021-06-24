@@ -13,15 +13,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 message("CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 
-#boost
-find_package(Boost REQUIRED)
-
-message("Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
-message("Boost_LIBRARY_DIRS: ${Boost_LIBRARY_DIRS}")
-
-include_directories(BEFORE ${Boost_INCLUDE_DIRS})
-link_directories(${Boost_LIBRARY_DIRS})
-
 #OpenMP
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	# workaround issue hipcc in rocm3.5 cannot find openmp
