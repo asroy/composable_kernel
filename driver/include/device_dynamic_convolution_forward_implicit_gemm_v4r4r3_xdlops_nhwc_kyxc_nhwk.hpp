@@ -173,7 +173,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r3_xdlops_nhwc_kyxc_nh
             GemmBBlockTransferSrcScalarPerVector_GemmK1,
             GemmBBlockTransferDstScalarPerVector_GemmK1,
             false, // don't move back src coordinate after threadwise copy
-            Sequence<2, 3, 0, 1, 4, 5, 6, 7>,
+            Sequence<2, 3, 0, 1, 7, 5, 4, 6>,
             6,
             GemmCThreadTransferDstScalarPerVector,
             decltype(wei_gemmk0_gemmm_gemmk1_grid_iterator_hacks),
