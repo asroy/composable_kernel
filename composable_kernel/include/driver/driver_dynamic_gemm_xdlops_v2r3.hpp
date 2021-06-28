@@ -21,7 +21,6 @@ template <index_t BlockSize,
           index_t KPerBlock,
           index_t MPerWave,
           index_t NPerWave,
-          index_t KPack,
           index_t MRepeat,
           index_t NRepeat,
           typename ABlockTransferThreadSliceLengths_K0_M_K1,
@@ -83,7 +82,6 @@ __host__ float driver_dynamic_gemm_xdlops_v2r3(const FloatAB* p_a_grid,
                                                        KPerBlock,
                                                        MPerWave,
                                                        NPerWave,
-                                                       KPack,
                                                        MRepeat,
                                                        NRepeat,
                                                        ABlockTransferThreadSliceLengths_K0_M_K1,
@@ -140,6 +138,35 @@ __host__ float driver_dynamic_gemm_xdlops_v2r3(const FloatAB* p_a_grid,
 
     const index_t grid_size = GridwiseGemm::CalculateGridSize(c_m_n_grid_desc);
 
+    for(index_t k0 = 0; k0 < 4; ++k0)
+    {
+        for(index_t k1 = 0; k1 < 4; ++k1)
+        {
+            auto idx = make_tuple(k0, 0, k1);
+
+            const bool is_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                a_k0_m_k1_grid_desc, make_dynamic_tensor_coordinate(a_k0_m_k1_grid_desc, idx));
+
+            std::cout << k0 << "," << k1 << ":" << a_k0_m_k1_grid_desc.CalculateOffset(idx) << ","
+                      << is_valid << std::endl;
+        }
+    }
+
+    for(index_t k0 = 0; k0 < 4; ++k0)
+    {
+        for(index_t k1 = 0; k1 < 4; ++k1)
+        {
+            auto idx = make_tuple(k0, 0, k1);
+
+            const bool is_valid = coordinate_has_valid_offset_assuming_visible_index_is_valid(
+                b_k0_n_k1_grid_desc, make_dynamic_tensor_coordinate(b_k0_n_k1_grid_desc, idx));
+
+            std::cout << k0 << "," << k1 << ":" << b_k0_n_k1_grid_desc.CalculateOffset(idx) << ","
+                      << is_valid << std::endl;
+        }
+    }
+
+#if 1
     const auto kernel = kernel_dynamic_gemm_xdlops_v2r3<GridwiseGemm,
                                                         FloatAB,
                                                         FloatC,
@@ -163,6 +190,9 @@ __host__ float driver_dynamic_gemm_xdlops_v2r3(const FloatAB* p_a_grid,
                                             c_block_cluster_adaptor);
 
     return ave_time;
+#else
+    return 0;
+#endif
 }
 
 } // namespace ck

@@ -59,7 +59,6 @@ template <index_t BlockSize,
           index_t KPerBlock,
           index_t MPerWave,
           index_t NPerWave,
-          index_t K1Value,
           index_t MRepeat,
           index_t NRepeat,
           typename ABlockTransferThreadSliceLengths_K0_M_K1,
@@ -94,23 +93,23 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
     static constexpr auto I3 = Number<3>{};
 
     // K1 should be Number<...>
-    // static constexpr auto K1 = AK0MK1GridDesc{}.GetLength(I2);
+    static constexpr auto K1 = AK0MK1GridDesc{}.GetLength(I2);
 
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
-        constexpr auto max_lds_align = Number<K1Value>{};
-
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto a_k0_m_k1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<KPerBlock>{}, Number<MPerBlock>{}, Number<K1Value>{}), max_lds_align);
+        constexpr auto a_k0_m_k1_block_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<KPerBlock>{}, Number<MPerBlock>{}, K1));
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto b_k0_n_k1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}, Number<K1Value>{}), max_lds_align);
+        constexpr auto b_k0_n_k1_block_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}, K1));
 
         // LDS allocation for A and B: be careful of alignment
+        constexpr auto max_lds_align = K1;
+
         constexpr auto a_block_space_size =
             math::integer_least_multiple(a_k0_m_k1_block_desc.GetElementSpaceSize(), max_lds_align);
 
@@ -126,8 +125,8 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
                   const CMNGridDesc& c_m_n_grid_desc)
     {
         // TODO: turn on this
-        // static_assert(is_known_at_compile_time<remove_cv_t<decltype(K1)>>::value,
-        //           "wrong! K1 need to be known at compile-time");
+        static_assert(is_known_at_compile_time<remove_cv_t<decltype(K1)>>::value,
+                      "wrong! K1 need to be known at compile-time");
 
         const auto M  = a_k0_m_k1_grid_desc.GetLength(I1);
         const auto N  = b_k0_n_k1_grid_desc.GetLength(I1);
@@ -137,7 +136,8 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
 
         return (M == c_m_n_grid_desc.GetLength(I0) && N == c_m_n_grid_desc.GetLength(I1) &&
                 K0 == b_k0_n_k1_grid_desc.GetLength(I0) &&
-                K1Value == b_k0_n_k1_grid_desc.GetLength(I2)) &&
+                K1 == a_k0_m_k1_grid_desc.GetLength(I2) &&
+                K1 == b_k0_n_k1_grid_desc.GetLength(I2)) &&
                (M % MPerBlock == 0 && N % NPerBlock == 0 && K0 % KPerBlock == 0) &&
                (MPerBlock % MPerWave == 0 && NPerBlock % NPerWave == 0);
     }
@@ -159,7 +159,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
         const auto M = c_m_n_grid_desc.GetLength(I0);
         const auto N = c_m_n_grid_desc.GetLength(I1);
 
-        constexpr auto xdlops_gemm = XdlopsGemm<FloatAB, MPerWave, NPerWave, K1Value>{};
+        constexpr auto xdlops_gemm = XdlopsGemm<FloatAB, MPerWave, NPerWave, K1.value>{};
 
         constexpr auto CLayout = xdlops_gemm.GetCLayout();
 
@@ -230,7 +230,6 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
         const auto K0 = a_k0_m_k1_grid_desc.GetLength(I0);
         const auto M  = a_k0_m_k1_grid_desc.GetLength(I1);
         const auto N  = b_k0_n_k1_grid_desc.GetLength(I1);
-        // const auto K1Value = b_k0_n_k1_grid_desc.GetLength(I2);
 
         // divide block work by [M, N]
         const auto block_work_idx =
@@ -243,24 +242,21 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
         const index_t n_block_data_idx_on_grid =
             __builtin_amdgcn_readfirstlane(block_work_idx[I1] * NPerBlock);
 
-        // lds max alignment
-        constexpr auto max_lds_align = Number<K1Value>{};
-
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto a_k0_m_k1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<KPerBlock>{}, Number<MPerBlock>{}, Number<K1Value>{}), max_lds_align);
+        constexpr auto a_k0_m_k1_block_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<KPerBlock>{}, Number<MPerBlock>{}, K1));
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto b_k0_n_k1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}, Number<K1Value>{}), max_lds_align);
+        constexpr auto b_k0_n_k1_block_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}, K1));
 
         // A matrix blockwise copy
         auto a_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
                                                    InMemoryDataOperation::Set,
-                                                   Sequence<KPerBlock, MPerBlock, K1Value>,
+                                                   Sequence<KPerBlock, MPerBlock, K1.value>,
                                                    ABlockTransferThreadSliceLengths_K0_M_K1,
                                                    ABlockTransferThreadClusterLengths_K0_M_K1,
                                                    ABlockTransferThreadClusterArrangeOrder,
@@ -287,7 +283,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
         auto b_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
                                                    InMemoryDataOperation::Set,
-                                                   Sequence<KPerBlock, NPerBlock, K1Value>,
+                                                   Sequence<KPerBlock, NPerBlock, K1.value>,
                                                    BBlockTransferThreadSliceLengths_K0_N_K1,
                                                    BBlockTransferThreadClusterLengths_K0_N_K1,
                                                    BBlockTransferThreadClusterArrangeOrder,
@@ -327,7 +323,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
             make_tuple(make_pass_through_transform(Number<KPerBlock>{}),
                        make_unmerge_transform(
                            make_tuple(Number<MRepeat>{}, Number<MPerBlock / MRepeat>{})),
-                       make_pass_through_transform(Number<K1Value>{})),
+                       make_pass_through_transform(K1)),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}),
             make_tuple(Sequence<0>{}, Sequence<1, 2>{}, Sequence<3>{}));
 
@@ -336,7 +332,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
             make_tuple(make_pass_through_transform(Number<KPerBlock>{}),
                        make_unmerge_transform(
                            make_tuple(Number<NRepeat>{}, Number<NPerBlock / NRepeat>{})),
-                       make_pass_through_transform(Number<K1Value>{})),
+                       make_pass_through_transform(K1)),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}),
             make_tuple(Sequence<0>{}, Sequence<1, 2>{}, Sequence<3>{}));
 
@@ -347,7 +343,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
                                                  decltype(b_k0_n0_n1_k1_block_desc),
                                                  MPerWave,
                                                  NPerWave,
-                                                 K1Value>{};
+                                                 K1.value>{};
 
         constexpr auto CLayout = blockwise_gemm.GetCLayout();
 
@@ -366,6 +362,8 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
             c_thread_buf;
 
         // LDS allocation for A and B: be careful of alignment
+        constexpr auto max_lds_align = K1;
+
         constexpr auto a_block_space_size =
             math::integer_least_multiple(a_k0_m_k1_block_desc.GetElementSpaceSize(), max_lds_align);
 

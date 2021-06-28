@@ -94,7 +94,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r2
     static constexpr auto I3 = Number<3>{};
 
     // K1 should be Number<...>
-    // static constexpr auto K1 = AK0MK1GridDesc{}.GetLength(I2);
+    static constexpr auto K1 = AK0MK1GridDesc{}.GetLength(I2);
 
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
@@ -126,8 +126,8 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r2
                   const CMNGridDesc& c_m_n_grid_desc)
     {
         // TODO: turn on this
-        // static_assert(is_known_at_compile_time<remove_cv_t<decltype(K1)>>::value,
-        //           "wrong! K1 need to be known at compile-time");
+        static_assert(is_known_at_compile_time<remove_cv_t<decltype(K1)>>::value,
+                      "wrong! K1 need to be known at compile-time");
 
         const auto M  = a_k0_m_k1_grid_desc.GetLength(I1);
         const auto N  = b_k0_n_k1_grid_desc.GetLength(I1);
