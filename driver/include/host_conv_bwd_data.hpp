@@ -110,7 +110,7 @@ void host_direct_convolution_backward_data(Tensor<TIn>& in,
                             {
                                 for(int k = 0; k < K; ++k)
                                 {
-                                    v += out(n, ho, ho, k) * wei(k, y, x, c);
+                                    v += out(n, ho, wo, k) * wei(k, y, x, c);
                                 }
                             }
                         }
