@@ -90,7 +90,7 @@ struct GeneratorTensor_5
     template <typename A, typename B, typename C, typename D>
     double operator()(A a, B b, C c, D d)
     {
-        return std::pow(2, d);
+        return c * 100 + d;
     }
 };
 

@@ -97,19 +97,19 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
 
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
+        constexpr auto max_lds_align = K1;
+
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto a_k0_m_k1_block_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-            make_tuple(Number<KPerBlock>{}, Number<MPerBlock>{}, K1));
+        constexpr auto a_k0_m_k1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(Number<KPerBlock>{}, Number<MPerBlock>{}, K1), max_lds_align);
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto b_k0_n_k1_block_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-            make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}, K1));
+        constexpr auto b_k0_n_k1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}, K1), max_lds_align);
 
         // LDS allocation for A and B: be careful of alignment
-        constexpr auto max_lds_align = K1;
-
         constexpr auto a_block_space_size =
             math::integer_least_multiple(a_k0_m_k1_block_desc.GetElementSpaceSize(), max_lds_align);
 
@@ -242,15 +242,18 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
         const index_t n_block_data_idx_on_grid =
             __builtin_amdgcn_readfirstlane(block_work_idx[I1] * NPerBlock);
 
+        // lds max alignment
+        constexpr auto max_lds_align = K1;
+
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto a_k0_m_k1_block_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-            make_tuple(Number<KPerBlock>{}, Number<MPerBlock>{}, K1));
+        constexpr auto a_k0_m_k1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(Number<KPerBlock>{}, Number<MPerBlock>{}, K1), max_lds_align);
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto b_k0_n_k1_block_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
-            make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}, K1));
+        constexpr auto b_k0_n_k1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(Number<KPerBlock>{}, Number<NPerBlock>{}, K1), max_lds_align);
 
         // A matrix blockwise copy
         auto a_blockwise_copy =
@@ -362,8 +365,6 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
             c_thread_buf;
 
         // LDS allocation for A and B: be careful of alignment
-        constexpr auto max_lds_align = K1;
-
         constexpr auto a_block_space_size =
             math::integer_least_multiple(a_k0_m_k1_block_desc.GetElementSpaceSize(), max_lds_align);
 

@@ -111,11 +111,16 @@ int main(int argc, char* argv[])
     const index_t Wo = (Wi + in_left_pad_w + in_right_pad_w - XEff) / conv_stride_w + 1;
 #endif
 
-#if 1
+#if 0
     constexpr index_t in_vector_size = 1;
     using in_data_t                  = float;
     using acc_data_t                 = float;
     using out_data_t                 = float;
+#elif 1
+    constexpr index_t in_vector_size = 1;
+    using in_data_t                  = half_t;
+    using acc_data_t                 = float;
+    using out_data_t                 = half_t;
 #elif 1
     constexpr index_t in_vector_size = 16;
     using in_data_t                  = int8_t;
@@ -316,7 +321,7 @@ int main(int argc, char* argv[])
 
         check_error(in_host, in_device);
 
-#if 1
+#if 0
         if(do_log)
         {
             LogRange(std::cout << "out : ", out.mData, ",") << std::endl;
