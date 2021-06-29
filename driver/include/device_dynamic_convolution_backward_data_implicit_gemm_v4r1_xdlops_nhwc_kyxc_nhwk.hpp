@@ -112,34 +112,6 @@ void device_dynamic_convolution_backward_data_implicit_gemm_v4r1_xdlops_nhwc_kyx
     constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmK1 = 4;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector = 4;
-#elif 1
-    // [M, N, K0, K1] = [256, 128, 4, 4]
-    constexpr index_t BlockSize = 256;
-
-    constexpr index_t GemmMPerBlock = 256;
-    constexpr index_t GemmNPerBlock = 128;
-    constexpr index_t GemmKPerBlock = 4;
-
-    constexpr index_t GemmMPerWave = 32;
-    constexpr index_t GemmNPerWave = 32;
-    constexpr index_t GemmK1       = 4;
-
-    constexpr index_t MRepeat = 4;
-    constexpr index_t NRepeat = 2;
-
-    using GemmABlockTransferThreadSliceLengths_GemmK0_GemmM_GemmK1   = Sequence<1, 4, 4>;
-    using GemmABlockTransferThreadClusterLengths_GemmK0_GemmM_GemmK1 = Sequence<4, 64, 1>;
-
-    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmM  = 1;
-    constexpr index_t GemmABlockTransferDstScalarPerVector_GemmK1 = 1;
-
-    using GemmBBlockTransferThreadSliceLengths_GemmK0_GemmN_GemmK1   = Sequence<1, 2, 4>;
-    using GemmBBlockTransferThreadClusterLengths_GemmK0_GemmN_GemmK1 = Sequence<4, 64, 1>;
-
-    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmK1 = 1;
-    constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmK1 = 1;
-
-    constexpr index_t GemmCThreadTransferDstScalarPerVector = 1;
 #endif
 
     const auto descs =
@@ -157,15 +129,6 @@ void device_dynamic_convolution_backward_data_implicit_gemm_v4r1_xdlops_nhwc_kyx
     const auto wei_gemmk0_gemmm_gemmk1_grid_desc = descs[I0];
     const auto out_gemmk0_gemmn_gemmk1_grid_desc = descs[I1];
     const auto in_gemmm_gemmn_grid_desc          = descs[I2];
-
-#if 1
-    wei_gemmk0_gemmm_gemmk1_grid_desc.Print();
-    printf("\n");
-    out_gemmk0_gemmn_gemmk1_grid_desc.Print();
-    printf("\n");
-    in_gemmm_gemmn_grid_desc.Print();
-    printf("\n");
-#endif
 
     // HACK: hacks that control index calculation when iterating over A, B, C matrix
     constexpr auto wei_gemmk0_gemmm_gemmk1_grid_iterator_hacks =
@@ -208,7 +171,6 @@ void device_dynamic_convolution_backward_data_implicit_gemm_v4r1_xdlops_nhwc_kyx
     constexpr auto out_gemmk0_gemmn_gemmk1_grid_move_slice_window_iterator_hacks =
         Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{};
 
-#if 1
     for(index_t i = 0; i < 5; ++i)
     {
         float ave_time = driver_dynamic_gemm_xdlops_v2r3<
@@ -285,7 +247,6 @@ void device_dynamic_convolution_backward_data_implicit_gemm_v4r1_xdlops_nhwc_kyx
                       << std::endl;
         }
     }
-#endif
 
     // copy result back to host
     in_n_hi_wi_c_device_buf.FromDevice(in_n_hi_wi_c.mData.data());

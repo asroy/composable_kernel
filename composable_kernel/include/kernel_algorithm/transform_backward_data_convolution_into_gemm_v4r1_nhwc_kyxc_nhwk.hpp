@@ -134,7 +134,7 @@ transform_backward_data_convolution_into_gemm_v4r1_nhwc_kyxc_nhwk(
                                                        Sequence<>{},
                                                        Sequence<4>{}));
 
-#if 1 // debug
+#if 0 // debug
     const auto wei_gemmk0_gemmm_gemmk1_grid_desc = transform_dynamic_tensor_descriptor(
         wei_k0_k1_ydotslice_xdotslice_c_grid_desc,
         make_tuple(make_merge_transform(make_tuple(YDotSlice, XDotSlice, K0)),
@@ -196,7 +196,7 @@ transform_backward_data_convolution_into_gemm_v4r1_nhwc_kyxc_nhwk(
                        Sequence<4>{},
                        Sequence<5, 6>{}));
 
-#if 1 // debug
+#if 0 // debug
     const auto out_gemmk0_gemmn_gemmk1_grid_desc = transform_dynamic_tensor_descriptor(
         out_n_ydotslice_htildaslice_xdotslice_wtildaslice_k0_k1_grid_desc,
         make_tuple(make_merge_transform(make_tuple(YDotSlice, XDotSlice, K0)),
