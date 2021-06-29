@@ -620,7 +620,26 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
                                   c_m0_m1_m2_n_grid_tensor_iterator_hacks);
             };
 
-            if constexpr(MRepeat == 4 && NRepeat == 2)
+            if constexpr(MRepeat == 4 && NRepeat == 4)
+            {
+                init_copy(make_tuple(I0, I0));
+                nrepeat_plus_copy(make_tuple(I0, I1));
+                nrepeat_plus_copy(make_tuple(I0, I2));
+                nrepeat_plus_copy(make_tuple(I0, I3));
+                mrepeat_plus_copy(make_tuple(I1, I3));
+                nrepeat_minus_copy(make_tuple(I1, I2));
+                nrepeat_minus_copy(make_tuple(I1, I1));
+                nrepeat_minus_copy(make_tuple(I1, I0));
+                mrepeat_plus_copy(make_tuple(I2, I0));
+                nrepeat_plus_copy(make_tuple(I2, I1));
+                nrepeat_plus_copy(make_tuple(I2, I2));
+                nrepeat_plus_copy(make_tuple(I2, I3));
+                mrepeat_plus_copy(make_tuple(I3, I3));
+                nrepeat_minus_copy(make_tuple(I3, I2));
+                nrepeat_minus_copy(make_tuple(I3, I1));
+                nrepeat_minus_copy(make_tuple(I3, I0));
+            }
+            else if constexpr(MRepeat == 4 && NRepeat == 2)
             {
                 init_copy(make_tuple(I0, I0));
                 nrepeat_plus_copy(make_tuple(I0, I1));
