@@ -321,14 +321,12 @@ int main(int argc, char* argv[])
 
         check_error(in_host, in_device);
 
-#if 0
         if(do_log)
         {
-            LogRange(std::cout << "out : ", out.mData, ",") << std::endl;
-            LogRange(std::cout << "wei: ", wei.mData, ",") << std::endl;
-            LogRange(std::cout << "in_host  : ", in_host.mData, ",") << std::endl;
-            LogRange(std::cout << "in_device: ", in_device.mData, ",") << std::endl;
+            LogRangeAsType<float>(std::cout << "out : ", out.mData, ",") << std::endl;
+            LogRangeAsType<float>(std::cout << "wei: ", wei.mData, ",") << std::endl;
+            LogRangeAsType<float>(std::cout << "in_host  : ", in_host.mData, ",") << std::endl;
+            LogRangeAsType<float>(std::cout << "in_device: ", in_device.mData, ",") << std::endl;
         }
-#endif
     }
 }

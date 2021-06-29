@@ -112,7 +112,7 @@ void device_dynamic_convolution_backward_data_implicit_gemm_v4r1_xdlops_nhwc_kyx
     constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmK1 = 4;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector = 4;
-#elif 0
+#elif 1
     // [M, N, K0, K1] = [256, 128, 4, 4]
     constexpr index_t BlockSize = 256;
 
