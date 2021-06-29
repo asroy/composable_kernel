@@ -1417,6 +1417,7 @@ struct DynamicUnMerge
         printf("DynamicUnMerge, ");
         printf("up_lengths_");
         print_multi_index(up_lengths_);
+        printf("up_lengths_scan_");
         print_multi_index(up_lengths_scan_);
         printf("}");
     }
