@@ -46,7 +46,8 @@ template <index_t BlockSize,
           typename BGridIteratorHacks,
           typename CGridIteratorHacks,
           typename AGridMoveSliceWindowIteratorHacks,
-          typename BGridMoveSliceWindowIteratorHacks>
+          typename BGridMoveSliceWindowIteratorHacks,
+          bool CAccessOrderMRepeatNRepeat>
 __host__ float driver_dynamic_gemm_xdlops_v2r3(const FloatAB* p_a_grid,
                                                const FloatAB* p_b_grid,
                                                FloatC* p_c_grid,
@@ -107,7 +108,8 @@ __host__ float driver_dynamic_gemm_xdlops_v2r3(const FloatAB* p_a_grid,
                                                        BGridIteratorHacks,
                                                        CGridIteratorHacks,
                                                        AGridMoveSliceWindowIteratorHacks,
-                                                       BGridMoveSliceWindowIteratorHacks>;
+                                                       BGridMoveSliceWindowIteratorHacks,
+                                                       CAccessOrderMRepeatNRepeat>;
 
     {
         std::cout << "a_k0_m_k1_grid_desc{" << a_k0_m_k1_grid_desc.GetLength(I0) << ", "

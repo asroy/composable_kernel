@@ -84,7 +84,8 @@ template <index_t BlockSize,
           typename BGridIteratorHacks,
           typename CGridIteratorHacks,
           typename AGridMoveSliceWindowIteratorHacks,
-          typename BGridMoveSliceWindowIteratorHacks>
+          typename BGridMoveSliceWindowIteratorHacks,
+          bool CAccessOrderMRepeatNRepeat>
 struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
 {
     static constexpr auto I0 = Number<0>{};
@@ -580,6 +581,19 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
                 return c_thread_idx_;
             };
 
+            auto mrepeat_plus_copy = [&](auto c_thread_idx_) {
+                constexpr auto mrepeat_step_plus = make_multi_index(1, 0, 0, 0, 0, 0, 0, 0);
+                c_thread_copy.MoveDstSliceWindow(c_m0_m1_m2_n_grid_desc, mrepeat_step_plus);
+
+                constexpr auto blk_off = c_mr_nr_blk_desc.CalculateOffset(c_thread_idx_);
+                c_thread_copy.Run(c_m0_m1_m2_n_thread_desc,
+                                  make_tuple(I0, I0, I0, I0, I0, I0, I0, I0),
+                                  c_thread_buf[Number<blk_off>{}].template AsType<FloatAcc>(),
+                                  c_m0_m1_m2_n_grid_desc,
+                                  c_grid_buf,
+                                  c_m0_m1_m2_n_grid_tensor_iterator_hacks);
+            };
+
             auto nrepeat_plus_copy = [&](auto c_thread_idx_) {
                 constexpr auto nrepeat_step_plus = make_multi_index(0, 1, 0, 0, 0, 0, 0, 0);
                 c_thread_copy.MoveDstSliceWindow(c_m0_m1_m2_n_grid_desc, nrepeat_step_plus);
@@ -593,8 +607,8 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
                                   c_m0_m1_m2_n_grid_tensor_iterator_hacks);
             };
 
-            auto mrepeat_plus_copy = [&](auto c_thread_idx_) {
-                constexpr auto mrepeat_step_plus = make_multi_index(1, 0, 0, 0, 0, 0, 0, 0);
+            auto mrepeat_minus_copy = [&](auto c_thread_idx_) {
+                constexpr auto mrepeat_step_plus = make_multi_index(-1, 0, 0, 0, 0, 0, 0, 0);
                 c_thread_copy.MoveDstSliceWindow(c_m0_m1_m2_n_grid_desc, mrepeat_step_plus);
 
                 constexpr auto blk_off = c_mr_nr_blk_desc.CalculateOffset(c_thread_idx_);
@@ -619,34 +633,119 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
                                   c_m0_m1_m2_n_grid_tensor_iterator_hacks);
             };
 
-            if constexpr(MRepeat == 4 && NRepeat == 2)
+            static_assert((MRepeat == 4 && NRepeat == 4) or (MRepeat == 4 && NRepeat == 2) or
+                              (MRepeat == 2 && NRepeat == 4) or (MRepeat == 2 && NRepeat == 2) or
+                              (MRepeat == 2 && NRepeat == 1) or (MRepeat == 1 && NRepeat == 2) or
+                              (MRepeat == 1 && NRepeat == 1),
+                          "wrong");
+
+            if constexpr(MRepeat == 4 && NRepeat == 4)
             {
                 init_copy(make_tuple(I0, I0));
-                nrepeat_plus_copy(make_tuple(I0, I1));
-                mrepeat_plus_copy(make_tuple(I1, I1));
-                nrepeat_minus_copy(make_tuple(I1, I0));
-                mrepeat_plus_copy(make_tuple(I2, I0));
-                nrepeat_plus_copy(make_tuple(I2, I1));
-                mrepeat_plus_copy(make_tuple(I3, I1));
-                nrepeat_minus_copy(make_tuple(I3, I0));
+
+                if constexpr(CAccessOrderMRepeatNRepeat)
+                {
+                    nrepeat_plus_copy(make_tuple(I0, I1));
+                    nrepeat_plus_copy(make_tuple(I0, I2));
+                    nrepeat_plus_copy(make_tuple(I0, I3));
+                    mrepeat_plus_copy(make_tuple(I1, I3));
+                    nrepeat_minus_copy(make_tuple(I1, I2));
+                    nrepeat_minus_copy(make_tuple(I1, I1));
+                    nrepeat_minus_copy(make_tuple(I1, I0));
+                    mrepeat_plus_copy(make_tuple(I2, I0));
+                    nrepeat_plus_copy(make_tuple(I2, I1));
+                    nrepeat_plus_copy(make_tuple(I2, I2));
+                    nrepeat_plus_copy(make_tuple(I2, I3));
+                    mrepeat_plus_copy(make_tuple(I3, I3));
+                    nrepeat_minus_copy(make_tuple(I3, I2));
+                    nrepeat_minus_copy(make_tuple(I3, I1));
+                    nrepeat_minus_copy(make_tuple(I3, I0));
+                }
+                else
+                {
+                    mrepeat_plus_copy(make_tuple(I1, I0));
+                    mrepeat_plus_copy(make_tuple(I2, I0));
+                    mrepeat_plus_copy(make_tuple(I3, I0));
+                    nrepeat_plus_copy(make_tuple(I3, I1));
+                    mrepeat_minus_copy(make_tuple(I2, I1));
+                    mrepeat_minus_copy(make_tuple(I1, I1));
+                    mrepeat_minus_copy(make_tuple(I0, I1));
+                    nrepeat_plus_copy(make_tuple(I0, I2));
+                    mrepeat_plus_copy(make_tuple(I1, I2));
+                    mrepeat_plus_copy(make_tuple(I2, I2));
+                    mrepeat_plus_copy(make_tuple(I3, I2));
+                    nrepeat_plus_copy(make_tuple(I3, I3));
+                    mrepeat_minus_copy(make_tuple(I2, I3));
+                    mrepeat_minus_copy(make_tuple(I1, I3));
+                    mrepeat_minus_copy(make_tuple(I0, I3));
+                }
+            }
+            else if constexpr(MRepeat == 4 && NRepeat == 2)
+            {
+                init_copy(make_tuple(I0, I0));
+
+                if constexpr(CAccessOrderMRepeatNRepeat)
+                {
+                    nrepeat_plus_copy(make_tuple(I0, I1));
+                    mrepeat_plus_copy(make_tuple(I1, I1));
+                    nrepeat_minus_copy(make_tuple(I1, I0));
+                    mrepeat_plus_copy(make_tuple(I2, I0));
+                    nrepeat_plus_copy(make_tuple(I2, I1));
+                    mrepeat_plus_copy(make_tuple(I3, I1));
+                    nrepeat_minus_copy(make_tuple(I3, I0));
+                }
+                else
+                {
+                    mrepeat_plus_copy(make_tuple(I1, I0));
+                    mrepeat_plus_copy(make_tuple(I2, I0));
+                    mrepeat_plus_copy(make_tuple(I3, I0));
+                    nrepeat_plus_copy(make_tuple(I3, I1));
+                    mrepeat_minus_copy(make_tuple(I2, I1));
+                    mrepeat_minus_copy(make_tuple(I1, I1));
+                    mrepeat_minus_copy(make_tuple(I0, I1));
+                }
             }
             else if constexpr(MRepeat == 2 && NRepeat == 4)
             {
                 init_copy(make_tuple(I0, I0));
-                nrepeat_plus_copy(make_tuple(I0, I1));
-                nrepeat_plus_copy(make_tuple(I0, I2));
-                nrepeat_plus_copy(make_tuple(I0, I3));
-                mrepeat_plus_copy(make_tuple(I1, I3));
-                nrepeat_minus_copy(make_tuple(I1, I2));
-                nrepeat_minus_copy(make_tuple(I1, I1));
-                nrepeat_minus_copy(make_tuple(I1, I0));
+
+                if constexpr(CAccessOrderMRepeatNRepeat)
+                {
+                    nrepeat_plus_copy(make_tuple(I0, I1));
+                    nrepeat_plus_copy(make_tuple(I0, I2));
+                    nrepeat_plus_copy(make_tuple(I0, I3));
+                    mrepeat_plus_copy(make_tuple(I1, I3));
+                    nrepeat_minus_copy(make_tuple(I1, I2));
+                    nrepeat_minus_copy(make_tuple(I1, I1));
+                    nrepeat_minus_copy(make_tuple(I1, I0));
+                }
+                else
+                {
+                    mrepeat_plus_copy(make_tuple(I1, I0));
+                    nrepeat_plus_copy(make_tuple(I1, I1));
+                    mrepeat_minus_copy(make_tuple(I0, I1));
+                    nrepeat_plus_copy(make_tuple(I0, I2));
+                    mrepeat_plus_copy(make_tuple(I1, I2));
+                    nrepeat_plus_copy(make_tuple(I1, I3));
+                    mrepeat_minus_copy(make_tuple(I0, I3));
+                }
             }
             else if constexpr(MRepeat == 2 && NRepeat == 2)
             {
                 init_copy(make_tuple(I0, I0));
-                nrepeat_plus_copy(make_tuple(I0, I1));
-                mrepeat_plus_copy(make_tuple(I1, I1));
-                nrepeat_minus_copy(make_tuple(I1, I0));
+
+                if constexpr(CAccessOrderMRepeatNRepeat)
+                {
+                    nrepeat_plus_copy(make_tuple(I0, I1));
+                    mrepeat_plus_copy(make_tuple(I1, I1));
+                    nrepeat_minus_copy(make_tuple(I1, I0));
+                }
+                else
+                {
+                    mrepeat_plus_copy(make_tuple(I1, I0));
+                    nrepeat_plus_copy(make_tuple(I1, I1));
+                    mrepeat_minus_copy(make_tuple(I0, I1));
+                }
             }
             else if constexpr(MRepeat == 2 && NRepeat == 1)
             {

@@ -85,6 +85,34 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r3_xdlops_nhwc_kyxc_nh
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector = 4;
 #elif 1
+    // [M, N, K0, K1] = [256, 256, 4, 8]
+    constexpr index_t BlockSize = 256;
+
+    constexpr index_t GemmMPerBlock = 256;
+    constexpr index_t GemmNPerBlock = 256;
+    constexpr index_t GemmKPerBlock = 4;
+
+    constexpr index_t GemmMPerWave = 32;
+    constexpr index_t GemmNPerWave = 32;
+    constexpr index_t GemmK1       = 8;
+
+    constexpr index_t MRepeat = 4;
+    constexpr index_t NRepeat = 4;
+
+    using GemmABlockTransferThreadSliceLengths_GemmK0_GemmM_GemmK1   = Sequence<1, 4, 8>;
+    using GemmABlockTransferThreadClusterLengths_GemmK0_GemmM_GemmK1 = Sequence<4, 64, 1>;
+
+    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK1 = 8;
+    constexpr index_t GemmABlockTransferDstScalarPerVector_GemmK1 = 8;
+
+    using GemmBBlockTransferThreadSliceLengths_GemmK0_GemmN_GemmK1   = Sequence<1, 4, 8>;
+    using GemmBBlockTransferThreadClusterLengths_GemmK0_GemmN_GemmK1 = Sequence<4, 64, 1>;
+
+    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmK1 = 8;
+    constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmK1 = 8;
+
+    constexpr index_t GemmCThreadTransferDstScalarPerVector = 4;
+#elif 1
     // [M, N, K0, K1] = [256, 128, 4, 8]
     constexpr index_t BlockSize = 256;
 
@@ -207,19 +235,20 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r3_xdlops_nhwc_kyxc_nh
             decltype(in_gemmk0_gemmn_gemmk1_grid_iterator_hacks),
             decltype(out_m0_m1_m2_n_grid_iterator_hacks),
             decltype(wei_gemmk0_gemmm_gemmk1_grid_move_slice_window_iterator_hacks),
-            decltype(in_gemmk0_gemmn_gemmk1_grid_move_slice_window_iterator_hacks)>(
-            static_cast<TInWei*>(wei_k_y_x_c_device_buf.GetDeviceBuffer()),
-            static_cast<TInWei*>(in_n_hi_wi_c_device_buf.GetDeviceBuffer()),
-            static_cast<TOut*>(out_n_ho_wo_k_device_buf.GetDeviceBuffer()),
-            wei_gemmk0_gemmm_gemmk1_grid_desc,
-            in_gemmk0_gemmn_gemmk1_grid_desc,
-            out_gemmm_gemmn_grid_desc,
-            wei_gemmk0_gemmm_gemmk1_grid_iterator_hacks,
-            in_gemmk0_gemmn_gemmk1_grid_iterator_hacks,
-            out_m0_m1_m2_n_grid_iterator_hacks,
-            wei_gemmk0_gemmm_gemmk1_grid_move_slice_window_iterator_hacks,
-            in_gemmk0_gemmn_gemmk1_grid_move_slice_window_iterator_hacks,
-            nrepeat);
+            decltype(in_gemmk0_gemmn_gemmk1_grid_move_slice_window_iterator_hacks),
+            false // CAccessOrderMRepeatNRepeat
+            >(static_cast<TInWei*>(wei_k_y_x_c_device_buf.GetDeviceBuffer()),
+              static_cast<TInWei*>(in_n_hi_wi_c_device_buf.GetDeviceBuffer()),
+              static_cast<TOut*>(out_n_ho_wo_k_device_buf.GetDeviceBuffer()),
+              wei_gemmk0_gemmm_gemmk1_grid_desc,
+              in_gemmk0_gemmn_gemmk1_grid_desc,
+              out_gemmm_gemmn_grid_desc,
+              wei_gemmk0_gemmm_gemmk1_grid_iterator_hacks,
+              in_gemmk0_gemmn_gemmk1_grid_iterator_hacks,
+              out_m0_m1_m2_n_grid_iterator_hacks,
+              wei_gemmk0_gemmm_gemmk1_grid_move_slice_window_iterator_hacks,
+              in_gemmk0_gemmn_gemmk1_grid_move_slice_window_iterator_hacks,
+              nrepeat);
 
         {
             const auto N = out_n_ho_wo_k_lengths[I0];

@@ -40,60 +40,6 @@ struct GeneratorTensor_3
     }
 };
 
-struct GeneratorTensor_4
-{
-    template <typename A>
-    double operator()(A a)
-    {
-        return std::pow(2, a);
-    }
-
-    template <typename A, typename B>
-    double operator()(A a, B b)
-    {
-        return std::pow(2, a);
-    }
-
-    template <typename A, typename B, typename C>
-    double operator()(A a, B b, C c)
-    {
-        return std::pow(2, a);
-    }
-
-    template <typename A, typename B, typename C, typename D>
-    double operator()(A a, B b, C c, D d)
-    {
-        return std::pow(2, a);
-    }
-};
-
-struct GeneratorTensor_5
-{
-    template <typename A>
-    double operator()(A a)
-    {
-        return std::pow(2, a);
-    }
-
-    template <typename A, typename B>
-    double operator()(A a, B b)
-    {
-        return std::pow(2, b);
-    }
-
-    template <typename A, typename B, typename C>
-    double operator()(A a, B b, C c)
-    {
-        return std::pow(2, c);
-    }
-
-    template <typename A, typename B, typename C, typename D>
-    double operator()(A a, B b, C c, D d)
-    {
-        return c * 100 + d;
-    }
-};
-
 struct GeneratorTensor_Checkboard
 {
     template <typename... Ts>
