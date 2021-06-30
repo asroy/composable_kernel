@@ -13,13 +13,16 @@
 #include "host_conv_bwd_data.hpp"
 #include "device_tensor.hpp"
 #include "device_dynamic_convolution_backward_data_implicit_gemm_v4r1_xdlops_nhwc_kyxc_nhwk.hpp"
+#include "device_dynamic_convolution_backward_data_implicit_gemm_v4r1r2_xdlops_nhwc_kyxc_nhwk.hpp"
 
 #define USE_DYNAMIC_MODE 1
 #define USE_CONV_BWD_V4R1_XDL_NHWC 1
+#define USE_CONV_BWD_V4R1R2_XDL_NHWC 1
 
 enum ConvBackwardDataAlgo
 {
     V4R1XDLNHWC,
+    V4R1R2XDLNHWC,
 };
 
 int main(int argc, char* argv[])
@@ -111,7 +114,7 @@ int main(int argc, char* argv[])
     const index_t Wo = (Wi + in_left_pad_w + in_right_pad_w - XEff) / conv_stride_w + 1;
 #endif
 
-#if 0
+#if 1
     constexpr index_t in_vector_size = 1;
     using in_data_t                  = float;
     using acc_data_t                 = float;
@@ -121,11 +124,6 @@ int main(int argc, char* argv[])
     using in_data_t                  = half_t;
     using acc_data_t                 = float;
     using out_data_t                 = half_t;
-#elif 1
-    constexpr index_t in_vector_size = 16;
-    using in_data_t                  = int8_t;
-    using acc_data_t                 = int32_t;
-    using out_data_t                 = int8_t;
 #endif
 
     std::vector<std::size_t> in_lengths_host(4), wei_lengths_host(4), out_lengths_host(4);
@@ -196,18 +194,6 @@ int main(int argc, char* argv[])
         case 2:
             wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
             out.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            break;
-        case 3:
-            wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            out.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            break;
-        case 4:
-            wei.GenerateTensorValue(GeneratorTensor_4{}, num_thread);
-            out.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            break;
-        case 5:
-            wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            out.GenerateTensorValue(GeneratorTensor_5{}, num_thread);
             break;
         default:
             wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
@@ -292,6 +278,33 @@ int main(int argc, char* argv[])
         const auto tmp = f_make_for_device_nhwc();
 
         device_dynamic_convolution_backward_data_implicit_gemm_v4r1_xdlops_nhwc_kyxc_nhwk<
+            in_data_t,
+            acc_data_t,
+            out_data_t>(tmp[I0],
+                        tmp[I1],
+                        tmp[I2],
+                        tmp[I3],
+                        tmp[I4],
+                        tmp[I5],
+                        tmp[I6],
+                        in_device,
+                        wei,
+                        out,
+                        nrepeat);
+    }
+#endif
+
+#if USE_CONV_BWD_V4R1R2_XDL_NHWC
+    if(algo == ConvBackwardDataAlgo::V4R1R2XDLNHWC)
+    {
+        if(layout != ConvTensorLayout::NHWC)
+        {
+            throw std::runtime_error("wrong! layout");
+        }
+
+        const auto tmp = f_make_for_device_nhwc();
+
+        device_dynamic_convolution_backward_data_implicit_gemm_v4r1r2_xdlops_nhwc_kyxc_nhwk<
             in_data_t,
             acc_data_t,
             out_data_t>(tmp[I0],
