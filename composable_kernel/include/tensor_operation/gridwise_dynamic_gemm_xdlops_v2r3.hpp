@@ -196,10 +196,17 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
         const auto M0 = M / M1;
         const auto N0 = N / N1;
 
+#if 1
         const auto c_blockid_to_m0_n0_block_cluster_adaptor =
             make_single_stage_tensor_adaptor(make_tuple(make_merge_transform(make_tuple(M0, N0))),
                                              make_tuple(Sequence<0, 1>{}),
                                              make_tuple(Sequence<0>{}));
+#elif 1
+        const auto c_blockid_to_m0_n0_block_cluster_adaptor =
+            make_single_stage_tensor_adaptor(make_tuple(make_merge_transform(make_tuple(N0, M0))),
+                                             make_tuple(Sequence<1, 0>{}),
+                                             make_tuple(Sequence<0>{}));
+#endif
 
         return c_blockid_to_m0_n0_block_cluster_adaptor;
     }
