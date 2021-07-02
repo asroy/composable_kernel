@@ -14,6 +14,7 @@
 #include "device_tensor.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nhwc_kyxc_nhwk.hpp"
+#include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nkhw.hpp"
@@ -24,23 +25,25 @@
 #define USE_DYNAMIC_MODE 1
 #define USE_CONV_FWD_V4R4_NCHW 0
 #define USE_CONV_FWD_V4R4_NHWC 0
+#define USE_CONV_FWD_V4R4R2_NHWC 1
 #define USE_CONV_FWD_V4R5_NCHW 0
 #define USE_CONV_FWD_V5R1_NCHW 0
 #define USE_CONV_FWD_V4R4_XDL_NCHW 0
 #define USE_CONV_FWD_V4R4R2_XDL_NHWC 0
-#define USE_CONV_FWD_V4R4R3_XDL_NHWC 1
-#define USE_CONV_FWD_V4R4R4_XDL_NHWC 1
+#define USE_CONV_FWD_V4R4R3_XDL_NHWC 0
+#define USE_CONV_FWD_V4R4R4_XDL_NHWC 0
 
 enum ConvForwardAlgo
 {
     V4R4NCHW,      // 0
     V4R4NHWC,      // 1
-    V4R5NCHW,      // 2
-    V5R1NCHW,      // 3
-    V4R4XDLNCHW,   // 4
-    V4R4R2XDLNHWC, // 5
-    V4R4R3XDLNHWC, // 6
-    V4R4R4XDLNHWC  // 7
+    V4R4R2NHWC,    // 2
+    V4R5NCHW,      // 3
+    V5R1NCHW,      // 4
+    V4R4XDLNCHW,   // 5
+    V4R4R2XDLNHWC, // 6
+    V4R4R3XDLNHWC, // 7
+    V4R4R4XDLNHWC  // 8
 };
 
 int main(int argc, char* argv[])
@@ -132,7 +135,7 @@ int main(int argc, char* argv[])
     const index_t Wo = (Wi + in_left_pad_w + in_right_pad_w - XEff) / conv_stride_w + 1;
 #endif
 
-#if 0
+#if 1
     constexpr index_t in_vector_size = 1;
     using in_data_t                  = float;
     using acc_data_t                 = float;
@@ -348,6 +351,32 @@ int main(int argc, char* argv[])
     }
 #endif
 
+#if USE_CONV_FWD_V4R4R2_NHWC
+    if(algo == ConvForwardAlgo::V4R4R2NHWC)
+    {
+        if(layout != ConvTensorLayout::NHWC)
+        {
+            throw std::runtime_error("wrong! layout");
+        }
+
+        const auto tmp = f_make_for_device_nhwc();
+
+        device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk<in_data_t,
+                                                                             acc_data_t,
+                                                                             out_data_t>(tmp[I0],
+                                                                                         tmp[I1],
+                                                                                         tmp[I2],
+                                                                                         tmp[I3],
+                                                                                         tmp[I4],
+                                                                                         tmp[I5],
+                                                                                         tmp[I6],
+                                                                                         in,
+                                                                                         wei,
+                                                                                         out_device,
+                                                                                         nrepeat);
+    }
+#endif
+
 #if USE_CONV_FWD_V4R5_NCHW
     if(algo == ConvForwardAlgo::V4R5NCHW)
     {
@@ -522,14 +551,12 @@ int main(int argc, char* argv[])
 
         check_error(out_host, out_device);
 
-#if 0
         if(do_log)
         {
-            LogRange(std::cout << "in : ", in.mData, ",") << std::endl;
-            LogRange(std::cout << "wei: ", wei.mData, ",") << std::endl;
-            LogRange(std::cout << "out_host  : ", out_host.mData, ",") << std::endl;
-            LogRange(std::cout << "out_device: ", out_device.mData, ",") << std::endl;
+            LogRangeAsType<float>(std::cout << "in : ", in.mData, ",") << std::endl;
+            LogRangeAsType<float>(std::cout << "wei: ", wei.mData, ",") << std::endl;
+            LogRangeAsType<float>(std::cout << "out_host  : ", out_host.mData, ",") << std::endl;
+            LogRangeAsType<float>(std::cout << "out_device: ", out_device.mData, ",") << std::endl;
         }
-#endif
     }
 }

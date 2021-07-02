@@ -100,7 +100,7 @@ struct DynamicBuffer
                 *reinterpret_cast<X*>(&p_data_[i]) = x;
 #else
                 // HACK: compiler would lower IR "store<i8, 16> address_space(3)" into inefficient
-                // ISA, so I try to let compiler emit use IR "store<i32, 4>" which would be lower to
+                // ISA, so I try to let compiler emit IR "store<i32, 4>" which would be lower to
                 // ds_write_b128
                 // TODO: remove this after compiler fix
                 if constexpr(is_same<typename scalar_type<remove_cv_t<remove_reference_t<T>>>::type,
