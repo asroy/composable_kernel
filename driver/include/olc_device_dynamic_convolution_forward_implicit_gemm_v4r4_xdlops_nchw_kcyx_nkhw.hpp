@@ -248,12 +248,12 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
 
     const auto descs =
         transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
-                                                                        in_n_c_hi_wi_desc,
-                                                                        out_n_k_ho_wo_desc,
-                                                                        conv_strides,
-                                                                        conv_dilations,
-                                                                        in_left_pads,
-                                                                        in_right_pads);
+                                                                               in_n_c_hi_wi_desc,
+                                                                               out_n_k_ho_wo_desc,
+                                                                               conv_strides,
+                                                                               conv_dilations,
+                                                                               in_left_pads,
+                                                                               in_right_pads);
     const auto a_k_m_grid_desc = descs[I0];
     const auto c_m_n_grid_desc = descs[I2];
     const auto M               = c_m_n_grid_desc.GetLength(I0);
@@ -290,13 +290,14 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
     const std::vector<size_t> vgd1 = {static_cast<size_t>(tunable->BlockSize), 1, 1};
     const std::vector<size_t> vgd2 = {static_cast<size_t>(grid_size * tunable->BlockSize), 1, 1};
 
-    std::string program_name = "dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.cpp";
-    std::string algo_name    = "implicit_gemm_conv_fwd_v4r4_xdlops_nchw";
+    std::string program_name =
+        "dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.cpp";
+    std::string algo_name = "implicit_gemm_conv_fwd_v4r4_xdlops_nchw";
 
     std::string param = " -std=c++17 ";
     std::string network_config;
 
-    param += get_definition_string_from_types<TInWei, TAcc, TOut>() + " " +
+    param += get_definition_string_from_types<TInWei, TAcc, TOut>() + " " + " -DCK_USE_AMD_XDLOPS" +
              get_definition_string_from_tunable(tunable) +
              " -DCK_PARAM_HAS_MAIN_KBLOCK_LOOP=" + std::to_string(hasMainKBlockLoop) +
              " -DCK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP=" + std::to_string(hasDoubleTailKBlockLoop);
@@ -313,7 +314,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
         KernelTimer timer1, timer2;
         std::string kernel_name;
 
-        kernel_name = "dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw_prepare";
+        kernel_name =
+            "dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw_prepare";
         auto network_config_1 = network_config + "_1";
 
         timer1.Start();
@@ -339,7 +341,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
             c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf);
         timer1.End();
 
-        kernel_name           = "dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw";
+        kernel_name = "dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw";
         auto network_config_2 = network_config + "_2";
 
         timer2.Start();

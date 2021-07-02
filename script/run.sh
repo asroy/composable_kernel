@@ -27,7 +27,7 @@ LOG=$5
 REPEAT=$6
 
 ################################ layout  algo  verify  init  log  repeat  N__ K___ C___ Y X Hi_ Wi__ Strides Dilations LeftPads RightPads
- ./conv_driver_v2          $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
+ #./conv_driver_v2          $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
 #./conv_driver_v2          $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256 1024 1 7  17   17     1 1       1 1      0 3       0 3
 #./conv_driver_v2          $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  256  256 2048 3 3  14   14     1 1       1 1      1 1       1 1
 #./conv_driver_v2          $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  256  256  256 3 3  14   14     1 1       1 1      1 1       1 1
@@ -43,4 +43,5 @@ REPEAT=$6
 
 #./conv_bwd_data_driver_v2 $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  256  256  256 3 3  14   14     1 1       1 1      1 1       1 1
 
- ./conv_driver_v2_olc      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
+ #./conv_driver_v2_olc      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
+ ./conv_driver_v2_olc      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256  256 3 3  14   14     1 1       1 1      1 1       1 1

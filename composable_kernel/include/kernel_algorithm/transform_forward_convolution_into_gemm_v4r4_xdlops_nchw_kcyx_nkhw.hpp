@@ -17,7 +17,8 @@ template <typename... Wei,
           typename ConvDilations,
           typename InLeftPads,
           typename InRightPads>
-__host__ __device__ constexpr auto transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
+__host__ __device__ constexpr auto
+transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
     const DynamicTensorDescriptor<Wei...>& wei_k_c_y_x_global_desc,
     const DynamicTensorDescriptor<In...>& in_n_c_hi_wi_global_desc,
     const DynamicTensorDescriptor<Out...>& out_n_k_ho_wo_global_desc,
@@ -100,6 +101,7 @@ __host__ __device__ constexpr auto transform_forward_convolution_into_gemm_v4r4_
         wei_gemmk_gemmm_global_desc, in_gemmk_gemmn_global_desc, out_gemmm_gemmn_global_desc);
 }
 
+#if 0
 template <typename... Wei,
           typename... In,
           typename... Out,
@@ -258,6 +260,7 @@ __host__ __device__ constexpr auto transform_forward_convolution_into_gemm_v4r4_
     return make_tuple(
         wei_gemmk_gemmm_global_desc, in_gemmk_gemmn_global_desc, out_gemmm_gemmn_global_desc);
 }
+#endif
 
 } // namespace ck
 #endif
