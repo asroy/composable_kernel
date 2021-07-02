@@ -362,18 +362,19 @@ int main(int argc, char* argv[])
         const auto tmp = f_make_for_device_nhwc();
 
         device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk<in_data_t,
-                                                                             acc_data_t,
-                                                                             out_data_t>(tmp[I0],
-                                                                                         tmp[I1],
-                                                                                         tmp[I2],
-                                                                                         tmp[I3],
-                                                                                         tmp[I4],
-                                                                                         tmp[I5],
-                                                                                         tmp[I6],
-                                                                                         in,
-                                                                                         wei,
-                                                                                         out_device,
-                                                                                         nrepeat);
+                                                                               acc_data_t,
+                                                                               out_data_t>(
+            tmp[I0],
+            tmp[I1],
+            tmp[I2],
+            tmp[I3],
+            tmp[I4],
+            tmp[I5],
+            tmp[I6],
+            in,
+            wei,
+            out_device,
+            nrepeat);
     }
 #endif
 
