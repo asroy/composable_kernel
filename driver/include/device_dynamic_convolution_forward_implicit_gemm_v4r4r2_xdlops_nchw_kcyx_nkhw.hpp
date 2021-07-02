@@ -56,7 +56,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nk
     const auto out_n_k_ho_wo_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(out_n_k_ho_wo_lengths);
 
-#if 0
+#if 1
     constexpr index_t BlockSize = 256;
 
     constexpr index_t GemmMPerBlock = 128;
@@ -65,7 +65,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nk
 
     constexpr index_t GemmMPerWave = 64;
     constexpr index_t GemmNPerWave = 64;
-    constexpr index_t GemmK1    = 8;
+    constexpr index_t GemmK1       = 8;
 
     constexpr index_t MRepeat = 1;
     constexpr index_t NRepeat = 1;
@@ -79,7 +79,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nk
     using GemmBBlockTransferThreadSliceLengths_GemmK0_GemmN_GemmK1   = Sequence<1, 4, 4>;
     using GemmBBlockTransferThreadClusterLengths_GemmK0_GemmN_GemmK1 = Sequence<4, 32, 2>;
 
-    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmN = 4;
+    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmN  = 4;
     constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmK1 = 4;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector = 1;

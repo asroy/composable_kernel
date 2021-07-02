@@ -115,7 +115,7 @@ static tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw
         4,            // BBlockTransferSrcScalarPerVector
         4,            // BBlockTransferDstScalarPerVector_KPack
         false,        // BThreadTransferSrcResetCoordinateAfterRun
-        {2, 3, 0, 1}, // CThreadTransferSrcDstAccessOrder
+        {3, 0, 1, 2}, // CThreadTransferSrcDstAccessOrder
         3,            // CThreadTransferSrcDstVectorDim,
         1             // CThreadTransferDstScalarPerVector
 };

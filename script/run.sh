@@ -44,4 +44,7 @@ REPEAT=$6
 #./conv_bwd_data_driver_v2 $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  256  256  256 3 3  14   14     1 1       1 1      1 1       1 1
 
  #./conv_driver_v2_olc      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
- ./conv_driver_v2_olc      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256  256 3 3  14   14     1 1       1 1      1 1       1 1
+ #./conv_driver_v2_olc      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256  256 3 3  14   14     1 1       1 1      1 1       1 1
+
+#./conv_driver_v2          $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  256  256 256 1 1  14   14     1 1       1 1      0 0       0 0
+./conv_driver_v2_olc          $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  256  256 256 1 1  14   14     1 1       1 1      0 0       0 0

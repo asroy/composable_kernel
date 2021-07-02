@@ -26,11 +26,11 @@
 
 enum ConvForwardAlgo
 {
-    V4R4NCHW,
-    V4R4NHWC,
-    V4R5NCHW,
-    V5R1NCHW,
-    V4R4XDLNCHW
+    V4R4NCHW,   // 0
+    V4R4NHWC,   // 1
+    V4R5NCHW,   // 2
+    V5R1NCHW,   // 3
+    V4R4XDLNCHW // 4
 };
 
 int main(int argc, char* argv[])
