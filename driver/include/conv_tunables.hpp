@@ -90,10 +90,35 @@ struct tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw
 
 static tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw
     default_tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw = {
-        256, 128, 128,       4,          64,           64,        8,
-        1,   1,   {1, 2, 8}, {4, 64, 1}, {1, 0, 2},    {1, 0, 2}, 2,
-        1,   1,   false,     {1, 4, 4},  {4, 32, 2},   {0, 2, 1}, {1, 0, 2},
-        1,   1,   1,         false,      {2, 3, 0, 1}, 3,         1};
+        256,          // BlockSize
+        128,          // MPerBlock,
+        128,          // NPerBlock,
+        4,            // KPerBlock,
+        64,           // MPerWave,
+        64,           // NPerWave,
+        8,            // KPack,
+        1,            // MRepeat,
+        1,            // NRepeat,
+        {1, 2, 8},    // ABlockTransferThreadSliceLengths_K0_M_K1,
+        {4, 64, 1},   // ABlockTransferThreadClusterLengths_K0_M_K1,
+        {1, 0, 2},    // ABlockTransferThreadClusterArrangeOrder,
+        {1, 0, 2},    // ABlockTransferSrcAccessOrder,
+        2,            // ABlockTransferSrcVectorDim
+        8,            // ABlockTransferSrcScalarPerVector,
+        8,            // ABlockTransferDstScalarPerVector_KPack,
+        false,        // AThreadTransferSrcResetCoordinateAfterRun,
+        {1, 4, 4},    // BBlockTransferThreadSliceLengths_K0_N_K1,
+        {4, 32, 2},   // BBlockTransferThreadClusterLengths_K0_N_K1,
+        {0, 2, 1},    // BBlockTransferThreadClusterArrangeOrder,
+        {1, 0, 2},    // BBlockTransferSrcAccessOrder,
+        1,            // BBlockTransferSrcVectorDim
+        4,            // BBlockTransferSrcScalarPerVector
+        4,            // BBlockTransferDstScalarPerVector_KPack
+        false,        // BThreadTransferSrcResetCoordinateAfterRun
+        {2, 3, 0, 1}, // CThreadTransferSrcDstAccessOrder
+        3,            // CThreadTransferSrcDstVectorDim,
+        1             // CThreadTransferDstScalarPerVector
+};
 
 struct tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw
 {
