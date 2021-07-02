@@ -13,10 +13,12 @@
 #include "host_conv.hpp"
 #include "device_tensor.hpp"
 #include "olc_device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
+#include "olc_device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
 #include "olc_device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw.hpp"
 
 #define USE_CONV_FWD_V4R4_NCHW 1
 #define USE_CONV_FWD_V4R5_NCHW 1
+#define USE_CONV_FWD_V4R4_XDLOPS_NCHW 1
 
 #include "conv_tunables.hpp"
 #include "handle.hpp"
@@ -27,7 +29,8 @@ enum ConvForwardAlgo
     V4R4NCHW,
     V4R4NHWC,
     V4R5NCHW,
-    V5R1NCHW
+    V5R1NCHW,
+    V4R4XDLNCHW
 };
 
 int main(int argc, char* argv[])
@@ -251,6 +254,38 @@ int main(int argc, char* argv[])
         device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw_olc<in_data_t,
                                                                                  acc_data_t,
                                                                                  out_data_t>(
+            handle,
+            tmp[I0],
+            tmp[I1],
+            tmp[I2],
+            conv_strides,
+            conv_dilations,
+            in_left_pads,
+            in_right_pads,
+            in,
+            wei,
+            out_device,
+            tunable,
+            nrepeat);
+    }
+#endif
+
+#if USE_CONV_FWD_V4R4_XDLOPS_NCHW
+    if(algo == ConvForwardAlgo::V4R4XDLNCHW)
+    {
+        if(layout != ConvTensorLayout::NCHW)
+        {
+            throw std::runtime_error("wrong! layout");
+        }
+
+        const auto tmp = f_make_for_device_nchw();
+
+        tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw* tunable =
+            &default_tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw;
+
+        device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw_olc<in_data_t,
+                                                                                        acc_data_t,
+                                                                                        out_data_t>(
             handle,
             tmp[I0],
             tmp[I1],
