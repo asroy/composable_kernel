@@ -17,25 +17,11 @@ constexpr index_t MPerBlock = CK_PARAM_MPerBlock;
 constexpr index_t NPerBlock = CK_PARAM_NPerBlock;
 constexpr index_t KPerBlock = CK_PARAM_KPerBlock;
 
-#define CK_PARAM_MPerWave 64
-#define CK_PARAM_NPerWave 64
-#define CK_PARAM_MRepeat 1
-#define CK_PARAM_NRepeat 1
-#define CK_PARAM_KPack 1
-
 constexpr index_t MPerWave = CK_PARAM_MPerWave;
 constexpr index_t NPerWave = CK_PARAM_NPerWave;
 constexpr index_t MRepeat  = CK_PARAM_MRepeat;
 constexpr index_t NRepeat  = CK_PARAM_NRepeat;
 constexpr index_t KPack    = CK_PARAM_KPack;
-
-#define CK_PARAM_ABlockTransferThreadSliceLengths_K0_M_K1 1, 2, 4
-#define CK_PARAM_ABlockTransferThreadClusterLengths_K0_M_K1 4, 64, 1
-#define CK_PARAM_ABlockTransferDstScalarPerVector_KPack 1
-
-#define CK_PARAM_BBlockTransferThreadSliceLengths_K0_N_K1 1, 2, 4
-#define CK_PARAM_BBlockTransferThreadClusterLengths_K0_N_K1 4, 64, 1
-#define CK_PARAM_BBlockTransferDstScalarPerVector_KPack 1
 
 using ABlockTransferThreadSliceLengths_K0_M_K1 =
     Sequence<CK_PARAM_ABlockTransferThreadSliceLengths_K0_M_K1>;
@@ -208,6 +194,7 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw_prepare(
                                                        KPerBlock,
                                                        MPerWave,
                                                        NPerWave,
+                                                       KPack,
                                                        MRepeat,
                                                        NRepeat,
                                                        ABlockTransferThreadSliceLengths_K0_M_K1,
@@ -338,6 +325,7 @@ extern "C" __global__ void
                                                        KPerBlock,
                                                        MPerWave,
                                                        NPerWave,
+                                                       KPack,
                                                        MRepeat,
                                                        NRepeat,
                                                        ABlockTransferThreadSliceLengths_K0_M_K1,

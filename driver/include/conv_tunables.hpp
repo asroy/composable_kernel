@@ -58,45 +58,42 @@ struct tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw
     ck::index_t NPerBlock;
     ck::index_t KPerBlock;
 
-    ck::index_t M1PerThread;
-    ck::index_t N1PerThread;
-    ck::index_t KPerThread;
+    ck::index_t MPerWave;
+    ck::index_t NPerWave;
+    ck::index_t KPack;
 
-    ck::index_t M1N1ThreadClusterM10;
-    ck::index_t M1N1ThreadClusterN10;
-    ck::index_t M1N1ThreadClusterM11;
-    ck::index_t M1N1ThreadClusterN11;
+    ck::index_t MRepeat;
+    ck::index_t NRepeat;
 
-    std::array<ck::index_t, 3> ABlockTransferThreadSliceLengths_K_M0_M1;
-    std::array<ck::index_t, 3> ABlockTransferThreadClusterLengths_K_M0_M1;
+    std::array<ck::index_t, 3> ABlockTransferThreadSliceLengths_K0_M_K1;
+    std::array<ck::index_t, 3> ABlockTransferThreadClusterLengths_K0_M_K1;
     std::array<ck::index_t, 3> ABlockTransferThreadClusterArrangeOrder;
     std::array<ck::index_t, 3> ABlockTransferSrcAccessOrder;
     ck::index_t ABlockTransferSrcVectorDim;
     ck::index_t ABlockTransferSrcScalarPerVector;
-    ck::index_t ABlockTransferDstScalarPerVector_M1;
+    ck::index_t ABlockTransferDstScalarPerVector_KPack;
     bool AThreadTransferSrcResetCoordinateAfterRun;
 
-    std::array<ck::index_t, 3> BBlockTransferThreadSliceLengths_K_N0_N1;
-    std::array<ck::index_t, 3> BBlockTransferThreadClusterLengths_K_N0_N1;
+    std::array<ck::index_t, 3> BBlockTransferThreadSliceLengths_K0_N_K1;
+    std::array<ck::index_t, 3> BBlockTransferThreadClusterLengths_K0_N_K1;
     std::array<ck::index_t, 3> BBlockTransferThreadClusterArrangeOrder;
     std::array<ck::index_t, 3> BBlockTransferSrcAccessOrder;
     ck::index_t BBlockTransferSrcVectorDim;
     ck::index_t BBlockTransferSrcScalarPerVector;
-    ck::index_t BBlockTransferDstScalarPerVector_N1;
+    ck::index_t BBlockTransferDstScalarPerVector_KPack;
     bool BThreadTransferSrcResetCoordinateAfterRun;
 
-    std::array<ck::index_t, 6> CThreadTransferSrcDstAccessOrder;
+    std::array<ck::index_t, 4> CThreadTransferSrcDstAccessOrder;
     ck::index_t CThreadTransferSrcDstVectorDim;
     ck::index_t CThreadTransferDstScalarPerVector;
 };
 
 static tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw
     default_tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw = {
-        256,       128,       128, 8, 4,         4,           1,
-        8,         8,         2,   2, {4, 1, 1}, {2, 1, 128}, {2, 1, 0},
-        {2, 1, 0}, 0,         4,   1, false,     {4, 1, 1},   {2, 1, 128},
-        {0, 1, 2}, {0, 1, 2}, 2,   1, 1,         false,       {3, 4, 5, 0, 1, 2},
-        5,         1};
+        256, 128, 128,       4,          64,           64,        8,
+        1,   1,   {1, 2, 8}, {4, 64, 1}, {1, 0, 2},    {1, 0, 2}, 2,
+        1,   1,   false,     {1, 4, 4},  {4, 32, 2},   {0, 2, 1}, {1, 0, 2},
+        1,   1,   1,         false,      {2, 3, 0, 1}, 3,         1};
 
 struct tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw
 {

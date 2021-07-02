@@ -32,20 +32,17 @@ get_network_config_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nc
 
     out += std::to_string(pt->MPerBlock) + "x" + std::to_string(pt->NPerBlock) + "x" +
            std::to_string(pt->KPerBlock) + "_";
-    out += std::to_string(pt->M1PerThread) + "x" + std::to_string(pt->N1PerThread) + "x" +
-           std::to_string(pt->KPerThread) + "_";
-    out += std::to_string(pt->M1N1ThreadClusterM10) + "x" +
-           std::to_string(pt->M1N1ThreadClusterN10) + "x" +
-           std::to_string(pt->M1N1ThreadClusterM11) + "x" +
-           std::to_string(pt->M1N1ThreadClusterN11) + "_";
+    out += std::to_string(pt->MPerWave) + "x" + std::to_string(pt->NPerWave) + "x" +
+           std::to_string(pt->MRepeat) + "x" + std::to_string(pt->NRepeat) + "x" +
+           std::to_string(pt->KPack) + "_";
 
-    out += std::to_string(pt->ABlockTransferThreadSliceLengths_K_M0_M1[0]) + "x" +
-           std::to_string(pt->ABlockTransferThreadSliceLengths_K_M0_M1[1]) + "x" +
-           std::to_string(pt->ABlockTransferThreadSliceLengths_K_M0_M1[2]) + "_";
+    out += std::to_string(pt->ABlockTransferThreadSliceLengths_K0_M_K1[0]) + "x" +
+           std::to_string(pt->ABlockTransferThreadSliceLengths_K0_M_K1[1]) + "x" +
+           std::to_string(pt->ABlockTransferThreadSliceLengths_K0_M_K1[2]) + "_";
 
-    out += std::to_string(pt->ABlockTransferThreadClusterLengths_K_M0_M1[0]) + "x" +
-           std::to_string(pt->ABlockTransferThreadClusterLengths_K_M0_M1[1]) + "x" +
-           std::to_string(pt->ABlockTransferThreadClusterLengths_K_M0_M1[2]) + "_";
+    out += std::to_string(pt->ABlockTransferThreadClusterLengths_K0_M_K1[0]) + "x" +
+           std::to_string(pt->ABlockTransferThreadClusterLengths_K0_M_K1[1]) + "x" +
+           std::to_string(pt->ABlockTransferThreadClusterLengths_K0_M_K1[2]) + "_";
 
     out += std::to_string(pt->ABlockTransferThreadClusterArrangeOrder[0]) + "x" +
            std::to_string(pt->ABlockTransferThreadClusterArrangeOrder[1]) + "x" +
@@ -57,16 +54,16 @@ get_network_config_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nc
 
     out += std::to_string(pt->ABlockTransferSrcVectorDim) + "_";
     out += std::to_string(pt->ABlockTransferSrcScalarPerVector) + "_";
-    out += std::to_string(pt->ABlockTransferDstScalarPerVector_M1) + "_";
+    out += std::to_string(pt->ABlockTransferDstScalarPerVector_KPack) + "_";
     out += std::to_string(pt->AThreadTransferSrcResetCoordinateAfterRun) + "_";
 
-    out += std::to_string(pt->BBlockTransferThreadSliceLengths_K_N0_N1[0]) + "x" +
-           std::to_string(pt->BBlockTransferThreadSliceLengths_K_N0_N1[1]) + "x" +
-           std::to_string(pt->BBlockTransferThreadSliceLengths_K_N0_N1[2]) + "_";
+    out += std::to_string(pt->BBlockTransferThreadSliceLengths_K0_N_K1[0]) + "x" +
+           std::to_string(pt->BBlockTransferThreadSliceLengths_K0_N_K1[1]) + "x" +
+           std::to_string(pt->BBlockTransferThreadSliceLengths_K0_N_K1[2]) + "_";
 
-    out += std::to_string(pt->BBlockTransferThreadClusterLengths_K_N0_N1[0]) + "x" +
-           std::to_string(pt->BBlockTransferThreadClusterLengths_K_N0_N1[1]) + "x" +
-           std::to_string(pt->BBlockTransferThreadClusterLengths_K_N0_N1[2]) + "_";
+    out += std::to_string(pt->BBlockTransferThreadClusterLengths_K0_N_K1[0]) + "x" +
+           std::to_string(pt->BBlockTransferThreadClusterLengths_K0_N_K1[1]) + "x" +
+           std::to_string(pt->BBlockTransferThreadClusterLengths_K0_N_K1[2]) + "_";
 
     out += std::to_string(pt->BBlockTransferThreadClusterArrangeOrder[0]) + "x" +
            std::to_string(pt->BBlockTransferThreadClusterArrangeOrder[1]) + "x" +
@@ -78,15 +75,13 @@ get_network_config_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nc
 
     out += std::to_string(pt->BBlockTransferSrcVectorDim) + "_";
     out += std::to_string(pt->BBlockTransferSrcScalarPerVector) + "_";
-    out += std::to_string(pt->BBlockTransferDstScalarPerVector_N1) + "_";
+    out += std::to_string(pt->BBlockTransferDstScalarPerVector_KPack) + "_";
     out += std::to_string(pt->BThreadTransferSrcResetCoordinateAfterRun) + "_";
 
     out += std::to_string(pt->CThreadTransferSrcDstAccessOrder[0]) + "x" +
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[1]) + "x" +
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[2]) + "x" +
-           std::to_string(pt->CThreadTransferSrcDstAccessOrder[3]) + "x" +
-           std::to_string(pt->CThreadTransferSrcDstAccessOrder[4]) + "x" +
-           std::to_string(pt->CThreadTransferSrcDstAccessOrder[5]) + "_";
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[3]) + "_";
 
     out += std::to_string(pt->CThreadTransferSrcDstVectorDim) + "_";
     out += std::to_string(pt->CThreadTransferDstScalarPerVector);
@@ -116,24 +111,21 @@ get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nchw_k
     out += " -DCK_PARAM_MPerBlock=" + std::to_string(pt->MPerBlock) +
            " -DCK_PARAM_NPerBlock=" + std::to_string(pt->NPerBlock) +
            " -DCK_PARAM_KPerBlock=" + std::to_string(pt->KPerBlock);
-    out += " -DCK_PARAM_M1PerThread=" + std::to_string(pt->M1PerThread) +
-           " -DCK_PARAM_N1PerThread=" + std::to_string(pt->N1PerThread) +
-           " -DCK_PARAM_KPerThread=" + std::to_string(pt->KPerThread);
+    out += " -DCK_PARAM_MPerWave=" + std::to_string(pt->MPerWave) +
+           " -DCK_PARAM_NPerWave=" + std::to_string(pt->NPerWave) +
+           " -DCK_PARAM_KPack=" + std::to_string(pt->KPack) +
+           " -DCK_PARAM_MRepeat=" + std::to_string(pt->MRepeat) +
+           " -DCK_PARAM_NRepeat=" + std::to_string(pt->NRepeat);
 
-    out += " -DCK_PARAM_M1N1ThreadClusterM10=" + std::to_string(pt->M1N1ThreadClusterM10) +
-           " -DCK_PARAM_M1N1ThreadClusterN10=" + std::to_string(pt->M1N1ThreadClusterN10) +
-           " -DCK_PARAM_M1N1ThreadClusterM11=" + std::to_string(pt->M1N1ThreadClusterM11) +
-           " -DCK_PARAM_M1N1ThreadClusterN11=" + std::to_string(pt->M1N1ThreadClusterN11);
+    out += " -DCK_PARAM_ABlockTransferThreadSliceLengths_K0_M_K1=" +
+           std::to_string(pt->ABlockTransferThreadSliceLengths_K0_M_K1[0]) + "," +
+           std::to_string(pt->ABlockTransferThreadSliceLengths_K0_M_K1[1]) + "," +
+           std::to_string(pt->ABlockTransferThreadSliceLengths_K0_M_K1[2]);
 
-    out += " -DCK_PARAM_ABlockTransferThreadSliceLengths_K_M0_M1=" +
-           std::to_string(pt->ABlockTransferThreadSliceLengths_K_M0_M1[0]) + "," +
-           std::to_string(pt->ABlockTransferThreadSliceLengths_K_M0_M1[1]) + "," +
-           std::to_string(pt->ABlockTransferThreadSliceLengths_K_M0_M1[2]);
-
-    out += " -DCK_PARAM_ABlockTransferThreadClusterLengths_K_M0_M1=" +
-           std::to_string(pt->ABlockTransferThreadClusterLengths_K_M0_M1[0]) + "," +
-           std::to_string(pt->ABlockTransferThreadClusterLengths_K_M0_M1[1]) + "," +
-           std::to_string(pt->ABlockTransferThreadClusterLengths_K_M0_M1[2]);
+    out += " -DCK_PARAM_ABlockTransferThreadClusterLengths_K0_M_K1=" +
+           std::to_string(pt->ABlockTransferThreadClusterLengths_K0_M_K1[0]) + "," +
+           std::to_string(pt->ABlockTransferThreadClusterLengths_K0_M_K1[1]) + "," +
+           std::to_string(pt->ABlockTransferThreadClusterLengths_K0_M_K1[2]);
 
     out += " -DCK_PARAM_ABlockTransferThreadClusterArrangeOrder=" +
            std::to_string(pt->ABlockTransferThreadClusterArrangeOrder[0]) + "," +
@@ -149,20 +141,20 @@ get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nchw_k
         " -DCK_PARAM_ABlockTransferSrcVectorDim=" + std::to_string(pt->ABlockTransferSrcVectorDim);
     out += " -DCK_PARAM_ABlockTransferSrcScalarPerVector=" +
            std::to_string(pt->ABlockTransferSrcScalarPerVector);
-    out += " -DCK_PARAM_ABlockTransferDstScalarPerVector_M1=" +
-           std::to_string(pt->ABlockTransferDstScalarPerVector_M1);
+    out += " -DCK_PARAM_ABlockTransferDstScalarPerVector_KPack=" +
+           std::to_string(pt->ABlockTransferDstScalarPerVector_KPack);
     out += " -DCK_PARAM_AThreadTransferSrcResetCoordinateAfterRun=" +
            std::to_string(pt->AThreadTransferSrcResetCoordinateAfterRun);
 
-    out += " -DCK_PARAM_BBlockTransferThreadSliceLengths_K_N0_N1=" +
-           std::to_string(pt->BBlockTransferThreadSliceLengths_K_N0_N1[0]) + "," +
-           std::to_string(pt->BBlockTransferThreadSliceLengths_K_N0_N1[1]) + "," +
-           std::to_string(pt->BBlockTransferThreadSliceLengths_K_N0_N1[2]);
+    out += " -DCK_PARAM_BBlockTransferThreadSliceLengths_K0_N_K1=" +
+           std::to_string(pt->BBlockTransferThreadSliceLengths_K0_N_K1[0]) + "," +
+           std::to_string(pt->BBlockTransferThreadSliceLengths_K0_N_K1[1]) + "," +
+           std::to_string(pt->BBlockTransferThreadSliceLengths_K0_N_K1[2]);
 
-    out += " -DCK_PARAM_BBlockTransferThreadClusterLengths_K_N0_N1=" +
-           std::to_string(pt->BBlockTransferThreadClusterLengths_K_N0_N1[0]) + "," +
-           std::to_string(pt->BBlockTransferThreadClusterLengths_K_N0_N1[1]) + "," +
-           std::to_string(pt->BBlockTransferThreadClusterLengths_K_N0_N1[2]);
+    out += " -DCK_PARAM_BBlockTransferThreadClusterLengths_K0_N_K1=" +
+           std::to_string(pt->BBlockTransferThreadClusterLengths_K0_N_K1[0]) + "," +
+           std::to_string(pt->BBlockTransferThreadClusterLengths_K0_N_K1[1]) + "," +
+           std::to_string(pt->BBlockTransferThreadClusterLengths_K0_N_K1[2]);
 
     out += " -DCK_PARAM_BBlockTransferThreadClusterArrangeOrder=" +
            std::to_string(pt->BBlockTransferThreadClusterArrangeOrder[0]) + "," +
@@ -178,8 +170,8 @@ get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nchw_k
         " -DCK_PARAM_BBlockTransferSrcVectorDim=" + std::to_string(pt->BBlockTransferSrcVectorDim);
     out += " -DCK_PARAM_BBlockTransferSrcScalarPerVector=" +
            std::to_string(pt->BBlockTransferSrcScalarPerVector);
-    out += " -DCK_PARAM_BBlockTransferDstScalarPerVector_N1=" +
-           std::to_string(pt->BBlockTransferDstScalarPerVector_N1);
+    out += " -DCK_PARAM_BBlockTransferDstScalarPerVector_KPack=" +
+           std::to_string(pt->BBlockTransferDstScalarPerVector_KPack);
     out += " -DCK_PARAM_BThreadTransferSrcResetCoordinateAfterRun=" +
            std::to_string(pt->BThreadTransferSrcResetCoordinateAfterRun);
 
@@ -187,9 +179,7 @@ get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nchw_k
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[0]) + "," +
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[1]) + "," +
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[2]) + "," +
-           std::to_string(pt->CThreadTransferSrcDstAccessOrder[3]) + "," +
-           std::to_string(pt->CThreadTransferSrcDstAccessOrder[4]) + "," +
-           std::to_string(pt->CThreadTransferSrcDstAccessOrder[5]);
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[3]);
 
     out += " -DCK_PARAM_CThreadTransferSrcDstVectorDim=" +
            std::to_string(pt->CThreadTransferSrcDstVectorDim);
