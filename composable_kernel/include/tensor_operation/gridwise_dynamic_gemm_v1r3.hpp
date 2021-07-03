@@ -158,6 +158,9 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r3
     static constexpr auto I2 = Number<2>{};
     static constexpr auto I3 = Number<3>{};
 
+    // TODO: hack
+    static constexpr auto K1 = Number<1>{};
+
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
         constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_M1>{},
@@ -352,16 +355,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r3
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto a_k_m_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<KPerBlock>{}, Number<MPerBlockM1>{}), max_lds_align);
-
-        // B matrix in LDS memory, dst of blockwise copy
-        //   be careful of LDS alignment
-        constexpr auto b_k_n_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<KPerBlock>{}, Number<NPerBlockN1>{}), max_lds_align);
-
-        // A matrix in LDS memory, dst of blockwise copy
-        //   be careful of LDS alignment
         constexpr auto a_k_m0_m1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
             make_tuple(Number<KPerBlock>{}, I1, Number<MPerBlockM1>{}), max_lds_align);
 
@@ -369,6 +362,16 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r3
         //   be careful of LDS alignment
         constexpr auto b_k_n0_n1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
             make_tuple(Number<KPerBlock>{}, I1, Number<NPerBlockN1>{}), max_lds_align);
+
+        // A matrix in LDS memory, for blockwise GEMM
+        //   be careful of LDS alignment
+        constexpr auto a_k0_m_k1_block_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<KPerBlock>{}, Number<MPerBlockM1>{}, K1));
+
+        // B matrix in LDS memory, for blockwise GEMM
+        //   be careful of LDS alignment
+        constexpr auto b_k0_n_k1_block_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<KPerBlock>{}, Number<NPerBlockN1>{}, K1));
 
         // A matrix blockwise copy
         auto a_blockwise_copy =
@@ -429,12 +432,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r3
         //     c_mtx[MPerBlockM1, NPerBlockN1] is distributed among threads, and saved in
         //       register
         const auto blockwise_gemm =
-            BlockwiseGemm_km_kn_m0m1n0n1_v2r3_pipeline_2x2<BlockSize,
+            BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2<BlockSize,
                                                            FloatAB,
                                                            FloatAB,
                                                            FloatAcc,
-                                                           decltype(a_k_m_block_desc),
-                                                           decltype(b_k_n_block_desc),
+                                                           decltype(a_k0_m_k1_block_desc),
+                                                           decltype(b_k0_n_k1_block_desc),
                                                            M1PerThreadM111,
                                                            N1PerThreadN111,
                                                            KPerThread,

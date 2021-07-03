@@ -132,7 +132,7 @@ struct ThreadwiseGemm_k0m0m1k1_k0n0n1k1_m0m1n0n1
         // TODO: sanity-check: compare ADesc, BDesc, CDesc Size with KLenghts, MLengths and NLengths
 
         // TODO remove this restriction
-        static_assert(KLengths::Size() == 1 && MLengths::Size() == 2 && NLengths::Size() == 2,
+        static_assert(KLengths::Size() == 2 && MLengths::Size() == 2 && NLengths::Size() == 2,
                       "wrong!");
     }
 
@@ -168,31 +168,46 @@ struct ThreadwiseGemm_k0m0m1k1_k0n0n1k1_m0m1n0n1
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
 
-        constexpr auto K  = KLengths{}[I0];
-        constexpr auto M0 = MLengths{}[I0];
-        constexpr auto M1 = MLengths{}[I1];
-        constexpr auto N0 = NLengths{}[I0];
-        constexpr auto N1 = NLengths{}[I1];
+        constexpr index_t K0 = KLengths{}[I0];
+        constexpr index_t K1 = KLengths{}[I1];
+        constexpr index_t M0 = MLengths{}[I0];
+        constexpr index_t M1 = MLengths{}[I1];
+        constexpr index_t N0 = NLengths{}[I0];
+        constexpr index_t N1 = NLengths{}[I1];
 
         constexpr auto a_origin_idx = to_multi_index(AOriginIdx{});
         constexpr auto b_origin_idx = to_multi_index(BOriginIdx{});
         constexpr auto c_origin_idx = to_multi_index(COriginIdx{});
 
-        static_for<0, K, 1>{}([&](auto k) {
+        static_for<0, K0, 1>{}([&](auto k0) {
             static_for<0, M0, 1>{}([&](auto m0) {
                 static_for<0, M1, 1>{}([&](auto m1) {
                     static_for<0, N0, 1>{}([&](auto n0) {
                         static_for<0, N1, 1>{}([&](auto n1) {
 
-                            constexpr index_t a_offset =
-                                ADesc{}.CalculateOffset(a_origin_idx + make_multi_index(k, m0, m1));
-                            constexpr index_t b_offset =
-                                BDesc{}.CalculateOffset(b_origin_idx + make_multi_index(k, n0, n1));
+                            vector_type<FloatA, K1> a_vec;
+                            vector_type<FloatB, K1> b_vec;
+
+                            static_for<0, K1, 1>{}([&](auto k1) {
+                                constexpr index_t a_offset =
+                                    ADesc{}.CalculateOffset(a_origin_idx + make_multi_index(k0, m0, m1, k1));
+
+                                constexpr index_t b_offset =
+                                    BDesc{}.CalculateOffset(b_origin_idx + make_multi_index(k0, n0, n1, k1));
+
+                                a_vec.template AsType<FloatA>()(k1) = a_buf[Number<a_offset>{}];
+
+                                b_vec.template AsType<FloatB>()(k1) = b_buf[Number<b_offset>{}];
+                            });
+
+                            using a_vector_t = typename vector_type<FloatA, K1>::type;
+                            using b_vector_t = typename vector_type<FloatB, K1>::type;
+
                             constexpr index_t c_offset = CDesc{}.CalculateOffset(
                                 c_origin_idx + make_multi_index(m0, m1, n0, n1));
 
-                            amd_assembly_inner_product(a_buf[Number<a_offset>{}],
-                                                       b_buf[Number<b_offset>{}],
+                            amd_assembly_inner_product(a_vec.template AsType<a_vector_t>()[I0],
+                                                       b_vec.template AsType<b_vector_t>()[I0],
                                                        c_buf(Number<c_offset>{}));
                         });
                     });
