@@ -135,21 +135,18 @@ int main(int argc, char* argv[])
     const index_t Wo = (Wi + in_left_pad_w + in_right_pad_w - XEff) / conv_stride_w + 1;
 #endif
 
-#if 1
-    constexpr index_t in_vector_size = 1;
+#if 0
     using in_data_t                  = float;
     using acc_data_t                 = float;
     using out_data_t                 = float;
+#elif 0
+    using in_data_t  = half_t;
+    using acc_data_t = float;
+    using out_data_t = half_t;
 #elif 1
-    constexpr index_t in_vector_size = 1;
-    using in_data_t                  = half_t;
-    using acc_data_t                 = float;
-    using out_data_t                 = half_t;
-#elif 1
-    constexpr index_t in_vector_size = 16;
-    using in_data_t                  = int8_t;
-    using acc_data_t                 = int32_t;
-    using out_data_t                 = int8_t;
+    using in_data_t  = int8_t;
+    using acc_data_t = int32_t;
+    using out_data_t = int8_t;
 #endif
 
     std::vector<std::size_t> in_lengths_host(4), wei_lengths_host(4), out_lengths_host(4);
@@ -415,7 +412,7 @@ int main(int argc, char* argv[])
         const auto tmp = f_make_for_device_nchw();
 
         device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw<in_data_t,
-                                                                             in_vector_size,
+                                                                             16,
                                                                              acc_data_t,
                                                                              out_data_t>(tmp[I0],
                                                                                          tmp[I1],
@@ -552,6 +549,7 @@ int main(int argc, char* argv[])
 
         check_error(out_host, out_device);
 
+#if 0
         if(do_log)
         {
             LogRangeAsType<float>(std::cout << "in : ", in.mData, ",") << std::endl;
@@ -559,5 +557,6 @@ int main(int argc, char* argv[])
             LogRangeAsType<float>(std::cout << "out_host  : ", out_host.mData, ",") << std::endl;
             LogRangeAsType<float>(std::cout << "out_device: ", out_device.mData, ",") << std::endl;
         }
+#endif
     }
 }

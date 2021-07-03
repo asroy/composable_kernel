@@ -93,9 +93,10 @@ struct ThreadwiseGemm_km0m1_kn0n1_m0m1n0n1
                             constexpr index_t c_offset = CDesc{}.CalculateOffset(
                                 c_origin_idx + make_multi_index(m0, m1, n0, n1));
 
-                            amd_assembly_inner_product(a_buf[Number<a_offset>{}],
-                                                       b_buf[Number<b_offset>{}],
-                                                       c_buf(Number<c_offset>{}));
+                            amd_inner_product_dlop<FloatA, FloatB, FloatC>(
+                                a_buf[Number<a_offset>{}],
+                                b_buf[Number<b_offset>{}],
+                                c_buf(Number<c_offset>{}));
                         });
                     });
                 });
@@ -206,9 +207,10 @@ struct ThreadwiseGemm_k0m0m1k1_k0n0n1k1_m0m1n0n1
                             constexpr index_t c_offset = CDesc{}.CalculateOffset(
                                 c_origin_idx + make_multi_index(m0, m1, n0, n1));
 
-                            amd_assembly_inner_product(a_vec.template AsType<a_vector_t>()[I0],
-                                                       b_vec.template AsType<b_vector_t>()[I0],
-                                                       c_buf(Number<c_offset>{}));
+                            amd_inner_product_dlop<a_vector_t, b_vector_t, FloatC>(
+                                a_vec.template AsType<a_vector_t>()[I0],
+                                b_vec.template AsType<b_vector_t>()[I0],
+                                c_buf(Number<c_offset>{}));
                         });
                     });
                 });
