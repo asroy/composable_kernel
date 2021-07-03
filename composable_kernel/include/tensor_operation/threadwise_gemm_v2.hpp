@@ -189,11 +189,11 @@ struct ThreadwiseGemm_k0m0m1k1_k0n0n1k1_m0m1n0n1
                             vector_type<FloatB, K1> b_vec;
 
                             static_for<0, K1, 1>{}([&](auto k1) {
-                                constexpr index_t a_offset =
-                                    ADesc{}.CalculateOffset(a_origin_idx + make_multi_index(k0, m0, m1, k1));
+                                constexpr index_t a_offset = ADesc{}.CalculateOffset(
+                                    a_origin_idx + make_multi_index(k0, m0, m1, k1));
 
-                                constexpr index_t b_offset =
-                                    BDesc{}.CalculateOffset(b_origin_idx + make_multi_index(k0, n0, n1, k1));
+                                constexpr index_t b_offset = BDesc{}.CalculateOffset(
+                                    b_origin_idx + make_multi_index(k0, n0, n1, k1));
 
                                 a_vec.template AsType<FloatA>()(k1) = a_buf[Number<a_offset>{}];
 

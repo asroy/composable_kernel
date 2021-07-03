@@ -53,8 +53,8 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
 
     static constexpr index_t K0 = AK0MK1BlockDesc{}.GetLength(I0);
     static constexpr index_t K1 = AK0MK1BlockDesc{}.GetLength(I2);
-    static constexpr index_t M = AK0MK1BlockDesc{}.GetLength(I1);
-    static constexpr index_t N = BK0NK1BlockDesc{}.GetLength(I1);
+    static constexpr index_t M  = AK0MK1BlockDesc{}.GetLength(I1);
+    static constexpr index_t N  = BK0NK1BlockDesc{}.GetLength(I1);
 
     static constexpr index_t M100 = M1N1ThreadClusterM100;
     static constexpr index_t N100 = M1N1ThreadClusterN100;
@@ -139,8 +139,10 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
         return Sequence<M0, M11, N0, N11>{};
     }
 
-    static constexpr auto a_k0_m0_m1_k1_block_desc_ = MakeAK0M0M1K1BlockDescriptor(AK0MK1BlockDesc{});
-    static constexpr auto b_k0_n0_n1_k1_block_desc_ = MakeBK0N0N1K1BlockDescriptor(BK0NK1BlockDesc{});
+    static constexpr auto a_k0_m0_m1_k1_block_desc_ =
+        MakeAK0M0M1K1BlockDescriptor(AK0MK1BlockDesc{});
+    static constexpr auto b_k0_n0_n1_k1_block_desc_ =
+        MakeBK0N0N1K1BlockDescriptor(BK0NK1BlockDesc{});
 
     public:
     __device__ BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2()
@@ -151,7 +153,8 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
           b_thread_copy_{
               make_tuple(0, c_thread_origin_data_idx_[I2], c_thread_origin_data_idx_[I3], 0)}
     {
-        static_assert(AK0MK1BlockDesc::IsKnownAtCompileTime() && BK0NK1BlockDesc::IsKnownAtCompileTime(),
+        static_assert(AK0MK1BlockDesc::IsKnownAtCompileTime() &&
+                          BK0NK1BlockDesc::IsKnownAtCompileTime(),
                       "wrong! Desc should be known at compile-time");
 
         static_assert(BlockSize == M101 * M100 * N101 * N100,
@@ -190,7 +193,10 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
     }
 
     // TODO: check this
-    __host__ __device__ static constexpr index_t GetABlockAlignment() { return K1 * M1PerThreadM11; }
+    __host__ __device__ static constexpr index_t GetABlockAlignment()
+    {
+        return K1 * M1PerThreadM11;
+    }
 
     // TODO: check this
     __host__ __device__ static constexpr auto GetBBlockAlignment() { return K1 * N1PerThreadN11; }
@@ -362,12 +368,14 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
 
     private:
     // A[K0, M0, M1, K1]
-    static constexpr auto a_k0_m0_m1_k1_thread_desc_ = make_dynamic_naive_tensor_descriptor_packed_v2(
-        make_tuple(Number<KPerThread>{}, Number<M0>{}, Number<M1PerThreadM11>{}, Number<K1>{}));
+    static constexpr auto a_k0_m0_m1_k1_thread_desc_ =
+        make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<KPerThread>{}, Number<M0>{}, Number<M1PerThreadM11>{}, Number<K1>{}));
 
     // B[K0, N0, N1, K1]
-    static constexpr auto b_k0_n0_n1_k1_thread_desc_ = make_dynamic_naive_tensor_descriptor_packed_v2(
-        make_tuple(Number<KPerThread>{}, Number<N0>{}, Number<N1PerThreadN11>{}, Number<K1>{}));
+    static constexpr auto b_k0_n0_n1_k1_thread_desc_ =
+        make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<KPerThread>{}, Number<N0>{}, Number<N1PerThreadN11>{}, Number<K1>{}));
 
     using AThreadCopy =
         ThreadwiseDynamicTensorSliceTransfer_v4<FloatA,

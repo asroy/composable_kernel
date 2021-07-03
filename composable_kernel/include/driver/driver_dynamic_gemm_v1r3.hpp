@@ -13,8 +13,8 @@ template <index_t BlockSize,
           typename FloatAcc,
           typename FloatC,
           InMemoryDataOperation CGlobalMemoryDataOperation,
-          typename AKMGridDesc,
-          typename BKNGridDesc,
+          typename AK0MK1GridDesc,
+          typename BK0NK1GridDesc,
           typename CMNGridDesc,
           index_t MPerBlock,
           index_t NPerBlock,
@@ -26,21 +26,21 @@ template <index_t BlockSize,
           index_t M1N1ThreadClusterN10,
           index_t M1N1ThreadClusterM11,
           index_t M1N1ThreadClusterN11,
-          typename ABlockTransferThreadSliceLengths_K_M0_M1,
-          typename ABlockTransferThreadClusterLengths_K_M0_M1,
+          typename ABlockTransferThreadSliceLengths_K0_M0_M1_K1,
+          typename ABlockTransferThreadClusterLengths_K0_M0_M1_K1,
           typename ABlockTransferThreadClusterArrangeOrder,
           typename ABlockTransferSrcAccessOrder,
           index_t ABlockTransferSrcVectorDim,
           index_t ABlockTransferSrcScalarPerVector,
-          index_t ABlockTransferDstScalarPerVector_M1,
+          index_t ABlockTransferDstScalarPerVector_K1,
           bool AThreadTransferSrcResetCoordinateAfterRun,
-          typename BBlockTransferThreadSliceLengths_K_N0_N1,
-          typename BBlockTransferThreadClusterLengths_K_N0_N1,
+          typename BBlockTransferThreadSliceLengths_K0_N0_N1_K1,
+          typename BBlockTransferThreadClusterLengths_K0_N0_N1_K1,
           typename BBlockTransferThreadClusterArrangeOrder,
           typename BBlockTransferSrcAccessOrder,
           index_t BBlockTransferSrcVectorDim,
           index_t BBlockTransferSrcScalarPerVector,
-          index_t BBlockTransferDstScalarPerVector_N1,
+          index_t BBlockTransferDstScalarPerVector_K1,
           bool BThreadTransferSrcResetCoordinateAfterRun,
           typename CThreadTransferSrcDstAccessOrder,
           index_t CThreadTransferSrcDstVectorDim,
@@ -53,8 +53,8 @@ template <index_t BlockSize,
 __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
                                         const FloatAB* p_b_grid,
                                         FloatC* p_c_grid,
-                                        const AKMGridDesc& a_k_m_grid_desc,
-                                        const BKNGridDesc& b_k_n_grid_desc,
+                                        const AK0MK1GridDesc& a_k0_m_k1_grid_desc,
+                                        const BK0NK1GridDesc& b_k0_n_k1_grid_desc,
                                         const CMNGridDesc& c_m_n_grid_desc,
                                         AGridIteratorHacks,
                                         BGridIteratorHacks,
@@ -78,8 +78,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
                                           FloatAcc,
                                           FloatC,
                                           CGlobalMemoryDataOperation,
-                                          AKMGridDesc,
-                                          BKNGridDesc,
+                                          AK0MK1GridDesc,
+                                          BK0NK1GridDesc,
                                           CMNGridDesc,
                                           MPerBlock,
                                           NPerBlock,
@@ -91,21 +91,21 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
                                           M1N1ThreadClusterN10,
                                           M1N1ThreadClusterM11,
                                           M1N1ThreadClusterN11,
-                                          ABlockTransferThreadSliceLengths_K_M0_M1,
-                                          ABlockTransferThreadClusterLengths_K_M0_M1,
+                                          ABlockTransferThreadSliceLengths_K0_M0_M1_K1,
+                                          ABlockTransferThreadClusterLengths_K0_M0_M1_K1,
                                           ABlockTransferThreadClusterArrangeOrder,
                                           ABlockTransferSrcAccessOrder,
                                           ABlockTransferSrcVectorDim,
                                           ABlockTransferSrcScalarPerVector,
-                                          ABlockTransferDstScalarPerVector_M1,
+                                          ABlockTransferDstScalarPerVector_K1,
                                           AThreadTransferSrcResetCoordinateAfterRun,
-                                          BBlockTransferThreadSliceLengths_K_N0_N1,
-                                          BBlockTransferThreadClusterLengths_K_N0_N1,
+                                          BBlockTransferThreadSliceLengths_K0_N0_N1_K1,
+                                          BBlockTransferThreadClusterLengths_K0_N0_N1_K1,
                                           BBlockTransferThreadClusterArrangeOrder,
                                           BBlockTransferSrcAccessOrder,
                                           BBlockTransferSrcVectorDim,
                                           BBlockTransferSrcScalarPerVector,
-                                          BBlockTransferDstScalarPerVector_N1,
+                                          BBlockTransferDstScalarPerVector_K1,
                                           BThreadTransferSrcResetCoordinateAfterRun,
                                           CThreadTransferSrcDstAccessOrder,
                                           CThreadTransferSrcDstVectorDim,
@@ -116,20 +116,22 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
                                           AGridMoveSliceWindowIteratorHacks,
                                           BGridMoveSliceWindowIteratorHacks>;
 
-    const auto M = a_k_m_grid_desc.GetLength(I1);
-    const auto N = b_k_n_grid_desc.GetLength(I1);
-    const auto K = a_k_m_grid_desc.GetLength(I0);
+    const auto M  = a_k0_m_k1_grid_desc.GetLength(I1);
+    const auto N  = b_k0_n_k1_grid_desc.GetLength(I1);
+    const auto K0 = a_k0_m_k1_grid_desc.GetLength(I0);
 
-    if(!GridwiseGemm::CheckValidity(a_k_m_grid_desc, b_k_n_grid_desc, c_m_n_grid_desc))
+    if(!GridwiseGemm::CheckValidity(a_k0_m_k1_grid_desc, b_k0_n_k1_grid_desc, c_m_n_grid_desc))
     {
         throw std::runtime_error("wrong! GridwiseDynamicGemm_km_kn_mn_v1r3 has invalid setting");
     }
 
-    const auto a_k_m0_m1_grid_desc = GridwiseGemm::MakeAKM0M1GridDescriptor(a_k_m_grid_desc);
-    const auto b_k_n0_n1_grid_desc = GridwiseGemm::MakeBKN0N1GridDescriptor(b_k_n_grid_desc);
+    const auto a_k0_m0_m1_k1_grid_desc =
+        GridwiseGemm::MakeAK0M0M1K1GridDescriptor(a_k0_m_k1_grid_desc);
+    const auto b_k0_n0_n1_k1_grid_desc =
+        GridwiseGemm::MakeBK0N0N1K1GridDescriptor(b_k0_n_k1_grid_desc);
 
-    using AKM0M1GridDesc = decltype(a_k_m0_m1_grid_desc);
-    using BKN0N1GridDesc = decltype(b_k_n0_n1_grid_desc);
+    using AK0M0M1K1GridDesc = decltype(a_k0_m0_m1_k1_grid_desc);
+    using BK0N0N1K1GridDesc = decltype(b_k0_n0_n1_k1_grid_desc);
 
     // c_m0_m10_m11_n0_n10_n11_grid_desc
     const auto c_m0_m10_m11_n0_n10_n11_grid_desc =
@@ -145,18 +147,20 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
 
     const index_t grid_size = GridwiseGemm::CalculateGridSize(M, N);
 
-    const bool has_main_k_block_loop = GridwiseGemm::CalculateHasMainKBlockLoop(K);
+    const bool has_main_k_block_loop = GridwiseGemm::CalculateHasMainKBlockLoop(K0);
 
-    const bool has_double_tail_k_block_loop = GridwiseGemm::CalculateHasDoubleTailKBlockLoop(K);
+    const bool has_double_tail_k_block_loop = GridwiseGemm::CalculateHasDoubleTailKBlockLoop(K0);
 
     {
-        std::cout << "a_k_m0_m1_grid_desc{" << a_k_m0_m1_grid_desc.GetLength(I0) << ", "
-                  << a_k_m0_m1_grid_desc.GetLength(I1) << ", " << a_k_m0_m1_grid_desc.GetLength(I2)
-                  << "}" << std::endl;
+        std::cout << "a_k0_m0_m1_k1_grid_desc{" << a_k0_m0_m1_k1_grid_desc.GetLength(I0) << ", "
+                  << a_k0_m0_m1_k1_grid_desc.GetLength(I1) << ", "
+                  << a_k0_m0_m1_k1_grid_desc.GetLength(I2) << ", "
+                  << a_k0_m0_m1_k1_grid_desc.GetLength(I3) << "}" << std::endl;
 
-        std::cout << "b_k_n0_n1_grid_desc{" << b_k_n0_n1_grid_desc.GetLength(I0) << ", "
-                  << b_k_n0_n1_grid_desc.GetLength(I1) << ", " << b_k_n0_n1_grid_desc.GetLength(I2)
-                  << "}" << std::endl;
+        std::cout << "b_k0_n0_n1_k1_grid_desc{" << b_k0_n0_n1_k1_grid_desc.GetLength(I0) << ", "
+                  << b_k0_n0_n1_k1_grid_desc.GetLength(I1) << ", "
+                  << b_k0_n0_n1_k1_grid_desc.GetLength(I2) << ", "
+                  << b_k0_n0_n1_k1_grid_desc.GetLength(I3) << "}" << std::endl;
 
         std::cout << "c_m0_m10_m11_n0_n10_n11_grid_desc{ "
                   << c_m0_m10_m11_n0_n10_n11_grid_desc.GetLength(I0) << ", "
@@ -176,8 +180,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
             kernel_dynamic_gemm_v1r3<GridwiseGemm,
                                      FloatAB,
                                      FloatC,
-                                     remove_reference_t<AKM0M1GridDesc>,
-                                     remove_reference_t<BKN0N1GridDesc>,
+                                     remove_reference_t<AK0M0M1K1GridDesc>,
+                                     remove_reference_t<BK0N0N1K1GridDesc>,
                                      remove_reference_t<CM0M10M11N0N10N11GridDesc>,
                                      remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
                                      true,
@@ -192,8 +196,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
                                           p_a_grid,
                                           p_b_grid,
                                           p_c_grid,
-                                          a_k_m0_m1_grid_desc,
-                                          b_k_n0_n1_grid_desc,
+                                          a_k0_m0_m1_k1_grid_desc,
+                                          b_k0_n0_n1_k1_grid_desc,
                                           c_m0_m10_m11_n0_n10_n11_grid_desc,
                                           c_blockid_to_m0_n0_block_cluster_adaptor);
     }
@@ -203,8 +207,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
             kernel_dynamic_gemm_v1r3<GridwiseGemm,
                                      FloatAB,
                                      FloatC,
-                                     remove_reference_t<AKM0M1GridDesc>,
-                                     remove_reference_t<BKN0N1GridDesc>,
+                                     remove_reference_t<AK0M0M1K1GridDesc>,
+                                     remove_reference_t<BK0N0N1K1GridDesc>,
                                      remove_reference_t<CM0M10M11N0N10N11GridDesc>,
                                      remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
                                      true,
@@ -219,8 +223,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
                                           p_a_grid,
                                           p_b_grid,
                                           p_c_grid,
-                                          a_k_m0_m1_grid_desc,
-                                          b_k_n0_n1_grid_desc,
+                                          a_k0_m0_m1_k1_grid_desc,
+                                          b_k0_n0_n1_k1_grid_desc,
                                           c_m0_m10_m11_n0_n10_n11_grid_desc,
                                           c_blockid_to_m0_n0_block_cluster_adaptor);
     }
@@ -230,8 +234,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
             kernel_dynamic_gemm_v1r3<GridwiseGemm,
                                      FloatAB,
                                      FloatC,
-                                     remove_reference_t<AKM0M1GridDesc>,
-                                     remove_reference_t<BKN0N1GridDesc>,
+                                     remove_reference_t<AK0M0M1K1GridDesc>,
+                                     remove_reference_t<BK0N0N1K1GridDesc>,
                                      remove_reference_t<CM0M10M11N0N10N11GridDesc>,
                                      remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
                                      false,
@@ -246,8 +250,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
                                           p_a_grid,
                                           p_b_grid,
                                           p_c_grid,
-                                          a_k_m0_m1_grid_desc,
-                                          b_k_n0_n1_grid_desc,
+                                          a_k0_m0_m1_k1_grid_desc,
+                                          b_k0_n0_n1_k1_grid_desc,
                                           c_m0_m10_m11_n0_n10_n11_grid_desc,
                                           c_blockid_to_m0_n0_block_cluster_adaptor);
     }
@@ -257,8 +261,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
             kernel_dynamic_gemm_v1r3<GridwiseGemm,
                                      FloatAB,
                                      FloatC,
-                                     remove_reference_t<AKM0M1GridDesc>,
-                                     remove_reference_t<BKN0N1GridDesc>,
+                                     remove_reference_t<AK0M0M1K1GridDesc>,
+                                     remove_reference_t<BK0N0N1K1GridDesc>,
                                      remove_reference_t<CM0M10M11N0N10N11GridDesc>,
                                      remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
                                      false,
@@ -273,22 +277,22 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
                                           p_a_grid,
                                           p_b_grid,
                                           p_c_grid,
-                                          a_k_m0_m1_grid_desc,
-                                          b_k_n0_n1_grid_desc,
+                                          a_k0_m0_m1_k1_grid_desc,
+                                          b_k0_n0_n1_k1_grid_desc,
                                           c_m0_m10_m11_n0_n10_n11_grid_desc,
                                           c_blockid_to_m0_n0_block_cluster_adaptor);
     }
 
     return ave_time;
 #elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER
-    DeviceMem a_k_m0_m1_grid_desc_dev_buf(sizeof(AKM0M1GridDesc));
-    DeviceMem b_k_n0_n1_grid_desc_dev_buf(sizeof(BKN0N1GridDesc));
+    DeviceMem a_k0_m0_m1_k1_grid_desc_dev_buf(sizeof(AK0M0M1K1GridDesc));
+    DeviceMem b_k0_n0_n1_k1_grid_desc_dev_buf(sizeof(BK0N0N1K1GridDesc));
     DeviceMem c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf(sizeof(CM0M10M11N0N10N11GridDesc));
     DeviceMem c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf(
         sizeof(CBlockIdToM0N0BlockClusterAdaptor));
 
-    a_k_m0_m1_grid_desc_dev_buf.ToDevice(&a_k_m0_m1_grid_desc);
-    b_k_n0_n1_grid_desc_dev_buf.ToDevice(&b_k_n0_n1_grid_desc);
+    a_k0_m0_m1_k1_grid_desc_dev_buf.ToDevice(&a_k0_m0_m1_k1_grid_desc);
+    b_k0_n0_n1_k1_grid_desc_dev_buf.ToDevice(&b_k0_n0_n1_k1_grid_desc);
     c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf.ToDevice(&c_m0_m10_m11_n0_n10_n11_grid_desc);
     c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf.ToDevice(
         &c_blockid_to_m0_n0_block_cluster_adaptor);
@@ -301,8 +305,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
             kernel_dynamic_gemm_v1r3<GridwiseGemm,
                                      FloatAB,
                                      FloatC,
-                                     remove_reference_t<AKM0M1GridDesc>,
-                                     remove_reference_t<BKN0N1GridDesc>,
+                                     remove_reference_t<AK0M0M1K1GridDesc>,
+                                     remove_reference_t<BK0N0N1K1GridDesc>,
                                      remove_reference_t<CM0M10M11N0N10N11GridDesc>,
                                      remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
                                      true,
@@ -318,8 +322,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
             p_a_grid,
             p_b_grid,
             p_c_grid,
-            (void __CONSTANT__*)a_k_m0_m1_grid_desc_dev_buf.GetDeviceBuffer(),
-            (void __CONSTANT__*)b_k_n0_n1_grid_desc_dev_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)a_k0_m0_m1_k1_grid_desc_dev_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)b_k0_n0_n1_k1_grid_desc_dev_buf.GetDeviceBuffer(),
             (void __CONSTANT__*)c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf.GetDeviceBuffer(),
             (void __CONSTANT__*)c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf.GetDeviceBuffer());
     }
@@ -329,8 +333,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
             kernel_dynamic_gemm_v1r3<GridwiseGemm,
                                      FloatAB,
                                      FloatC,
-                                     remove_reference_t<AKM0M1GridDesc>,
-                                     remove_reference_t<BKN0N1GridDesc>,
+                                     remove_reference_t<AK0M0M1K1GridDesc>,
+                                     remove_reference_t<BK0N0N1K1GridDesc>,
                                      remove_reference_t<CM0M10M11N0N10N11GridDesc>,
                                      remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
                                      true,
@@ -346,8 +350,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
             p_a_grid,
             p_b_grid,
             p_c_grid,
-            (void __CONSTANT__*)a_k_m0_m1_grid_desc_dev_buf.GetDeviceBuffer(),
-            (void __CONSTANT__*)b_k_n0_n1_grid_desc_dev_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)a_k0_m0_m1_k1_grid_desc_dev_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)b_k0_n0_n1_k1_grid_desc_dev_buf.GetDeviceBuffer(),
             (void __CONSTANT__*)c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf.GetDeviceBuffer(),
             (void __CONSTANT__*)c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf.GetDeviceBuffer());
     }
@@ -357,8 +361,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
             kernel_dynamic_gemm_v1r3<GridwiseGemm,
                                      FloatAB,
                                      FloatC,
-                                     remove_reference_t<AKM0M1GridDesc>,
-                                     remove_reference_t<BKN0N1GridDesc>,
+                                     remove_reference_t<AK0M0M1K1GridDesc>,
+                                     remove_reference_t<BK0N0N1K1GridDesc>,
                                      remove_reference_t<CM0M10M11N0N10N11GridDesc>,
                                      remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
                                      false,
@@ -374,8 +378,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
             p_a_grid,
             p_b_grid,
             p_c_grid,
-            (void __CONSTANT__*)a_k_m0_m1_grid_desc_dev_buf.GetDeviceBuffer(),
-            (void __CONSTANT__*)b_k_n0_n1_grid_desc_dev_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)a_k0_m0_m1_k1_grid_desc_dev_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)b_k0_n0_n1_k1_grid_desc_dev_buf.GetDeviceBuffer(),
             (void __CONSTANT__*)c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf.GetDeviceBuffer(),
             (void __CONSTANT__*)c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf.GetDeviceBuffer());
     }
@@ -385,8 +389,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
             kernel_dynamic_gemm_v1r3<GridwiseGemm,
                                      FloatAB,
                                      FloatC,
-                                     remove_reference_t<AKM0M1GridDesc>,
-                                     remove_reference_t<BKN0N1GridDesc>,
+                                     remove_reference_t<AK0M0M1K1GridDesc>,
+                                     remove_reference_t<BK0N0N1K1GridDesc>,
                                      remove_reference_t<CM0M10M11N0N10N11GridDesc>,
                                      remove_reference_t<CBlockIdToM0N0BlockClusterAdaptor>,
                                      false,
@@ -402,8 +406,8 @@ __host__ float driver_dynamic_gemm_v1r3(const FloatAB* p_a_grid,
             p_a_grid,
             p_b_grid,
             p_c_grid,
-            (void __CONSTANT__*)a_k_m0_m1_grid_desc_dev_buf.GetDeviceBuffer(),
-            (void __CONSTANT__*)b_k_n0_n1_grid_desc_dev_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)a_k0_m0_m1_k1_grid_desc_dev_buf.GetDeviceBuffer(),
+            (void __CONSTANT__*)b_k0_n0_n1_k1_grid_desc_dev_buf.GetDeviceBuffer(),
             (void __CONSTANT__*)c_m0_m10_m11_n0_n10_n11_grid_desc_dev_buf.GetDeviceBuffer(),
             (void __CONSTANT__*)c_blockid_to_m0_n0_block_cluster_adaptor_dev_buf.GetDeviceBuffer());
     }
