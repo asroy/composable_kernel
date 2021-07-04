@@ -375,8 +375,8 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
         decltype(a_k0_m0_m1_k1_thread_desc_),
         Sequence<KPerThread, 1, M1PerThreadM11, K1>, // SliceLengths
         Sequence<0, 1, 2, 3>,                        // DimAccessOrder
-        Sequence<1, 1, M1PerThreadM11, K1>,          // SrcVectorLengths
-        Sequence<0, 1, 2, 3>>;                       // SrcVectorContiguousDimOrder
+        Sequence<1, 1, M1PerThreadM11, K1>,          // SrcVectorTensorLengths
+        Sequence<0, 1, 2, 3>>;                       // SrcVectorTensorContiguousDimOrder
 
     using BThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4r1<
         FloatB,
@@ -385,8 +385,8 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
         decltype(b_k0_n0_n1_k1_thread_desc_),
         Sequence<KPerThread, 1, N1PerThreadN11, K1>, // SliceLengths
         Sequence<0, 1, 2, 3>,                        // DimAccessOrder
-        Sequence<1, 1, N1PerThreadN11, K1>,          // SrcVectorLengths
-        Sequence<0, 1, 2, 3>>;                       // SrcVectorContiguousDimOrder
+        Sequence<1, 1, N1PerThreadN11, K1>,          // SrcVectorTensorLengths
+        Sequence<0, 1, 2, 3>>;                       // SrcVectorTensorContiguousDimOrder
 
     CIndex c_thread_origin_data_idx_;
 

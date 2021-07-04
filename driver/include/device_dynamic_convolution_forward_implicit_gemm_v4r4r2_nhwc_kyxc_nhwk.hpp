@@ -78,14 +78,14 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk(
     using GemmABlockTransferThreadSliceLengths_K0_M0_M1_K1   = Sequence<4, 1, 1, 1>;
     using GemmABlockTransferThreadClusterLengths_K0_M0_M1_K1 = Sequence<2, 1, 128, 1>;
 
-    constexpr index_t GemmABlockTransferSrcScalarPerVector_K1 = 1;
-    constexpr index_t GemmABlockTransferDstScalarPerVector_K1 = 1;
+    using GemmABlockTransferSrcVectorTensorLengths_K0_M0_M1_K1 = Sequence<4, 1, 1, 1>;
+    using GemmABlockTransferDstVectorTensorLengths_K0_M0_M1_K1 = Sequence<1, 1, 1, 1>;
 
     using GemmBBlockTransferThreadSliceLengths_K0_N0_N1_K1   = Sequence<4, 1, 1, 1>;
     using GemmBBlockTransferThreadClusterLengths_K0_N0_N1_K1 = Sequence<2, 1, 128, 1>;
 
-    constexpr index_t GemmBBlockTransferSrcScalarPerVector_K1 = 1;
-    constexpr index_t GemmBBlockTransferDstScalarPerVector_K1 = 1;
+    using GemmBBlockTransferSrcVectorTensorLengths_K0_N0_N1_K1 = Sequence<4, 1, 1, 1>;
+    using GemmBBlockTransferDstVectorTensorLengths_K0_N0_N1_K1 = Sequence<1, 1, 1, 1>;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_N11 = 4;
 #elif 1
@@ -110,14 +110,14 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk(
     using GemmABlockTransferThreadSliceLengths_K0_M0_M1_K1   = Sequence<4, 1, 1, 2>;
     using GemmABlockTransferThreadClusterLengths_K0_M0_M1_K1 = Sequence<2, 1, 128, 1>;
 
-    constexpr index_t GemmABlockTransferSrcScalarPerVector_K1 = 2;
-    constexpr index_t GemmABlockTransferDstScalarPerVector_K1 = 2;
+    using GemmABlockTransferSrcVectorTensorLengths_K0_M0_M1_K1 = Sequence<4, 1, 1, 2>;
+    using GemmABlockTransferDstVectorTensorLengths_K0_M0_M1_K1 = Sequence<1, 1, 1, 2>;
 
     using GemmBBlockTransferThreadSliceLengths_K0_N0_N1_K1   = Sequence<4, 1, 1, 2>;
     using GemmBBlockTransferThreadClusterLengths_K0_N0_N1_K1 = Sequence<2, 1, 128, 1>;
 
-    constexpr index_t GemmBBlockTransferSrcScalarPerVector_K1 = 2;
-    constexpr index_t GemmBBlockTransferDstScalarPerVector_K1 = 2;
+    using GemmBBlockTransferSrcVectorTensorLengths_K0_N0_N1_K1 = Sequence<4, 1, 1, 2>;
+    using GemmBBlockTransferDstVectorTensorLengths_K0_N0_N1_K1 = Sequence<1, 1, 1, 2>;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_N11 = 4;
 #elif 1
@@ -142,14 +142,14 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk(
     using GemmABlockTransferThreadSliceLengths_K0_M0_M1_K1   = Sequence<4, 1, 1, 4>;
     using GemmABlockTransferThreadClusterLengths_K0_M0_M1_K1 = Sequence<2, 1, 128, 1>;
 
-    constexpr index_t GemmABlockTransferSrcScalarPerVector_K1 = 4;
-    constexpr index_t GemmABlockTransferDstScalarPerVector_K1 = 4;
+    using GemmABlockTransferSrcVectorTensorLengths_K0_M0_M1_K1 = Sequence<4, 1, 1, 4>;
+    using GemmABlockTransferDstVectorTensorLengths_K0_M0_M1_K1 = Sequence<1, 1, 1, 4>;
 
     using GemmBBlockTransferThreadSliceLengths_K0_N0_N1_K1   = Sequence<4, 1, 1, 4>;
     using GemmBBlockTransferThreadClusterLengths_K0_N0_N1_K1 = Sequence<2, 1, 128, 1>;
 
-    constexpr index_t GemmBBlockTransferSrcScalarPerVector_K1 = 4;
-    constexpr index_t GemmBBlockTransferDstScalarPerVector_K1 = 4;
+    using GemmBBlockTransferSrcVectorTensorLengths_K0_N0_N1_K1 = Sequence<4, 1, 1, 4>;
+    using GemmBBlockTransferDstVectorTensorLengths_K0_N0_N1_K1 = Sequence<1, 1, 1, 4>;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_N11 = 4;
 #endif
@@ -234,18 +234,16 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk(
             GemmABlockTransferThreadClusterLengths_K0_M0_M1_K1,
             Sequence<1, 2, 0, 3>, // ABlockTransferThreadClusterArrangeOrder
             Sequence<1, 2, 0, 3>, // ABlockTransferSrcAccessOrder
-            3,                    // ABlockTransferSrcVectorDim
-            GemmABlockTransferSrcScalarPerVector_K1,
-            GemmABlockTransferDstScalarPerVector_K1,
-            false, // don't move back src coordinate after threadwise copy
+            GemmABlockTransferSrcVectorTensorLengths_K0_M0_M1_K1,
+            Sequence<1, 2, 0, 3>, // ABlockTransferSrcVectorTensorContiguousDimOrder
+            GemmABlockTransferDstVectorTensorLengths_K0_M0_M1_K1,
             GemmBBlockTransferThreadSliceLengths_K0_N0_N1_K1,
             GemmBBlockTransferThreadClusterLengths_K0_N0_N1_K1,
             Sequence<1, 2, 0, 3>, // BBlockTransferThreadClusterArrangeOrder
             Sequence<1, 2, 0, 3>, // BBlockTransferSrcAccessOrder
-            3,                    // BBlockTransferSrcVectorDim
-            GemmBBlockTransferSrcScalarPerVector_K1,
-            GemmBBlockTransferDstScalarPerVector_K1,
-            false,                      // don't move back src coordinate after threadwise copy
+            GemmBBlockTransferSrcVectorTensorLengths_K0_N0_N1_K1,
+            Sequence<1, 2, 0, 3>, // BBlockTransferSrcVectorTensorContiguousDimOrder
+            GemmBBlockTransferDstVectorTensorLengths_K0_N0_N1_K1,
             Sequence<0, 1, 2, 3, 4, 5>, // CThreadTransferSrcDstAccessOrder
             5,                          // CThreadTransferSrcDstVectorDim
             GemmCThreadTransferDstScalarPerVector_N11,
