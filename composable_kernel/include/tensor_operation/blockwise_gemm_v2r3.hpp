@@ -3,7 +3,7 @@
 
 #include "common_header.hpp"
 #include "tensor_adaptor.hpp"
-#include "threadwise_dynamic_tensor_slice_transfer.hpp"
+#include "threadwise_dynamic_tensor_slice_transfer_v2.hpp"
 #include "threadwise_gemm_v2.hpp"
 
 namespace ck {
@@ -368,27 +368,25 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
         make_dynamic_naive_tensor_descriptor_packed_v2(
             make_tuple(Number<KPerThread>{}, Number<N0>{}, Number<N1PerThreadN11>{}, Number<K1>{}));
 
-    using AThreadCopy =
-        ThreadwiseDynamicTensorSliceTransfer_v4<FloatA,
-                                                FloatA,
-                                                decltype(a_k0_m0_m1_k1_block_desc_),
-                                                decltype(a_k0_m0_m1_k1_thread_desc_),
-                                                Sequence<KPerThread, 1, M1PerThreadM11, K1>,
-                                                Sequence<0, 1, 2, 3>,
-                                                3,
-                                                K1, // TODO: change this
-                                                1>;
+    using AThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4r1<
+        FloatA,
+        FloatA,
+        decltype(a_k0_m0_m1_k1_block_desc_),
+        decltype(a_k0_m0_m1_k1_thread_desc_),
+        Sequence<KPerThread, 1, M1PerThreadM11, K1>, // SliceLengths
+        Sequence<0, 1, 2, 3>,                        // DimAccessOrder
+        Sequence<1, 1, M1PerThreadM11, K1>,          // SrcVectorLengths
+        Sequence<0, 1, 2, 3>>;                       // SrcVectorContiguousDimOrder
 
-    using BThreadCopy =
-        ThreadwiseDynamicTensorSliceTransfer_v4<FloatB,
-                                                FloatB,
-                                                decltype(b_k0_n0_n1_k1_block_desc_),
-                                                decltype(b_k0_n0_n1_k1_thread_desc_),
-                                                Sequence<KPerThread, 1, N1PerThreadN11, K1>,
-                                                Sequence<0, 1, 2, 3>,
-                                                3,
-                                                K1, // TODO: change this
-                                                1>;
+    using BThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4r1<
+        FloatB,
+        FloatB,
+        decltype(b_k0_n0_n1_k1_block_desc_),
+        decltype(b_k0_n0_n1_k1_thread_desc_),
+        Sequence<KPerThread, 1, N1PerThreadN11, K1>, // SliceLengths
+        Sequence<0, 1, 2, 3>,                        // DimAccessOrder
+        Sequence<1, 1, N1PerThreadN11, K1>,          // SrcVectorLengths
+        Sequence<0, 1, 2, 3>>;                       // SrcVectorContiguousDimOrder
 
     CIndex c_thread_origin_data_idx_;
 

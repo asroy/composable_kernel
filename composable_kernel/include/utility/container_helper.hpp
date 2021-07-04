@@ -94,7 +94,7 @@ __host__ __device__ constexpr auto container_reorder_given_old2new(Sequence<Is..
 
     constexpr auto new2old = typename sequence_map_inverse<Sequence<IRs...>>::type{};
 
-    return container_reorder_give_new2old(old_seq, new2old);
+    return container_reorder_given_new2old(old_seq, new2old);
 }
 
 #if !CK_WORKAROUND_SWDEV_275126
@@ -221,6 +221,13 @@ container_reverse_exclusive_scan(const Array<TData, NSize>& x, Reduce f, TData i
     y(Number<0>{}) = r;
 
     return y;
+}
+
+template <index_t... Is, typename Reduce, index_t Init>
+__host__ __device__ constexpr auto
+container_reverse_exclusive_scan(const Sequence<Is...>& seq, Reduce f, Number<Init>)
+{
+    return reverse_exclusive_scan_sequence(seq, f, Number<Init>{});
 }
 
 #if !CK_WORKAROUND_SWDEV_275126
