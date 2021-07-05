@@ -161,7 +161,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r3
 
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
-        // TODO: change this
+        // TODO: change this. I think it needs multi-dimensional alignment
         constexpr auto max_lds_align = K1;
 
         // TODO: check alignment
@@ -349,7 +349,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r3
         const index_t im0 = __builtin_amdgcn_readfirstlane(c_m0_n0_block_cluster_idx[I0]);
         const index_t in0 = __builtin_amdgcn_readfirstlane(c_m0_n0_block_cluster_idx[I1]);
 
-        // lds max alignment
+        // TODO: change this. I think it needs multi-dimensional alignment
         constexpr auto max_lds_align = K1;
 
         // TODO: check alignment
@@ -373,6 +373,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r3
         // B matrix in LDS memory, for blockwise GEMM
         constexpr auto b_k0_n_k1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
             make_tuple(Number<KPerBlock>{}, Number<NPerBlockN1>{}, K1), max_lds_align);
+
+        static_assert(a_k0_m0_m1_k1_block_desc.GetElementSpaceSize() ==
+                          a_k0_m_k1_block_desc.GetElementSpaceSize() &&
+                      b_k0_n0_n1_k1_block_desc.GetElementSpaceSize() ==
+                          b_k0_n_k1_block_desc.GetElementSpaceSize() &&
+                      "wrong!");
 
         // A matrix blockwise copy
         auto a_blockwise_copy = BlockwiseDynamicTensorSliceTransfer_v4r1<
@@ -444,6 +450,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v1r3
                                                                  M11N11ThreadClusterN1101,
                                                                  M1PerThreadM111,
                                                                  N1PerThreadN111>{};
+
         constexpr auto c_m10_m11_n10_n11_thread_tensor_lengths =
             decltype(blockwise_gemm)::GetCM0M1N0N1ThreadTensorLengths();
 

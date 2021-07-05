@@ -105,12 +105,15 @@ struct GridwiseDynamicContraction_km0m1_kn0n1_m0m1n0n1_v1r2
     static constexpr auto GM0 = CGM0GM1GN0GN1GridDesc{}.GetLength(I0);
     static constexpr auto GN0 = CGM0GM1GN0GN1GridDesc{}.GetLength(I2);
 
+    // TODO: remove hardcode
+    static constexpr auto GK1 = I1;
+
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
-        constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_GM11>{},
-                                                 Number<BBlockTransferDstScalarPerVector_GN11>{},
-                                                 Number<M1PerThreadM111>{},
-                                                 Number<N1PerThreadN111>{});
+        // lds max alignment
+        // TODO: part of them should be moved into blockwise-gemm
+        // TODO: change this. I think it needs multi-dimensional alignment
+        constexpr auto max_lds_align = GK1;
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -344,11 +347,9 @@ struct GridwiseDynamicContraction_km0m1_kn0n1_m0m1n0n1_v1r2
         const index_t ign10 = __builtin_amdgcn_readfirstlane(c_gm10_gn10_block_cluster_idx[I1]);
 
         // lds max alignment
-        // part of them should be moved into blockwise-gemm
-        constexpr auto max_lds_align = math::lcm(Number<ABlockTransferDstScalarPerVector_GM11>{},
-                                                 Number<BBlockTransferDstScalarPerVector_GN11>{},
-                                                 Number<M1PerThreadM111>{},
-                                                 Number<N1PerThreadN111>{});
+        // TODO: part of them should be moved into blockwise-gemm
+        // TODO: change this. I think it needs multi-dimensional alignment
+        constexpr auto max_lds_align = GK1;
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
@@ -364,13 +365,19 @@ struct GridwiseDynamicContraction_km0m1_kn0n1_m0m1n0n1_v1r2
 
         // A matrix in LDS memory for blockwise GEMM
         //   be careful of LDS alignment
-        constexpr auto a_gk_bm_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<KPerBlock>{}, GM0 * Number<GM1PerBlockGM11>{}), max_lds_align);
+        constexpr auto a_gk0_bm_gk1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(Number<KPerBlock>{}, GM0 * Number<GM1PerBlockGM11>{}, GK1), max_lds_align);
 
         // B matrix in LDS memory for blockwise GEMM
         //   be careful of LDS alignment
-        constexpr auto b_gk_bn_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<KPerBlock>{}, GN0 * Number<GN1PerBlockGN11>{}), max_lds_align);
+        constexpr auto b_gk0_bn_gk1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(Number<KPerBlock>{}, GN0 * Number<GN1PerBlockGN11>{}, GK1), max_lds_align);
+
+        static_assert(a_gk_gm0_gm10_gm11_block_desc.GetElementSpaceSize() ==
+                              a_gk0_bm_gk1_block_desc.GetElementSpaceSize() &&
+                          b_gk_gn0_gn10_gn11_block_desc.GetElementSpaceSize() ==
+                              b_gk0_bn_gk1_block_desc.GetElementSpaceSize(),
+                      "wrong!");
 
         // A matrix blockwise copy
         auto a_blockwise_copy = BlockwiseDynamicTensorSliceTransfer_v4<
@@ -431,21 +438,22 @@ struct GridwiseDynamicContraction_km0m1_kn0n1_m0m1n0n1_v1r2
         //     c_mtx[GM1PerBlockGM11, GN1PerBlockGN11] is distributed among threads, and saved in
         //       register
         const auto blockwise_gemm =
-            BlockwiseGemm_km_kn_m0m1n0n1_v2r2_pipeline_2x2<BlockSize,
-                                                           FloatAB,
-                                                           FloatAB,
-                                                           FloatAcc,
-                                                           decltype(a_gk_bm_block_desc),
-                                                           decltype(b_gk_bn_block_desc),
-                                                           M1PerThreadM111,
-                                                           N1PerThreadN111,
-                                                           KPerThread,
-                                                           M11N11ThreadClusterM1100,
-                                                           M11N11ThreadClusterN1100,
-                                                           M11N11ThreadClusterM1101,
-                                                           M11N11ThreadClusterN1101,
-                                                           M1PerThreadM111,
-                                                           N1PerThreadN111>{};
+            BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2<BlockSize,
+                                                                 FloatAB,
+                                                                 FloatAB,
+                                                                 FloatAcc,
+                                                                 decltype(a_gk0_bm_gk1_block_desc),
+                                                                 decltype(b_gk0_bn_gk1_block_desc),
+                                                                 M1PerThreadM111,
+                                                                 N1PerThreadN111,
+                                                                 KPerThread,
+                                                                 M11N11ThreadClusterM1100,
+                                                                 M11N11ThreadClusterN1100,
+                                                                 M11N11ThreadClusterM1101,
+                                                                 M11N11ThreadClusterN1101,
+                                                                 M1PerThreadM111,
+                                                                 N1PerThreadN111>{};
+
         constexpr auto c_bm0_bm1_bn0_bn1_thread_tensor_lengths =
             decltype(blockwise_gemm)::GetCM0M1N0N1ThreadTensorLengths();
 
