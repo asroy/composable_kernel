@@ -142,7 +142,7 @@ int main(int argc, char* argv[])
     using in_data_t  = float;
     using acc_data_t = float;
     using out_data_t = float;
-#elif 0
+#elif 1
     using in_data_t  = half_t;
     using acc_data_t = float;
     using out_data_t = half_t;

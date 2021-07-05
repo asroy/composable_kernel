@@ -84,6 +84,40 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw(
     using GemmBBlockTransferDstVectorTensorLengths_GK0_GN0_GN10_GN11_GK1 = Sequence<1, 1, 1, 1, 1>;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_BN1 = 1;
+#elif 1
+    // [8, 1, 128, 2] * [8, 4, 32, 2] = [1, 128, 4, 32] for fp16
+    // cdata = 64, BlockSize = 256
+    constexpr index_t BlockSize = 256;
+
+    constexpr index_t GN0 = 4;
+    constexpr index_t GK1 = 2;
+
+    constexpr index_t GemmGM1PerBlockGM11 = 128;
+    constexpr index_t GemmGN1PerBlockGN11 = 32;
+    constexpr index_t GemmKPerBlock       = 8;
+
+    constexpr index_t GemmM1PerThreadM111 = 4;
+    constexpr index_t GemmN1PerThreadN111 = 4;
+    constexpr index_t GemmKPerThread      = 1;
+
+    constexpr index_t GemmM11N11ThreadClusterM1101 = 2;
+    constexpr index_t GemmM11N11ThreadClusterN1101 = 2;
+    constexpr index_t GemmM11N11ThreadClusterM1100 = 8;
+    constexpr index_t GemmM11N11ThreadClusterN1100 = 8;
+
+    using GemmABlockTransferThreadSliceLengths_GK0_GM0_GM10_GM11_GK1   = Sequence<4, 1, 1, 1, 2>;
+    using GemmABlockTransferThreadClusterLengths_GK0_GM0_GM10_GM11_GK1 = Sequence<2, 1, 1, 128, 1>;
+
+    using GemmABlockTransferSrcVectorTensorLengths_GK0_GM0_GM10_GM11_GK1 = Sequence<4, 1, 1, 1, 1>;
+    using GemmABlockTransferDstVectorTensorLengths_GK0_GM0_GM10_GM11_GK1 = Sequence<1, 1, 1, 1, 2>;
+
+    using GemmBBlockTransferThreadSliceLengths_GK0_GN0_GN10_GN11_GK1   = Sequence<1, 4, 1, 1, 2>;
+    using GemmBBlockTransferThreadClusterLengths_GK0_GN0_GN10_GN11_GK1 = Sequence<8, 1, 1, 32, 1>;
+
+    using GemmBBlockTransferSrcVectorTensorLengths_GK0_GN0_GN10_GN11_GK1 = Sequence<1, 1, 1, 1, 1>;
+    using GemmBBlockTransferDstVectorTensorLengths_GK0_GN0_GN10_GN11_GK1 = Sequence<1, 1, 1, 1, 2>;
+
+    constexpr index_t GemmCThreadTransferDstScalarPerVector_BN1 = 1;
 #endif
 
     const auto descs =
@@ -170,18 +204,18 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw(
             GemmM11N11ThreadClusterN1101,
             GemmABlockTransferThreadSliceLengths_GK0_GM0_GM10_GM11_GK1,
             GemmABlockTransferThreadClusterLengths_GK0_GM0_GM10_GM11_GK1,
-            Sequence<3, 2, 1, 0, 4>, // ABlockTransferThreadClusterArrangeOrder
+            Sequence<1, 2, 3, 0, 4>, // ABlockTransferThreadClusterArrangeOrder
             Sequence<3, 2, 1, 0, 4>, // ABlockTransferSrcAccessOrder
             GemmABlockTransferSrcVectorTensorLengths_GK0_GM0_GM10_GM11_GK1,
             GemmABlockTransferDstVectorTensorLengths_GK0_GM0_GM10_GM11_GK1,
-            Sequence<0, 1, 2, 3, 4>,
+            Sequence<0, 1, 2, 3, 4>, // ABlockTransferSrcVectorTensorContiguousDimOrder
             GemmBBlockTransferThreadSliceLengths_GK0_GN0_GN10_GN11_GK1,
             GemmBBlockTransferThreadClusterLengths_GK0_GN0_GN10_GN11_GK1,
-            Sequence<0, 4, 3, 2, 1>, // BBlockTransferThreadClusterArrangeOrder
-            Sequence<0, 4, 3, 2, 1>, // BBlockTransferSrcAccessOrder
+            Sequence<0, 4, 1, 2, 3>, // BBlockTransferThreadClusterArrangeOrder
+            Sequence<4, 3, 2, 0, 1>, // BBlockTransferSrcAccessOrder
             GemmBBlockTransferSrcVectorTensorLengths_GK0_GN0_GN10_GN11_GK1,
             GemmBBlockTransferDstVectorTensorLengths_GK0_GN0_GN10_GN11_GK1,
-            Sequence<0, 1, 2, 3, 4>,
+            Sequence<0, 1, 2, 3, 4>, // BBlockTransferSrcVectorTensorContiguousDimOrder
             Sequence<3, 4, 5, 0, 1, 2>, // CThreadTransferSrcDstAccessOrder
             5,                          // CThreadTransferSrcDstVectorDim
             GemmCThreadTransferDstScalarPerVector_BN1,
