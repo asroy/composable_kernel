@@ -51,10 +51,12 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw(
         make_dynamic_naive_tensor_descriptor_packed_v2(out_n_k_ho_wo_lengths);
 
 #if 1
-    // cdata = 64, BlockSize = 256, [8, 1, 128] * [8, 4, 32] = [1, 128, 4, 32]
+    // [8, 1, 128, 1] * [8, 4, 32, 1] = [1, 128, 4, 32] for fp32
+    // cdata = 64, BlockSize = 256
     constexpr index_t BlockSize = 256;
 
-    constexpr index_t N0 = 4;
+    constexpr index_t GN0 = 4;
+    constexpr index_t GK1 = 1;
 
     constexpr index_t GemmGM1PerBlockGM11 = 128;
     constexpr index_t GemmGN1PerBlockGN11 = 32;
@@ -69,74 +71,81 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw(
     constexpr index_t GemmM11N11ThreadClusterM1100 = 8;
     constexpr index_t GemmM11N11ThreadClusterN1100 = 8;
 
-    using GemmABlockTransferThreadSliceLengths_GK_GM0_GM10_GM11   = Sequence<4, 1, 1, 1>;
-    using GemmABlockTransferThreadClusterLengths_GK_GM0_GM10_GM11 = Sequence<2, 1, 1, 128>;
+    using GemmABlockTransferThreadSliceLengths_GK0_GM0_GM10_GM11_GK1   = Sequence<4, 1, 1, 1, 1>;
+    using GemmABlockTransferThreadClusterLengths_GK0_GM0_GM10_GM11_GK1 = Sequence<2, 1, 1, 128, 1>;
 
-    constexpr index_t GemmABlockTransferSrcScalarPerVector_GK   = 4;
-    constexpr index_t GemmABlockTransferDstScalarPerVector_GM11 = 1;
+    using GemmABlockTransferSrcVectorTensorLengths_GK0_GM0_GM10_GM11_GK1 = Sequence<4, 1, 1, 1, 1>;
+    using GemmABlockTransferDstVectorTensorLengths_GK0_GM0_GM10_GM11_GK1 = Sequence<1, 1, 1, 1, 1>;
 
-    using GemmBBlockTransferThreadSliceLengths_GK_GN0_GN10_GN11   = Sequence<1, 4, 1, 1>;
-    using GemmBBlockTransferThreadClusterLengths_GK_GN0_GN10_GN11 = Sequence<8, 1, 1, 32>;
+    using GemmBBlockTransferThreadSliceLengths_GK0_GN0_GN10_GN11_GK1   = Sequence<1, 4, 1, 1, 1>;
+    using GemmBBlockTransferThreadClusterLengths_GK0_GN0_GN10_GN11_GK1 = Sequence<8, 1, 1, 32, 1>;
 
-    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GN11 = 1;
-    constexpr index_t GemmBBlockTransferDstScalarPerVector_GN11 = 1;
+    using GemmBBlockTransferSrcVectorTensorLengths_GK0_GN0_GN10_GN11_GK1 = Sequence<1, 1, 1, 1, 1>;
+    using GemmBBlockTransferDstVectorTensorLengths_GK0_GN0_GN10_GN11_GK1 = Sequence<1, 1, 1, 1, 1>;
 
     constexpr index_t GemmCThreadTransferDstScalarPerVector_BN1 = 1;
 #endif
 
-    const auto descs = transform_forward_convolution_into_contraction_v4r5r2_nchw_kcyx_nkhw_pad<N0>(
-        wei_k_c_y_x_desc,
-        in_n_c_hi_wi_desc,
-        out_n_k_ho_wo_desc,
-        conv_strides,
-        conv_dilations,
-        in_left_pads,
-        in_right_pads);
+    const auto descs =
+        transform_forward_convolution_into_contraction_v4r5r2_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
+                                                                                 in_n_c_hi_wi_desc,
+                                                                                 out_n_k_ho_wo_desc,
+                                                                                 conv_strides,
+                                                                                 conv_dilations,
+                                                                                 in_left_pads,
+                                                                                 in_right_pads,
+                                                                                 Number<GN0>{},
+                                                                                 Number<GK1>{});
 
-    const auto wei_gk_gm0_gm1_grid_desc      = descs[I0];
-    const auto in_gk_gn0_gn1_grid_desc       = descs[I1];
+    const auto wei_gk0_gm0_gm1_gk1_grid_desc = descs[I0];
+    const auto in_gk0_gn0_gn1_gk1_grid_desc  = descs[I1];
     const auto out_gm0_gm1_gn0_gn1_grid_desc = descs[I2];
 
     // HACK: hacks that control index calculation when iterating over A, B, C matrix
-    constexpr auto wei_gk_gm0_gm10_gm11_grid_iterator_hacks =
-        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0>{}),
-                   make_tuple(Sequence<0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0>{}));
+    constexpr auto wei_grid_iterator_hacks =
+        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0>{},   // 0+: GK0
+                              Sequence<0, 0, 0, 0, 0, 0, 0>{},   // 1+: GM0
+                              Sequence<0, 0, 0, 0, 0, 0, 0>{},   // 2+: GM10
+                              Sequence<0, 0, 0, 0, 0, 0, 0>{},   // 3+: GM11
+                              Sequence<0, 0, 0, 0, 0, 0, 0>{}),  // 4+: GK1
+                   make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0>{},   // 0-: GK0
+                              Sequence<0, 0, 0, 0, 0, 0, 0>{},   // 1-: GM0
+                              Sequence<0, 0, 0, 0, 0, 0, 0>{},   // 2-: GM10
+                              Sequence<0, 0, 0, 0, 0, 0, 0>{},   // 3-: GM11
+                              Sequence<0, 0, 0, 0, 0, 0, 0>{})); // 4-: GK1
 
-    constexpr auto in_gk_gn0_gn10_gn11_grid_iterator_hacks =
-        make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{}),
-                   make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0>{},
-                              Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0>{}));
+    constexpr auto in_grid_iterator_hacks = make_tuple(
+        make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0>{},   // 0+: GK0
+                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0>{},   // 1+: GN0
+                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0>{},   // 2+: GN10
+                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0>{},   // 3+: GN11
+                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{}),  // 4+: GK1
+        make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0>{},   // 0-: GK0
+                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0>{},   // 1-: GN0
+                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0>{},   // 2-: GN10
+                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0>{},   // 3-: GN11
+                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{})); // 4-: GK1
 
-    constexpr auto out_gm10_bm0_bm1_gn10_bn0_bn1_grid_iterator_hacks = make_tuple(
-        make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0>{}),
-        make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0>{},
-                   Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0>{}));
+    constexpr auto out_grid_iterator_hacks = make_tuple(
+        make_tuple(
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},  // 0+: GM10
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0>{},  // 1+: BM0
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0>{},  // 2+: BM1
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},  // 3+: GN10
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0>{},  // 4+: BN0
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0>{}), // 5+: GN1
+        make_tuple(
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},   // 0-: GM10
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0>{},   // 1-: BM0
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0>{},   // 2-: BM1
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},   // 3-: GN10
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0>{},   // 4-: BN0
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0>{})); // 5-: GN1
 
-    constexpr auto wei_gk_gm0_gm10_gm11_grid_move_slice_window_iterator_hacks =
-        Sequence<0, 0, 0, 0, 0, 0>{};
+    constexpr auto wei_grid_move_slice_window_iterator_hacks = Sequence<0, 0, 0, 0, 0, 0, 0>{};
 
-    constexpr auto in_gk_gn0_gn10_gn11_grid_move_slice_window_iterator_hacks =
-        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0>{};
+    constexpr auto in_grid_move_slice_window_iterator_hacks =
+        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0>{};
 
     for(index_t i = 0; i < 5; ++i)
     {
@@ -146,8 +155,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw(
             TAcc,
             TOut,
             InMemoryDataOperation::Set,
-            decltype(wei_gk_gm0_gm1_grid_desc),
-            decltype(in_gk_gn0_gn1_grid_desc),
+            decltype(wei_gk0_gm0_gm1_gk1_grid_desc),
+            decltype(in_gk0_gn0_gn1_gk1_grid_desc),
             decltype(out_gm0_gm1_gn0_gn1_grid_desc),
             GemmGM1PerBlockGM11,
             GemmGN1PerBlockGN11,
@@ -159,41 +168,39 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw(
             GemmM11N11ThreadClusterN1100,
             GemmM11N11ThreadClusterM1101,
             GemmM11N11ThreadClusterN1101,
-            GemmABlockTransferThreadSliceLengths_GK_GM0_GM10_GM11,
-            GemmABlockTransferThreadClusterLengths_GK_GM0_GM10_GM11,
-            Sequence<3, 2, 1, 0>, // ABlockTransferThreadClusterArrangeOrder
-            Sequence<3, 2, 1, 0>, // ABlockTransferSrcAccessOrder
-            0,                    // ABlockTransferSrcVectorDim
-            GemmABlockTransferSrcScalarPerVector_GK,
-            GemmABlockTransferDstScalarPerVector_GM11,
-            false, // don't move back src coordinate after threadwise copy
-            GemmBBlockTransferThreadSliceLengths_GK_GN0_GN10_GN11,
-            GemmBBlockTransferThreadClusterLengths_GK_GN0_GN10_GN11,
-            Sequence<0, 3, 2, 1>, // BBlockTransferThreadClusterArrangeOrder
-            Sequence<0, 3, 2, 1>, // BBlockTransferSrcAccessOrder
-            3,                    // BBlockTransferSrcVectorDim
-            GemmBBlockTransferSrcScalarPerVector_GN11,
-            GemmBBlockTransferDstScalarPerVector_GN11,
-            false,                      // don't move back src coordinate after threadwise copy
+            GemmABlockTransferThreadSliceLengths_GK0_GM0_GM10_GM11_GK1,
+            GemmABlockTransferThreadClusterLengths_GK0_GM0_GM10_GM11_GK1,
+            Sequence<3, 2, 1, 0, 4>, // ABlockTransferThreadClusterArrangeOrder
+            Sequence<3, 2, 1, 0, 4>, // ABlockTransferSrcAccessOrder
+            GemmABlockTransferSrcVectorTensorLengths_GK0_GM0_GM10_GM11_GK1,
+            GemmABlockTransferDstVectorTensorLengths_GK0_GM0_GM10_GM11_GK1,
+            Sequence<0, 1, 2, 3, 4>,
+            GemmBBlockTransferThreadSliceLengths_GK0_GN0_GN10_GN11_GK1,
+            GemmBBlockTransferThreadClusterLengths_GK0_GN0_GN10_GN11_GK1,
+            Sequence<0, 4, 3, 2, 1>, // BBlockTransferThreadClusterArrangeOrder
+            Sequence<0, 4, 3, 2, 1>, // BBlockTransferSrcAccessOrder
+            GemmBBlockTransferSrcVectorTensorLengths_GK0_GN0_GN10_GN11_GK1,
+            GemmBBlockTransferDstVectorTensorLengths_GK0_GN0_GN10_GN11_GK1,
+            Sequence<0, 1, 2, 3, 4>,
             Sequence<3, 4, 5, 0, 1, 2>, // CThreadTransferSrcDstAccessOrder
             5,                          // CThreadTransferSrcDstVectorDim
             GemmCThreadTransferDstScalarPerVector_BN1,
-            decltype(wei_gk_gm0_gm10_gm11_grid_iterator_hacks),
-            decltype(in_gk_gn0_gn10_gn11_grid_iterator_hacks),
-            decltype(out_gm10_bm0_bm1_gn10_bn0_bn1_grid_iterator_hacks),
-            decltype(wei_gk_gm0_gm10_gm11_grid_move_slice_window_iterator_hacks),
-            decltype(in_gk_gn0_gn10_gn11_grid_move_slice_window_iterator_hacks)>(
+            decltype(wei_grid_iterator_hacks),
+            decltype(in_grid_iterator_hacks),
+            decltype(out_grid_iterator_hacks),
+            decltype(wei_grid_move_slice_window_iterator_hacks),
+            decltype(in_grid_move_slice_window_iterator_hacks)>(
             static_cast<TInWei*>(wei_k_c_y_x_device_buf.GetDeviceBuffer()),
             static_cast<TInWei*>(in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
             static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()),
-            wei_gk_gm0_gm1_grid_desc,
-            in_gk_gn0_gn1_grid_desc,
+            wei_gk0_gm0_gm1_gk1_grid_desc,
+            in_gk0_gn0_gn1_gk1_grid_desc,
             out_gm0_gm1_gn0_gn1_grid_desc,
-            wei_gk_gm0_gm10_gm11_grid_iterator_hacks,
-            in_gk_gn0_gn10_gn11_grid_iterator_hacks,
-            out_gm10_bm0_bm1_gn10_bn0_bn1_grid_iterator_hacks,
-            wei_gk_gm0_gm10_gm11_grid_move_slice_window_iterator_hacks,
-            in_gk_gn0_gn10_gn11_grid_move_slice_window_iterator_hacks,
+            wei_grid_iterator_hacks,
+            in_grid_iterator_hacks,
+            out_grid_iterator_hacks,
+            wei_grid_move_slice_window_iterator_hacks,
+            in_grid_move_slice_window_iterator_hacks,
             nrepeat);
 
         float perf = (float)calculate_convolution_flops(

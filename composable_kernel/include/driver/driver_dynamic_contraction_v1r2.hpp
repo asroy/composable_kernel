@@ -26,22 +26,20 @@ template <index_t BlockSize,
           index_t M1N1ThreadClusterN10,
           index_t M1N1ThreadClusterM11,
           index_t M1N1ThreadClusterN11,
-          typename ABlockTransferThreadSliceLengths_GK_GM0_GM10_GM11,
-          typename ABlockTransferThreadClusterLengths_GK_GM0_GM10_GM11,
+          typename ABlockTransferThreadSliceLengths_GK0_GM0_GM10_GM11_GK1,
+          typename ABlockTransferThreadClusterLengths_GK0_GM0_GM10_GM11_GK1,
           typename ABlockTransferThreadClusterArrangeOrder,
           typename ABlockTransferSrcAccessOrder,
-          index_t ABlockTransferSrcVectorDim,
-          index_t ABlockTransferSrcScalarPerVector,
-          index_t ABlockTransferDstScalarPerVector_GM11,
-          bool AThreadTransferSrcResetCoordinateAfterRun,
-          typename BBlockTransferThreadSliceLengths_GK_GN0_GN10_GN11,
-          typename BBlockTransferThreadClusterLengths_GK_GN0_GN10_GN11,
+          typename ABlockTransferSrcVectorTensorLengths_GK0_GM0_GM10_GM11_GK1,
+          typename ABlockTransferDstVectorTensorLengths_GK0_GM0_GM10_GM11_GK1,
+          typename ABlockTransferSrcVectorTensorContiguousDimOrder,
+          typename BBlockTransferThreadSliceLengths_GK0_GN0_GN10_GN11_GK1,
+          typename BBlockTransferThreadClusterLengths_GK0_GN0_GN10_GN11_GK1,
           typename BBlockTransferThreadClusterArrangeOrder,
           typename BBlockTransferSrcAccessOrder,
-          index_t BBlockTransferSrcVectorDim,
-          index_t BBlockTransferSrcScalarPerVector,
-          index_t BBlockTransferDstScalarPerVector_GN11,
-          bool BThreadTransferSrcResetCoordinateAfterRun,
+          typename BBlockTransferSrcVectorTensorLengths_GK0_GN0_GN10_GN11_GK1,
+          typename BBlockTransferDstVectorTensorLengths_GK0_GN0_GN10_GN11_GK1,
+          typename BBlockTransferSrcVectorTensorContiguousDimOrder,
           typename CThreadTransferSrcDstAccessOrder,
           index_t CThreadTransferSrcDstVectorDim,
           index_t CThreadTransferDstScalarPerVector,
@@ -54,8 +52,8 @@ __host__ float
 driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
                                 const FloatAB* p_b_grid,
                                 FloatC* p_c_grid,
-                                const AGKGM0GM1GridDesc& a_gk_gm0_gm1_grid_desc,
-                                const BGKGN0GN1GridDesc& b_gk_gn0_gn1_grid_desc,
+                                const AGKGM0GM1GridDesc& a_gk0_gm0_gm1_gk1_grid_desc,
+                                const BGKGN0GN1GridDesc& b_gk0_gn0_gn1_gk1_grid_desc,
                                 const CGM0GM1GN0GN1GridDesc& c_gm0_gm1_gn0_gn1_grid_desc,
                                 AGridIteratorHacks,
                                 BGridIteratorHacks,
@@ -73,7 +71,7 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
     constexpr auto I5 = Number<5>{};
 
     // GEMM
-    using GridwiseContraction = GridwiseDynamicContraction_km0m1_kn0n1_m0m1n0n1_v1r2<
+    using GridwiseContraction = GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2<
         BlockSize,
         FloatAB,
         FloatAcc,
@@ -92,22 +90,20 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
         M1N1ThreadClusterN10,
         M1N1ThreadClusterM11,
         M1N1ThreadClusterN11,
-        ABlockTransferThreadSliceLengths_GK_GM0_GM10_GM11,
-        ABlockTransferThreadClusterLengths_GK_GM0_GM10_GM11,
+        ABlockTransferThreadSliceLengths_GK0_GM0_GM10_GM11_GK1,
+        ABlockTransferThreadClusterLengths_GK0_GM0_GM10_GM11_GK1,
         ABlockTransferThreadClusterArrangeOrder,
         ABlockTransferSrcAccessOrder,
-        ABlockTransferSrcVectorDim,
-        ABlockTransferSrcScalarPerVector,
-        ABlockTransferDstScalarPerVector_GM11,
-        AThreadTransferSrcResetCoordinateAfterRun,
-        BBlockTransferThreadSliceLengths_GK_GN0_GN10_GN11,
-        BBlockTransferThreadClusterLengths_GK_GN0_GN10_GN11,
+        ABlockTransferSrcVectorTensorLengths_GK0_GM0_GM10_GM11_GK1,
+        ABlockTransferDstVectorTensorLengths_GK0_GM0_GM10_GM11_GK1,
+        ABlockTransferSrcVectorTensorContiguousDimOrder,
+        BBlockTransferThreadSliceLengths_GK0_GN0_GN10_GN11_GK1,
+        BBlockTransferThreadClusterLengths_GK0_GN0_GN10_GN11_GK1,
         BBlockTransferThreadClusterArrangeOrder,
         BBlockTransferSrcAccessOrder,
-        BBlockTransferSrcVectorDim,
-        BBlockTransferSrcScalarPerVector,
-        BBlockTransferDstScalarPerVector_GN11,
-        BThreadTransferSrcResetCoordinateAfterRun,
+        BBlockTransferSrcVectorTensorLengths_GK0_GN0_GN10_GN11_GK1,
+        BBlockTransferDstVectorTensorLengths_GK0_GN0_GN10_GN11_GK1,
+        BBlockTransferSrcVectorTensorContiguousDimOrder,
         CThreadTransferSrcDstAccessOrder,
         CThreadTransferSrcDstVectorDim,
         CThreadTransferDstScalarPerVector,
@@ -117,22 +113,22 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
         AGridMoveSliceWindowIteratorHacks,
         BGridMoveSliceWindowIteratorHacks>;
 
-    const auto K = a_gk_gm0_gm1_grid_desc.GetLength(I0);
+    const auto GK0 = a_gk0_gm0_gm1_gk1_grid_desc.GetLength(I0);
 
     if(!GridwiseContraction::CheckValidity(
-           a_gk_gm0_gm1_grid_desc, b_gk_gn0_gn1_grid_desc, c_gm0_gm1_gn0_gn1_grid_desc))
+           a_gk0_gm0_gm1_gk1_grid_desc, b_gk0_gn0_gn1_gk1_grid_desc, c_gm0_gm1_gn0_gn1_grid_desc))
     {
         throw std::runtime_error(
             "wrong! GridwiseDynamicContraction_km_kn0n1_mn0n1_v1r1 has invalid setting");
     }
 
-    const auto a_gk_gm0_gm10_gm11_grid_desc =
-        GridwiseContraction::MakeAGKGM0GM10GM11GridDescriptor(a_gk_gm0_gm1_grid_desc);
-    const auto b_gk_gn0_gn10_gn11_grid_desc =
-        GridwiseContraction::MakeBGKGN0GN10GN11GridDescriptor(b_gk_gn0_gn1_grid_desc);
+    const auto a_gk0_gm0_gm10_gm11_gk1_grid_desc =
+        GridwiseContraction::MakeAGK0GM0GM10GM11GK1GridDescriptor(a_gk0_gm0_gm1_gk1_grid_desc);
+    const auto b_gk0_gn0_gn10_gn11_gk1_grid_desc =
+        GridwiseContraction::MakeBGK0GN0GN10GN11GK1GridDescriptor(b_gk0_gn0_gn1_gk1_grid_desc);
 
-    using AGKGM0GM10GM11GridDesc = decltype(a_gk_gm0_gm10_gm11_grid_desc);
-    using BGKGN0GN10GN11GridDesc = decltype(b_gk_gn0_gn10_gn11_grid_desc);
+    using AGK0GM0GM10GM11GK1GridDesc = decltype(a_gk0_gm0_gm10_gm11_gk1_grid_desc);
+    using BGK0GN0GN10GN11GK1GridDesc = decltype(b_gk0_gn0_gn10_gn11_gk1_grid_desc);
 
     // c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc
     const auto c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc =
@@ -149,21 +145,25 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
 
     const index_t grid_size = GridwiseContraction::CalculateGridSize(c_gm0_gm1_gn0_gn1_grid_desc);
 
-    const bool has_main_k_block_loop = GridwiseContraction::CalculateHasMainKBlockLoop(K);
+    const bool has_main_k_block_loop = GridwiseContraction::CalculateHasMainKBlockLoop(GK0);
 
     const bool has_double_tail_k_block_loop =
-        GridwiseContraction::CalculateHasDoubleTailKBlockLoop(K);
+        GridwiseContraction::CalculateHasDoubleTailKBlockLoop(GK0);
 
     {
-        std::cout << "a_gk_gm0_gm10_gm11_grid_desc{" << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I0)
-                  << ", " << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I1) << ", "
-                  << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I2) << ", "
-                  << a_gk_gm0_gm10_gm11_grid_desc.GetLength(I3) << "}" << std::endl;
+        std::cout << "a_gk0_gm0_gm10_gm11_gk1_grid_desc{"
+                  << a_gk0_gm0_gm10_gm11_gk1_grid_desc.GetLength(I0) << ", "
+                  << a_gk0_gm0_gm10_gm11_gk1_grid_desc.GetLength(I1) << ", "
+                  << a_gk0_gm0_gm10_gm11_gk1_grid_desc.GetLength(I2) << ", "
+                  << a_gk0_gm0_gm10_gm11_gk1_grid_desc.GetLength(I3) << ", "
+                  << a_gk0_gm0_gm10_gm11_gk1_grid_desc.GetLength(I4) << "}" << std::endl;
 
-        std::cout << "b_gk_gn0_gn10_gn11_grid_desc{" << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I0)
-                  << ", " << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I1) << ", "
-                  << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I2) << ", "
-                  << b_gk_gn0_gn10_gn11_grid_desc.GetLength(I3) << "}" << std::endl;
+        std::cout << "b_gk0_gn0_gn10_gn11_gk1_grid_desc{"
+                  << b_gk0_gn0_gn10_gn11_gk1_grid_desc.GetLength(I0) << ", "
+                  << b_gk0_gn0_gn10_gn11_gk1_grid_desc.GetLength(I1) << ", "
+                  << b_gk0_gn0_gn10_gn11_gk1_grid_desc.GetLength(I2) << ", "
+                  << b_gk0_gn0_gn10_gn11_gk1_grid_desc.GetLength(I3) << ", "
+                  << b_gk0_gn0_gn10_gn11_gk1_grid_desc.GetLength(I4) << "}" << std::endl;
 
         std::cout << "c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc{ "
                   << c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc.GetLength(I0) << ", "
@@ -182,8 +182,8 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
             GridwiseContraction,
             FloatAB,
             FloatC,
-            remove_reference_t<AGKGM0GM10GM11GridDesc>,
-            remove_reference_t<BGKGN0GN10GN11GridDesc>,
+            remove_reference_t<AGK0GM0GM10GM11GK1GridDesc>,
+            remove_reference_t<BGK0GN0GN10GN11GK1GridDesc>,
             remove_reference_t<CGM10BM0BM1GN10BN0BN1GridDesc>,
             remove_reference_t<CBlockIdToGM10GN10BlockClusterAdaptor>,
             true,
@@ -198,8 +198,8 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
                                           p_a_grid,
                                           p_b_grid,
                                           p_c_grid,
-                                          a_gk_gm0_gm10_gm11_grid_desc,
-                                          b_gk_gn0_gn10_gn11_grid_desc,
+                                          a_gk0_gm0_gm10_gm11_gk1_grid_desc,
+                                          b_gk0_gn0_gn10_gn11_gk1_grid_desc,
                                           c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
                                           c_blockid_to_gm10_gn10_block_cluster_adaptor);
     }
@@ -209,8 +209,8 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
             GridwiseContraction,
             FloatAB,
             FloatC,
-            remove_reference_t<AGKGM0GM10GM11GridDesc>,
-            remove_reference_t<BGKGN0GN10GN11GridDesc>,
+            remove_reference_t<AGK0GM0GM10GM11GK1GridDesc>,
+            remove_reference_t<BGK0GN0GN10GN11GK1GridDesc>,
             remove_reference_t<CGM10BM0BM1GN10BN0BN1GridDesc>,
             remove_reference_t<CBlockIdToGM10GN10BlockClusterAdaptor>,
             true,
@@ -225,8 +225,8 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
                                           p_a_grid,
                                           p_b_grid,
                                           p_c_grid,
-                                          a_gk_gm0_gm10_gm11_grid_desc,
-                                          b_gk_gn0_gn10_gn11_grid_desc,
+                                          a_gk0_gm0_gm10_gm11_gk1_grid_desc,
+                                          b_gk0_gn0_gn10_gn11_gk1_grid_desc,
                                           c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
                                           c_blockid_to_gm10_gn10_block_cluster_adaptor);
     }
@@ -236,8 +236,8 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
             GridwiseContraction,
             FloatAB,
             FloatC,
-            remove_reference_t<AGKGM0GM10GM11GridDesc>,
-            remove_reference_t<BGKGN0GN10GN11GridDesc>,
+            remove_reference_t<AGK0GM0GM10GM11GK1GridDesc>,
+            remove_reference_t<BGK0GN0GN10GN11GK1GridDesc>,
             remove_reference_t<CGM10BM0BM1GN10BN0BN1GridDesc>,
             remove_reference_t<CBlockIdToGM10GN10BlockClusterAdaptor>,
             false,
@@ -252,8 +252,8 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
                                           p_a_grid,
                                           p_b_grid,
                                           p_c_grid,
-                                          a_gk_gm0_gm10_gm11_grid_desc,
-                                          b_gk_gn0_gn10_gn11_grid_desc,
+                                          a_gk0_gm0_gm10_gm11_gk1_grid_desc,
+                                          b_gk0_gn0_gn10_gn11_gk1_grid_desc,
                                           c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
                                           c_blockid_to_gm10_gn10_block_cluster_adaptor);
     }
@@ -263,8 +263,8 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
             GridwiseContraction,
             FloatAB,
             FloatC,
-            remove_reference_t<AGKGM0GM10GM11GridDesc>,
-            remove_reference_t<BGKGN0GN10GN11GridDesc>,
+            remove_reference_t<AGK0GM0GM10GM11GK1GridDesc>,
+            remove_reference_t<BGK0GN0GN10GN11GK1GridDesc>,
             remove_reference_t<CGM10BM0BM1GN10BN0BN1GridDesc>,
             remove_reference_t<CBlockIdToGM10GN10BlockClusterAdaptor>,
             false,
@@ -279,8 +279,8 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
                                           p_a_grid,
                                           p_b_grid,
                                           p_c_grid,
-                                          a_gk_gm0_gm10_gm11_grid_desc,
-                                          b_gk_gn0_gn10_gn11_grid_desc,
+                                          a_gk0_gm0_gm10_gm11_gk1_grid_desc,
+                                          b_gk0_gn0_gn10_gn11_gk1_grid_desc,
                                           c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
                                           c_blockid_to_gm10_gn10_block_cluster_adaptor);
     }
