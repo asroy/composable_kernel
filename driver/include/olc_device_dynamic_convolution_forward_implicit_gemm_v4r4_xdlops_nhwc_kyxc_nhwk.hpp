@@ -246,14 +246,12 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk
                                                                                in_right_pads);
     const auto a_k_m_grid_desc = descs[I0];
     const auto c_m_n_grid_desc = descs[I2];
-    const auto M               = c_m_n_grid_desc.GetLength(I0);
-    const auto N               = c_m_n_grid_desc.GetLength(I1);
-    const auto K               = a_k_m_grid_desc.GetLength(I0);
 
-    const index_t grid_size            = (M / tunable->MPerBlock) * (N / tunable->NPerBlock);
-    //const bool hasMainKBlockLoop       = ((K + tunable->KPerBlock) / (2 * tunable->KPerBlock) > 1);
-    //const bool hasDoubleTailKBlockLoop = ((K / tunable->KPerBlock) % 2 == 0);
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    const auto M = c_m_n_grid_desc.GetLength(I0);
+    const auto N = c_m_n_grid_desc.GetLength(I1);
+    const auto K = a_k_m_grid_desc.GetLength(I0);
+
+    const index_t grid_size = (M / tunable->MPerBlock) * (N / tunable->NPerBlock);
 
     // these buffers are usually provided by the user application
     DeviceMem in_n_hi_wi_c_dev_buf(sizeof(TInWei) * in_n_hi_wi_c.mDesc.GetElementSpace());
@@ -288,14 +286,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk
     std::string network_config;
 
     param += get_definition_string_from_types<TInWei, TAcc, TOut>() + " -DCK_USE_AMD_XDLOPS ";
-        param +=
-             get_definition_string_from_tunable(tunable);
-             //" -DCK_PARAM_HAS_MAIN_KBLOCK_LOOP=" + std::to_string(hasMainKBlockLoop) +
-             //" -DCK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP=" + std::to_string(hasDoubleTailKBlockLoop);
+    param += get_definition_string_from_tunable(tunable);
+
     network_config = get_network_config_string_from_types<TInWei, TAcc, TOut>() + "_" +
                      get_network_config_string_from_tunable(tunable);
-                     //std::to_string(hasMainKBlockLoop) + "_" +
-                     //std::to_string(hasDoubleTailKBlockLoop);
 
     std::vector<float> kernel1_times;
     std::vector<float> kernel2_times;
@@ -356,10 +350,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk
 
         const auto N = in_n_hi_wi_c_lengths[I0];
         const auto C = in_n_hi_wi_c_lengths[I3];
-        const auto K  = out_n_ho_wo_k_lengths[I3];
 
         const auto Ho = out_n_ho_wo_k_lengths[I1];
         const auto Wo = out_n_ho_wo_k_lengths[I2];
+        const auto K  = out_n_ho_wo_k_lengths[I3];
 
         const auto Y = wei_k_y_x_c_lengths[I1];
         const auto X = wei_k_y_x_c_lengths[I2];

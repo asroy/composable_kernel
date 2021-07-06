@@ -35,7 +35,7 @@ enum ConvForwardAlgo
     V4R5NCHW,    // 2
     V5R1NCHW,    // 3
     V4R4XDLNCHW, // 4
-    V4R4XDLNHWC  // 4
+    V4R4XDLNHWC  // 5
 };
 
 int main(int argc, char* argv[])
@@ -113,14 +113,16 @@ int main(int argc, char* argv[])
     {
     case ConvTensorLayout::NCHW:
         // NCHW
-        in_lengths_host[0]  = static_cast<std::size_t>(N);
-        in_lengths_host[1]  = static_cast<std::size_t>(C);
-        in_lengths_host[2]  = static_cast<std::size_t>(Hi);
-        in_lengths_host[3]  = static_cast<std::size_t>(Wi);
+        in_lengths_host[0] = static_cast<std::size_t>(N);
+        in_lengths_host[1] = static_cast<std::size_t>(C);
+        in_lengths_host[2] = static_cast<std::size_t>(Hi);
+        in_lengths_host[3] = static_cast<std::size_t>(Wi);
+
         wei_lengths_host[0] = static_cast<std::size_t>(K);
         wei_lengths_host[1] = static_cast<std::size_t>(C);
         wei_lengths_host[2] = static_cast<std::size_t>(Y);
         wei_lengths_host[3] = static_cast<std::size_t>(X);
+
         out_lengths_host[0] = static_cast<std::size_t>(N);
         out_lengths_host[1] = static_cast<std::size_t>(K);
         out_lengths_host[2] = static_cast<std::size_t>(Ho);
@@ -128,14 +130,16 @@ int main(int argc, char* argv[])
         break;
     case ConvTensorLayout::NHWC:
         // NHWC
-        in_lengths_host[0]  = static_cast<std::size_t>(N);
-        in_lengths_host[1]  = static_cast<std::size_t>(Hi);
-        in_lengths_host[2]  = static_cast<std::size_t>(Wi);
-        in_lengths_host[3]  = static_cast<std::size_t>(C);
+        in_lengths_host[0] = static_cast<std::size_t>(N);
+        in_lengths_host[1] = static_cast<std::size_t>(Hi);
+        in_lengths_host[2] = static_cast<std::size_t>(Wi);
+        in_lengths_host[3] = static_cast<std::size_t>(C);
+
         wei_lengths_host[0] = static_cast<std::size_t>(K);
         wei_lengths_host[1] = static_cast<std::size_t>(Y);
         wei_lengths_host[2] = static_cast<std::size_t>(X);
         wei_lengths_host[3] = static_cast<std::size_t>(C);
+
         out_lengths_host[0] = static_cast<std::size_t>(N);
         out_lengths_host[1] = static_cast<std::size_t>(Ho);
         out_lengths_host[2] = static_cast<std::size_t>(Wo);
@@ -341,8 +345,14 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-        host_direct_convolution(
-            in, wei, out_host, conv_strides, conv_dilations, in_left_pads, in_right_pads);
+        host_direct_convolution(in,
+                                wei,
+                                out_host,
+                                make_tuple(conv_stride_h, conv_stride_w),
+                                make_tuple(conv_dilation_h, conv_dilation_w),
+                                make_tuple(in_left_pad_h, in_left_pad_w),
+                                make_tuple(in_right_pad_h, in_right_pad_w),
+                                layout);
 
         check_error(out_host, out_device);
 

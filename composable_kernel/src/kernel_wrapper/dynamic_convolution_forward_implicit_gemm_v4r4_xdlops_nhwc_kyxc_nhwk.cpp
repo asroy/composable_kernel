@@ -255,6 +255,7 @@ extern "C" __global__ void
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
     constexpr auto I2 = Number<2>{};
+    constexpr auto I3 = Number<3>{};
 
     constexpr auto in_n_hi_wi_c_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(256, 28, 28, 256));
@@ -286,7 +287,7 @@ extern "C" __global__ void
     using AK0MK1GridDesc = decltype(a_k0_m_k1_grid_desc_tmp);
     using BK0NK1GridDesc = decltype(b_k0_n_k1_grid_desc_tmp);
 
- using AGridIteratorHacks = decltype(make_tuple(
+    using AGridIteratorHacks = decltype(make_tuple(
         make_tuple(Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}),
         make_tuple(
             Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{})));
@@ -299,10 +300,10 @@ extern "C" __global__ void
                                        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0>{},
                                        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0>{})));
 
-    using CGridIteratorHacks = decltype(make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{}, //GemmM0
-                                                              Sequence<0, 0, 0, 0, 0>{}, //GemmM1
-                                                              Sequence<0, 0, 0, 0, 0>{}, //GemmM2
-                                                              Sequence<0, 0, 1, 0, 0>{} //GemmN
+    using CGridIteratorHacks = decltype(make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{}, // GemmM0
+                                                              Sequence<0, 0, 0, 0, 0>{}, // GemmM1
+                                                              Sequence<0, 0, 0, 0, 0>{}, // GemmM2
+                                                              Sequence<0, 0, 1, 0, 0>{}  // GemmN
                                                               ),
                                                    make_tuple(Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 0, 0, 0>{},
@@ -353,7 +354,7 @@ extern "C" __global__ void
                                                        CGridIteratorHacks,
                                                        AGridMoveSliceWindowIteratorHacks,
                                                        BGridMoveSliceWindowIteratorHacks>;
-  constexpr auto c_m0_m1_m2_n_grid_desc_tmp =
+    constexpr auto c_m0_m1_m2_n_grid_desc_tmp =
         GridwiseGemm::MakeCM0M1M2NGridDescriptor(c_m_n_grid_desc);
     constexpr auto c_blockid_to_m0_n0_block_cluster_adaptor_tmp =
         GridwiseGemm::MakeCBlockClusterAdaptor(c_m_n_grid_desc);

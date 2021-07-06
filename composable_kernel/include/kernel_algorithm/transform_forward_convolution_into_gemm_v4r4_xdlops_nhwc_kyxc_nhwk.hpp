@@ -9,7 +9,7 @@ namespace ck {
 
 // GemmM = K
 // GemmN = N * Ho * Wo
-// GemmK = C * Y * X
+// GemmK = Y * X * C
 template <typename... Wei,
           typename... In,
           typename... Out,
@@ -32,15 +32,14 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_pad(
     constexpr auto I2 = Number<2>{};
     constexpr auto I3 = Number<3>{};
 
-    const auto N = in_n_hi_wi_c_global_desc.GetLength(I0);
-    const auto C = in_n_hi_wi_c_global_desc.GetLength(I3);
-    const auto K = out_n_ho_wo_k_global_desc.GetLength(I3);
-
+    const auto N  = in_n_hi_wi_c_global_desc.GetLength(I0);
     const auto Hi = in_n_hi_wi_c_global_desc.GetLength(I1);
     const auto Wi = in_n_hi_wi_c_global_desc.GetLength(I2);
+    const auto C  = in_n_hi_wi_c_global_desc.GetLength(I3);
 
     const auto Ho = out_n_ho_wo_k_global_desc.GetLength(I1);
     const auto Wo = out_n_ho_wo_k_global_desc.GetLength(I2);
+    const auto K  = out_n_ho_wo_k_global_desc.GetLength(I3);
 
     const auto Y = wei_k_y_x_c_global_desc.GetLength(I1);
     const auto X = wei_k_y_x_c_global_desc.GetLength(I2);
@@ -70,8 +69,7 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_pad(
         make_tuple(make_pass_through_transform(N),
                    make_pad_transform(Hi, InLeftPadH, InRightPadH),
                    make_pad_transform(Wi, InLeftPadW, InRightPadW),
-                   make_pass_through_transform(C)
-                   ),
+                   make_pass_through_transform(C)),
         make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
         make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 
@@ -80,8 +78,7 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_pad(
         make_tuple(make_pass_through_transform(N),
                    make_embed_transform(make_tuple(Y, Ho), make_tuple(ConvDilationH, ConvStrideH)),
                    make_embed_transform(make_tuple(X, Wo), make_tuple(ConvDilationW, ConvStrideW)),
-                   make_pass_through_transform(C)
-                   ),
+                   make_pass_through_transform(C)),
         make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
         make_tuple(Sequence<0>{}, Sequence<1, 2>{}, Sequence<3, 4>{}, Sequence<5>{}));
 
@@ -94,9 +91,9 @@ transform_forward_convolution_into_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_pad(
 
     // output tensor
     const auto out_gemmm_gemmn_global_desc = transform_dynamic_tensor_descriptor(
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, Ho * Wo, K)),
-        make_tuple(make_merge_transform(make_tuple(N, Ho * Wo)), make_pass_through_transform(K)),
-        make_tuple(Sequence<0, 1>{}, Sequence<2>{}),
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N * Ho * Wo, K)),
+        make_tuple(make_pass_through_transform(N * Ho * Wo), make_pass_through_transform(K)),
+        make_tuple(Sequence<0>{}, Sequence<1>{}),
         make_tuple(Sequence<1>{}, Sequence<0>{}));
 
     return make_tuple(
