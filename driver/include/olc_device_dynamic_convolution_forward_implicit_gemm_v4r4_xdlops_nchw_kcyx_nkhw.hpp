@@ -221,8 +221,6 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
     using size_t = std::size_t;
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // The follow codes are only used for computing the grid_size, hasMainKBlockLoop,
-    // hasDoubleTailKBlockLoop
 
     constexpr auto I0 = Number<0>{};
     constexpr auto I1 = Number<1>{};
@@ -250,9 +248,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
     const auto N               = c_m_n_grid_desc.GetLength(I1);
     const auto K               = a_k_m_grid_desc.GetLength(I0);
 
-    const index_t grid_size            = (M / tunable->MPerBlock) * (N / tunable->NPerBlock);
-    const bool hasMainKBlockLoop       = ((K + tunable->KPerBlock) / (2 * tunable->KPerBlock) > 1);
-    const bool hasDoubleTailKBlockLoop = ((K / tunable->KPerBlock) % 2 == 0);
+    const index_t grid_size = (M / tunable->MPerBlock) * (N / tunable->NPerBlock);
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // these buffers are usually provided by the user application
@@ -288,13 +284,10 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
     std::string network_config;
 
     param += get_definition_string_from_types<TInWei, TAcc, TOut>() + " " + " -DCK_USE_AMD_XDLOPS" +
-             get_definition_string_from_tunable(tunable) +
-             " -DCK_PARAM_HAS_MAIN_KBLOCK_LOOP=" + std::to_string(hasMainKBlockLoop) +
-             " -DCK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP=" + std::to_string(hasDoubleTailKBlockLoop);
+             get_definition_string_from_tunable(tunable);
+
     network_config = get_network_config_string_from_types<TInWei, TAcc, TOut>() + "_" +
-                     get_network_config_string_from_tunable(tunable) + "_" +
-                     std::to_string(hasMainKBlockLoop) + "_" +
-                     std::to_string(hasDoubleTailKBlockLoop);
+                     get_network_config_string_from_tunable(tunable);
 
     std::vector<float> kernel1_times;
     std::vector<float> kernel2_times;

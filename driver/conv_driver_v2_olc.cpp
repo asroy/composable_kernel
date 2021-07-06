@@ -19,10 +19,10 @@
 #include "olc_device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
 #include "olc_device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk.hpp"
 
-#define USE_CONV_FWD_V4R4_NCHW 1
-#define USE_CONV_FWD_V4R5_NCHW 1
+#define USE_CONV_FWD_V4R4_NCHW 0
+#define USE_CONV_FWD_V4R5_NCHW 0
 #define USE_CONV_FWD_V4R4_XDLOPS_NCHW 1
-#define USE_CONV_FWD_V4R4_XDLOPS_NHWC 1
+#define USE_CONV_FWD_V4R4_XDLOPS_NHWC 0
 
 #include "conv_tunables.hpp"
 #include "handle.hpp"
