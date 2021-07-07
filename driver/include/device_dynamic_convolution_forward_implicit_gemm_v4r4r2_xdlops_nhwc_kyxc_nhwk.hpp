@@ -74,16 +74,16 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nhwc_kyxc_nh
     using GemmABlockTransferThreadSliceLengths_GemmK0_GemmM_GemmK1   = Sequence<1, 2, 8>;
     using GemmABlockTransferThreadClusterLengths_GemmK0_GemmM_GemmK1 = Sequence<4, 64, 1>;
 
-    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK1 = 1;
-    constexpr index_t GemmABlockTransferDstScalarPerVector_GemmK1 = 1;
+    constexpr index_t GemmABlockTransferSrcScalarPerVector_GemmK1 = 8;
+    constexpr index_t GemmABlockTransferDstScalarPerVector_GemmK1 = 8;
 
     using GemmBBlockTransferThreadSliceLengths_GemmK0_GemmN_GemmK1   = Sequence<1, 2, 8>;
     using GemmBBlockTransferThreadClusterLengths_GemmK0_GemmN_GemmK1 = Sequence<4, 64, 1>;
 
-    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmK1 = 1;
-    constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmK1 = 1;
+    constexpr index_t GemmBBlockTransferSrcScalarPerVector_GemmK1 = 8;
+    constexpr index_t GemmBBlockTransferDstScalarPerVector_GemmK1 = 8;
 
-    constexpr index_t GemmCThreadTransferDstScalarPerVector = 1;
+    constexpr index_t GemmCThreadTransferDstScalarPerVector = 4;
 #endif
 
     const auto descs =

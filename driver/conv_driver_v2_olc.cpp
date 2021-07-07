@@ -22,7 +22,7 @@
 #define USE_CONV_FWD_V4R4_NCHW 0
 #define USE_CONV_FWD_V4R5_NCHW 0
 #define USE_CONV_FWD_V4R4_XDLOPS_NCHW 1
-#define USE_CONV_FWD_V4R4_XDLOPS_NHWC 0
+#define USE_CONV_FWD_V4R4_XDLOPS_NHWC 1
 
 #include "conv_tunables.hpp"
 #include "handle.hpp"

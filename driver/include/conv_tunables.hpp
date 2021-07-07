@@ -174,20 +174,20 @@ static tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_kyxc_nhwk
         {1, 0, 2},    // ABlockTransferThreadClusterArrangeOrder,
         {1, 0, 2},    // ABlockTransferSrcAccessOrder,
         2,            // ABlockTransferSrcVectorDim
-        1,            // ABlockTransferSrcScalarPerVector,
-        1,            // ABlockTransferDstScalarPerVector_KPack,
+        8,            // ABlockTransferSrcScalarPerVector,
+        8,            // ABlockTransferDstScalarPerVector_KPack,
         false,        // AThreadTransferSrcResetCoordinateAfterRun,
         {1, 2, 8},    // BBlockTransferThreadSliceLengths_K0_N_K1,
         {4, 64, 1},   // BBlockTransferThreadClusterLengths_K0_N_K1,
         {1, 0, 2},    // BBlockTransferThreadClusterArrangeOrder,
         {1, 0, 2},    // BBlockTransferSrcAccessOrder,
         2,            // BBlockTransferSrcVectorDim
-        1,            // BBlockTransferSrcScalarPerVector
-        1,            // BBlockTransferDstScalarPerVector_KPack
+        8,            // BBlockTransferSrcScalarPerVector
+        8,            // BBlockTransferDstScalarPerVector_KPack
         false,        // BThreadTransferSrcResetCoordinateAfterRun
         {2, 3, 0, 1}, // CThreadTransferSrcDstAccessOrder
         2,            // CThreadTransferSrcDstVectorDim,
-        1             // CThreadTransferDstScalarPerVector
+        4             // CThreadTransferDstScalarPerVector
 };
 
 struct tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw
