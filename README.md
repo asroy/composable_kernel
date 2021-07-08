@@ -69,7 +69,7 @@ Build drivers:   \
 ```
 
 # Result
-Forward convoltuion, NCHW
+Forward convoltuion, FP16, NCHW
 ```
 ./conv_driver_v2                0     6       0     3    0       1  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
 
@@ -91,7 +91,7 @@ Start running 1 times...
 Average time : 1.4155 ms, 103.686 TFlop/s
 ```
 
-Forward convoltuion, NCHW
+Forward convoltuion, FP16, NCHW
 ```
  ./conv_driver_v2                0     6       0     3    0       1  256 1024  256 3 3  14   14     1 1       1 1      1 1       1 1
  
@@ -113,7 +113,7 @@ Start running 1 times...
 Average time : 2.21357 ms, 106.959 TFlop/s
  ```
  
- Forward convolution, NHWC
+ Forward convolution, FP16, NHWC
  ```
  ./conv_driver_v2                1     9       0     3    0       1  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
  
@@ -135,7 +135,7 @@ Start running 1 times...
 Average time : 1.12014 ms, 131.025 TFlop/s
  ```
  
- Forward convolution, NHWC
+ Forward convolution, FP16, NHWC
  ```
  ./conv_driver_v2                1     9       0     3    0       1  256 1024  256 3 3  14   14     1 1       1 1      1 1       1 1
  
@@ -157,7 +157,7 @@ Start running 1 times...
 Average time : 1.86877 ms, 126.693 TFlop/s
  ```
  
- Backward data convolution, NHWC
+ Backward data convolution, FP16, NHWC
  ```
  ./conv_bwd_data_driver_v2       1     1       0     3    0       1  256  256 1024 3 3  14   14     1 1       1 1      1 1       1 1
  
