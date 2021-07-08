@@ -1,6 +1,6 @@
 # How to build and run
 
-# docker
+# Docker
 ```
 docker run                                                                   \
 -it                                                                          \
@@ -62,8 +62,119 @@ Build drivers:   \
 ```
 ########################### layout  algo  verify  init  log  repeat  N__ K___ C___ Y X Hi_ Wi__ Strides Dilations LeftPads RightPads
  ./conv_driver_v2                0     6       0     3    0       1  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
+ ./conv_driver_v2                0     6       0     3    0       1  256 1024  256 3 3  14   14     1 1       1 1      1 1       1 1
  ./conv_driver_v2                1     9       0     3    0       1  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
  ./conv_driver_v2                1     9       0     3    0       1  256 1024  256 3 3  14   14     1 1       1 1      1 1       1 1
- ./conv_driver_v2                0     6       0     3    0       1  256 1024  256 3 3  14   14     1 1       1 1      1 1       1 1
  ./conv_bwd_data_driver_v2       1     1       0     3    0       1  256  256 1024 3 3  14   14     1 1       1 1      1 1       1 1
+```
+
+# Result
+Forward convoltuion, NCHW
+```
+./conv_driver_v2                0     6       0     3    0       1  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
+
+layout: 0
+in: dim 4, lengths {128, 192, 71, 71}, strides {967872, 5041, 71, 1}
+wei: dim 4, lengths {256, 192, 3, 3}, strides {1728, 9, 3, 1}
+out: dim 4, lengths {128, 256, 36, 36}, strides {331776, 1296, 36, 1}
+InLeftPads size 2, {1, 1, }
+InRightPads size 2, {1, 1, }
+ConvStrides size 2, {2, 2, }
+ConvDilations size 2, {1, 1, }
+device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nkhw
+a_k0_m_k1_grid_desc{216, 256, 8}
+b_k0_n_k1_grid_desc{216, 165888, 8}
+c_m_n_grid_desc{ 256, 165888}
+launch_and_time_kernel: grid_dim {1296, 1, 1}, block_dim {256, 1, 1}
+Warm up
+Start running 1 times...
+Average time : 1.4155 ms, 103.686 TFlop/s
+```
+
+Forward convoltuion, NCHW
+```
+ ./conv_driver_v2                0     6       0     3    0       1  256 1024  256 3 3  14   14     1 1       1 1      1 1       1 1
+ 
+ layout: 0
+in: dim 4, lengths {256, 256, 14, 14}, strides {50176, 196, 14, 1}
+wei: dim 4, lengths {1024, 256, 3, 3}, strides {2304, 9, 3, 1}
+out: dim 4, lengths {256, 1024, 14, 14}, strides {200704, 196, 14, 1}
+InLeftPads size 2, {1, 1, }
+InRightPads size 2, {1, 1, }
+ConvStrides size 2, {1, 1, }
+ConvDilations size 2, {1, 1, }
+device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nkhw
+a_k0_m_k1_grid_desc{288, 1024, 8}
+b_k0_n_k1_grid_desc{288, 50176, 8}
+c_m_n_grid_desc{ 1024, 50176}
+launch_and_time_kernel: grid_dim {1568, 1, 1}, block_dim {256, 1, 1}
+Warm up
+Start running 1 times...
+Average time : 2.21357 ms, 106.959 TFlop/s
+ ```
+ 
+ Forward convolution, NHWC
+ ```
+ ./conv_driver_v2                1     9       0     3    0       1  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
+ 
+ layout: 1
+in: dim 4, lengths {128, 71, 71, 192}, strides {967872, 13632, 192, 1}
+wei: dim 4, lengths {256, 3, 3, 192}, strides {1728, 576, 192, 1}
+out: dim 4, lengths {128, 36, 36, 256}, strides {331776, 9216, 256, 1}
+InLeftPads size 2, {1, 1, }
+InRightPads size 2, {1, 1, }
+ConvStrides size 2, {2, 2, }
+ConvDilations size 2, {1, 1, }
+device_dynamic_convolution_forward_implicit_gemm_v4r4r4_xdlops_nhwc_kyxc_nhwk
+a_k0_m_k1_grid_desc{216, 165888, 8}
+b_k0_n_k1_grid_desc{216, 256, 8}
+c_m_n_grid_desc{ 165888, 256}
+launch_and_time_kernel: grid_dim {1296, 1, 1}, block_dim {256, 1, 1}
+Warm up
+Start running 1 times...
+Average time : 1.12014 ms, 131.025 TFlop/s
+ ```
+ 
+ Forward convolution, NHWC
+ ```
+ ./conv_driver_v2                1     9       0     3    0       1  256 1024  256 3 3  14   14     1 1       1 1      1 1       1 1
+ 
+ layout: 1
+in: dim 4, lengths {256, 14, 14, 256}, strides {50176, 3584, 256, 1}
+wei: dim 4, lengths {1024, 3, 3, 256}, strides {2304, 768, 256, 1}
+out: dim 4, lengths {256, 14, 14, 1024}, strides {200704, 14336, 1024, 1}
+InLeftPads size 2, {1, 1, }
+InRightPads size 2, {1, 1, }
+ConvStrides size 2, {1, 1, }
+ConvDilations size 2, {1, 1, }
+device_dynamic_convolution_forward_implicit_gemm_v4r4r4_xdlops_nhwc_kyxc_nhwk
+a_k0_m_k1_grid_desc{288, 50176, 8}
+b_k0_n_k1_grid_desc{288, 1024, 8}
+c_m_n_grid_desc{ 50176, 1024}
+launch_and_time_kernel: grid_dim {1568, 1, 1}, block_dim {256, 1, 1}
+Warm up
+Start running 1 times...
+Average time : 1.86877 ms, 126.693 TFlop/s
+ ```
+ 
+ Backward data convolution, NHWC
+ ```
+ ./conv_bwd_data_driver_v2       1     1       0     3    0       1  256  256 1024 3 3  14   14     1 1       1 1      1 1       1 1
+ 
+ layout: 1
+in: dim 4, lengths {256, 14, 14, 1024}, strides {200704, 14336, 1024, 1}
+wei: dim 4, lengths {256, 3, 3, 1024}, strides {9216, 3072, 1024, 1}
+out: dim 4, lengths {256, 14, 14, 256}, strides {50176, 3584, 256, 1}
+InLeftPads size 2, {1, 1, }
+InRightPads size 2, {1, 1, }
+ConvStrides size 2, {1, 1, }
+ConvDilations size 2, {1, 1, }
+device_dynamic_convolution_backward_data_implicit_gemm_v4r1r2_xdlops_nhwc_kyxc_nhwk
+a_k0_m_k1_grid_desc{288, 50176, 8}
+b_k0_n_k1_grid_desc{288, 1024, 8}
+c_m_n_grid_desc{ 50176, 1024}
+launch_and_time_kernel: grid_dim {1568, 1, 1}, block_dim {256, 1, 1}
+Warm up
+Start running 1 times...
+Average time : 2.22461 ms, 106.428 TFlop/s
 ```
