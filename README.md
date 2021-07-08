@@ -42,8 +42,8 @@ cmake                                                                           
 
 Build drivers:   \
 ``conv_driver_v2`` is (offline compilation) driver for forward convolution,  \
-``conv_bwd_data_driver_v2`` is (offline compilation) driver for backward-data convolution,  \
-``conv_driver_v2_olc`` is (online compilation) driver for forward convolution,  
+``conv_bwd_data_driver_v2`` is (offline compilation) driver for backward-data convolution  \
+``conv_driver_v2_olc`` is (online compilation) driver for forward convolution
 ```
  make -j conv_driver_v2
  make -j conv_bwd_data_driver_v2
@@ -51,14 +51,14 @@ Build drivers:   \
 ```
 
 # Run
-# layout: 0 = NCHW; 1 = NHWC
-# algo: 
-#   Forward convolution: https://github.com/asroy/modular_convolution/blob/aafb5eb18781f1ac9e06a17c3e53d968dd53dcc0/driver/conv_driver_v2.cpp#L38
-#   Backward data convolution: https://github.com/asroy/modular_convolution/blob/aafb5eb18781f1ac9e06a17c3e53d968dd53dcc0/driver/conv_bwd_data_driver_v2.cpp#L22
-# verify: 0 = no verification; 1 = do verification
-# init: initialization method
-# log: 0 = no log; 1 = do log
-# repeat: number of time kernel being launched
+* layout: 0 = NCHW; 1 = NHWC
+* algo:
+   * Forward convolution: https://github.com/asroy/modular_convolution/blob/aafb5eb18781f1ac9e06a17c3e53d968dd53dcc0/driver/conv_driver_v2.cpp#L38
+   * Backward data convolution: https://github.com/asroy/modular_convolution/blob/aafb5eb18781f1ac9e06a17c3e53d968dd53dcc0/driver/conv_bwd_data_driver_v2.cpp#L22
+* verify: 0 = no verification; 1 = do verification
+* init: 0 ~ 3. initialization method
+* log: 0 = no log; 1 = do log
+* repeat: number of time kernel being launched
 ```
 ########################### layout  algo  verify  init  log  repeat  N__ K___ C___ Y X Hi_ Wi__ Strides Dilations LeftPads RightPads
  ./conv_driver_v2                0     6       0     3    0       1  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
