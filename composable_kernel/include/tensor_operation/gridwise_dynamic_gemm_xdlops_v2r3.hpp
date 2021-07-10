@@ -59,6 +59,7 @@ template <index_t BlockSize,
           index_t KPerBlock,
           index_t MPerWave,
           index_t NPerWave,
+          index_t KPack,
           index_t MRepeat,
           index_t NRepeat,
           typename ABlockTransferThreadSliceLengths_K0_M_K1,
@@ -94,7 +95,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
     static constexpr auto I3 = Number<3>{};
 
     // K1 should be Number<...>
-    static constexpr auto K1 = AK0MK1GridDesc{}.GetLength(I2);
+    static constexpr auto K1 = Number<KPack>{};
 
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
@@ -160,7 +161,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
         const auto M = c_m_n_grid_desc.GetLength(I0);
         const auto N = c_m_n_grid_desc.GetLength(I1);
 
-        constexpr auto xdlops_gemm = XdlopsGemm<FloatAB, MPerWave, NPerWave, K1.value>{};
+        constexpr auto xdlops_gemm = XdlopsGemm<FloatAB, MPerWave, NPerWave, K1>{};
 
         constexpr auto CLayout = xdlops_gemm.GetCLayout();
 
@@ -267,7 +268,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
         auto a_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
                                                    InMemoryDataOperation::Set,
-                                                   Sequence<KPerBlock, MPerBlock, K1.value>,
+                                                   Sequence<KPerBlock, MPerBlock, K1>,
                                                    ABlockTransferThreadSliceLengths_K0_M_K1,
                                                    ABlockTransferThreadClusterLengths_K0_M_K1,
                                                    ABlockTransferThreadClusterArrangeOrder,
@@ -294,7 +295,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
         auto b_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
                                                    InMemoryDataOperation::Set,
-                                                   Sequence<KPerBlock, NPerBlock, K1.value>,
+                                                   Sequence<KPerBlock, NPerBlock, K1>,
                                                    BBlockTransferThreadSliceLengths_K0_N_K1,
                                                    BBlockTransferThreadClusterLengths_K0_N_K1,
                                                    BBlockTransferThreadClusterArrangeOrder,
@@ -354,7 +355,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
                                                  decltype(b_k0_n0_n1_k1_block_desc),
                                                  MPerWave,
                                                  NPerWave,
-                                                 K1.value>{};
+                                                 K1>{};
 
         constexpr auto CLayout = blockwise_gemm.GetCLayout();
 

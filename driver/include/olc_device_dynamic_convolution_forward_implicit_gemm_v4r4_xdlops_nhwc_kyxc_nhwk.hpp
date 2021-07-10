@@ -179,7 +179,11 @@ get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_k
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[0]) + "," +
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[1]) + "," +
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[2]) + "," +
-           std::to_string(pt->CThreadTransferSrcDstAccessOrder[3]);
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[3]) + "," +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[4]) + "," +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[5]) + "," +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[6]) + "," +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[7]);
 
     out += " -DCK_PARAM_CThreadTransferSrcDstVectorDim=" +
            std::to_string(pt->CThreadTransferSrcDstVectorDim);
