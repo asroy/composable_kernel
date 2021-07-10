@@ -155,12 +155,12 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_prepare(
     using BK0NK1GridDesc = decltype(b_k0_n_k1_grid_desc);
     using CMNGridDesc    = decltype(c_m_n_grid_desc);
 
-    using AGridIteratorHacks = decltype(make_tuple(
+    using BGridIteratorHacks = decltype(make_tuple(
         make_tuple(Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}),
         make_tuple(
             Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{})));
 
-    using BGridIteratorHacks =
+    using AGridIteratorHacks =
         decltype(make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{},
                                        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0>{},
                                        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{}),
@@ -185,8 +185,8 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_prepare(
                                                               Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 2, 0, 0>{})));
 
-    using AGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0>;
-    using BGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0>;
+    using AGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0>;
+    using BGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0>;
 
     using GridwiseGemm =
         GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3<BlockSize,
@@ -296,12 +296,12 @@ extern "C" __global__ void
     using AK0MK1GridDesc = decltype(a_k0_m_k1_grid_desc_tmp);
     using BK0NK1GridDesc = decltype(b_k0_n_k1_grid_desc_tmp);
 
-    using AGridIteratorHacks = decltype(make_tuple(
+    using BGridIteratorHacks = decltype(make_tuple(
         make_tuple(Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}),
         make_tuple(
             Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{})));
 
-    using BGridIteratorHacks =
+    using AGridIteratorHacks =
         decltype(make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{},
                                        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0>{},
                                        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{}),
@@ -326,8 +326,8 @@ extern "C" __global__ void
                                                               Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 2, 0, 0>{})));
 
-    using AGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0>;
-    using BGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0>;
+    using AGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0>;
+    using BGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0>;
 
     using GridwiseGemm =
         GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3<BlockSize,

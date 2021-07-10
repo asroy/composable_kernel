@@ -186,8 +186,8 @@ static tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_kyxc_nhwk
         8,                        // BBlockTransferDstScalarPerVector_KPack
         false,                    // BThreadTransferSrcResetCoordinateAfterRun
         {2, 3, 0, 1, 7, 5, 4, 6}, // CThreadTransferSrcDstAccessOrder
-        6,                        // CThreadTransferSrcDstVectorDim,
-        4                         // CThreadTransferDstScalarPerVector
+        7,                        // CThreadTransferSrcDstVectorDim,
+        1                         // CThreadTransferDstScalarPerVector
 };
 
 struct tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw

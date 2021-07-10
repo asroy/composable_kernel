@@ -335,8 +335,8 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk
 
         timer2.Start();
         handle->AddKernel(algo_name, network_config_2, program_name, kernel_name, vld, vgd2, param)(
-            reinterpret_cast<const TInWei*>(wei_k_y_x_c_dev_buf.GetDeviceBuffer()),
             reinterpret_cast<const TInWei*>(in_n_hi_wi_c_dev_buf.GetDeviceBuffer()),
+            reinterpret_cast<const TInWei*>(wei_k_y_x_c_dev_buf.GetDeviceBuffer()),
             reinterpret_cast<TOut*>(out_n_ho_wo_k_dev_buf.GetDeviceBuffer()),
             (const void*)(a_k0_m_k1_grid_desc_dev_buf),
             (const void*)(b_k0_n_k1_grid_desc_dev_buf),
