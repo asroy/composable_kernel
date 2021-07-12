@@ -12,6 +12,7 @@
 
 namespace ck {
 
+#if CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VALUE
 template <typename GridwiseGemm,
           typename FloatAB,
           typename FloatC,
@@ -45,6 +46,50 @@ __global__ void
                       c_m0_m1_m2_n_grid_desc,
                       c_block_cluster_adaptor);
 }
+#elif CK_EXPERIMENTAL_PASS_TENSOR_DESCRIPTOR_BY_VOID_POINTER
+template <typename GridwiseGemm,
+          typename FloatAB,
+          typename FloatC,
+          typename AK0MK1GridDesc,
+          typename BK0NK1GridDesc,
+          typename CM0M1M2NGridDesc,
+          typename CBlockClusterAdaptor>
+__global__ void
+#if CK_USE_LAUNCH_BOUNDS
+    __launch_bounds__(CK_MAX_THREAD_PER_BLOCK, CK_MIN_BLOCK_PER_CU)
+#endif
+        kernel_dynamic_gemm_xdlops_v2r3(const FloatAB* __restrict__ p_a_grid,
+                                        const FloatAB* __restrict__ p_b_grid,
+                                        FloatC* __restrict__ p_c_grid,
+                                        const void __CONSTANT__* p_a_k0_m_k1_grid_desc,
+                                        const void __CONSTANT__* p_b_k0_n_k1_grid_desc,
+                                        const void __CONSTANT__* p_c_m0_m1_m2_n_grid_desc,
+                                        const void __CONSTANT__* p_c_block_cluster_adaptor)
+{
+    constexpr index_t shared_block_size =
+        GridwiseGemm::GetSharedMemoryNumberOfByte() / sizeof(FloatAB);
+
+    const auto a_k0_m_k1_grid_desc =
+        *reinterpret_cast<const AK0MK1GridDesc*>((const void*)p_a_k0_m_k1_grid_desc);
+    const auto b_k0_n_k1_grid_desc =
+        *reinterpret_cast<const BK0NK1GridDesc*>((const void*)p_b_k0_n_k1_grid_desc);
+    const auto c_m0_m1_m2_n_grid_desc =
+        *reinterpret_cast<const CM0M1M2NGridDesc*>((const void*)p_c_m0_m1_m2_n_grid_desc);
+    const auto c_block_cluster_adaptor =
+        *reinterpret_cast<const CBlockClusterAdaptor*>((const void*)p_c_block_cluster_adaptor);
+
+    __shared__ FloatAB p_shared_block[shared_block_size];
+
+    GridwiseGemm::Run(p_a_grid,
+                      p_b_grid,
+                      p_c_grid,
+                      p_shared_block,
+                      a_k0_m_k1_grid_desc,
+                      b_k0_n_k1_grid_desc,
+                      c_m0_m1_m2_n_grid_desc,
+                      c_block_cluster_adaptor);
+}
+#endif
 
 template <index_t BlockSize,
           typename FloatAB,
