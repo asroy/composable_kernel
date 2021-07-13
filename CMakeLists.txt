@@ -48,36 +48,28 @@ include_directories(BEFORE
     ${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_operation
     ${PROJECT_SOURCE_DIR}/composable_kernel/include/problem_transform
     ${PROJECT_SOURCE_DIR}/composable_kernel/include/driver
+    ${PROJECT_SOURCE_DIR}/external/rocm/include
     ${PROJECT_SOURCE_DIR}/external/half/include
-    ${PROJECT_SOURCE_DIR}/driver/include
+    ${PROJECT_SOURCE_DIR}/host/include
+    ${PROJECT_SOURCE_DIR}/host/driver/include
 )
 
-if(DEVICE_BACKEND STREQUAL "AMD")
-    include_directories(BEFORE
-        ${PROJECT_SOURCE_DIR}/external/rocm/include
-    )
-endif()
-
-add_subdirectory(driver)
+add_subdirectory(host)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 message("Compiling options for drivers: ${CMAKE_CXX_FLAGS}")
 
-if(DEVICE_BACKEND STREQUAL "AMD")
-    set(CONV_V2_SOURCE driver/conv_driver_v2.cpp)
-    set(CONV_BWD_DATA_V2_SOURCE driver/conv_bwd_data_driver_v2.cpp)
-    set(CONV_V2_OLC_SOURCE driver/conv_driver_v2_olc.cpp)
-endif()
+set(CONV_V2_SOURCE host/driver/conv_driver_v2.cpp)
+set(CONV_BWD_DATA_V2_SOURCE host/driver/conv_bwd_data_driver_v2.cpp)
+set(CONV_V2_OLC_SOURCE host/driver/conv_driver_v2_olc.cpp)
 
 add_executable(conv_driver_v2 ${CONV_V2_SOURCE})
 add_executable(conv_bwd_data_driver_v2 ${CONV_BWD_DATA_V2_SOURCE})
 add_executable(conv_driver_v2_olc ${CONV_V2_OLC_SOURCE})
 
-target_include_directories(conv_driver_v2_olc PRIVATE driver/olCompiling/include/)
+target_include_directories(conv_driver_v2_olc PRIVATE host/olCompiling/include/)
 
 target_link_libraries(conv_driver_v2 PRIVATE modConv)
 target_link_libraries(conv_bwd_data_driver_v2 PRIVATE modConv)
 target_link_libraries(conv_driver_v2_olc PRIVATE modConv)
-
-

@@ -121,11 +121,4 @@ static tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw default_tunable_dyn_conv_fwd_v4r
     {3, 4, 5, 0, 1, 2},
     5,
     1};
-
-static inline int
-conv_hw_out_size(int hw_in_size, int leftPad, int rightPad, int dilation, int yx_size, int stride)
-{
-    return (hw_in_size + leftPad + rightPad - dilation * (yx_size - 1) - 1) / stride + 1;
-}
-
 #endif

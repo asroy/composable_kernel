@@ -67,7 +67,11 @@ else()
     set(OLC_DEBUG 0)
 endif()
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/olCompiling/include/config.h.in" "${PROJECT_BINARY_DIR}/driver/olCompiling/include/config.h")
+configure_file("${PROJECT_SOURCE_DIR}/host/olCompiling/include/config.h.in" "${PROJECT_BINARY_DIR}/host/olCompiling/include/config.h")
+
+include_directories(BEFORE
+    ${PROJECT_BINARY_DIR}/host/olCompiling/include
+)
 
 message(STATUS "Hip compiler flags: ${HIP_COMPILER_FLAGS}")
 
@@ -95,7 +99,7 @@ set(MCONV_SOURCES
 )
 
 set(OLC_HIP_UTILITY_HEADERS
-    ${PROJECT_BINARY_DIR}/driver/olCompiling/include/config.h
+    ${PROJECT_BINARY_DIR}/host/olCompiling/include/config.h
     olCompiling/include/logger.hpp
     olCompiling/include/stringutils.hpp 
     olCompiling/include/tmp_dir.hpp
