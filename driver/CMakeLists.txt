@@ -1,4 +1,3 @@
-
 set(CMAKE_CXX_COMPILER /opt/rocm/llvm/bin/clang++)
 
 ## for online-compiling of HIP kernels
@@ -17,6 +16,7 @@ if(OLC_HIP_COMPILER MATCHES ".*clang\\+\\+$")
 	    ${CMAKE_INSTALL_PREFIX}/llvm
     )
 endif()
+
 if(OLC_OFFLOADBUNDLER_BIN)
     message(STATUS "clang-offload-bundler found: ${OLC_OFFLOADBUNDLER_BIN}")
     set(OLC_OFFLOADBUNDLER_BIN "${OLC_OFFLOADBUNDLER_BIN}")
@@ -67,26 +67,18 @@ else()
     set(OLC_DEBUG 0)
 endif()
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/olCompiling/include/config.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/olCompiling/include/config.h")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/olCompiling/include/config.h.in" "${PROJECT_BINARY_DIR}/driver/olCompiling/include/config.h")
 
 message(STATUS "Hip compiler flags: ${HIP_COMPILER_FLAGS}")
 
 ## HIP_COMPILER_FLAGS will be used for on-line compiling of the HIP kernels
 add_definitions("-DHIP_COMPILER_FLAGS=${HIP_COMPILER_FLAGS}")
 
-file(GLOB COMPOSABLE_KERNEL_INCLUDE_1 "${PROJECT_SOURCE_DIR}/composable_kernel/include/kernel_algorithm/*.hpp")
-file(GLOB COMPOSABLE_KERNEL_INCLUDE_2 "${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_description/*.hpp")
-file(GLOB COMPOSABLE_KERNEL_INCLUDE_3 "${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_operation/*.hpp")
-file(GLOB COMPOSABLE_KERNEL_INCLUDE_4 "${PROJECT_SOURCE_DIR}/composable_kernel/include/utility/*.hpp")
-file(GLOB COMPOSABLE_KERNEL_INCLUDE_5 "${PROJECT_BINARY_DIR}/composable_kernel/include/utility/*.hpp") 
-file(GLOB COMPOSABLE_KERNEL_INCLUDE_6 "${PROJECT_SOURCE_DIR}/external/rocm/include/bfloat16_dev.hpp")
+file(GLOB_RECURSE COMPOSABLE_KERNEL_INCLUDE_1 "${PROJECT_SOURCE_DIR}/composable_kernel/include/*/*.hpp")
+file(GLOB COMPOSABLE_KERNEL_INCLUDE_2 "${PROJECT_SOURCE_DIR}/external/rocm/include/bfloat16_dev.hpp")
 set(MCONV_KERNEL_INCLUDES
     ${COMPOSABLE_KERNEL_INCLUDE_1}
     ${COMPOSABLE_KERNEL_INCLUDE_2}
-    ${COMPOSABLE_KERNEL_INCLUDE_3}
-    ${COMPOSABLE_KERNEL_INCLUDE_4}
-    ${COMPOSABLE_KERNEL_INCLUDE_5}
-    ${COMPOSABLE_KERNEL_INCLUDE_6}
    )
 
 set(MCONV_KERNELS
@@ -103,7 +95,7 @@ set(MCONV_SOURCES
 )
 
 set(OLC_HIP_UTILITY_HEADERS
-    olCompiling/include/config.h
+    ${PROJECT_BINARY_DIR}/driver/olCompiling/include/config.h
     olCompiling/include/logger.hpp
     olCompiling/include/stringutils.hpp 
     olCompiling/include/tmp_dir.hpp

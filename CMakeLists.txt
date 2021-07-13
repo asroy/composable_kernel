@@ -46,23 +46,16 @@ include_directories(BEFORE
     ${PROJECT_SOURCE_DIR}/composable_kernel/include/utility
     ${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_description
     ${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_operation
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/kernel_algorithm
+    ${PROJECT_SOURCE_DIR}/composable_kernel/include/problem_transform
     ${PROJECT_SOURCE_DIR}/composable_kernel/include/driver
     ${PROJECT_SOURCE_DIR}/external/half/include
     ${PROJECT_SOURCE_DIR}/driver/include
-    ${PROJECT_BINARY_DIR}/composable_kernel/include/utility
 )
 
 if(DEVICE_BACKEND STREQUAL "AMD")
     include_directories(BEFORE
         ${PROJECT_SOURCE_DIR}/external/rocm/include
     )
-endif()
-
-if(DEVICE_BACKEND STREQUAL "AMD")
-    configure_file("${PROJECT_SOURCE_DIR}/composable_kernel/include/utility/config.amd.hpp.in" "${PROJECT_BINARY_DIR}/composable_kernel/include/utility/config.hpp")
-    configure_file("${PROJECT_SOURCE_DIR}/composable_kernel/include/utility/float_type.amd.hpp.in" "${PROJECT_BINARY_DIR}/composable_kernel/include/utility/float_type.hpp")
-    configure_file("${PROJECT_SOURCE_DIR}/composable_kernel/include/utility/synchronization.amd.hpp.in" "${PROJECT_BINARY_DIR}/composable_kernel/include/utility/synchronization.hpp")
 endif()
 
 add_subdirectory(driver)
