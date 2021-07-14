@@ -2,7 +2,7 @@
 #include "host_tensor.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
-#include "transform_forward_convolution_into_gemm_v4r4_xdlops_nhwc_kyxc_nhwk.hpp"
+#include "transform_forward_convolution_into_gemm_v4r4r4_nhwc_kyxc_nhwk.hpp"
 
 #include "olc_driver_common.hpp"
 #include "conv_tunables.hpp"
@@ -241,13 +241,14 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk
         make_dynamic_naive_tensor_descriptor_packed_v2(out_n_ho_wo_k_lengths);
 
     const auto descs =
-        transform_forward_convolution_into_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_pad(wei_k_y_x_c_desc,
-                                                                               in_n_hi_wi_c_desc,
-                                                                               out_n_ho_wo_k_desc,
-                                                                               conv_strides,
-                                                                               conv_dilations,
-                                                                               in_left_pads,
-                                                                               in_right_pads);
+        transform_forward_convolution_into_gemm_v4r4r4_nhwc_kyxc_nhwk_pad(in_n_hi_wi_c_desc,
+                                                                          wei_k_y_x_c_desc,
+                                                                          out_n_ho_wo_k_desc,
+                                                                          conv_strides,
+                                                                          conv_dilations,
+                                                                          in_left_pads,
+                                                                          in_right_pads,
+                                                                          Number<4>{});
     const auto a_k_m_grid_desc = descs[I0];
     const auto c_m_n_grid_desc = descs[I2];
 

@@ -3,7 +3,7 @@
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
 #include "gridwise_dynamic_gemm_xdlops_v2r3.hpp"
-#include "transform_forward_convolution_into_gemm_v4r4_xdlops_nhwc_kyxc_nhwk.hpp"
+#include "transform_forward_convolution_into_gemm_v4r4r4_nhwc_kyxc_nhwk.hpp"
 
 using namespace ck;
 
@@ -57,48 +57,6 @@ using CThreadTransferSrcDstAccessOrder = Sequence<CK_PARAM_CThreadTransferSrcDst
 constexpr index_t CThreadTransferSrcDstVectorDim    = CK_PARAM_CThreadTransferSrcDstVectorDim;
 constexpr index_t CThreadTransferDstScalarPerVector = CK_PARAM_CThreadTransferDstScalarPerVector;
 
-template <typename AKMGridDesc>
-__host__ __device__ constexpr auto MakeAK0MK1GridDescriptor(const AKMGridDesc& a_k_m_grid_desc)
-{
-    constexpr auto I0 = Number<0>{};
-    constexpr auto I1 = Number<1>{};
-
-    const auto K = a_k_m_grid_desc.GetLength(I0);
-    const auto M = a_k_m_grid_desc.GetLength(I1);
-
-    const auto K0 = K / KPack;
-    const auto K1 = KPack;
-
-    const auto a_k0_m_k1_grid_desc = transform_dynamic_tensor_descriptor(
-        a_k_m_grid_desc,
-        make_tuple(make_unmerge_transform(make_tuple(K0, K1)), make_pass_through_transform(M)),
-        make_tuple(Sequence<0>{}, Sequence<1>{}),
-        make_tuple(Sequence<0, 2>{}, Sequence<1>{}));
-
-    return a_k0_m_k1_grid_desc;
-}
-
-template <typename BKNGridDesc>
-__host__ __device__ constexpr auto MakeBK0NK1GridDescriptor(const BKNGridDesc& b_k_n_grid_desc)
-{
-    constexpr auto I0 = Number<0>{};
-    constexpr auto I1 = Number<1>{};
-
-    const auto K = b_k_n_grid_desc.GetLength(I0);
-    const auto N = b_k_n_grid_desc.GetLength(I1);
-
-    const auto K0 = K / KPack;
-    const auto K1 = KPack;
-
-    const auto b_k0_n_k1_grid_desc = transform_dynamic_tensor_descriptor(
-        b_k_n_grid_desc,
-        make_tuple(make_unmerge_transform(make_tuple(K0, K1)), make_pass_through_transform(N)),
-        make_tuple(Sequence<0>{}, Sequence<1>{}),
-        make_tuple(Sequence<0, 2>{}, Sequence<1>{}));
-
-    return b_k0_n_k1_grid_desc;
-}
-
 extern "C" __global__ void
 dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_prepare(
     int n,
@@ -135,21 +93,19 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_prepare(
     const auto out_n_ho_wo_k_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(n, ho, wo, k));
 
-    const auto descs = transform_forward_convolution_into_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_pad(
-        wei_k_y_x_c_desc,
+    const auto descs = transform_forward_convolution_into_gemm_v4r4r4_nhwc_kyxc_nhwk_pad(
         in_n_hi_wi_c_desc,
+        wei_k_y_x_c_desc,
         out_n_ho_wo_k_desc,
         make_tuple(convStrideH, convStrideW),
         make_tuple(convDilationY, convDilationX),
         make_tuple(leftPadH, leftPadW),
-        make_tuple(rightPadH, rightPadW));
+        make_tuple(rightPadH, rightPadW),
+        Number<KPack>{});
 
-    const auto a_k_m_grid_desc = descs[I0];
-    const auto b_k_n_grid_desc = descs[I1];
-    const auto c_m_n_grid_desc = descs[I2];
-
-    auto a_k0_m_k1_grid_desc = MakeAK0MK1GridDescriptor(a_k_m_grid_desc);
-    auto b_k0_n_k1_grid_desc = MakeBK0NK1GridDescriptor(b_k_n_grid_desc);
+    const auto a_k0_m_k1_grid_desc = descs[I0];
+    const auto b_k0_n_k1_grid_desc = descs[I1];
+    const auto c_m_n_grid_desc     = descs[I2];
 
     using AK0MK1GridDesc = decltype(a_k0_m_k1_grid_desc);
     using BK0NK1GridDesc = decltype(b_k0_n_k1_grid_desc);
@@ -274,27 +230,22 @@ extern "C" __global__ void
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(256, 28, 28, 256));
 
     constexpr auto descs =
-        transform_forward_convolution_into_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_pad(wei_k_y_x_c_desc,
-                                                                               in_n_hi_wi_c_desc,
-                                                                               out_n_ho_wo_k_desc,
-                                                                               make_tuple(1, 1),
-                                                                               make_tuple(1, 1),
-                                                                               make_tuple(1, 1),
-                                                                               make_tuple(1, 1));
+        transform_forward_convolution_into_gemm_v4r4r4_nhwc_kyxc_nhwk_pad(in_n_hi_wi_c_desc,
+                                                                          wei_k_y_x_c_desc,
+                                                                          out_n_ho_wo_k_desc,
+                                                                          make_tuple(I1, I1),
+                                                                          make_tuple(I1, I1),
+                                                                          make_tuple(I1, I1),
+                                                                          make_tuple(I1, I1),
+                                                                          Number<KPack>{});
 
-    constexpr auto a_k_m_grid_desc = descs[I0];
-    constexpr auto b_k_n_grid_desc = descs[I1];
-    constexpr auto c_m_n_grid_desc = descs[I2];
-
-    using AKMGridDesc = decltype(a_k_m_grid_desc);
-    using BKNGridDesc = decltype(b_k_n_grid_desc);
-    using CMNGridDesc = decltype(c_m_n_grid_desc);
-
-    auto a_k0_m_k1_grid_desc_tmp = MakeAK0MK1GridDescriptor(a_k_m_grid_desc);
-    auto b_k0_n_k1_grid_desc_tmp = MakeBK0NK1GridDescriptor(b_k_n_grid_desc);
+    constexpr auto a_k0_m_k1_grid_desc_tmp = descs[I0];
+    constexpr auto b_k0_n_k1_grid_desc_tmp = descs[I1];
+    constexpr auto c_m_n_grid_desc         = descs[I2];
 
     using AK0MK1GridDesc = decltype(a_k0_m_k1_grid_desc_tmp);
     using BK0NK1GridDesc = decltype(b_k0_n_k1_grid_desc_tmp);
+    using CMNGridDesc    = decltype(c_m_n_grid_desc);
 
     using BGridIteratorHacks = decltype(make_tuple(
         make_tuple(Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}),
