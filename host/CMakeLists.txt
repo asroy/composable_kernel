@@ -189,8 +189,6 @@ target_link_libraries(modConv PRIVATE hip::device)
 target_link_libraries(modConv INTERFACE hip::host)
 target_link_libraries(modConv PRIVATE Boost::filesystem)
 
-target_compile_options(modConv PRIVATE -mfma)
-
 target_compile_features(modConv PUBLIC)
 set_target_properties(modConv PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

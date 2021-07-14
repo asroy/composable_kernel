@@ -6,7 +6,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(TargetFlags)
 include(AddKernels)
 
-#c++
+#C++
 enable_language(CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,10 +35,9 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 link_libraries(${OpenMP_gomp_LIBRARY})
 link_libraries(${OpenMP_pthread_LIBRARY})
 
-#GPU backend
-if(DEVICE_BACKEND STREQUAL "AMD")
-    find_package(HIP REQUIRED)
-endif()
+#HIP
+find_package(HIP REQUIRED)
+message(STATUS "Build with HIP ${hip_VERSION}")
 
 #
 include_directories(BEFORE
