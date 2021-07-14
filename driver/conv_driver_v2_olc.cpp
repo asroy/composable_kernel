@@ -95,11 +95,16 @@ int main(int argc, char* argv[])
     const index_t Ho = (Hi + in_left_pad_h + in_right_pad_h - YEff) / conv_stride_h + 1;
     const index_t Wo = (Wi + in_left_pad_w + in_right_pad_w - XEff) / conv_stride_w + 1;
 
-#if 1
+#if 0
     constexpr index_t in_vector_size = 1;
     using in_data_t                  = float;
     using acc_data_t                 = float;
     using out_data_t                 = float;
+#elif 1
+    constexpr index_t in_vector_size = 1;
+    using in_data_t                  = half_float::half;
+    using acc_data_t                 = float;
+    using out_data_t                 = half_float::half;
 #elif 1
     constexpr index_t in_vector_size = 16;
     using in_data_t                  = int8_t;
@@ -343,6 +348,7 @@ int main(int argc, char* argv[])
     }
 #endif
 
+#if 0
     if(do_verification)
     {
         host_direct_convolution(in,
@@ -364,6 +370,7 @@ int main(int argc, char* argv[])
             LogRange(std::cout << "out_device: ", out_device.mData, ",") << std::endl;
         }
     }
+#endif
 
     delete handle;
     MY_HIP_CHECK(hipStreamDestroy(stream));
