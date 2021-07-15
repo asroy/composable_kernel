@@ -166,24 +166,24 @@ static tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_kyxc_nhwk
         4,                        // KPerBlock,
         32,                       // MPerWave,
         32,                       // NPerWave,
-        8,                        // KPack,
+        4,                        // KPack,
         2,                        // MRepeat,
         2,                        // NRepeat,
-        {1, 2, 8},                // ABlockTransferThreadSliceLengths_K0_M_K1,
+        {1, 2, 4},                // ABlockTransferThreadSliceLengths_K0_M_K1,
         {4, 64, 1},               // ABlockTransferThreadClusterLengths_K0_M_K1,
         {1, 0, 2},                // ABlockTransferThreadClusterArrangeOrder,
         {1, 0, 2},                // ABlockTransferSrcAccessOrder,
         2,                        // ABlockTransferSrcVectorDim
-        8,                        // ABlockTransferSrcScalarPerVector,
-        8,                        // ABlockTransferDstScalarPerVector_KPack,
+        4,                        // ABlockTransferSrcScalarPerVector,
+        4,                        // ABlockTransferDstScalarPerVector_KPack,
         false,                    // AThreadTransferSrcResetCoordinateAfterRun,
-        {1, 2, 8},                // BBlockTransferThreadSliceLengths_K0_N_K1,
+        {1, 2, 4},                // BBlockTransferThreadSliceLengths_K0_N_K1,
         {4, 64, 1},               // BBlockTransferThreadClusterLengths_K0_N_K1,
         {1, 0, 2},                // BBlockTransferThreadClusterArrangeOrder,
         {1, 0, 2},                // BBlockTransferSrcAccessOrder,
         2,                        // BBlockTransferSrcVectorDim
-        8,                        // BBlockTransferSrcScalarPerVector
-        8,                        // BBlockTransferDstScalarPerVector_KPack
+        4,                        // BBlockTransferSrcScalarPerVector
+        4,                        // BBlockTransferDstScalarPerVector_KPack
         false,                    // BThreadTransferSrcResetCoordinateAfterRun
         {2, 3, 0, 1, 7, 5, 4, 6}, // CThreadTransferSrcDstAccessOrder
         7,                        // CThreadTransferSrcDstVectorDim,

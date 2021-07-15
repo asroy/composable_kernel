@@ -16,8 +16,8 @@
 #make -j conv_bwd_data_driver_v2
  make -j conv_driver_v2_olc
 
- rm -rf /root/_hip_binary_kernels_/
- rm -rf /tmp/olCompile*
+ #rm -rf /root/_hip_binary_kernels_/
+ #rm -rf /tmp/olCompile*
 
 LAYOUT=$1
 ALGO=$2
@@ -43,8 +43,8 @@ REPEAT=$6
 
 #./conv_bwd_data_driver_v2 $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  256  256  256 3 3  14   14     1 1       1 1      1 1       1 1
 
- #./conv_driver_v2      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
- ./conv_driver_v2_olc      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
+ ./conv_driver_v2_olc      $LAYOUT 5 $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
+ #./conv_driver_v2          $LAYOUT 9 $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
  #./conv_driver_v2_olc      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256  256 3 3  14   14     1 1       1 1      1 1       1 1
 
 #./conv_driver_v2_olc      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  256  256 256 1 1  14   14     1 1       1 1      0 0       0 0

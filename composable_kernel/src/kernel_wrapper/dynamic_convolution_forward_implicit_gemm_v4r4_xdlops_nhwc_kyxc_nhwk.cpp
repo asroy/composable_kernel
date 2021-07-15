@@ -194,8 +194,10 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_prepare(
 
     if(hipThreadIdx_x == 0)
     {
-        *static_cast<decltype(a_k0_m_k1_grid_desc)*>(p_a_k0_m_k1_grid_desc) = a_k0_m_k1_grid_desc;
-        *static_cast<decltype(b_k0_n_k1_grid_desc)*>(p_b_k0_n_k1_grid_desc) = b_k0_n_k1_grid_desc;
+        *static_cast<remove_cv_t<decltype(a_k0_m_k1_grid_desc)>*>(p_a_k0_m_k1_grid_desc) =
+            a_k0_m_k1_grid_desc;
+        *static_cast<remove_cv_t<decltype(b_k0_n_k1_grid_desc)>*>(p_b_k0_n_k1_grid_desc) =
+            b_k0_n_k1_grid_desc;
         *static_cast<decltype(c_m0_m1_m2_n_grid_desc)*>(p_c_m0_m1_m2_n_grid_desc) =
             c_m0_m1_m2_n_grid_desc;
         *static_cast<decltype(c_blockid_to_m0_n0_block_cluster_adaptor)*>(
