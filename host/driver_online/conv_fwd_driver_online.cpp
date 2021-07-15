@@ -25,9 +25,7 @@
 enum ConvForwardAlgo
 {
     V4R4NCHW,
-    V4R4NHWC,
     V4R5NCHW,
-    V5R1NCHW
 };
 
 int main(int argc, char* argv[])
