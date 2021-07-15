@@ -119,8 +119,9 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
     if(!GridwiseContraction::CheckValidity(
            a_grid_desc_gk0_gm0_gm1_gk1, b_grid_desc_gk0_gn0_gn1_gk1, c_grid_desc_gm0_gm1_gn0_gn1))
     {
-        throw std::runtime_error(
-            "wrong! GridwiseDynamicContraction_km_kn0n1_mn0n1_v1r1 has invalid setting");
+        throw std::runtime_error("wrong! "
+                                 "GridwiseDynamicContraction_A_GK0_GM0_GM1_GK1_B_GK0_GN0_GN1_GK1_C_"
+                                 "GM0_GM1_GN0_GN1 has invalid setting");
     }
 
     const auto a_grid_desc_gk0_gm0_gm10_gm11_gk1 =
@@ -181,7 +182,7 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
 
     if(has_main_k_block_loop && has_double_tail_k_block_loop)
     {
-        const auto kernel = kernel_dynamic_contraction_v1r1<
+        const auto kernel = kernel_dynamic_contraction_v1r2<
             GridwiseContraction,
             FloatAB,
             FloatC,
@@ -208,7 +209,7 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
     }
     else if(has_main_k_block_loop && !has_double_tail_k_block_loop)
     {
-        const auto kernel = kernel_dynamic_contraction_v1r1<
+        const auto kernel = kernel_dynamic_contraction_v1r2<
             GridwiseContraction,
             FloatAB,
             FloatC,
@@ -235,7 +236,7 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
     }
     else if(!has_main_k_block_loop && has_double_tail_k_block_loop)
     {
-        const auto kernel = kernel_dynamic_contraction_v1r1<
+        const auto kernel = kernel_dynamic_contraction_v1r2<
             GridwiseContraction,
             FloatAB,
             FloatC,
@@ -262,7 +263,7 @@ driver_dynamic_contraction_v1r2(const FloatAB* p_a_grid,
     }
     else
     {
-        const auto kernel = kernel_dynamic_contraction_v1r1<
+        const auto kernel = kernel_dynamic_contraction_v1r2<
             GridwiseContraction,
             FloatAB,
             FloatC,
