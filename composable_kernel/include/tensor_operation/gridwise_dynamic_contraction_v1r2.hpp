@@ -15,10 +15,10 @@ namespace ck {
 template <typename GridwiseContraction,
           typename FloatAB,
           typename FloatC,
-          typename AGK0GM0GM10GM11GK1GridDesc,
-          typename BGK0GN0GN10GN11GK1GridDesc,
-          typename CGM10BM0BM1GN10BN0BN1GridDesc,
-          typename CBlockIdToGM10GN10BlockClusterAdaptor,
+          typename AGridDesc_GK0_GM0_GM10_GM11_GK1,
+          typename BGridDesc_GK0_GN0_GN10_GN11_GK1,
+          typename CGridDesc_GM10_BM0_BM1_GN10_BN0_BN1,
+          typename CGridBlockCluster_BlockId_To_GM10_GN10,
           bool HasMainKBlockLoop,
           bool HasDoubleTailKBlockLoop>
 __global__ void
@@ -29,10 +29,10 @@ __global__ void
             const FloatAB* __restrict__ p_a_grid,
             const FloatAB* __restrict__ p_b_grid,
             FloatC* __restrict__ p_c_grid,
-            const AGK0GM0GM10GM11GK1GridDesc a_gk0_gm0_gm10_gm11_gk1_grid_desc,
-            const BGK0GN0GN10GN11GK1GridDesc b_gk0_gn0_gn10_gn11_gk1_grid_desc,
-            const CGM10BM0BM1GN10BN0BN1GridDesc c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
-            const CBlockIdToGM10GN10BlockClusterAdaptor
+            const AGridDesc_GK0_GM0_GM10_GM11_GK1 a_gk0_gm0_gm10_gm11_gk1_grid_desc,
+            const BGridDesc_GK0_GN0_GN10_GN11_GK1 b_gk0_gn0_gn10_gn11_gk1_grid_desc,
+            const CGridDesc_GM10_BM0_BM1_GN10_BN0_BN1 c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
+            const CGridBlockCluster_BlockId_To_GM10_GN10
                 c_blockid_to_gm10_gn10_block_cluster_adaptor)
 {
     constexpr index_t shared_block_size =
@@ -57,19 +57,19 @@ template <index_t BlockSize,
           typename FloatAcc,
           typename FloatC,
           InMemoryDataOperation CGlobalMemoryDataOperation,
-          typename AGK0GM0GM1GK1GridDesc,
-          typename BGK0GN0GN1GK1GridDesc,
-          typename CGM0GM1GN0GN1GridDesc,
+          typename AGridDesc_GK0_GM0_GM1_GK1,
+          typename BGridDesc_GK0_GN0_GN1_GK1,
+          typename CGridDesc_GM0_GM1_GN0_GN1,
           index_t GM1PerBlockGM11,
           index_t GN1PerBlockGN11,
-          index_t KPerBlock,
-          index_t M1PerThreadM111,
-          index_t N1PerThreadN111,
-          index_t KPerThread,
-          index_t M11N11ThreadClusterM1100,
-          index_t M11N11ThreadClusterN1100,
-          index_t M11N11ThreadClusterM1101,
-          index_t M11N11ThreadClusterN1101,
+          index_t GK0PerBlock,
+          index_t BM1PerThreadBM11,
+          index_t BN1PerThreadBN11,
+          index_t BK0PerThread,
+          index_t BM10BN10ThreadClusterBM100,
+          index_t BM10BN10ThreadClusterBN100,
+          index_t BM10BN10ThreadClusterBM101,
+          index_t BM10BN10ThreadClusterBN101,
           typename ABlockTransferThreadSliceLengths_GK0_GM0_GM10_GM11_GK1,
           typename ABlockTransferThreadClusterLengths_GK0_GM0_GM10_GM11_GK1,
           typename ABlockTransferThreadClusterArrangeOrder,
@@ -100,9 +100,9 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
     static constexpr auto I3 = Number<3>{};
 
     // GM0 and GN0 need to known at compile-time
-    static constexpr auto GM0 = CGM0GM1GN0GN1GridDesc{}.GetLength(I0);
-    static constexpr auto GN0 = CGM0GM1GN0GN1GridDesc{}.GetLength(I2);
-    static constexpr auto GK1 = AGK0GM0GM1GK1GridDesc{}.GetLength(I3);
+    static constexpr auto GM0 = CGridDesc_GM0_GM1_GN0_GN1{}.GetLength(I0);
+    static constexpr auto GN0 = CGridDesc_GM0_GM1_GN0_GN1{}.GetLength(I2);
+    static constexpr auto GK1 = AGridDesc_GK0_GM0_GM1_GK1{}.GetLength(I3);
 
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
@@ -115,14 +115,14 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
         //   be careful of LDS alignment
         constexpr auto a_gk0_gm0_gm10_gm11_gk1_block_desc =
             make_dynamic_naive_tensor_descriptor_aligned_v2(
-                make_tuple(Number<KPerBlock>{}, GM0, I1, Number<GM1PerBlockGM11>{}, GK1),
+                make_tuple(Number<GK0PerBlock>{}, GM0, I1, Number<GM1PerBlockGM11>{}, GK1),
                 max_lds_align);
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
         constexpr auto b_gk0_gn0_gn10_gn11_gk1_block_desc =
             make_dynamic_naive_tensor_descriptor_aligned_v2(
-                make_tuple(Number<KPerBlock>{}, GN0, I1, Number<GN1PerBlockGN11>{}, GK1),
+                make_tuple(Number<GK0PerBlock>{}, GN0, I1, Number<GN1PerBlockGN11>{}, GK1),
                 max_lds_align);
 
         // LDS allocation for A and B: be careful of alignment
@@ -136,9 +136,9 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
     }
 
     __host__ __device__ static constexpr bool
-    CheckValidity(const AGK0GM0GM1GK1GridDesc& a_gk0_gm0_gm1_gk1_grid_desc,
-                  const BGK0GN0GN1GK1GridDesc& b_gk0_gn0_gn1_gk1_grid_desc,
-                  const CGM0GM1GN0GN1GridDesc& c_gm0_gm1_gn0_gn1_grid_desc)
+    CheckValidity(const AGridDesc_GK0_GM0_GM1_GK1& a_gk0_gm0_gm1_gk1_grid_desc,
+                  const BGridDesc_GK0_GN0_GN1_GK1& b_gk0_gn0_gn1_gk1_grid_desc,
+                  const CGridDesc_GM0_GM1_GN0_GN1& c_gm0_gm1_gn0_gn1_grid_desc)
     {
         static_assert(is_known_at_compile_time<remove_cv_t<decltype(GM0)>>::value &&
                           is_known_at_compile_time<remove_cv_t<decltype(GN0)>>::value,
@@ -150,21 +150,22 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
 
         // TODO: also check validity of all components (blockwise-copy, threadwise-copy, etc)
 
-        return ((GM0 == c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I0) &&
-                 GM1 == c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I1) &&
-                 GN0 == c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I2) &&
-                 GN1 == c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I3) &&
-                 GM0 == a_gk0_gm0_gm1_gk1_grid_desc.GetLength(I1) &&
-                 GM1 == a_gk0_gm0_gm1_gk1_grid_desc.GetLength(I2) &&
-                 GN0 == b_gk0_gn0_gn1_gk1_grid_desc.GetLength(I1) &&
-                 GN1 == b_gk0_gn0_gn1_gk1_grid_desc.GetLength(I2) &&
-                 GK0 == b_gk0_gn0_gn1_gk1_grid_desc.GetLength(I0) &&
-                 GK1 == b_gk0_gn0_gn1_gk1_grid_desc.GetLength(I3)) &&
-                (GM1 % GM1PerBlockGM11 == 0 && GN1 % GN1PerBlockGN11 == 0 && GK0 % KPerBlock == 0));
+        return (
+            (GM0 == c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I0) &&
+             GM1 == c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I1) &&
+             GN0 == c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I2) &&
+             GN1 == c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I3) &&
+             GM0 == a_gk0_gm0_gm1_gk1_grid_desc.GetLength(I1) &&
+             GM1 == a_gk0_gm0_gm1_gk1_grid_desc.GetLength(I2) &&
+             GN0 == b_gk0_gn0_gn1_gk1_grid_desc.GetLength(I1) &&
+             GN1 == b_gk0_gn0_gn1_gk1_grid_desc.GetLength(I2) &&
+             GK0 == b_gk0_gn0_gn1_gk1_grid_desc.GetLength(I0) &&
+             GK1 == b_gk0_gn0_gn1_gk1_grid_desc.GetLength(I3)) &&
+            (GM1 % GM1PerBlockGM11 == 0 && GN1 % GN1PerBlockGN11 == 0 && GK0 % GK0PerBlock == 0));
     }
 
     __host__ __device__ static constexpr index_t
-    CalculateGridSize(const CGM0GM1GN0GN1GridDesc& c_gm0_gm1_gn0_gn1_grid_desc)
+    CalculateGridSize(const CGridDesc_GM0_GM1_GN0_GN1& c_gm0_gm1_gn0_gn1_grid_desc)
     {
         const auto GM1 = c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I1);
         const auto GN1 = c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I3);
@@ -182,20 +183,20 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
 
     __host__ __device__ static constexpr bool CalculateHasMainKBlockLoop(index_t GK0)
     {
-        const bool has_main_k_block_loop = (GK0 + KPerBlock) / (2 * KPerBlock) > 1;
+        const bool has_main_k_block_loop = (GK0 + GK0PerBlock) / (2 * GK0PerBlock) > 1;
 
         return has_main_k_block_loop;
     }
 
     __host__ __device__ static constexpr bool CalculateHasDoubleTailKBlockLoop(index_t GK0)
     {
-        const bool has_double_tail_k_block_loop = (GK0 / KPerBlock) % 2 == 0;
+        const bool has_double_tail_k_block_loop = (GK0 / GK0PerBlock) % 2 == 0;
 
         return has_double_tail_k_block_loop;
     }
 
-    __host__ __device__ static constexpr auto
-    MakeAGK0GM0GM10GM11GK1GridDescriptor(const AGK0GM0GM1GK1GridDesc& a_gk0_gm0_gm1_gk1_grid_desc)
+    __host__ __device__ static constexpr auto MakeAGridDescriptor_GK0_GM0_GM10_GM11_GK1(
+        const AGridDesc_GK0_GM0_GM1_GK1& a_gk0_gm0_gm1_gk1_grid_desc)
     {
         const auto GK0 = a_gk0_gm0_gm1_gk1_grid_desc.GetLength(I0);
         const auto GM1 = a_gk0_gm0_gm1_gk1_grid_desc.GetLength(I2);
@@ -215,8 +216,8 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
         return a_gk0_gm0_gm10_gm11_gk1_grid_desc;
     }
 
-    __host__ __device__ static constexpr auto
-    MakeBGK0GN0GN10GN11GK1GridDescriptor(const BGK0GN0GN1GK1GridDesc& b_gk0_gn0_gn1_gk1_grid_desc)
+    __host__ __device__ static constexpr auto MakeBGridDescriptor_GK0_GN0_GN10_GN11_GK1(
+        const BGridDesc_GK0_GN0_GN1_GK1& b_gk0_gn0_gn1_gk1_grid_desc)
     {
         const auto GK0 = b_gk0_gn0_gn1_gk1_grid_desc.GetLength(I0);
         const auto GN1 = b_gk0_gn0_gn1_gk1_grid_desc.GetLength(I2);
@@ -236,8 +237,8 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
         return b_gk0_gn0_gn10_gn11_gk1_grid_desc;
     }
 
-    __host__ __device__ static constexpr auto MakeCGM10BM0BM1GN10BN0BN1GridDescriptor(
-        const CGM0GM1GN0GN1GridDesc& c_gm0_gm1_gn0_gn1_grid_desc)
+    __host__ __device__ static constexpr auto MakeCGridDescriptor_GM10_BM0_BM1_GN10_BN0_BN1(
+        const CGridDesc_GM0_GM1_GN0_GN1& c_gm0_gm1_gn0_gn1_grid_desc)
     {
         const auto GM1 = c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I1);
         const auto GN1 = c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I3);
@@ -252,9 +253,9 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
         constexpr auto BN = GN0 * GN11;
 
         constexpr auto BM1 =
-            Number<M11N11ThreadClusterM1100 * M11N11ThreadClusterM1101 * M1PerThreadM111>{};
+            Number<BM10BN10ThreadClusterBM100 * BM10BN10ThreadClusterBM101 * BM1PerThreadBM11>{};
         constexpr auto BN1 =
-            Number<M11N11ThreadClusterN1100 * M11N11ThreadClusterN1101 * N1PerThreadN111>{};
+            Number<BM10BN10ThreadClusterBN100 * BM10BN10ThreadClusterBN101 * BN1PerThreadBN11>{};
 
         constexpr auto BM0 = BM / BM1;
         constexpr auto BN0 = BN / BN1;
@@ -289,8 +290,8 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
         return c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc;
     }
 
-    __host__ __device__ static constexpr auto MakeCBlockIdToGM10GN10BlockClusterAdaptor(
-        const CGM0GM1GN0GN1GridDesc& c_gm0_gm1_gn0_gn1_grid_desc)
+    __host__ __device__ static constexpr auto MakeCGridBlockCluster_BlockId_To_GM10_GN10(
+        const CGridDesc_GM0_GM1_GN0_GN1& c_gm0_gm1_gn0_gn1_grid_desc)
     {
         const auto GM1 = c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I1);
         const auto GN1 = c_gm0_gm1_gn0_gn1_grid_desc.GetLength(I3);
@@ -309,14 +310,14 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
         return c_blockid_to_gm10_gn10_block_cluster_adaptor;
     }
 
-    using AGK0GM0GM10GM11GK1GridDesc =
-        decltype(MakeAGK0GM0GM10GM11GK1GridDescriptor(AGK0GM0GM1GK1GridDesc{}));
-    using BGK0GN0GN10GN11GK1GridDesc =
-        decltype(MakeBGK0GN0GN10GN11GK1GridDescriptor(BGK0GN0GN1GK1GridDesc{}));
-    using CGM10BM0BM1GN10BN0BN1GridDesc =
-        decltype(MakeCGM10BM0BM1GN10BN0BN1GridDescriptor(CGM0GM1GN0GN1GridDesc{}));
-    using CBlockIdToGM10GN10BlockClusterAdaptor =
-        decltype(MakeCBlockIdToGM10GN10BlockClusterAdaptor(CGM0GM1GN0GN1GridDesc{}));
+    using AGridDesc_GK0_GM0_GM10_GM11_GK1 =
+        decltype(MakeAGridDescriptor_GK0_GM0_GM10_GM11_GK1(AGridDesc_GK0_GM0_GM1_GK1{}));
+    using BGridDesc_GK0_GN0_GN10_GN11_GK1 =
+        decltype(MakeBGridDescriptor_GK0_GN0_GN10_GN11_GK1(BGridDesc_GK0_GN0_GN1_GK1{}));
+    using CGridDesc_GM10_BM0_BM1_GN10_BN0_BN1 =
+        decltype(MakeCGridDescriptor_GM10_BM0_BM1_GN10_BN0_BN1(CGridDesc_GM0_GM1_GN0_GN1{}));
+    using CGridBlockCluster_BlockId_To_GM10_GN10 =
+        decltype(MakeCGridBlockCluster_BlockId_To_GM10_GN10(CGridDesc_GM0_GM1_GN0_GN1{}));
 
     template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ static void
@@ -324,10 +325,10 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
         const FloatAB* __restrict__ p_b_grid,
         FloatC* __restrict__ p_c_grid,
         FloatAB* __restrict__ p_shared_block,
-        const AGK0GM0GM10GM11GK1GridDesc& a_gk0_gm0_gm10_gm11_gk1_grid_desc,
-        const BGK0GN0GN10GN11GK1GridDesc& b_gk0_gn0_gn10_gn11_gk1_grid_desc,
-        const CGM10BM0BM1GN10BN0BN1GridDesc& c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
-        const CBlockIdToGM10GN10BlockClusterAdaptor& c_blockid_to_gm10_gn10_block_cluster_adaptor,
+        const AGridDesc_GK0_GM0_GM10_GM11_GK1& a_gk0_gm0_gm10_gm11_gk1_grid_desc,
+        const BGridDesc_GK0_GN0_GN10_GN11_GK1& b_gk0_gn0_gn10_gn11_gk1_grid_desc,
+        const CGridDesc_GM10_BM0_BM1_GN10_BN0_BN1& c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
+        const CGridBlockCluster_BlockId_To_GM10_GN10& c_blockid_to_gm10_gn10_block_cluster_adaptor,
         integral_constant<bool, HasMainKBlockLoop>,
         integral_constant<bool, HasDoubleTailKBlockLoop>)
     {
@@ -358,25 +359,25 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
         //   be careful of LDS alignment
         constexpr auto a_gk0_gm0_gm10_gm11_gk1_block_desc =
             make_dynamic_naive_tensor_descriptor_aligned_v2(
-                make_tuple(Number<KPerBlock>{}, GM0, I1, Number<GM1PerBlockGM11>{}, GK1),
+                make_tuple(Number<GK0PerBlock>{}, GM0, I1, Number<GM1PerBlockGM11>{}, GK1),
                 max_lds_align);
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
         constexpr auto b_gk0_gn0_gn10_gn11_gk1_block_desc =
             make_dynamic_naive_tensor_descriptor_aligned_v2(
-                make_tuple(Number<KPerBlock>{}, GN0, I1, Number<GN1PerBlockGN11>{}, GK1),
+                make_tuple(Number<GK0PerBlock>{}, GN0, I1, Number<GN1PerBlockGN11>{}, GK1),
                 max_lds_align);
 
         // A matrix in LDS memory for blockwise GEMM
         //   be careful of LDS alignment
         constexpr auto a_gk0_bm_gk1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<KPerBlock>{}, GM0 * Number<GM1PerBlockGM11>{}, GK1), max_lds_align);
+            make_tuple(Number<GK0PerBlock>{}, GM0 * Number<GM1PerBlockGM11>{}, GK1), max_lds_align);
 
         // B matrix in LDS memory for blockwise GEMM
         //   be careful of LDS alignment
         constexpr auto b_gk0_bn_gk1_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<KPerBlock>{}, GN0 * Number<GN1PerBlockGN11>{}, GK1), max_lds_align);
+            make_tuple(Number<GK0PerBlock>{}, GN0 * Number<GN1PerBlockGN11>{}, GK1), max_lds_align);
 
         static_assert(a_gk0_gm0_gm10_gm11_gk1_block_desc.GetElementSpaceSize() ==
                               a_gk0_bm_gk1_block_desc.GetElementSpaceSize() &&
@@ -388,7 +389,7 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
         auto a_blockwise_copy = BlockwiseDynamicTensorSliceTransfer_v4r1<
             BlockSize,
             InMemoryDataOperation::Set,
-            Sequence<KPerBlock, GM0, 1, GM1PerBlockGM11, GK1.value>,
+            Sequence<GK0PerBlock, GM0, 1, GM1PerBlockGM11, GK1.value>,
             ABlockTransferThreadSliceLengths_GK0_GM0_GM10_GM11_GK1,
             ABlockTransferThreadClusterLengths_GK0_GM0_GM10_GM11_GK1,
             ABlockTransferThreadClusterArrangeOrder,
@@ -412,7 +413,7 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
         auto b_blockwise_copy = BlockwiseDynamicTensorSliceTransfer_v4r1<
             BlockSize,
             InMemoryDataOperation::Set,
-            Sequence<KPerBlock, GN0, 1, GN1PerBlockGN11, GK1.value>,
+            Sequence<GK0PerBlock, GN0, 1, GN1PerBlockGN11, GK1.value>,
             BBlockTransferThreadSliceLengths_GK0_GN0_GN10_GN11_GK1,
             BBlockTransferThreadClusterLengths_GK0_GN0_GN10_GN11_GK1,
             BBlockTransferThreadClusterArrangeOrder,
@@ -434,7 +435,7 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
 
         // GEMM definition
         //   c_mtx += transpose(a_mtx) * b_mtx
-        //     a_mtx[KPerBlock, GM1PerBlockGM11] is in LDS
+        //     a_mtx[GK0PerBlock, GM1PerBlockGM11] is in LDS
         //     b_mtx[KPerBlocl, GN1PerBlockGN11] is in LDS
         //     c_mtx[GM1PerBlockGM11, GN1PerBlockGN11] is distributed among threads, and saved in
         //       register
@@ -445,18 +446,18 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
                                                                  FloatAcc,
                                                                  decltype(a_gk0_bm_gk1_block_desc),
                                                                  decltype(b_gk0_bn_gk1_block_desc),
-                                                                 M1PerThreadM111,
-                                                                 N1PerThreadN111,
-                                                                 KPerThread,
-                                                                 M11N11ThreadClusterM1100,
-                                                                 M11N11ThreadClusterN1100,
-                                                                 M11N11ThreadClusterM1101,
-                                                                 M11N11ThreadClusterN1101,
-                                                                 M1PerThreadM111,
-                                                                 N1PerThreadN111>{};
+                                                                 BM1PerThreadBM11,
+                                                                 BN1PerThreadBN11,
+                                                                 BK0PerThread,
+                                                                 BM10BN10ThreadClusterBM100,
+                                                                 BM10BN10ThreadClusterBN100,
+                                                                 BM10BN10ThreadClusterBM101,
+                                                                 BM10BN10ThreadClusterBN101,
+                                                                 BM1PerThreadBM11,
+                                                                 BN1PerThreadBN11>{};
 
         constexpr auto c_bm0_bm1_bn0_bn1_thread_tensor_lengths =
-            decltype(blockwise_gemm)::GetCM0M1N0N1ThreadTensorLengths();
+            decltype(blockwise_gemm)::GetCThreadTensorLengths_BM0_BM11_BN0_BN11();
 
         constexpr auto c_bm0_bm1_bn0_bn1_thread_desc =
             make_dynamic_naive_tensor_descriptor_packed_v2(
@@ -484,8 +485,8 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
                  c_thread_buf,
                  FloatAcc{0});
 
-        constexpr auto a_block_slice_copy_step = make_multi_index(KPerBlock, 0, 0, 0, 0);
-        constexpr auto b_block_slice_copy_step = make_multi_index(KPerBlock, 0, 0, 0, 0);
+        constexpr auto a_block_slice_copy_step = make_multi_index(GK0PerBlock, 0, 0, 0, 0);
+        constexpr auto b_block_slice_copy_step = make_multi_index(GK0PerBlock, 0, 0, 0, 0);
 
         auto a_block_even_buf = make_dynamic_buffer<AddressSpace::Lds>(
             p_a_block_double, a_gk0_gm0_gm10_gm11_gk1_block_desc.GetElementSpaceSize());
@@ -568,8 +569,8 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
                 a_blockwise_copy.RunWrite(a_gk0_gm0_gm10_gm11_gk1_block_desc, a_block_even_buf);
                 b_blockwise_copy.RunWrite(b_gk0_gn0_gn10_gn11_gk1_block_desc, b_block_even_buf);
 
-                k_block_data_begin += 2 * KPerBlock;
-            } while(k_block_data_begin < GK0 - 2 * KPerBlock);
+                k_block_data_begin += 2 * GK0PerBlock;
+            } while(k_block_data_begin < GK0 - 2 * GK0PerBlock);
         }
 
         // LDS double buffer: tail
@@ -616,15 +617,15 @@ struct GridwiseDynamicContraction_k0m0m1k1_k0n0n1k1_m0m1n0n1_v1r2
         // output: register to global memory
         {
             constexpr index_t M11 =
-                M1PerThreadM111 * M11N11ThreadClusterM1100 * M11N11ThreadClusterM1101;
+                BM1PerThreadBM11 * BM10BN10ThreadClusterBM100 * BM10BN10ThreadClusterBM101;
             constexpr index_t N11 =
-                N1PerThreadN111 * M11N11ThreadClusterN1100 * M11N11ThreadClusterN1101;
+                BN1PerThreadBN11 * BM10BN10ThreadClusterBN100 * BM10BN10ThreadClusterBN101;
 
             constexpr index_t M10 = GM1PerBlockGM11 / M11;
             constexpr index_t N10 = GN1PerBlockGN11 / N11;
 
-            constexpr index_t M111 = M1PerThreadM111;
-            constexpr index_t N111 = N1PerThreadN111;
+            constexpr index_t M111 = BM1PerThreadBM11;
+            constexpr index_t N111 = BN1PerThreadBN11;
 
             constexpr auto c_gm10_bm0_bm1_gn10_bn0_bn1_thread_desc =
                 make_dynamic_naive_tensor_descriptor_packed_v2(

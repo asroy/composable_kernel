@@ -4,7 +4,7 @@
 #include "common_header.hpp"
 #include "tensor_adaptor.hpp"
 #include "threadwise_dynamic_tensor_slice_transfer_v2.hpp"
-#include "threadwise_gemm_v2.hpp"
+#include "threadwise_contraction.hpp"
 
 namespace ck {
 
@@ -12,13 +12,13 @@ namespace ck {
 // A and B are visable to the whole block, C is distributed among each thread
 // Assume:
 //   1. A:
-//     1. AK0MK1BlockDesc is known at compile-time
+//     1. ABlockDesc_BK0_BM_BK1 is known at compile-time
 //     2. ABlockBuffer is DynamicBuffer
 //   2. B:
-//     1. BK0NK1BlockDesc is known at compile-time
+//     1. BBlockDesc_BK0_BN_BK1 is known at compile-time
 //     2. BBlockBuffer is DynamicBuffer
 //   3. C:
-//     1. CM0M1N0N1ThreadDesc is known at compile-time
+//     1. CThreadDesc_BM0_BM11_BN0_BN11 is known at compile-time
 //     2. CThreadBuffer is StaticBuffer
 // Also assume:
 //   M0 = N0 = 2. It will do 2x2 pipelined read and fma (ABBA optimization)
@@ -26,19 +26,19 @@ template <index_t BlockSize,
           typename FloatA,
           typename FloatB,
           typename FloatC,
-          typename AK0MK1BlockDesc,
-          typename BK0NK1BlockDesc,
-          index_t M1PerThreadM11,
-          index_t N1PerThreadN11,
-          index_t KPerThread,
-          index_t M1N1ThreadClusterM100,
-          index_t M1N1ThreadClusterN100,
-          index_t M1N1ThreadClusterM101,
-          index_t M1N1ThreadClusterN101,
-          index_t AThreadCopyScalarPerVector_M11,
-          index_t BThreadCopyScalarPerVector_N11,
-          typename std::enable_if<AK0MK1BlockDesc::IsKnownAtCompileTime() &&
-                                      BK0NK1BlockDesc::IsKnownAtCompileTime(),
+          typename ABlockDesc_BK0_BM_BK1,
+          typename BBlockDesc_BK0_BN_BK1,
+          index_t BM1PerThreadBM11,
+          index_t BN1PerThreadBN11,
+          index_t BK0PerThread,
+          index_t BM10BN10ThreadClusterBM100,
+          index_t BM10BN10ThreadClusterBN100,
+          index_t BM10BN10ThreadClusterBM101,
+          index_t BM10BN10ThreadClusterBN101,
+          index_t AThreadCopyScalarPerVector_BM11,
+          index_t BThreadCopyScalarPerVector_BN11,
+          typename std::enable_if<ABlockDesc_BK0_BM_BK1::IsKnownAtCompileTime() &&
+                                      BBlockDesc_BK0_BN_BK1::IsKnownAtCompileTime(),
                                   bool>::type = false>
 struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
 {
@@ -51,28 +51,30 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
     static constexpr auto I2 = Number<2>{};
     static constexpr auto I3 = Number<3>{};
 
-    static constexpr index_t K0 = AK0MK1BlockDesc{}.GetLength(I0);
-    static constexpr index_t K1 = AK0MK1BlockDesc{}.GetLength(I2);
-    static constexpr index_t M  = AK0MK1BlockDesc{}.GetLength(I1);
-    static constexpr index_t N  = BK0NK1BlockDesc{}.GetLength(I1);
+    static constexpr index_t K0 = ABlockDesc_BK0_BM_BK1{}.GetLength(I0);
+    static constexpr index_t K1 = ABlockDesc_BK0_BM_BK1{}.GetLength(I2);
+    static constexpr index_t M  = ABlockDesc_BK0_BM_BK1{}.GetLength(I1);
+    static constexpr index_t N  = BBlockDesc_BK0_BN_BK1{}.GetLength(I1);
 
-    static constexpr index_t M100 = M1N1ThreadClusterM100;
-    static constexpr index_t N100 = M1N1ThreadClusterN100;
+    static constexpr index_t M100 = BM10BN10ThreadClusterBM100;
+    static constexpr index_t N100 = BM10BN10ThreadClusterBN100;
 
-    static constexpr index_t M101 = M1N1ThreadClusterM101;
-    static constexpr index_t N101 = M1N1ThreadClusterN101;
+    static constexpr index_t M101 = BM10BN10ThreadClusterBM101;
+    static constexpr index_t N101 = BM10BN10ThreadClusterBN101;
 
-    static constexpr index_t M11 = M1PerThreadM11;
-    static constexpr index_t N11 = N1PerThreadN11;
+    static constexpr index_t M11 = BM1PerThreadBM11;
+    static constexpr index_t N11 = BN1PerThreadBN11;
 
-    static constexpr index_t M1 = M1N1ThreadClusterM100 * M1N1ThreadClusterM101 * M1PerThreadM11;
-    static constexpr index_t N1 = M1N1ThreadClusterN100 * M1N1ThreadClusterN101 * N1PerThreadN11;
+    static constexpr index_t M1 =
+        BM10BN10ThreadClusterBM100 * BM10BN10ThreadClusterBM101 * BM1PerThreadBM11;
+    static constexpr index_t N1 =
+        BM10BN10ThreadClusterBN100 * BM10BN10ThreadClusterBN101 * BN1PerThreadBN11;
 
     static constexpr index_t M0 = M / M1;
     static constexpr index_t N0 = N / N1;
 
     __host__ __device__ static constexpr auto
-    MakeAK0M0M1K1BlockDescriptor(const AK0MK1BlockDesc& a_k0_m_k1_block_desc)
+    MakeABlockDescriptor_BK0_BM0_BM1_BK1(const ABlockDesc_BK0_BM_BK1& a_k0_m_k1_block_desc)
     {
         const auto a_k0_m0_m1_k1_block_desc = transform_dynamic_tensor_descriptor(
             a_k0_m_k1_block_desc,
@@ -86,7 +88,7 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
     }
 
     __host__ __device__ static constexpr auto
-    MakeBK0N0N1K1BlockDescriptor(const BK0NK1BlockDesc& b_k0_n_k1_block_desc)
+    MakeBBlockDescriptor_BK0_BN0_BN1_BK1(const BBlockDesc_BK0_BN_BK1& b_k0_n_k1_block_desc)
     {
         const auto b_k0_n0_n1_k1_block_desc = transform_dynamic_tensor_descriptor(
             b_k0_n_k1_block_desc,
@@ -99,7 +101,8 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
         return b_k0_n0_n1_k1_block_desc;
     }
 
-    __host__ __device__ static constexpr auto MakeCM0M100M101M11N0N100N101N11ToMNBlockAdaptor()
+    __host__ __device__ static constexpr auto
+    MakeCBlockAdaptor_BM0_BM100_BM101_BM11_BN0_BN100_BN101_BN11_To_BM_BN()
     {
         // upper: [M0, M100, M101, M11, N0, N100, N101, N11]
         // lower: [M, N]
@@ -116,7 +119,7 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
     }
 
     __host__ __device__ static constexpr auto
-    MakeCM0M100M101M11N0N100N101N11ToM0M1N0N1BlockAdaptor()
+    MakeCBlockAdaptor_BM0_BM100_BM101_BM11_BN0_BN100_BN101_BN11_To_BM0_BM1_BN0_BN1()
     {
         // upper: [M0, M100, M101, M11, N0, N100, N101, N11]
         // lower: [M0, M1, N0, N1]
@@ -134,15 +137,15 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
         return c_m0_m100_m101_m11_n0_n100_n101_n11_to_m0_m1_n0_n1_block_adaptor;
     }
 
-    __host__ __device__ static constexpr auto GetCM0M1N0N1ThreadTensorLengths()
+    __host__ __device__ static constexpr auto GetCThreadTensorLengths_BM0_BM11_BN0_BN11()
     {
         return Sequence<M0, M11, N0, N11>{};
     }
 
     static constexpr auto a_k0_m0_m1_k1_block_desc_ =
-        MakeAK0M0M1K1BlockDescriptor(AK0MK1BlockDesc{});
+        MakeABlockDescriptor_BK0_BM0_BM1_BK1(ABlockDesc_BK0_BM_BK1{});
     static constexpr auto b_k0_n0_n1_k1_block_desc_ =
-        MakeBK0N0N1K1BlockDescriptor(BK0NK1BlockDesc{});
+        MakeBBlockDescriptor_BK0_BN0_BN1_BK1(BBlockDesc_BK0_BN_BK1{});
 
     public:
     __device__ BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2()
@@ -153,8 +156,8 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
           b_thread_copy_{
               make_tuple(0, c_thread_origin_data_idx_[I2], c_thread_origin_data_idx_[I3], 0)}
     {
-        static_assert(AK0MK1BlockDesc::IsKnownAtCompileTime() &&
-                          BK0NK1BlockDesc::IsKnownAtCompileTime(),
+        static_assert(ABlockDesc_BK0_BM_BK1::IsKnownAtCompileTime() &&
+                          BBlockDesc_BK0_BN_BK1::IsKnownAtCompileTime(),
                       "wrong! Desc should be known at compile-time");
 
         static_assert(BlockSize == M101 * M100 * N101 * N100,
@@ -162,7 +165,8 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
 
         static_assert(M % M1 == 0 && N % N1 == 0, "wrong!");
 
-        static_assert(AK0MK1BlockDesc{}.GetLength(I0) == BK0NK1BlockDesc{}.GetLength(I0),
+        static_assert(ABlockDesc_BK0_BM_BK1{}.GetLength(I0) ==
+                          BBlockDesc_BK0_BN_BK1{}.GetLength(I0),
                       "wrong! K dimension not consistent");
 
         // TODO: remove this restriction
@@ -173,7 +177,8 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
     {
         // lower: [M0, M1, N0, N1]
         // upper: [M0, M100, M101, M11, N0, N100, N101, N11]
-        constexpr auto adaptor0 = MakeCM0M100M101M11N0N100N101N11ToM0M1N0N1BlockAdaptor();
+        constexpr auto adaptor0 =
+            MakeCBlockAdaptor_BM0_BM100_BM101_BM11_BN0_BN100_BN101_BN11_To_BM0_BM1_BN0_BN1();
 
         // lower: [M0, M100, M101, M11, N0, N100, N101, N11]
         // upper: [Tid, M0, M11, N0, N11]
@@ -192,21 +197,21 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
         return adaptor.CalculateBottomIndex(make_multi_index(get_thread_local_1d_id(), 0, 0, 0, 0));
     }
 
-    template <typename CM0M1N0N1ThreadDesc,
+    template <typename CThreadDesc_BM0_BM11_BN0_BN11,
               typename ABlockBuffer,
               typename BBlockBuffer,
               typename CThreadBuffer>
-    __device__ void Run(const CM0M1N0N1ThreadDesc& c_m0_m1_n0_n1_thread_desc,
+    __device__ void Run(const CThreadDesc_BM0_BM11_BN0_BN11& c_m0_m1_n0_n1_thread_desc,
                         const ABlockBuffer& a_block_buf,
                         const BBlockBuffer& b_block_buf,
                         CThreadBuffer& c_thread_buf) const
     {
-        static_assert(CM0M1N0N1ThreadDesc::IsKnownAtCompileTime(),
+        static_assert(CThreadDesc_BM0_BM11_BN0_BN11::IsKnownAtCompileTime(),
                       "wrong! Desc should be known at compile-time");
 
         // TODO: remove this restriction
-        static_assert(M0 == 2 && N0 == 2 && CM0M1N0N1ThreadDesc{}.GetLength(I0) == M0 &&
-                          CM0M1N0N1ThreadDesc{}.GetLength(I2) == N0,
+        static_assert(M0 == 2 && N0 == 2 && CThreadDesc_BM0_BM11_BN0_BN11{}.GetLength(I0) == M0 &&
+                          CThreadDesc_BM0_BM11_BN0_BN11{}.GetLength(I2) == N0,
                       "wrong");
 
         auto a_thread_buf = make_static_buffer<AddressSpace::Vgpr, FloatA>(
@@ -214,16 +219,17 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
         auto b_thread_buf = make_static_buffer<AddressSpace::Vgpr, FloatB>(
             b_k0_n0_n1_k1_thread_desc_.GetElementSpaceSize());
 
-        constexpr auto threadwise_gemm =
-            ThreadwiseGemm_k0m0m1k1_k0n0n1k1_m0m1n0n1<FloatA,
-                                                      FloatB,
-                                                      FloatC,
-                                                      decltype(a_k0_m0_m1_k1_thread_desc_),
-                                                      decltype(b_k0_n0_n1_k1_thread_desc_),
-                                                      CM0M1N0N1ThreadDesc,
-                                                      Sequence<KPerThread, K1>,
-                                                      Sequence<1, M1PerThreadM11>,
-                                                      Sequence<1, N1PerThreadN11>>{};
+        constexpr auto threadwise_contraction =
+            ThreadwiseContraction_A_TK0_TM0_TM1_TK1_B_TK0_TN0_TN1_TK1_C_TM0_TM1_TN0_TN1<
+                FloatA,
+                FloatB,
+                FloatC,
+                decltype(a_k0_m0_m1_k1_thread_desc_),
+                decltype(b_k0_n0_n1_k1_thread_desc_),
+                CThreadDesc_BM0_BM11_BN0_BN11,
+                Sequence<BK0PerThread, K1>,
+                Sequence<1, BM1PerThreadBM11>,
+                Sequence<1, BN1PerThreadBN11>>{};
 
         // read A_sub_0
         a_thread_copy_.Run(a_k0_m0_m1_k1_block_desc_,
@@ -258,7 +264,7 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
                            a_thread_buf);
 
         // C_sub_00 += transpose(A_sub_0) * B_sub_0
-        threadwise_gemm.Run(a_thread_buf,
+        threadwise_contraction.Run(a_thread_buf,
                             make_tuple(I0, I0, I0, I0),
                             b_thread_buf,
                             make_tuple(I0, I0, I0, I0),
@@ -266,7 +272,7 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
                             make_tuple(I0, I0, I0, I0));
 
         // C_sub_01 += transpose(A_sub_0) * B_sub_1
-        threadwise_gemm.Run(a_thread_buf,
+        threadwise_contraction.Run(a_thread_buf,
                             make_tuple(I0, I0, I0, I0),
                             b_thread_buf,
                             make_tuple(I0, I1, I0, I0),
@@ -274,7 +280,7 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
                             make_tuple(I0, I0, I1, I0));
 
         // loop over rest of k
-        static_for<KPerThread, K0, KPerThread>{}([&](auto k) {
+        static_for<BK0PerThread, K0, BK0PerThread>{}([&](auto k) {
             // read A_sub_0
             a_thread_copy_.Run(a_k0_m0_m1_k1_block_desc_,
                                make_tuple(k, I0, I0, I0),
@@ -284,7 +290,7 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
                                a_thread_buf);
 
             // C_sub_10 += transpose(A_sub_1) * B_sub_0
-            threadwise_gemm.Run(a_thread_buf,
+            threadwise_contraction.Run(a_thread_buf,
                                 make_tuple(I0, I1, I0, I0),
                                 b_thread_buf,
                                 make_tuple(I0, I0, I0, I0),
@@ -300,7 +306,7 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
                                b_thread_buf);
 
             // C_sub_11 += transpose(A_sub_1) * B_sub_1
-            threadwise_gemm.Run(a_thread_buf,
+            threadwise_contraction.Run(a_thread_buf,
                                 make_tuple(I0, I1, I0, I0),
                                 b_thread_buf,
                                 make_tuple(I0, I1, I0, I0),
@@ -324,7 +330,7 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
                                a_thread_buf);
 
             // C_sub_00 += transpose(A_sub_0) * B_sub_0
-            threadwise_gemm.Run(a_thread_buf,
+            threadwise_contraction.Run(a_thread_buf,
                                 make_tuple(I0, I0, I0, I0),
                                 b_thread_buf,
                                 make_tuple(I0, I0, I0, I0),
@@ -332,7 +338,7 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
                                 make_tuple(I0, I0, I0, I0));
 
             // C_sub_01 += transpose(A_sub_0) * B_sub_1
-            threadwise_gemm.Run(a_thread_buf,
+            threadwise_contraction.Run(a_thread_buf,
                                 make_tuple(I0, I0, I0, I0),
                                 b_thread_buf,
                                 make_tuple(I0, I1, I0, I0),
@@ -341,7 +347,7 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
         });
 
         // C_sub_10 += transpose(A_sub_1) * B_sub_0
-        threadwise_gemm.Run(a_thread_buf,
+        threadwise_contraction.Run(a_thread_buf,
                             make_tuple(I0, I1, I0, I0),
                             b_thread_buf,
                             make_tuple(I0, I0, I0, I0),
@@ -349,7 +355,7 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
                             make_tuple(I1, I0, I0, I0));
 
         // C_sub_11 += transpose(A_sub_1) * B_sub_1
-        threadwise_gemm.Run(a_thread_buf,
+        threadwise_contraction.Run(a_thread_buf,
                             make_tuple(I0, I1, I0, I0),
                             b_thread_buf,
                             make_tuple(I0, I1, I0, I0),
@@ -360,33 +366,33 @@ struct BlockwiseGemm_k0mk1_k0nk1_m0m1n0n1_v2r3_pipeline_2x2
     private:
     // A[K0, M0, M1, K1]
     static constexpr auto a_k0_m0_m1_k1_thread_desc_ =
-        make_dynamic_naive_tensor_descriptor_packed_v2(
-            make_tuple(Number<KPerThread>{}, Number<M0>{}, Number<M1PerThreadM11>{}, Number<K1>{}));
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
+            Number<BK0PerThread>{}, Number<M0>{}, Number<BM1PerThreadBM11>{}, Number<K1>{}));
 
     // B[K0, N0, N1, K1]
     static constexpr auto b_k0_n0_n1_k1_thread_desc_ =
-        make_dynamic_naive_tensor_descriptor_packed_v2(
-            make_tuple(Number<KPerThread>{}, Number<N0>{}, Number<N1PerThreadN11>{}, Number<K1>{}));
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
+            Number<BK0PerThread>{}, Number<N0>{}, Number<BN1PerThreadBN11>{}, Number<K1>{}));
 
     using AThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4r1<
         FloatA,
         FloatA,
         decltype(a_k0_m0_m1_k1_block_desc_),
         decltype(a_k0_m0_m1_k1_thread_desc_),
-        Sequence<KPerThread, 1, M1PerThreadM11, K1>, // SliceLengths
-        Sequence<0, 1, 2, 3>,                        // DimAccessOrder
-        Sequence<1, 1, M1PerThreadM11, K1>,          // SrcVectorTensorLengths
-        Sequence<0, 1, 2, 3>>;                       // SrcVectorTensorContiguousDimOrder
+        Sequence<BK0PerThread, 1, BM1PerThreadBM11, K1>, // SliceLengths
+        Sequence<0, 1, 2, 3>,                            // DimAccessOrder
+        Sequence<1, 1, BM1PerThreadBM11, K1>,            // SrcVectorTensorLengths
+        Sequence<0, 1, 2, 3>>;                           // SrcVectorTensorContiguousDimOrder
 
     using BThreadCopy = ThreadwiseDynamicTensorSliceTransfer_v4r1<
         FloatB,
         FloatB,
         decltype(b_k0_n0_n1_k1_block_desc_),
         decltype(b_k0_n0_n1_k1_thread_desc_),
-        Sequence<KPerThread, 1, N1PerThreadN11, K1>, // SliceLengths
-        Sequence<0, 1, 2, 3>,                        // DimAccessOrder
-        Sequence<1, 1, N1PerThreadN11, K1>,          // SrcVectorTensorLengths
-        Sequence<0, 1, 2, 3>>;                       // SrcVectorTensorContiguousDimOrder
+        Sequence<BK0PerThread, 1, BN1PerThreadBN11, K1>, // SliceLengths
+        Sequence<0, 1, 2, 3>,                            // DimAccessOrder
+        Sequence<1, 1, BN1PerThreadBN11, K1>,            // SrcVectorTensorLengths
+        Sequence<0, 1, 2, 3>>;                           // SrcVectorTensorContiguousDimOrder
 
     CIndex c_thread_origin_data_idx_;
 
