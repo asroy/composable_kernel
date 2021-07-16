@@ -85,10 +85,7 @@ set(MCONV_KERNEL_INCLUDES
     ${COMPOSABLE_KERNEL_INCLUDE_2}
    )
 
-set(MCONV_KERNELS
-   ${PROJECT_SOURCE_DIR}/composable_kernel/src/kernel_wrapper/dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.cpp	
-   ${PROJECT_SOURCE_DIR}/composable_kernel/src/kernel_wrapper/dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw.cpp	
-   )
+file(GLOB_RECURSE MCONV_KERNELS "${PROJECT_SOURCE_DIR}/composable_kernel/src/kernel_wrapper/*.cpp")
 
 add_kernels(${CMAKE_CURRENT_SOURCE_DIR} "${MCONV_KERNELS}")
 add_kernel_includes(${CMAKE_CURRENT_SOURCE_DIR} "${MCONV_KERNEL_INCLUDES}")

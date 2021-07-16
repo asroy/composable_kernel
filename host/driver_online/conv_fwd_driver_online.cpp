@@ -14,9 +14,11 @@
 #include "device_tensor.hpp"
 #include "online_device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "online_device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw.hpp"
+#include "online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw.hpp"
 
 #define USE_CONV_FWD_V4R4_NCHW 1
 #define USE_CONV_FWD_V4R5_NCHW 1
+#define USE_CONV_FWD_V4R5R2_NCHW 1
 
 #include "conv_tunables.hpp"
 #include "handle.hpp"
@@ -26,6 +28,7 @@ enum ConvForwardAlgo
 {
     V4R4NCHW,
     V4R5NCHW,
+    V4R5R2NCHW,
 };
 
 int main(int argc, char* argv[])
@@ -86,12 +89,14 @@ int main(int argc, char* argv[])
     const index_t Wo = (Wi + in_left_pad_w + in_right_pad_w - XEff) / conv_stride_w + 1;
 
 #if 1
-    constexpr index_t in_vector_size = 1;
     using in_data_t                  = float;
     using acc_data_t                 = float;
     using out_data_t                 = float;
 #elif 1
-    constexpr index_t in_vector_size = 16;
+    using in_data_t                  = half_t;
+    using acc_data_t                 = float;
+    using out_data_t                 = half_t;
+#elif 1
     using in_data_t                  = int8_t;
     using acc_data_t                 = int32_t;
     using out_data_t                 = int8_t;
@@ -247,6 +252,38 @@ int main(int argc, char* argv[])
             &default_tunable_dyn_conv_fwd_v4r5_nchw_kcyx_nkhw;
 
         online_device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw<in_data_t,
+                                                                                    acc_data_t,
+                                                                                    out_data_t>(
+            handle,
+            tmp[I0],
+            tmp[I1],
+            tmp[I2],
+            conv_strides,
+            conv_dilations,
+            in_left_pads,
+            in_right_pads,
+            in,
+            wei,
+            out_device,
+            tunable,
+            nrepeat);
+    }
+#endif
+
+#if USE_CONV_FWD_V4R5R2_NCHW
+    if(algo == ConvForwardAlgo::V4R5R2NCHW)
+    {
+        if(layout != ConvTensorLayout::NCHW)
+        {
+            throw std::runtime_error("wrong! layout");
+        }
+
+        const auto tmp = f_make_for_device_nchw();
+
+        tunable_dyn_conv_fwd_v4r5r2_nchw_kcyx_nkhw* tunable =
+            &default_tunable_dyn_conv_fwd_v4r5r2_nchw_kcyx_nkhw;
+
+        online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw<in_data_t,
                                                                                     acc_data_t,
                                                                                     out_data_t>(
             handle,

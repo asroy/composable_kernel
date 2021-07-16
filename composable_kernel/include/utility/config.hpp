@@ -17,7 +17,7 @@
 #if 0
 #define CK_AMD_GPU_GFX906 1
 #elif 1
-#define CK_AMD_GPU_GFX908 1
+#define CK_AMD_GPU_GFX908 0
 #elif 0
 #define CK_AMD_GPU_GFX1030 1
 #endif
