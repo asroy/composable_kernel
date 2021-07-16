@@ -179,26 +179,38 @@ int main(int argc, char* argv[])
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
-    if(do_verification)
+    switch(init_method)
     {
-        switch(init_method)
-        {
-        case 0:
-            wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            out.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            break;
-        case 1:
-            wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            out.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            break;
-        case 2:
-            wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            out.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            break;
-        default:
-            wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            out.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-        }
+    case 0:
+        // no initialization
+        break;
+    case 1:
+        wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        out.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        break;
+    case 2:
+        wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        out.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        break;
+    case 3:
+        wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        out.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        break;
+    case 4:
+        wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        out.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        break;
+    case 5:
+        wei.GenerateTensorValue(GeneratorTensor_3<float>{-4.99, 5.01}, num_thread);
+        out.GenerateTensorValue(GeneratorTensor_3<float>{-4.99, 5.01}, num_thread);
+        break;
+    default:
+        wei.GenerateTensorValue(GeneratorTensor_2{1, 5}, num_thread);
+
+        auto gen_wei = [](auto... is) {
+            return GeneratorTensor_2{1, 5}(is...) * GeneratorTensor_Checkboard{}(is...);
+        };
+        out.GenerateTensorValue(gen_wei, num_thread);
     }
 
     auto f_make_for_device_nchw = [&]() {
