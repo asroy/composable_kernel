@@ -30,7 +30,7 @@
 #define USE_CONV_FWD_V4R5_NCHW 0
 #define USE_CONV_FWD_V4R5R2_NCHW 0
 #define USE_CONV_FWD_V5R1_NCHW 0
-#define USE_CONV_FWD_V4R4_XDL_NCHW 0
+#define USE_CONV_FWD_V4R4_XDL_NCHW 1
 #define USE_CONV_FWD_V4R4R2_XDL_NHWC 0
 #define USE_CONV_FWD_V4R4R3_XDL_NHWC 0
 #define USE_CONV_FWD_V4R4R4_XDL_NHWC 1
@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
     const index_t Wo = (Wi + in_left_pad_w + in_right_pad_w - XEff) / conv_stride_w + 1;
 #endif
 
-#if 1
+#if 0
     using in_data_t  = float;
     using acc_data_t = float;
     using out_data_t = float;
