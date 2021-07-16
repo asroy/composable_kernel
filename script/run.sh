@@ -16,8 +16,8 @@
 #make -j conv_bwd_data_driver_v2
  make -j conv_driver_v2_olc
 
- #rm -rf /root/_hip_binary_kernels_/
- #rm -rf /tmp/olCompile*
+ rm -rf /root/_hip_binary_kernels_/
+ rm -rf /tmp/olCompile*
 
 LAYOUT=$1
 ALGO=$2
