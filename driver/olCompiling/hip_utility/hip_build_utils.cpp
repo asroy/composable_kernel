@@ -164,13 +164,13 @@ static boost::filesystem::path HipBuildImpl(boost::optional<TmpDir>& tmp_dir,
     {
         if(IsHccCompiler())
         {
-            // params += " -gline-tables-only";
+            params += " -gline-tables-only";
             env += " KMDUMPISA=1";
             env += " KMDUMPLLVM=1";
         }
         else if(IsHipClangCompiler())
         {
-            // params += " -gline-tables-only";
+            params += " -gline-tables-only";
             params += " -save-temps";
         }
     }
