@@ -202,7 +202,7 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_prepare(
             c_m0_m1_m2_n_grid_desc;
         *static_cast<decltype(c_blockid_to_m0_n0_block_cluster_adaptor)*>(
             p_c_blockid_to_m0_n0_block_cluster_adaptor) = c_blockid_to_m0_n0_block_cluster_adaptor;
-    };
+    }
 };
 
 extern "C" __global__ void

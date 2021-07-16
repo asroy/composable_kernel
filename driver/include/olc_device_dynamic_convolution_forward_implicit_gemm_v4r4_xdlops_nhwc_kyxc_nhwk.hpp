@@ -81,7 +81,11 @@ get_network_config_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nh
     out += std::to_string(pt->CThreadTransferSrcDstAccessOrder[0]) + "x" +
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[1]) + "x" +
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[2]) + "x" +
-           std::to_string(pt->CThreadTransferSrcDstAccessOrder[3]) + "_";
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[3]) + "x" +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[4]) + "x" +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[5]) + "x" +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[6]) + "x" +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[7]) + "_";
 
     out += std::to_string(pt->CThreadTransferSrcDstVectorDim) + "_";
     out += std::to_string(pt->CThreadTransferDstScalarPerVector);

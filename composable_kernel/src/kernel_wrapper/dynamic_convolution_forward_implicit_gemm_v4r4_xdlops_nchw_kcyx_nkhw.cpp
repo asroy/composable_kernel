@@ -2,8 +2,8 @@
 #include "type_helper.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
-#include "gridwise_dynamic_gemm_xdlops_v2r2.hpp"
-#include "transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
+#include "gridwise_dynamic_gemm_xdlops_v2r3.hpp"
+#include "transform_forward_convolution_into_gemm_v4r4r2_nchw_kcyx_nkhw.hpp"
 
 using namespace ck;
 
@@ -57,48 +57,6 @@ using CThreadTransferSrcDstAccessOrder = Sequence<CK_PARAM_CThreadTransferSrcDst
 constexpr index_t CThreadTransferSrcDstVectorDim    = CK_PARAM_CThreadTransferSrcDstVectorDim;
 constexpr index_t CThreadTransferDstScalarPerVector = CK_PARAM_CThreadTransferDstScalarPerVector;
 
-template <typename AKMGridDesc>
-__host__ __device__ constexpr auto MakeAK0MK1GridDescriptor(const AKMGridDesc& a_k_m_grid_desc)
-{
-    constexpr auto I0 = Number<0>{};
-    constexpr auto I1 = Number<1>{};
-
-    const auto K = a_k_m_grid_desc.GetLength(I0);
-    const auto M = a_k_m_grid_desc.GetLength(I1);
-
-    const auto K0 = K / KPack;
-    const auto K1 = KPack;
-
-    const auto a_k0_m_k1_grid_desc = transform_dynamic_tensor_descriptor(
-        a_k_m_grid_desc,
-        make_tuple(make_unmerge_transform(make_tuple(K0, K1)), make_pass_through_transform(M)),
-        make_tuple(Sequence<0>{}, Sequence<1>{}),
-        make_tuple(Sequence<0, 2>{}, Sequence<1>{}));
-
-    return a_k0_m_k1_grid_desc;
-}
-
-template <typename BKNGridDesc>
-__host__ __device__ constexpr auto MakeBK0NK1GridDescriptor(const BKNGridDesc& b_k_n_grid_desc)
-{
-    constexpr auto I0 = Number<0>{};
-    constexpr auto I1 = Number<1>{};
-
-    const auto K = b_k_n_grid_desc.GetLength(I0);
-    const auto N = b_k_n_grid_desc.GetLength(I1);
-
-    const auto K0 = K / KPack;
-    const auto K1 = KPack;
-
-    const auto b_k0_n_k1_grid_desc = transform_dynamic_tensor_descriptor(
-        b_k_n_grid_desc,
-        make_tuple(make_unmerge_transform(make_tuple(K0, K1)), make_pass_through_transform(N)),
-        make_tuple(Sequence<0>{}, Sequence<1>{}),
-        make_tuple(Sequence<0, 2>{}, Sequence<1>{}));
-
-    return b_k0_n_k1_grid_desc;
-}
-
 extern "C" __global__ void
 dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw_prepare(
     int n,
@@ -135,21 +93,19 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw_prepare(
     const auto out_n_k_ho_wo_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(n, k, ho, wo));
 
-    const auto descs = transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(
+    const auto descs = transform_forward_convolution_into_gemm_v4r4r2_nchw_kcyx_nkhw_pad(
         wei_k_c_y_x_desc,
         in_n_c_hi_wi_desc,
         out_n_k_ho_wo_desc,
         make_tuple(convStrideH, convStrideW),
         make_tuple(convDilationY, convDilationX),
         make_tuple(leftPadH, leftPadW),
-        make_tuple(rightPadH, rightPadW));
+        make_tuple(rightPadH, rightPadW),
+        Number<KPack>{});
 
-    const auto a_k_m_grid_desc = descs[I0];
-    const auto b_k_n_grid_desc = descs[I1];
-    const auto c_m_n_grid_desc = descs[I2];
-
-    auto a_k0_m_k1_grid_desc = MakeAK0MK1GridDescriptor(a_k_m_grid_desc);
-    auto b_k0_n_k1_grid_desc = MakeBK0NK1GridDescriptor(b_k_n_grid_desc);
+    const auto a_k0_m_k1_grid_desc = descs[I0];
+    const auto b_k0_n_k1_grid_desc = descs[I1];
+    const auto c_m_n_grid_desc     = descs[I2];
 
     using AK0MK1GridDesc = decltype(a_k0_m_k1_grid_desc);
     using BK0NK1GridDesc = decltype(b_k0_n_k1_grid_desc);
@@ -169,10 +125,18 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw_prepare(
                                        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0>{})));
 
     using CGridIteratorHacks = decltype(make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                                                              Sequence<0, 0, 1, 0, 0>{},
+                                                              Sequence<0, 0, 0, 0, 0>{},
+                                                              Sequence<0, 0, 1, 0, 0>{},
+                                                              Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 1, 0, 0>{}),
                                                    make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                                                              Sequence<0, 0, 2, 0, 0>{},
+                                                              Sequence<0, 0, 0, 0, 0>{},
+                                                              Sequence<0, 0, 2, 0, 0>{},
+                                                              Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 2, 0, 0>{})));
@@ -181,7 +145,7 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw_prepare(
     using BGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0>;
 
     using GridwiseGemm =
-        GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r2<BlockSize,
+        GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3<BlockSize,
                                                        FloatAB,
                                                        FloatAcc,
                                                        FloatC,
@@ -220,7 +184,8 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw_prepare(
                                                        BGridIteratorHacks,
                                                        CGridIteratorHacks,
                                                        AGridMoveSliceWindowIteratorHacks,
-                                                       BGridMoveSliceWindowIteratorHacks>;
+                                                       BGridMoveSliceWindowIteratorHacks,
+                                                       false>;
 
     auto c_m0_m1_m2_n_grid_desc = GridwiseGemm::MakeCM0M1M2NGridDescriptor(c_m_n_grid_desc);
 
@@ -229,13 +194,15 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw_prepare(
 
     if(hipThreadIdx_x == 0)
     {
-        *static_cast<decltype(a_k0_m_k1_grid_desc)*>(p_a_k0_m_k1_grid_desc) = a_k0_m_k1_grid_desc;
-        *static_cast<decltype(b_k0_n_k1_grid_desc)*>(p_b_k0_n_k1_grid_desc) = b_k0_n_k1_grid_desc;
+        *static_cast<remove_cv_t<decltype(a_k0_m_k1_grid_desc)>*>(p_a_k0_m_k1_grid_desc) =
+            a_k0_m_k1_grid_desc;
+        *static_cast<remove_cv_t<decltype(b_k0_n_k1_grid_desc)>*>(p_b_k0_n_k1_grid_desc) =
+            b_k0_n_k1_grid_desc;
         *static_cast<decltype(c_m0_m1_m2_n_grid_desc)*>(p_c_m0_m1_m2_n_grid_desc) =
             c_m0_m1_m2_n_grid_desc;
         *static_cast<decltype(c_blockid_to_m0_n0_block_cluster_adaptor)*>(
             p_c_blockid_to_m0_n0_block_cluster_adaptor) = c_blockid_to_m0_n0_block_cluster_adaptor;
-    };
+    }
 };
 
 extern "C" __global__ void
@@ -264,21 +231,18 @@ extern "C" __global__ void
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(256, 256, 28, 28));
 
     constexpr auto descs =
-        transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
-                                                                               in_n_c_hi_wi_desc,
-                                                                               out_n_k_ho_wo_desc,
-                                                                               make_tuple(1, 1),
-                                                                               make_tuple(1, 1),
-                                                                               make_tuple(1, 1),
-                                                                               make_tuple(1, 1));
+        transform_forward_convolution_into_gemm_v4r4r2_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
+                                                                          in_n_c_hi_wi_desc,
+                                                                          out_n_k_ho_wo_desc,
+                                                                          make_tuple(1, 1),
+                                                                          make_tuple(1, 1),
+                                                                          make_tuple(1, 1),
+                                                                          make_tuple(1, 1),
+                                                                          Number<KPack>{});
 
-    constexpr auto a_k_m_grid_desc = descs[I0];
-    constexpr auto b_k_n_grid_desc = descs[I1];
-    constexpr auto c_m_n_grid_desc = descs[I2];
-
-    using AKMGridDesc = decltype(a_k_m_grid_desc);
-    using BKNGridDesc = decltype(b_k_n_grid_desc);
-    using CMNGridDesc = decltype(c_m_n_grid_desc);
+    constexpr auto a_k0_m_k1_grid_desc_tmp = descs[I0];
+    constexpr auto b_k0_n_k1_grid_desc_tmp = descs[I1];
+    constexpr auto c_m_n_grid_desc         = descs[I2];
 
     using AGridIteratorHacks = decltype(make_tuple(
         make_tuple(Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}),
@@ -294,10 +258,18 @@ extern "C" __global__ void
                                        Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0>{})));
 
     using CGridIteratorHacks = decltype(make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                                                              Sequence<0, 0, 1, 0, 0>{},
+                                                              Sequence<0, 0, 0, 0, 0>{},
+                                                              Sequence<0, 0, 1, 0, 0>{},
+                                                              Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 1, 0, 0>{}),
                                                    make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                                                              Sequence<0, 0, 2, 0, 0>{},
+                                                              Sequence<0, 0, 0, 0, 0>{},
+                                                              Sequence<0, 0, 2, 0, 0>{},
+                                                              Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 0, 0, 0>{},
                                                               Sequence<0, 0, 2, 0, 0>{})));
@@ -305,14 +277,12 @@ extern "C" __global__ void
     using AGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0>;
     using BGridMoveSliceWindowIteratorHacks = Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0>;
 
-    auto a_k0_m_k1_grid_desc_tmp = MakeAK0MK1GridDescriptor(a_k_m_grid_desc);
-    auto b_k0_n_k1_grid_desc_tmp = MakeBK0NK1GridDescriptor(b_k_n_grid_desc);
-
     using AK0MK1GridDesc = decltype(a_k0_m_k1_grid_desc_tmp);
     using BK0NK1GridDesc = decltype(b_k0_n_k1_grid_desc_tmp);
+    using CMNGridDesc    = decltype(c_m_n_grid_desc);
 
     using GridwiseGemm =
-        GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r2<BlockSize,
+        GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3<BlockSize,
                                                        FloatAB,
                                                        FloatAcc,
                                                        FloatC,
@@ -351,7 +321,8 @@ extern "C" __global__ void
                                                        BGridIteratorHacks,
                                                        CGridIteratorHacks,
                                                        AGridMoveSliceWindowIteratorHacks,
-                                                       BGridMoveSliceWindowIteratorHacks>;
+                                                       BGridMoveSliceWindowIteratorHacks,
+                                                       false>;
 
     constexpr auto c_m0_m1_m2_n_grid_desc_tmp =
         GridwiseGemm::MakeCM0M1M2NGridDescriptor(c_m_n_grid_desc);

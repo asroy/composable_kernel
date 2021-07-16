@@ -2,7 +2,7 @@
 #include "host_tensor.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
-#include "transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
+#include "transform_forward_convolution_into_gemm_v4r4r2_nchw_kcyx_nkhw.hpp"
 
 #include "olc_driver_common.hpp"
 #include "conv_tunables.hpp"
@@ -81,7 +81,11 @@ get_network_config_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nc
     out += std::to_string(pt->CThreadTransferSrcDstAccessOrder[0]) + "x" +
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[1]) + "x" +
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[2]) + "x" +
-           std::to_string(pt->CThreadTransferSrcDstAccessOrder[3]) + "_";
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[3]) + "x" +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[4]) + "x" +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[5]) + "x" +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[6]) + "x" +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[7]) + "_";
 
     out += std::to_string(pt->CThreadTransferSrcDstVectorDim) + "_";
     out += std::to_string(pt->CThreadTransferDstScalarPerVector);
@@ -179,7 +183,11 @@ get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nchw_k
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[0]) + "," +
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[1]) + "," +
            std::to_string(pt->CThreadTransferSrcDstAccessOrder[2]) + "," +
-           std::to_string(pt->CThreadTransferSrcDstAccessOrder[3]);
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[3]) + "," +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[4]) + "," +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[5]) + "," +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[6]) + "," +
+           std::to_string(pt->CThreadTransferSrcDstAccessOrder[7]);
 
     out += " -DCK_PARAM_CThreadTransferSrcDstVectorDim=" +
            std::to_string(pt->CThreadTransferSrcDstVectorDim);
@@ -234,19 +242,20 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw
     const auto out_n_k_ho_wo_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(out_n_k_ho_wo_lengths);
 
-    const auto descs =
-        transform_forward_convolution_into_gemm_v4r4_xdlops_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
-                                                                               in_n_c_hi_wi_desc,
-                                                                               out_n_k_ho_wo_desc,
-                                                                               conv_strides,
-                                                                               conv_dilations,
-                                                                               in_left_pads,
-                                                                               in_right_pads);
-    const auto a_k_m_grid_desc = descs[I0];
-    const auto c_m_n_grid_desc = descs[I2];
-    const auto M               = c_m_n_grid_desc.GetLength(I0);
-    const auto N               = c_m_n_grid_desc.GetLength(I1);
-    const auto K               = a_k_m_grid_desc.GetLength(I0);
+    const auto n  = in_n_c_hi_wi_desc.GetLength(I0);
+    const auto c  = in_n_c_hi_wi_desc.GetLength(I1);
+    const auto hi = in_n_c_hi_wi_desc.GetLength(I2);
+    const auto wi = in_n_c_hi_wi_desc.GetLength(I3);
+    const auto k  = wei_k_c_y_x_desc.GetLength(I0);
+    const auto y  = wei_k_c_y_x_desc.GetLength(I2);
+    const auto x  = wei_k_c_y_x_desc.GetLength(I3);
+    const auto ho = out_n_k_ho_wo_desc.GetLength(I2);
+    const auto wo = out_n_k_ho_wo_desc.GetLength(I3);
+
+    const auto M  = k;
+    const auto N  = n * ho * wo;
+    const auto K  = c * y * x;
+    const auto K0 = K / tunable->KPack;
 
     const index_t grid_size = (M / tunable->MPerBlock) * (N / tunable->NPerBlock);
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
