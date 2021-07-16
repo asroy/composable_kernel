@@ -12,7 +12,7 @@
  export OLC_DEBUG_HIP_DUMP=1
  export OLC_DEBUG_SAVE_TEMP_DIR=1
 
-#make -j conv_driver_v2
+make -j conv_driver_v2
 #make -j conv_bwd_data_driver_v2
  make -j conv_driver_v2_olc
 
@@ -43,8 +43,8 @@ REPEAT=$6
 
 #./conv_bwd_data_driver_v2 $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  256  256  256 3 3  14   14     1 1       1 1      1 1       1 1
 
- ./conv_driver_v2_olc      $LAYOUT 5 $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
- #./conv_driver_v2          $LAYOUT 9 $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
+ #./conv_driver_v2_olc      $LAYOUT 5 $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
+ ./conv_driver_v2          $LAYOUT 9 $VERIFY $INIT $LOG $REPEAT  128  256  192 3 3  71   71     2 2       1 1      1 1       1 1
  #./conv_driver_v2_olc      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  128  256  256 3 3  14   14     1 1       1 1      1 1       1 1
 
 #./conv_driver_v2_olc      $LAYOUT $ALGO $VERIFY $INIT $LOG $REPEAT  256  256 256 1 1  14   14     1 1       1 1      0 0       0 0

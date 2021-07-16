@@ -235,10 +235,10 @@ extern "C" __global__ void
         transform_forward_convolution_into_gemm_v4r4r4_nhwc_kyxc_nhwk_pad(in_n_hi_wi_c_desc,
                                                                           wei_k_y_x_c_desc,
                                                                           out_n_ho_wo_k_desc,
-                                                                          make_tuple(I1, I1),
-                                                                          make_tuple(I1, I1),
-                                                                          make_tuple(I1, I1),
-                                                                          make_tuple(I1, I1),
+                                                                          make_tuple(1, 1),
+                                                                          make_tuple(1, 1),
+                                                                          make_tuple(1, 1),
+                                                                          make_tuple(1, 1),
                                                                           Number<KPack>{});
 
     constexpr auto a_k0_m_k1_grid_desc_tmp = descs[I0];
