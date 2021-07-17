@@ -104,7 +104,7 @@ template <index_t BlockSize,
           index_t KPerBlock,
           index_t MPerWave,
           index_t NPerWave,
-          index_t KPack,
+          index_t K1Value,
           index_t MRepeat,
           index_t NRepeat,
           typename ABlockTransferThreadSliceLengths_K0_M_K1,
@@ -140,7 +140,7 @@ struct GridwiseDynamicGemm_k0mk1_k0nk1_mn_xdlops_v2r3
     static constexpr auto I3 = Number<3>{};
 
     // K1 should be Number<...>
-    static constexpr auto K1 = Number<KPack>{};
+    static constexpr auto K1 = Number<K1Value>{};
 
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {

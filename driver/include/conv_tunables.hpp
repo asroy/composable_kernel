@@ -60,7 +60,7 @@ struct tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw
 
     ck::index_t MPerWave;
     ck::index_t NPerWave;
-    ck::index_t KPack;
+    ck::index_t K1;
 
     ck::index_t MRepeat;
     ck::index_t NRepeat;
@@ -71,7 +71,7 @@ struct tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw
     std::array<ck::index_t, 3> ABlockTransferSrcAccessOrder;
     ck::index_t ABlockTransferSrcVectorDim;
     ck::index_t ABlockTransferSrcScalarPerVector;
-    ck::index_t ABlockTransferDstScalarPerVector_KPack;
+    ck::index_t ABlockTransferDstScalarPerVector_K1;
     bool AThreadTransferSrcResetCoordinateAfterRun;
 
     std::array<ck::index_t, 3> BBlockTransferThreadSliceLengths_K0_N_K1;
@@ -80,7 +80,7 @@ struct tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw
     std::array<ck::index_t, 3> BBlockTransferSrcAccessOrder;
     ck::index_t BBlockTransferSrcVectorDim;
     ck::index_t BBlockTransferSrcScalarPerVector;
-    ck::index_t BBlockTransferDstScalarPerVector_KPack;
+    ck::index_t BBlockTransferDstScalarPerVector_K1;
     bool BThreadTransferSrcResetCoordinateAfterRun;
 
     std::array<ck::index_t, 8> CThreadTransferSrcDstAccessOrder;
@@ -96,7 +96,7 @@ static tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw
         4,                        // KPerBlock,
         32,                       // MPerWave,
         32,                       // NPerWave,
-        4,                        // KPack,
+        4,                        // K1,
         2,                        // MRepeat,
         2,                        // NRepeat,
         {1, 2, 4},                // ABlockTransferThreadSliceLengths_K0_M_K1,
@@ -105,7 +105,7 @@ static tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw
         {1, 0, 2},                // ABlockTransferSrcAccessOrder,
         2,                        // ABlockTransferSrcVectorDim
         1,                        // ABlockTransferSrcScalarPerVector,
-        4,                        // ABlockTransferDstScalarPerVector_KPack,
+        4,                        // ABlockTransferDstScalarPerVector_K1,
         false,                    // AThreadTransferSrcResetCoordinateAfterRun,
         {1, 2, 4},                // BBlockTransferThreadSliceLengths_K0_N_K1,
         {4, 64, 1},               // BBlockTransferThreadClusterLengths_K0_N_K1,
@@ -113,7 +113,7 @@ static tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw
         {1, 0, 2},                // BBlockTransferSrcAccessOrder,
         1,                        // BBlockTransferSrcVectorDim
         1,                        // BBlockTransferSrcScalarPerVector
-        4,                        // BBlockTransferDstScalarPerVector_KPack
+        4,                        // BBlockTransferDstScalarPerVector_K1
         false,                    // BThreadTransferSrcResetCoordinateAfterRun
         {3, 0, 1, 2, 7, 5, 4, 6}, // CThreadTransferSrcDstAccessOrder
         7,                        // CThreadTransferSrcDstVectorDim,
@@ -130,7 +130,7 @@ struct tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_kyxc_nhwk
 
     ck::index_t MPerWave;
     ck::index_t NPerWave;
-    ck::index_t KPack;
+    ck::index_t K1;
 
     ck::index_t MRepeat;
     ck::index_t NRepeat;
@@ -141,7 +141,7 @@ struct tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_kyxc_nhwk
     std::array<ck::index_t, 3> ABlockTransferSrcAccessOrder;
     ck::index_t ABlockTransferSrcVectorDim;
     ck::index_t ABlockTransferSrcScalarPerVector;
-    ck::index_t ABlockTransferDstScalarPerVector_KPack;
+    ck::index_t ABlockTransferDstScalarPerVector_K1;
     bool AThreadTransferSrcResetCoordinateAfterRun;
 
     std::array<ck::index_t, 3> BBlockTransferThreadSliceLengths_K0_N_K1;
@@ -150,7 +150,7 @@ struct tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_kyxc_nhwk
     std::array<ck::index_t, 3> BBlockTransferSrcAccessOrder;
     ck::index_t BBlockTransferSrcVectorDim;
     ck::index_t BBlockTransferSrcScalarPerVector;
-    ck::index_t BBlockTransferDstScalarPerVector_KPack;
+    ck::index_t BBlockTransferDstScalarPerVector_K1;
     bool BThreadTransferSrcResetCoordinateAfterRun;
 
     std::array<ck::index_t, 8> CThreadTransferSrcDstAccessOrder;
@@ -166,7 +166,7 @@ static tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_kyxc_nhwk
         4,                        // KPerBlock,
         32,                       // MPerWave,
         32,                       // NPerWave,
-        4,                        // KPack,
+        4,                        // K1,
         2,                        // MRepeat,
         2,                        // NRepeat,
         {1, 2, 4},                // ABlockTransferThreadSliceLengths_K0_M_K1,
@@ -175,7 +175,7 @@ static tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_kyxc_nhwk
         {1, 0, 2},                // ABlockTransferSrcAccessOrder,
         2,                        // ABlockTransferSrcVectorDim
         4,                        // ABlockTransferSrcScalarPerVector,
-        4,                        // ABlockTransferDstScalarPerVector_KPack,
+        4,                        // ABlockTransferDstScalarPerVector_K1,
         false,                    // AThreadTransferSrcResetCoordinateAfterRun,
         {1, 2, 4},                // BBlockTransferThreadSliceLengths_K0_N_K1,
         {4, 64, 1},               // BBlockTransferThreadClusterLengths_K0_N_K1,
@@ -183,7 +183,7 @@ static tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_kyxc_nhwk
         {1, 0, 2},                // BBlockTransferSrcAccessOrder,
         2,                        // BBlockTransferSrcVectorDim
         4,                        // BBlockTransferSrcScalarPerVector
-        4,                        // BBlockTransferDstScalarPerVector_KPack
+        4,                        // BBlockTransferDstScalarPerVector_K1
         false,                    // BThreadTransferSrcResetCoordinateAfterRun
         {2, 3, 0, 1, 7, 5, 4, 6}, // CThreadTransferSrcDstAccessOrder
         7,                        // CThreadTransferSrcDstVectorDim,

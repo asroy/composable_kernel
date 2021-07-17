@@ -34,7 +34,7 @@ get_network_config_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nh
            std::to_string(pt->KPerBlock) + "_";
     out += std::to_string(pt->MPerWave) + "x" + std::to_string(pt->NPerWave) + "x" +
            std::to_string(pt->MRepeat) + "x" + std::to_string(pt->NRepeat) + "x" +
-           std::to_string(pt->KPack) + "_";
+           std::to_string(pt->K1) + "_";
 
     out += std::to_string(pt->ABlockTransferThreadSliceLengths_K0_M_K1[0]) + "x" +
            std::to_string(pt->ABlockTransferThreadSliceLengths_K0_M_K1[1]) + "x" +
@@ -54,7 +54,7 @@ get_network_config_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nh
 
     out += std::to_string(pt->ABlockTransferSrcVectorDim) + "_";
     out += std::to_string(pt->ABlockTransferSrcScalarPerVector) + "_";
-    out += std::to_string(pt->ABlockTransferDstScalarPerVector_KPack) + "_";
+    out += std::to_string(pt->ABlockTransferDstScalarPerVector_K1) + "_";
     out += std::to_string(pt->AThreadTransferSrcResetCoordinateAfterRun) + "_";
 
     out += std::to_string(pt->BBlockTransferThreadSliceLengths_K0_N_K1[0]) + "x" +
@@ -75,7 +75,7 @@ get_network_config_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nh
 
     out += std::to_string(pt->BBlockTransferSrcVectorDim) + "_";
     out += std::to_string(pt->BBlockTransferSrcScalarPerVector) + "_";
-    out += std::to_string(pt->BBlockTransferDstScalarPerVector_KPack) + "_";
+    out += std::to_string(pt->BBlockTransferDstScalarPerVector_K1) + "_";
     out += std::to_string(pt->BThreadTransferSrcResetCoordinateAfterRun) + "_";
 
     out += std::to_string(pt->CThreadTransferSrcDstAccessOrder[0]) + "x" +
@@ -117,7 +117,7 @@ get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_k
            " -DCK_PARAM_KPerBlock=" + std::to_string(pt->KPerBlock);
     out += " -DCK_PARAM_MPerWave=" + std::to_string(pt->MPerWave) +
            " -DCK_PARAM_NPerWave=" + std::to_string(pt->NPerWave) +
-           " -DCK_PARAM_KPack=" + std::to_string(pt->KPack) +
+           " -DCK_PARAM_K1=" + std::to_string(pt->K1) +
            " -DCK_PARAM_MRepeat=" + std::to_string(pt->MRepeat) +
            " -DCK_PARAM_NRepeat=" + std::to_string(pt->NRepeat);
 
@@ -145,8 +145,8 @@ get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_k
         " -DCK_PARAM_ABlockTransferSrcVectorDim=" + std::to_string(pt->ABlockTransferSrcVectorDim);
     out += " -DCK_PARAM_ABlockTransferSrcScalarPerVector=" +
            std::to_string(pt->ABlockTransferSrcScalarPerVector);
-    out += " -DCK_PARAM_ABlockTransferDstScalarPerVector_KPack=" +
-           std::to_string(pt->ABlockTransferDstScalarPerVector_KPack);
+    out += " -DCK_PARAM_ABlockTransferDstScalarPerVector_K1=" +
+           std::to_string(pt->ABlockTransferDstScalarPerVector_K1);
     out += " -DCK_PARAM_AThreadTransferSrcResetCoordinateAfterRun=" +
            std::to_string(pt->AThreadTransferSrcResetCoordinateAfterRun);
 
@@ -174,8 +174,8 @@ get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_k
         " -DCK_PARAM_BBlockTransferSrcVectorDim=" + std::to_string(pt->BBlockTransferSrcVectorDim);
     out += " -DCK_PARAM_BBlockTransferSrcScalarPerVector=" +
            std::to_string(pt->BBlockTransferSrcScalarPerVector);
-    out += " -DCK_PARAM_BBlockTransferDstScalarPerVector_KPack=" +
-           std::to_string(pt->BBlockTransferDstScalarPerVector_KPack);
+    out += " -DCK_PARAM_BBlockTransferDstScalarPerVector_K1=" +
+           std::to_string(pt->BBlockTransferDstScalarPerVector_K1);
     out += " -DCK_PARAM_BThreadTransferSrcResetCoordinateAfterRun=" +
            std::to_string(pt->BThreadTransferSrcResetCoordinateAfterRun);
 
@@ -259,7 +259,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk
     const auto M  = k;
     const auto N  = n * ho * wo;
     const auto K  = c * y * x;
-    const auto K0 = K / tunable->KPack;
+    const auto K0 = K / tunable->K1;
 
     const index_t grid_size = (M / tunable->MPerBlock) * (N / tunable->NPerBlock);
 

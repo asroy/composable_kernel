@@ -21,7 +21,7 @@ constexpr index_t MPerWave = CK_PARAM_MPerWave;
 constexpr index_t NPerWave = CK_PARAM_NPerWave;
 constexpr index_t MRepeat  = CK_PARAM_MRepeat;
 constexpr index_t NRepeat  = CK_PARAM_NRepeat;
-constexpr index_t KPack    = CK_PARAM_KPack;
+constexpr index_t K1       = CK_PARAM_K1;
 
 using ABlockTransferThreadSliceLengths_K0_M_K1 =
     Sequence<CK_PARAM_ABlockTransferThreadSliceLengths_K0_M_K1>;
@@ -33,8 +33,8 @@ using ABlockTransferSrcAccessOrder = Sequence<CK_PARAM_ABlockTransferSrcAccessOr
 
 constexpr index_t ABlockTransferSrcVectorDim       = CK_PARAM_ABlockTransferSrcVectorDim;
 constexpr index_t ABlockTransferSrcScalarPerVector = CK_PARAM_ABlockTransferSrcScalarPerVector;
-constexpr index_t ABlockTransferDstScalarPerVector_KPack =
-    CK_PARAM_ABlockTransferDstScalarPerVector_KPack;
+constexpr index_t ABlockTransferDstScalarPerVector_K1 =
+    CK_PARAM_ABlockTransferDstScalarPerVector_K1;
 constexpr bool AThreadTransferSrcResetCoordinateAfterRun =
     static_cast<bool>(CK_PARAM_AThreadTransferSrcResetCoordinateAfterRun);
 
@@ -48,8 +48,8 @@ using BBlockTransferSrcAccessOrder = Sequence<CK_PARAM_BBlockTransferSrcAccessOr
 
 constexpr index_t BBlockTransferSrcVectorDim       = CK_PARAM_BBlockTransferSrcVectorDim;
 constexpr index_t BBlockTransferSrcScalarPerVector = CK_PARAM_BBlockTransferSrcScalarPerVector;
-constexpr index_t BBlockTransferDstScalarPerVector_KPack =
-    CK_PARAM_BBlockTransferDstScalarPerVector_KPack;
+constexpr index_t BBlockTransferDstScalarPerVector_K1 =
+    CK_PARAM_BBlockTransferDstScalarPerVector_K1;
 constexpr bool BThreadTransferSrcResetCoordinateAfterRun =
     static_cast<bool>(CK_PARAM_BThreadTransferSrcResetCoordinateAfterRun);
 
@@ -101,7 +101,7 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_prepare(
         make_tuple(convDilationY, convDilationX),
         make_tuple(leftPadH, leftPadW),
         make_tuple(rightPadH, rightPadW),
-        Number<KPack>{});
+        Number<K1>{});
 
     const auto a_k0_m_k1_grid_desc = descs[I0];
     const auto b_k0_n_k1_grid_desc = descs[I1];
@@ -158,7 +158,7 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_prepare(
                                                        KPerBlock,
                                                        MPerWave,
                                                        NPerWave,
-                                                       KPack,
+                                                       K1,
                                                        MRepeat,
                                                        NRepeat,
                                                        ABlockTransferThreadSliceLengths_K0_M_K1,
@@ -167,7 +167,7 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_prepare(
                                                        ABlockTransferSrcAccessOrder,
                                                        ABlockTransferSrcVectorDim,
                                                        ABlockTransferSrcScalarPerVector,
-                                                       ABlockTransferDstScalarPerVector_KPack,
+                                                       ABlockTransferDstScalarPerVector_K1,
                                                        AThreadTransferSrcResetCoordinateAfterRun,
                                                        BBlockTransferThreadSliceLengths_K0_N_K1,
                                                        BBlockTransferThreadClusterLengths_K0_N_K1,
@@ -175,7 +175,7 @@ dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk_prepare(
                                                        BBlockTransferSrcAccessOrder,
                                                        BBlockTransferSrcVectorDim,
                                                        BBlockTransferSrcScalarPerVector,
-                                                       BBlockTransferDstScalarPerVector_KPack,
+                                                       BBlockTransferDstScalarPerVector_K1,
                                                        BThreadTransferSrcResetCoordinateAfterRun,
                                                        CThreadTransferSrcDstAccessOrder,
                                                        CThreadTransferSrcDstVectorDim,
@@ -239,7 +239,7 @@ extern "C" __global__ void
                                                                           make_tuple(1, 1),
                                                                           make_tuple(1, 1),
                                                                           make_tuple(1, 1),
-                                                                          Number<KPack>{});
+                                                                          Number<K1>{});
 
     constexpr auto a_k0_m_k1_grid_desc_tmp = descs[I0];
     constexpr auto b_k0_n_k1_grid_desc_tmp = descs[I1];
@@ -296,7 +296,7 @@ extern "C" __global__ void
                                                        KPerBlock,
                                                        MPerWave,
                                                        NPerWave,
-                                                       KPack,
+                                                       K1,
                                                        MRepeat,
                                                        NRepeat,
                                                        ABlockTransferThreadSliceLengths_K0_M_K1,
@@ -305,7 +305,7 @@ extern "C" __global__ void
                                                        ABlockTransferSrcAccessOrder,
                                                        ABlockTransferSrcVectorDim,
                                                        ABlockTransferSrcScalarPerVector,
-                                                       ABlockTransferDstScalarPerVector_KPack,
+                                                       ABlockTransferDstScalarPerVector_K1,
                                                        AThreadTransferSrcResetCoordinateAfterRun,
                                                        BBlockTransferThreadSliceLengths_K0_N_K1,
                                                        BBlockTransferThreadClusterLengths_K0_N_K1,
@@ -313,7 +313,7 @@ extern "C" __global__ void
                                                        BBlockTransferSrcAccessOrder,
                                                        BBlockTransferSrcVectorDim,
                                                        BBlockTransferSrcScalarPerVector,
-                                                       BBlockTransferDstScalarPerVector_KPack,
+                                                       BBlockTransferDstScalarPerVector_K1,
                                                        BThreadTransferSrcResetCoordinateAfterRun,
                                                        CThreadTransferSrcDstAccessOrder,
                                                        CThreadTransferSrcDstVectorDim,
