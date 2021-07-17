@@ -15,10 +15,14 @@
 #include "online_device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "online_device_dynamic_convolution_forward_implicit_gemm_v4r5_nchw_kcyx_nkhw.hpp"
 #include "online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw.hpp"
+#include "online_device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
+#include "online_device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk.hpp"
 
 #define USE_CONV_FWD_V4R4_NCHW 1
 #define USE_CONV_FWD_V4R5_NCHW 1
 #define USE_CONV_FWD_V4R5R2_NCHW 1
+#define USE_CONV_FWD_V4R4_XDLOPS_NCHW 1
+#define USE_CONV_FWD_V4R4_XDLOPS_NHWC 1
 
 #include "conv_tunables.hpp"
 #include "handle.hpp"
@@ -26,9 +30,11 @@
 
 enum ConvForwardAlgo
 {
-    V4R4NCHW,
-    V4R5NCHW,
-    V4R5R2NCHW,
+    V4R4NCHW,    // 0
+    V4R5NCHW,    // 1
+    V4R5R2NCHW,  // 2
+    V4R4XDLNCHW, // 3
+    V4R4XDLNHWC  // 4
 };
 
 int main(int argc, char* argv[])
@@ -89,17 +95,17 @@ int main(int argc, char* argv[])
     const index_t Wo = (Wi + in_left_pad_w + in_right_pad_w - XEff) / conv_stride_w + 1;
 
 #if 1
-    using in_data_t                  = float;
-    using acc_data_t                 = float;
-    using out_data_t                 = float;
+    using in_data_t  = float;
+    using acc_data_t = float;
+    using out_data_t = float;
 #elif 1
-    using in_data_t                  = half_t;
-    using acc_data_t                 = float;
-    using out_data_t                 = half_t;
+    using in_data_t  = half_t;
+    using acc_data_t = float;
+    using out_data_t = half_t;
 #elif 1
-    using in_data_t                  = int8_t;
-    using acc_data_t                 = int32_t;
-    using out_data_t                 = int8_t;
+    using in_data_t  = int8_t;
+    using acc_data_t = int32_t;
+    using out_data_t = int8_t;
 #endif
 
     std::vector<std::size_t> in_lengths_host(4), wei_lengths_host(4), out_lengths_host(4);
@@ -108,14 +114,16 @@ int main(int argc, char* argv[])
     {
     case ConvTensorLayout::NCHW:
         // NCHW
-        in_lengths_host[0]  = static_cast<std::size_t>(N);
-        in_lengths_host[1]  = static_cast<std::size_t>(C);
-        in_lengths_host[2]  = static_cast<std::size_t>(Hi);
-        in_lengths_host[3]  = static_cast<std::size_t>(Wi);
+        in_lengths_host[0] = static_cast<std::size_t>(N);
+        in_lengths_host[1] = static_cast<std::size_t>(C);
+        in_lengths_host[2] = static_cast<std::size_t>(Hi);
+        in_lengths_host[3] = static_cast<std::size_t>(Wi);
+
         wei_lengths_host[0] = static_cast<std::size_t>(K);
         wei_lengths_host[1] = static_cast<std::size_t>(C);
         wei_lengths_host[2] = static_cast<std::size_t>(Y);
         wei_lengths_host[3] = static_cast<std::size_t>(X);
+
         out_lengths_host[0] = static_cast<std::size_t>(N);
         out_lengths_host[1] = static_cast<std::size_t>(K);
         out_lengths_host[2] = static_cast<std::size_t>(Ho);
@@ -123,14 +131,16 @@ int main(int argc, char* argv[])
         break;
     case ConvTensorLayout::NHWC:
         // NHWC
-        in_lengths_host[0]  = static_cast<std::size_t>(N);
-        in_lengths_host[1]  = static_cast<std::size_t>(Hi);
-        in_lengths_host[2]  = static_cast<std::size_t>(Wi);
-        in_lengths_host[3]  = static_cast<std::size_t>(C);
+        in_lengths_host[0] = static_cast<std::size_t>(N);
+        in_lengths_host[1] = static_cast<std::size_t>(Hi);
+        in_lengths_host[2] = static_cast<std::size_t>(Wi);
+        in_lengths_host[3] = static_cast<std::size_t>(C);
+
         wei_lengths_host[0] = static_cast<std::size_t>(K);
         wei_lengths_host[1] = static_cast<std::size_t>(Y);
         wei_lengths_host[2] = static_cast<std::size_t>(X);
         wei_lengths_host[3] = static_cast<std::size_t>(C);
+
         out_lengths_host[0] = static_cast<std::size_t>(N);
         out_lengths_host[1] = static_cast<std::size_t>(Ho);
         out_lengths_host[2] = static_cast<std::size_t>(Wo);
@@ -155,34 +165,38 @@ int main(int argc, char* argv[])
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
-    if(do_verification)
+    switch(init_method)
     {
-        switch(init_method)
-        {
-        case 0:
-            in.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            break;
-        case 1:
-            in.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            break;
-        case 2:
-            in.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            break;
-        case 3:
-            in.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            break;
-        default:
-            in.GenerateTensorValue(GeneratorTensor_2{1, 5}, num_thread);
+    case 0:
+        // no initialization
+        break;
+    case 1:
+        in.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        break;
+    case 2:
+        in.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        break;
+    case 3:
+        in.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        break;
+    case 4:
+        in.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        break;
+    case 5:
+        in.GenerateTensorValue(GeneratorTensor_3<float>{0.0, 1.0}, num_thread);
+        wei.GenerateTensorValue(GeneratorTensor_3<float>{-0.5, 0.5}, num_thread);
+        break;
+    default:
+        in.GenerateTensorValue(GeneratorTensor_2{1, 5}, num_thread);
 
-            auto gen_wei = [](auto... is) {
-                return GeneratorTensor_2{1, 5}(is...) * GeneratorTensor_Checkboard{}(is...);
-            };
-            wei.GenerateTensorValue(gen_wei, num_thread);
-        }
+        auto gen_wei = [](auto... is) {
+            return GeneratorTensor_2{1, 5}(is...) * GeneratorTensor_Checkboard{}(is...);
+        };
+        wei.GenerateTensorValue(gen_wei, num_thread);
     }
 
     auto f_make_for_device_nchw = [&]() {
@@ -284,8 +298,8 @@ int main(int argc, char* argv[])
             &default_tunable_dyn_conv_fwd_v4r5r2_nchw_kcyx_nkhw;
 
         online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw<in_data_t,
-                                                                                    acc_data_t,
-                                                                                    out_data_t>(
+                                                                                      acc_data_t,
+                                                                                      out_data_t>(
             handle,
             tmp[I0],
             tmp[I1],
@@ -302,10 +316,80 @@ int main(int argc, char* argv[])
     }
 #endif
 
+#if USE_CONV_FWD_V4R4_XDLOPS_NCHW
+    if(algo == ConvForwardAlgo::V4R4XDLNCHW)
+    {
+        if(layout != ConvTensorLayout::NCHW)
+        {
+            throw std::runtime_error("wrong! layout");
+        }
+
+        const auto tmp = f_make_for_device_nchw();
+
+        tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw* tunable =
+            &default_tunable_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw;
+
+        online_device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw<
+            in_data_t,
+            acc_data_t,
+            out_data_t>(handle,
+                        tmp[I0],
+                        tmp[I1],
+                        tmp[I2],
+                        conv_strides,
+                        conv_dilations,
+                        in_left_pads,
+                        in_right_pads,
+                        in,
+                        wei,
+                        out_device,
+                        tunable,
+                        nrepeat);
+    }
+#endif
+
+#if USE_CONV_FWD_V4R4_XDLOPS_NHWC
+    if(algo == ConvForwardAlgo::V4R4XDLNHWC)
+    {
+        if(layout != ConvTensorLayout::NHWC)
+        {
+            throw std::runtime_error("wrong! layout");
+        }
+
+        const auto tmp = f_make_for_device_nhwc();
+
+        tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_kyxc_nhwk* tunable =
+            &default_tunable_dyn_conv_fwd_v4r4_xdlops_nhwc_kyxc_nhwk;
+
+        online_device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk<
+            in_data_t,
+            acc_data_t,
+            out_data_t>(handle,
+                        tmp[I0],
+                        tmp[I1],
+                        tmp[I2],
+                        conv_strides,
+                        conv_dilations,
+                        in_left_pads,
+                        in_right_pads,
+                        in,
+                        wei,
+                        out_device,
+                        tunable,
+                        nrepeat);
+    }
+#endif
+
     if(do_verification)
     {
-        host_direct_convolution(
-            in, wei, out_host, conv_strides, conv_dilations, in_left_pads, in_right_pads);
+        host_direct_convolution(in,
+                                wei,
+                                out_host,
+                                make_tuple(conv_stride_h, conv_stride_w),
+                                make_tuple(conv_dilation_h, conv_dilation_w),
+                                make_tuple(in_left_pad_h, in_left_pad_w),
+                                make_tuple(in_right_pad_h, in_right_pad_w),
+                                layout);
 
         check_error(out_host, out_device);
 

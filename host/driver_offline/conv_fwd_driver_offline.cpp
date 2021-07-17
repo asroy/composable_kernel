@@ -17,19 +17,15 @@
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nkhw.hpp"
-#include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nhwc_kyxc_nhwk.hpp"
-#include "device_dynamic_convolution_forward_implicit_gemm_v4r4r3_xdlops_nhwc_kyxc_nhwk.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4r4_xdlops_nhwc_kyxc_nhwk.hpp"
 
 #define USE_DYNAMIC_MODE 1
-#define USE_CONV_FWD_V4R4_NCHW 1
+#define USE_CONV_FWD_V4R4_NCHW 0
 #define USE_CONV_FWD_V4R4R2_NHWC 0
-#define USE_CONV_FWD_V4R5R2_NCHW 1
+#define USE_CONV_FWD_V4R5R2_NCHW 0
 #define USE_CONV_FWD_V5R1_NCHW 0
-#define USE_CONV_FWD_V4R4_XDL_NCHW 0
-#define USE_CONV_FWD_V4R4R2_XDL_NHWC 0
-#define USE_CONV_FWD_V4R4R3_XDL_NHWC 0
-#define USE_CONV_FWD_V4R4R4_XDL_NHWC 0
+#define USE_CONV_FWD_V4R4R2_XDL_NCHW 1
+#define USE_CONV_FWD_V4R4R4_XDL_NHWC 1
 
 enum ConvForwardAlgo
 {
@@ -37,10 +33,8 @@ enum ConvForwardAlgo
     V4R4R2NHWC,    // 1
     V4R5R2NCHW,    // 2
     V5R1NCHW,      // 3
-    V4R4XDLNCHW,   // 4
-    V4R4R2XDLNHWC, // 5
-    V4R4R3XDLNHWC, // 6
-    V4R4R4XDLNHWC  // 7
+    V4R4R2XDLNCHW, // 4
+    V4R4R4XDLNHWC  // 5
 };
 
 int main(int argc, char* argv[])
@@ -132,7 +126,7 @@ int main(int argc, char* argv[])
     const index_t Wo = (Wi + in_left_pad_w + in_right_pad_w - XEff) / conv_stride_w + 1;
 #endif
 
-#if 1
+#if 0
     using in_data_t  = float;
     using acc_data_t = float;
     using out_data_t = float;
@@ -199,34 +193,38 @@ int main(int argc, char* argv[])
 
     std::size_t num_thread = std::thread::hardware_concurrency();
 
-    if(do_verification)
+    switch(init_method)
     {
-        switch(init_method)
-        {
-        case 0:
-            in.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            break;
-        case 1:
-            in.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            break;
-        case 2:
-            in.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
-            break;
-        case 3:
-            in.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
-            break;
-        default:
-            in.GenerateTensorValue(GeneratorTensor_2{1, 5}, num_thread);
+    case 0:
+        // no initialization
+        break;
+    case 1:
+        in.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        break;
+    case 2:
+        in.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        break;
+    case 3:
+        in.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        wei.GenerateTensorValue(GeneratorTensor_1{}, num_thread);
+        break;
+    case 4:
+        in.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        wei.GenerateTensorValue(GeneratorTensor_2{-5, 5}, num_thread);
+        break;
+    case 5:
+        in.GenerateTensorValue(GeneratorTensor_3<float>{0.0, 1.0}, num_thread);
+        wei.GenerateTensorValue(GeneratorTensor_3<float>{-0.5, 0.5}, num_thread);
+        break;
+    default:
+        in.GenerateTensorValue(GeneratorTensor_2{1, 5}, num_thread);
 
-            auto gen_wei = [](auto... is) {
-                return GeneratorTensor_2{1, 5}(is...) * GeneratorTensor_Checkboard{}(is...);
-            };
-            wei.GenerateTensorValue(gen_wei, num_thread);
-        }
+        auto gen_wei = [](auto... is) {
+            return GeneratorTensor_2{1, 5}(is...) * GeneratorTensor_Checkboard{}(is...);
+        };
+        wei.GenerateTensorValue(gen_wei, num_thread);
     }
 
     auto f_make_for_device_nchw = [&]() {
@@ -400,8 +398,8 @@ int main(int argc, char* argv[])
     }
 #endif
 
-#if USE_CONV_FWD_V4R4_XDL_NCHW
-    if(algo == ConvForwardAlgo::V4R4XDLNCHW)
+#if USE_CONV_FWD_V4R4R2_XDL_NCHW
+    if(algo == ConvForwardAlgo::V4R4R2XDLNCHW)
     {
         if(layout != ConvTensorLayout::NCHW)
         {
@@ -411,60 +409,6 @@ int main(int argc, char* argv[])
         const auto tmp = f_make_for_device_nchw();
 
         device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nkhw<in_data_t,
-                                                                                      acc_data_t,
-                                                                                      out_data_t>(
-            tmp[I0],
-            tmp[I1],
-            tmp[I2],
-            tmp[I3],
-            tmp[I4],
-            tmp[I5],
-            tmp[I6],
-            in,
-            wei,
-            out_device,
-            nrepeat);
-    }
-#endif
-
-#if USE_CONV_FWD_V4R4R2_XDL_NHWC
-    if(algo == ConvForwardAlgo::V4R4R2XDLNHWC)
-    {
-        if(layout != ConvTensorLayout::NHWC)
-        {
-            throw std::runtime_error("wrong! layout");
-        }
-
-        const auto tmp = f_make_for_device_nhwc();
-
-        device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nhwc_kyxc_nhwk<in_data_t,
-                                                                                      acc_data_t,
-                                                                                      out_data_t>(
-            tmp[I0],
-            tmp[I1],
-            tmp[I2],
-            tmp[I3],
-            tmp[I4],
-            tmp[I5],
-            tmp[I6],
-            in,
-            wei,
-            out_device,
-            nrepeat);
-    }
-#endif
-
-#if USE_CONV_FWD_V4R4R3_XDL_NHWC
-    if(algo == ConvForwardAlgo::V4R4R3XDLNHWC)
-    {
-        if(layout != ConvTensorLayout::NHWC)
-        {
-            throw std::runtime_error("wrong! layout");
-        }
-
-        const auto tmp = f_make_for_device_nhwc();
-
-        device_dynamic_convolution_forward_implicit_gemm_v4r4r3_xdlops_nhwc_kyxc_nhwk<in_data_t,
                                                                                       acc_data_t,
                                                                                       out_data_t>(
             tmp[I0],
