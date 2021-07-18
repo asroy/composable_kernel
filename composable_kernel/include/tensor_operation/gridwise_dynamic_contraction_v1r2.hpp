@@ -5,8 +5,8 @@
 #include "dynamic_multi_index_transform_helper.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
-#include "blockwise_gemm_v2r2.hpp"
-#include "blockwise_dynamic_tensor_slice_transfer.hpp"
+#include "blockwise_gemm_v2r3.hpp"
+#include "blockwise_dynamic_tensor_slice_transfer_v2.hpp"
 #include "threadwise_dynamic_tensor_slice_transfer.hpp"
 #include "threadwise_dynamic_tensor_slice_set.hpp"
 
