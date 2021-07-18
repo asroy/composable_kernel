@@ -53,15 +53,3 @@ include_directories(BEFORE
 )
 
 add_subdirectory(host)
-
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-#
-#message("Compiling options for drivers: ${CMAKE_CXX_FLAGS}")
-
-#set(CONV_V2_OLC_SOURCE host/driver/conv_driver_v2_olc.cpp)
-#
-#add_executable(conv_driver_v2_olc ${CONV_V2_OLC_SOURCE})
-#
-#target_include_directories(conv_driver_v2_olc PRIVATE host/olCompiling/include/)
-#
-#target_link_libraries(conv_driver_v2_olc PRIVATE modConv)
