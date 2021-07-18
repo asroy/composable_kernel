@@ -1,7 +1,7 @@
 #include <unistd.h>
 #include "device.hpp"
 #include "host_tensor.hpp"
-#include "transform_forward_convolution_into_gemm_v4r5r2_nchw_kcyx_nkhw.hpp"
+#include "transform_forward_convolution_into_gemm_v6r1_nchw_kcyx_nkhw.hpp"
 #include "driver_dynamic_contraction_v1r2.hpp"
 
 template <typename TInWei,
@@ -14,7 +14,7 @@ template <typename TInWei,
           typename ConvDilations,
           typename InLeftPads,
           typename InRightPads>
-void device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw(
+void device_dynamic_convolution_forward_implicit_gemm_v6r1_nchw_kcyx_nkhw(
     const InLengths& in_n_c_hi_wi_lengths,
     const WeiLengths& wei_k_c_y_x_lengths,
     const OutLengths& out_n_k_ho_wo_lengths,
@@ -121,15 +121,15 @@ void device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw(
 #endif
 
     const auto descs =
-        transform_forward_convolution_into_contraction_v4r5r2_nchw_kcyx_nkhw_pad(wei_desc_k_c_y_x,
-                                                                                 in_desc_n_c_hi_wi,
-                                                                                 out_desc_n_k_ho_wo,
-                                                                                 conv_strides,
-                                                                                 conv_dilations,
-                                                                                 in_left_pads,
-                                                                                 in_right_pads,
-                                                                                 Number<GN0>{},
-                                                                                 Number<GK1>{});
+        transform_forward_convolution_into_contraction_v6r1_nchw_kcyx_nkhw_pad(wei_desc_k_c_y_x,
+                                                                               in_desc_n_c_hi_wi,
+                                                                               out_desc_n_k_ho_wo,
+                                                                               conv_strides,
+                                                                               conv_dilations,
+                                                                               in_left_pads,
+                                                                               in_right_pads,
+                                                                               Number<GN0>{},
+                                                                               Number<GK1>{});
 
     const auto wei_grid_desc_gk0_gm0_gm1_gk1 = descs[I0];
     const auto in_grid_desc_gk0_gn0_gn1_gk1  = descs[I1];

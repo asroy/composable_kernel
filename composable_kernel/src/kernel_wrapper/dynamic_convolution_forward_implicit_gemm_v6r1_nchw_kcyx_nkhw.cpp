@@ -3,7 +3,7 @@
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
 #include "gridwise_dynamic_contraction_v1r2.hpp"
-#include "transform_forward_convolution_into_gemm_v4r5r2_nchw_kcyx_nkhw.hpp"
+#include "transform_forward_convolution_into_gemm_v6r1_nchw_kcyx_nkhw.hpp"
 
 using namespace ck;
 
@@ -58,7 +58,7 @@ constexpr index_t CThreadTransferDstScalarPerVector = CK_PARAM_CThreadTransferDs
 constexpr bool HasMainKBlockLoop       = static_cast<bool>(CK_PARAM_HAS_MAIN_KBLOCK_LOOP);
 constexpr bool HasDoubleTailKBlockLoop = static_cast<bool>(CK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP);
 
-extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw_prepare(
+extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v6r1_nchw_kcyx_nkhw_prepare(
     index_t N,
     index_t C,
     index_t Hi,
@@ -95,7 +95,7 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw
     const auto out_n_k_ho_wo_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K, Ho, Wo));
 
-    const auto descs = transform_forward_convolution_into_contraction_v4r5r2_nchw_kcyx_nkhw_pad(
+    const auto descs = transform_forward_convolution_into_contraction_v6r1_nchw_kcyx_nkhw_pad(
         wei_k_c_y_x_desc,
         in_n_c_hi_wi_desc,
         out_n_k_ho_wo_desc,
@@ -231,7 +231,7 @@ extern "C" __global__ void
 #if CK_USE_LAUNCH_BOUNDS
     __launch_bounds__(CK_MAX_THREAD_PER_BLOCK, CK_MIN_BLOCK_PER_CU)
 #endif
-        dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw(
+        dynamic_convolution_forward_implicit_gemm_v6r1_nchw_kcyx_nkhw(
             const FloatAB* __restrict__ p_a_grid,
             const FloatAB* __restrict__ p_b_grid,
             FloatC* __restrict__ p_c_grid,
@@ -252,15 +252,15 @@ extern "C" __global__ void
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(256, 256, 28, 28));
 
     constexpr auto descs =
-        transform_forward_convolution_into_contraction_v4r5r2_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
-                                                                                 in_n_c_hi_wi_desc,
-                                                                                 out_n_k_ho_wo_desc,
-                                                                                 make_tuple(1, 1),
-                                                                                 make_tuple(1, 1),
-                                                                                 make_tuple(1, 1),
-                                                                                 make_tuple(1, 1),
-                                                                                 GN0,
-                                                                                 GK1);
+        transform_forward_convolution_into_contraction_v6r1_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
+                                                                               in_n_c_hi_wi_desc,
+                                                                               out_n_k_ho_wo_desc,
+                                                                               make_tuple(1, 1),
+                                                                               make_tuple(1, 1),
+                                                                               make_tuple(1, 1),
+                                                                               make_tuple(1, 1),
+                                                                               GN0,
+                                                                               GK1);
 
     constexpr auto a_grid_desc_gk0_gm0_gm1_gk1 = descs[I0];
     constexpr auto b_grid_desc_gk0_gn0_gn1_gk1 = descs[I1];

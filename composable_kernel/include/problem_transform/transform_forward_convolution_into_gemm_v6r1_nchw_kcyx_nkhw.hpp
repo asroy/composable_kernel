@@ -1,5 +1,5 @@
-#ifndef CK_TRANSFORM_FORWARD_CONVOLUTION_INTO_CONTRACTION_V4R5R2_NCHW_KCYX_NKHW_HPP
-#define CK_TRANSFORM_FORWARD_CONVOLUTION_INTO_CONTRACTION_V4R5R2_NCHW_KCYX_NKHW_HPP
+#ifndef CK_TRANSFORM_FORWARD_CONVOLUTION_INTO_CONTRACTION_V6R1_NCHW_KCYX_NKHW_HPP
+#define CK_TRANSFORM_FORWARD_CONVOLUTION_INTO_CONTRACTION_V6R1_NCHW_KCYX_NKHW_HPP
 
 #include "common_header.hpp"
 #include "dynamic_tensor_descriptor.hpp"
@@ -20,7 +20,7 @@ template <typename... Wei,
           typename N0Type,
           typename C0Type>
 __host__ __device__ constexpr auto
-transform_forward_convolution_into_contraction_v4r5r2_nchw_kcyx_nkhw_pad(
+transform_forward_convolution_into_contraction_v6r1_nchw_kcyx_nkhw_pad(
     const DynamicTensorDescriptor<Wei...>& wei_k_c_y_x_grid_desc,
     const DynamicTensorDescriptor<In...>& in_n_c_hi_wi_grid_desc,
     const DynamicTensorDescriptor<Out...>& out_n_k_ho_wo_grid_desc,

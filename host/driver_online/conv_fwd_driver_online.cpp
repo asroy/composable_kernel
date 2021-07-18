@@ -15,19 +15,19 @@
 #include "handle.hpp"
 #include "hipCheck.hpp"
 #include "online_device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
-#include "online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw.hpp"
+#include "online_device_dynamic_convolution_forward_implicit_gemm_v6r1_nchw_kcyx_nkhw.hpp"
 #include "online_device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
 #include "online_device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk.hpp"
 
 #define USE_CONV_FWD_V4R4_NCHW 1
-#define USE_CONV_FWD_V4R5R2_NCHW 1
+#define USE_CONV_FWD_V6R1_NCHW 1
 #define USE_CONV_FWD_V4R4_XDLOPS_NCHW 1
 #define USE_CONV_FWD_V4R4_XDLOPS_NHWC 1
 
 enum ConvForwardAlgo
 {
     V4R4NCHW,    // 0
-    V4R5R2NCHW,  // 1
+    V6R1NCHW,    // 1
     V4R4XDLNCHW, // 2
     V4R4XDLNHWC  // 3
 };
@@ -247,8 +247,8 @@ int main(int argc, char* argv[])
     }
 #endif
 
-#if USE_CONV_FWD_V4R5R2_NCHW
-    if(algo == ConvForwardAlgo::V4R5R2NCHW)
+#if USE_CONV_FWD_V6R1_NCHW
+    if(algo == ConvForwardAlgo::V6R1NCHW)
     {
         if(layout != ConvTensorLayout::NCHW)
         {
@@ -257,11 +257,11 @@ int main(int argc, char* argv[])
 
         const auto tmp = f_make_for_device_nchw();
 
-        const auto tunable = tunable_dyn_conv_fwd_v4r5r2_nchw_kcyx_nkhw{};
+        const auto tunable = tunable_dyn_conv_fwd_v6r1_nchw_kcyx_nkhw{};
 
-        online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw<in_data_t,
-                                                                                      acc_data_t,
-                                                                                      out_data_t>(
+        online_device_dynamic_convolution_forward_implicit_gemm_v6r1_nchw_kcyx_nkhw<in_data_t,
+                                                                                    acc_data_t,
+                                                                                    out_data_t>(
             handle,
             tmp[I0],
             tmp[I1],

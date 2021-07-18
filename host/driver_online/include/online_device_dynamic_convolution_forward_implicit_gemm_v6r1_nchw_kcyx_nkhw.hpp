@@ -4,10 +4,10 @@
 #include "online_driver_common.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
-#include "transform_forward_convolution_into_gemm_v4r5r2_nchw_kcyx_nkhw.hpp"
-#include "conv_tunable_fwd_v4r5r2_nchw_kcyx_nkhw.hpp"
+#include "transform_forward_convolution_into_gemm_v6r1_nchw_kcyx_nkhw.hpp"
+#include "conv_tunable_fwd_v6r1_nchw_kcyx_nkhw.hpp"
 
-namespace detail_dyn_conv_fwd_v4r5r2_nchw_kcyx_nkhw {
+namespace detail_dyn_conv_fwd_v6r1_nchw_kcyx_nkhw {
 
 template <typename TInWei, typename TAcc, typename TOut>
 static std::string get_network_config_string_from_types()
@@ -22,7 +22,7 @@ static std::string get_network_config_string_from_types()
 };
 
 static std::string
-get_network_config_string_from_tunable(const tunable_dyn_conv_fwd_v4r5r2_nchw_kcyx_nkhw& tunable)
+get_network_config_string_from_tunable(const tunable_dyn_conv_fwd_v6r1_nchw_kcyx_nkhw& tunable)
 {
     std::string out("TUN_");
 
@@ -130,7 +130,7 @@ static std::string get_definition_string_from_types()
 };
 
 static std::string
-get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v4r5r2_nchw_kcyx_nkhw& tunable)
+get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v6r1_nchw_kcyx_nkhw& tunable)
 {
     std::string out;
 
@@ -236,7 +236,7 @@ get_definition_string_from_tunable(const tunable_dyn_conv_fwd_v4r5r2_nchw_kcyx_n
     return (out);
 };
 
-} // namespace detail_dyn_conv_fwd_v4r5r2_nchw_kcyx_nkhw
+} // namespace detail_dyn_conv_fwd_v6r1_nchw_kcyx_nkhw
 
 template <typename TInWei,
           typename TAcc,
@@ -248,7 +248,7 @@ template <typename TInWei,
           typename ConvDilations,
           typename InLeftPads,
           typename InRightPads>
-void online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw(
+void online_device_dynamic_convolution_forward_implicit_gemm_v6r1_nchw_kcyx_nkhw(
     olCompile::Handle* handle,
     const InLengths& in_n_c_hi_wi_lengths,
     const WeiLengths& wei_k_c_y_x_lengths,
@@ -260,11 +260,11 @@ void online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nk
     const Tensor<TInWei>& in_n_c_hi_wi,
     const Tensor<TInWei>& wei_k_c_y_x,
     Tensor<TOut>& out_n_k_ho_wo,
-    const tunable_dyn_conv_fwd_v4r5r2_nchw_kcyx_nkhw& tunable,
+    const tunable_dyn_conv_fwd_v6r1_nchw_kcyx_nkhw& tunable,
     ck::index_t nrepeat)
 {
     using namespace ck;
-    using namespace detail_dyn_conv_fwd_v4r5r2_nchw_kcyx_nkhw;
+    using namespace detail_dyn_conv_fwd_v6r1_nchw_kcyx_nkhw;
     using size_t = std::size_t;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -284,15 +284,15 @@ void online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nk
         make_dynamic_naive_tensor_descriptor_packed_v2(out_n_k_ho_wo_lengths);
 
     const auto descs =
-        transform_forward_convolution_into_contraction_v4r5r2_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
-                                                                                 in_n_c_hi_wi_desc,
-                                                                                 out_n_k_ho_wo_desc,
-                                                                                 conv_strides,
-                                                                                 conv_dilations,
-                                                                                 in_left_pads,
-                                                                                 in_right_pads,
-                                                                                 tunable.GN0,
-                                                                                 tunable.GK1);
+        transform_forward_convolution_into_contraction_v6r1_nchw_kcyx_nkhw_pad(wei_k_c_y_x_desc,
+                                                                               in_n_c_hi_wi_desc,
+                                                                               out_n_k_ho_wo_desc,
+                                                                               conv_strides,
+                                                                               conv_dilations,
+                                                                               in_left_pads,
+                                                                               in_right_pads,
+                                                                               tunable.GN0,
+                                                                               tunable.GK1);
 
     const auto a_grid_desc_gk0_gm0_gm1_gk1 = descs[I0];
     const auto c_grid_desc_gm0_gm1_gn0_gn1 = descs[I2];
@@ -332,9 +332,8 @@ void online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nk
     const std::vector<size_t> vgd1 = {static_cast<size_t>(tunable.BlockSize), 1, 1};
     const std::vector<size_t> vgd2 = {static_cast<size_t>(grid_size * tunable.BlockSize), 1, 1};
 
-    std::string program_name =
-        "dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw.cpp";
-    std::string algo_name = "implicit_gemm_conv_fwd_v4r5r2_nchw";
+    std::string program_name = "dynamic_convolution_forward_implicit_gemm_v6r1_nchw_kcyx_nkhw.cpp";
+    std::string algo_name    = "implicit_gemm_conv_fwd_v6r1_nchw";
 
     std::string param = " -std=c++17 ";
     std::string network_config;
@@ -356,7 +355,7 @@ void online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nk
         KernelTimer timer1, timer2;
         std::string kernel_name;
 
-        kernel_name = "dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw_prepare";
+        kernel_name = "dynamic_convolution_forward_implicit_gemm_v6r1_nchw_kcyx_nkhw_prepare";
         auto network_config_1 = network_config + "_1";
 
         timer1.Start();
@@ -382,7 +381,7 @@ void online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nk
             c_grid_block_cluster_blockid_to_gm10_gn10_dev_buf);
         timer2.End();
 
-        kernel_name           = "dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw";
+        kernel_name           = "dynamic_convolution_forward_implicit_gemm_v6r1_nchw_kcyx_nkhw";
         auto network_config_2 = network_config + "_2";
 
         timer2.Start();
