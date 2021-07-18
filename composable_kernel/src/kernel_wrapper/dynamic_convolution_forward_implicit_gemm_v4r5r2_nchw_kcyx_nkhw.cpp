@@ -14,16 +14,16 @@ using FloatAcc = typename get_type_from_type_id<static_cast<char>(CK_PARAM_CONV_
 constexpr index_t BlockSize = CK_PARAM_BlockSize;
 constexpr index_t N0        = CK_PARAM_N0;
 
-constexpr index_t GM1PerBlockGM11      = CK_PARAM_GM1PerBlockGM11;
-constexpr index_t GN1PerBlockGN11      = CK_PARAM_GN1PerBlockGN11;
-constexpr index_t KPerBlock            = CK_PARAM_KPerBlock;
-constexpr index_t M1PerThread          = CK_PARAM_M1PerThread;
-constexpr index_t N1PerThread          = CK_PARAM_N1PerThread;
-constexpr index_t KPerThread           = CK_PARAM_KPerThread;
-constexpr index_t M1N1ThreadClusterM10 = CK_PARAM_M1N1ThreadClusterM10;
-constexpr index_t M1N1ThreadClusterN10 = CK_PARAM_M1N1ThreadClusterN10;
-constexpr index_t M1N1ThreadClusterM11 = CK_PARAM_M1N1ThreadClusterM11;
-constexpr index_t M1N1ThreadClusterN11 = CK_PARAM_M1N1ThreadClusterN11;
+constexpr index_t GM1PerBlockGM11            = CK_PARAM_GM1PerBlockGM11;
+constexpr index_t GN1PerBlockGN11            = CK_PARAM_GN1PerBlockGN11;
+constexpr index_t GK0PerBlock                = CK_PARAM_GK0PerBlock;
+constexpr index_t BM1PerThreadBM11           = CK_PARAM_BM1PerThreadBM11;
+constexpr index_t BN1PerThreadBN11           = CK_PARAM_BN1PerThreadBN11;
+constexpr index_t BK0PerThread               = CK_PARAM_BK0PerThread;
+constexpr index_t BM10BN10ThreadClusterBM100 = CK_PARAM_BM10BN10ThreadClusterBM100;
+constexpr index_t BM10BN10ThreadClusterBN100 = CK_PARAM_BM10BN10ThreadClusterBN100;
+constexpr index_t BM10BN10ThreadClusterBM101 = CK_PARAM_BM10BN10ThreadClusterBM101;
+constexpr index_t BM10BN10ThreadClusterBN101 = CK_PARAM_BM10BN10ThreadClusterBN101;
 
 using ABlockTransferThreadSliceLengths_GK_GM0_GM10_GM11 =
     Sequence<CK_PARAM_ABlockTransferThreadSliceLengths_GK_GM0_GM10_GM11>;
@@ -63,21 +63,21 @@ constexpr bool HasMainKBlockLoop       = static_cast<bool>(CK_PARAM_HAS_MAIN_KBL
 constexpr bool HasDoubleTailKBlockLoop = static_cast<bool>(CK_PARAM_HAS_DOUBLE_TAIL_KBLOCK_LOOP);
 
 extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw_prepare(
-    int n,
-    int c,
-    int hi,
-    int wi,
-    int k,
-    int y,
-    int x,
-    int convStrideH,
-    int convStrideW,
-    int convDilationY,
-    int convDilationX,
-    int leftPadH,
-    int leftPadW,
-    int rightPadH,
-    int rightPadW,
+    index_t N,
+    index_t C,
+    index_t Hi,
+    index_t Wi,
+    index_t K,
+    index_t Y,
+    index_t X,
+    index_t ConvStrideH,
+    index_t ConvStrideW,
+    index_t ConvDilationH,
+    index_t ConvDilationW,
+    index_t InLeftPadH,
+    index_t InLeftPadW,
+    index_t InRightPadH,
+    index_t InRightPadW,
     void* p_a_gk_gm0_gm10_gm11_grid_desc,
     void* p_b_gk_gn0_gn10_gn11_grid_desc,
     void* p_c_gm10_bm0_bm1_gn10_bn0_bn1_grid_desc,
@@ -87,24 +87,26 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw
     constexpr auto I1 = Number<1>{};
     constexpr auto I2 = Number<2>{};
 
-    const index_t ho = (hi + leftPadH + rightPadH - convDilationY * (y - 1) - 1) / convStrideH + 1;
-    const index_t wo = (wi + leftPadW + rightPadW - convDilationX * (x - 1) - 1) / convStrideW + 1;
+    const index_t Ho =
+        (Hi + InLeftPadH + InRightPadH - ConvDilationH * (Y - 1) - 1) / ConvStrideH + 1;
+    const index_t Wo =
+        (Wi + InLeftPadW + InRightPadW - ConvDilationW * (X - 1) - 1) / ConvStrideW + 1;
 
     const auto in_n_c_hi_wi_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(n, c, hi, wi));
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, C, Hi, Wi));
     const auto wei_k_c_y_x_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(k, c, y, x));
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, C, Y, X));
     const auto out_n_k_ho_wo_desc =
-        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(n, k, ho, wo));
+        make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K, Ho, Wo));
 
     const auto descs = transform_forward_convolution_into_contraction_v4r5_nchw_kcyx_nkhw_pad<N0>(
         wei_k_c_y_x_desc,
         in_n_c_hi_wi_desc,
         out_n_k_ho_wo_desc,
-        make_tuple(convStrideH, convStrideW),
-        make_tuple(convDilationY, convDilationX),
-        make_tuple(leftPadH, leftPadW),
-        make_tuple(rightPadH, rightPadW));
+        make_tuple(ConvStrideH, ConvStrideW),
+        make_tuple(ConvDilationH, ConvDilationW),
+        make_tuple(InLeftPadH, InLeftPadW),
+        make_tuple(InRightPadH, InRightPadW));
 
     const auto a_gk_gm0_gm1_grid_desc      = descs[I0];
     const auto b_gk_gn0_gn1_grid_desc      = descs[I1];
@@ -162,14 +164,14 @@ extern "C" __global__ void dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw
         CGM0GM1GN0GN1GridDesc,
         GM1PerBlockGM11,
         GN1PerBlockGN11,
-        KPerBlock,
-        M1PerThread,
-        N1PerThread,
-        KPerThread,
-        M1N1ThreadClusterM10,
-        M1N1ThreadClusterN10,
-        M1N1ThreadClusterM11,
-        M1N1ThreadClusterN11,
+        GK0PerBlock,
+        BM1PerThreadBM11,
+        BN1PerThreadBN11,
+        BK0PerThread,
+        BM10BN10ThreadClusterBM100,
+        BM10BN10ThreadClusterBN100,
+        BM10BN10ThreadClusterBM101,
+        BM10BN10ThreadClusterBN101,
         ABlockTransferThreadSliceLengths_GK_GM0_GM10_GM11,
         ABlockTransferThreadClusterLengths_GK_GM0_GM10_GM11,
         ABlockTransferThreadClusterArrangeOrder,
@@ -307,14 +309,14 @@ extern "C" __global__ void
         CGM0GM1GN0GN1GridDesc,
         GM1PerBlockGM11,
         GN1PerBlockGN11,
-        KPerBlock,
-        M1PerThread,
-        N1PerThread,
-        KPerThread,
-        M1N1ThreadClusterM10,
-        M1N1ThreadClusterN10,
-        M1N1ThreadClusterM11,
-        M1N1ThreadClusterN11,
+        GK0PerBlock,
+        BM1PerThreadBM11,
+        BN1PerThreadBN11,
+        BK0PerThread,
+        BM10BN10ThreadClusterBM100,
+        BM10BN10ThreadClusterBN100,
+        BM10BN10ThreadClusterBM101,
+        BM10BN10ThreadClusterBN101,
         ABlockTransferThreadSliceLengths_GK_GM0_GM10_GM11,
         ABlockTransferThreadClusterLengths_GK_GM0_GM10_GM11,
         ABlockTransferThreadClusterArrangeOrder,
