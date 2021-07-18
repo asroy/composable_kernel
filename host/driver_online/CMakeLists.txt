@@ -1,7 +1,7 @@
 include_directories(BEFORE
+    include
     ${PROJECT_BINARY_DIR}/host/online_compilation/include
     ${PROJECT_SOURCE_DIR}/host/online_compilation/include
-    include
     ${PROJECT_SOURCE_DIR}/host/host_tensor/include
     ${PROJECT_SOURCE_DIR}/composable_kernel/include
     ${PROJECT_SOURCE_DIR}/composable_kernel/include/utility

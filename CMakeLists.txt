@@ -39,17 +39,4 @@ link_libraries(${OpenMP_pthread_LIBRARY})
 find_package(HIP REQUIRED)
 message(STATUS "Build with HIP ${hip_VERSION}")
 
-include_directories(BEFORE
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/utility
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_description
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_operation
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/problem_transform
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/driver
-    ${PROJECT_SOURCE_DIR}/external/rocm/include
-    ${PROJECT_SOURCE_DIR}/external/half/include
-    ${PROJECT_SOURCE_DIR}/host/include
-    ${PROJECT_SOURCE_DIR}/host/driver/include
-)
-
 add_subdirectory(host)

@@ -1,12 +1,10 @@
 #include "device.hpp"
 #include "host_tensor.hpp"
+#include "handle.hpp"
+#include "online_driver_common.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
-
-#include "online_driver_common.hpp"
-#include "conv_tunables.hpp"
-
-#include "handle.hpp"
+#include "conv_tunable_fwd_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
 
 namespace detail_dyn_conv_fwd_v4r4_xdlops_nchw_kcyx_nkhw {
 

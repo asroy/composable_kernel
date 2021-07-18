@@ -12,27 +12,24 @@
 #include "conv_common.hpp"
 #include "host_conv.hpp"
 #include "device_tensor.hpp"
+#include "handle.hpp"
+#include "hipCheck.hpp"
 #include "online_device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "online_device_dynamic_convolution_forward_implicit_gemm_v4r5r2_nchw_kcyx_nkhw.hpp"
 #include "online_device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nchw_kcyx_nkhw.hpp"
 #include "online_device_dynamic_convolution_forward_implicit_gemm_v4r4_xdlops_nhwc_kyxc_nhwk.hpp"
 
-#define USE_CONV_FWD_V4R4_NCHW 0
+#define USE_CONV_FWD_V4R4_NCHW 1
 #define USE_CONV_FWD_V4R5R2_NCHW 1
-#define USE_CONV_FWD_V4R4_XDLOPS_NCHW 0
-#define USE_CONV_FWD_V4R4_XDLOPS_NHWC 0
-
-#include "conv_tunables.hpp"
-#include "handle.hpp"
-#include "hipCheck.hpp"
+#define USE_CONV_FWD_V4R4_XDLOPS_NCHW 1
+#define USE_CONV_FWD_V4R4_XDLOPS_NHWC 1
 
 enum ConvForwardAlgo
 {
     V4R4NCHW,    // 0
-    V4R5NCHW,    // 1
-    V4R5R2NCHW,  // 2
-    V4R4XDLNCHW, // 3
-    V4R4XDLNHWC  // 4
+    V4R5R2NCHW,  // 1
+    V4R4XDLNCHW, // 2
+    V4R4XDLNHWC  // 3
 };
 
 int main(int argc, char* argv[])
