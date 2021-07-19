@@ -641,7 +641,7 @@ int main(int argc, char* argv[])
     using out_data_t                 = float;
 #elif 1
     using in_data_t                  = half_t;
-    constexpr index_t in_vector_size = 16;
+    constexpr index_t in_vector_size = 8;
     using acc_data_t                 = float;
     using out_data_t                 = half_t;
 #elif 0
