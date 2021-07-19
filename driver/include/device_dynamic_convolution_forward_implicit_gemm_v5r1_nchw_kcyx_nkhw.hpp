@@ -143,7 +143,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
               << in_left_pads[I0] << "p" << in_right_pads[I0] << std::endl;
 
     constexpr auto conv_driver =
-#if 0
+#if 1
         DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
 #else
         DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad

@@ -263,6 +263,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
         const auto GridSize = (K / KPerBlock) * (Hop / HoPerBlock) * (Wop / WoPerBlock) * N;
 
+        std::cout << "GridSize = " << GridSize << std::endl;
+
         constexpr bool has_main_k_block_loop = (E + EPerBlock) / (2 * EPerBlock) > 1;
 
         constexpr bool has_double_tail_k_block_loop = (E / EPerBlock) % 2 == 0;
