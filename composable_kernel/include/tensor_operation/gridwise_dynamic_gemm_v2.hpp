@@ -27,8 +27,8 @@ template <index_t BlockSize,
           index_t HoPerThread,
           index_t WoPerThread,
           index_t EPerThread,
-          typename ABlockTransferThreadSliceLengths_E_K,
-          typename ABlockTransferThreadClusterLengths_E_K,
+          typename ABlockTransferThreadSliceLengths_E0_E1_K,
+          typename ABlockTransferThreadClusterLengths_E0_E1_K,
           typename ABlockTransferThreadClusterArrangeOrder,
           typename ABlockTransferSrcAccessOrder,
           index_t ABlockTransferSrcVectorDim,
@@ -51,19 +51,23 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 {
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
-        constexpr auto E = EPerBlock * 3 * 3;
+        constexpr auto I0 = Number<0>{};
+        constexpr auto I1 = Number<1>{};
 
-        constexpr auto max_lds_align =
-            math::lcm(Number<ABlockTransferDstScalarPerVector_K>{}, Number<KPerBlock>{});
+        constexpr auto a_e0_e1_k_global_desc = AGlobalDesc{};
+
+        constexpr auto E1 = a_e0_e1_k_global_desc.GetLength(I1);
+
+        constexpr auto max_lds_align = ABlockTransferDstScalarPerVector_K;
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto a_e_k_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<E>{}, Number<KPerBlock>{}), max_lds_align);
+        constexpr auto a_e1_k_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(Number<E1>{}, Number<KPerBlock>{}), max_lds_align);
 
         // LDS allocation for A and B: be careful of alignment
         constexpr auto a_block_space_size =
-            math::integer_least_multiple(a_e_k_desc.GetElementSpaceSize(), max_lds_align);
+            math::integer_least_multiple(a_e1_k_desc.GetElementSpaceSize(), max_lds_align);
 
         return a_block_space_size * sizeof(FloatAB);
     }
@@ -80,17 +84,19 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         constexpr auto I1 = Number<1>{};
         constexpr auto I2 = Number<2>{};
         constexpr auto I3 = Number<3>{};
+        constexpr auto I4 = Number<4>{};
 
-        constexpr auto E = EPerBlock * 3 * 3;
+        constexpr auto a_e0_e1_k_global_desc       = AGlobalDesc{};
+        constexpr auto b_e0_e1_n_ho_wo_global_desc = BGlobalDesc{};
+        constexpr auto c_k_n_ho_wo_global_desc     = CGlobalDesc{};
 
-        constexpr auto a_e_k_global_desc       = AGlobalDesc{};
-        constexpr auto b_e_n_ho_wo_global_desc = BGlobalDesc{};
-        constexpr auto c_k_n_ho_wo_global_desc = CGlobalDesc{};
+        constexpr auto E0 = a_e0_e1_k_global_desc.GetLength(I0);
+        constexpr auto E1 = a_e0_e1_k_global_desc.GetLength(I1);
+        constexpr auto K  = a_e0_e1_k_global_desc.GetLength(I2);
 
-        constexpr auto K  = a_e_k_global_desc.GetLength(I1);
-        constexpr auto N  = b_e_n_ho_wo_global_desc.GetLength(I1);
-        constexpr auto Ho = b_e_n_ho_wo_global_desc.GetLength(I2);
-        constexpr auto Wo = b_e_n_ho_wo_global_desc.GetLength(I3);
+        constexpr auto N  = b_e0_e1_n_ho_wo_global_desc.GetLength(I2);
+        constexpr auto Ho = b_e0_e1_n_ho_wo_global_desc.GetLength(I3);
+        constexpr auto Wo = b_e0_e1_n_ho_wo_global_desc.GetLength(I4);
 
         // divide block work by [M, N]
 #if 0
@@ -126,28 +132,29 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         // A matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto a_e_k_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+        constexpr auto a_e0_e1_k_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(I1, Number<EPerBlock>{}, Number<KPerBlock>{}), max_lds_align);
+
+        constexpr auto a_e1_k_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
             make_tuple(Number<EPerBlock>{}, Number<KPerBlock>{}), max_lds_align);
 
-        constexpr auto a_e_k_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(Number<E>{}, Number<KPerBlock>{}), max_lds_align);
+        constexpr auto a_e0_e1_k_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
+            make_tuple(I1, Number<E1>{}, Number<KPerBlock>{}), max_lds_align);
 
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
-        constexpr auto b_e_n_ho_wo_block_desc =
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
-                Number<EPerBlock>{}, Number<1>{}, Number<HoPerBlock>{}, Number<WoPerBlock>{}));
+        constexpr auto b_e1_n_ho_wo_block_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<EPerBlock>{}, I1, Number<HoPerBlock>{}, Number<WoPerBlock>{}));
 
         // c_thread_mtx definition: this is a mess
         // TODO:: more elegent way of defining c_thread_mtx
-        constexpr auto c_k_n_ho_wo_thread_desc =
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
-                Number<KPerThread>{}, Number<1>{}, Number<HoPerThread>{}, Number<WoPerThread>{}));
+        constexpr auto c_k_n_ho_wo_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(Number<KPerThread>{}, I1, Number<HoPerThread>{}, Number<WoPerThread>{}));
 
         const auto blockwise_gemm =
             BlockwiseGemm_km_kn_m0m1n0n1_v3<BlockSize,
-                                            decltype(a_e_k_block_desc),
-                                            decltype(b_e_n_ho_wo_block_desc),
+                                            decltype(a_e1_k_block_desc),
+                                            decltype(b_e1_n_ho_wo_block_desc),
                                             decltype(c_k_n_ho_wo_thread_desc),
                                             KPerThread,
                                             HoPerThread,
@@ -171,23 +178,22 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         const index_t wo_thread_data_on_global =
             wo_block_data_on_global + wo_thread_id * WoPerThread;
 
-#if 1
         // A matrix blockwise copy
         auto a_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
                                                    InMemoryDataOperation::Set,
-                                                   Sequence<E, KPerBlock>,
-                                                   ABlockTransferThreadSliceLengths_E_K,
-                                                   ABlockTransferThreadClusterLengths_E_K,
+                                                   Sequence<1, E1, KPerBlock>,
+                                                   ABlockTransferThreadSliceLengths_E0_E1_K,
+                                                   ABlockTransferThreadClusterLengths_E0_E1_K,
                                                    ABlockTransferThreadClusterArrangeOrder,
                                                    FloatAB,
                                                    FloatAB,
-                                                   decltype(a_e_k_global_desc),
-                                                   decltype(a_e_k_desc),
+                                                   decltype(a_e0_e1_k_global_desc),
+                                                   decltype(a_e0_e1_k_desc),
                                                    ABlockTransferSrcAccessOrder,
-                                                   Sequence<0, 1>,
+                                                   Sequence<0, 1, 2>,
                                                    ABlockTransferSrcVectorDim,
-                                                   1,
+                                                   2,
                                                    ABlockTransferSrcScalarPerVector,
                                                    ABlockTransferDstScalarPerVector_K,
                                                    AddressSpace::Global,
@@ -196,21 +202,20 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                                                    1,
                                                    AThreadTransferSrcResetCoordinateAfterRun,
                                                    true>(
-                a_e_k_global_desc,
-                make_multi_index(0, k_block_data_on_global),
-                a_e_k_desc,
-                make_multi_index(0, 0));
+                a_e0_e1_k_global_desc,
+                make_multi_index(0, 0, k_block_data_on_global),
+                a_e0_e1_k_desc,
+                make_multi_index(0, 0, 0));
 
-        constexpr auto b_e_n_ho_wo_thread_desc =
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(
-                Number<EPerBlock>{}, Number<1>{}, Number<HoPerThread>{}, Number<WoPerThread>{}));
+        constexpr auto b_e0_e1_n_ho_wo_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
+            make_tuple(I1, Number<EPerBlock>{}, I1, Number<HoPerThread>{}, Number<WoPerThread>{}));
 
         auto b_threadwise_transfer = ThreadwiseDynamicTensorSliceTransfer_v2<
             FloatAB,
             FloatAB,
-            decltype(b_e_n_ho_wo_global_desc),
-            decltype(b_e_n_ho_wo_thread_desc),
-            Sequence<EPerBlock, 1, HoPerThread, WoPerThread>,
+            decltype(b_e0_e1_n_ho_wo_global_desc),
+            decltype(b_e0_e1_n_ho_wo_thread_desc),
+            Sequence<1, EPerBlock, 1, HoPerThread, WoPerThread>,
             BBlockTransferSrcAccessOrder,
             BBlockTransferSrcVectorDim,
             BBlockTransferSrcScalarPerVector,
@@ -218,8 +223,8 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
             AddressSpace::Vgpr,
             InMemoryDataOperation::Set,
             1,
-            true>(b_e_n_ho_wo_global_desc,
-                  make_multi_index(0, 0, ho_thread_data_on_global, wo_thread_data_on_global));
+            true>(b_e0_e1_n_ho_wo_global_desc,
+                  make_multi_index(0, 0, 0, ho_thread_data_on_global, wo_thread_data_on_global));
 
         FloatAB* p_a_block = p_shared_block;
 
@@ -229,125 +234,134 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         // zero out threadwise output
         threadwise_matrix_set_zero_v3(c_k_n_ho_wo_thread_desc, p_c_thread);
 
-        constexpr auto b_thread_slice_copy_step = make_multi_index(EPerBlock, 0, 0, 0);
+        constexpr auto b_thread_slice_copy_step = make_multi_index(0, EPerBlock, 0, 0, 0);
 
         // hack to control index calculation when iterating over A and B matrix for threadwise copy
-        constexpr auto a_e_k_global_iterator_hacks       = AGlobalIteratorHacks{};
+        constexpr auto a_e0_e1_k_global_iterator_hacks   = AGlobalIteratorHacks{};
         constexpr auto b_e_n_ho_wo_global_iterator_hacks = BGlobalIteratorHacks{};
 
         // hack to control index calculation when move slice window for A and B matrix for
         // threadwise copy
         constexpr auto a_e_k_global_move_slice_window_iterator_hack =
             AGlobalMoveSliceWindowIteratorHacks{};
-        constexpr auto b_e_n_ho_wo_global_move_slice_window_iterator_hack =
+        constexpr auto b_e0_e1_n_ho_wo_global_move_slice_window_iterator_hack =
             BGlobalMoveSliceWindowIteratorHacks{};
 
-        constexpr auto b_thread_space_size = b_e_n_ho_wo_thread_desc.GetElementSpaceSize();
+        constexpr auto b_thread_space_size = b_e0_e1_n_ho_wo_thread_desc.GetElementSpaceSize();
         FloatAB p_b_thread_double[b_thread_space_size * 2];
 
-        // LDS double buffer: preload data into LDS
+        index_t e0_block_data_begin = 0;
+
+        do
         {
-            a_blockwise_copy.RunRead(a_e_k_global_desc, p_a_global, a_e_k_global_iterator_hacks);
 
-            b_threadwise_transfer.Run(b_e_n_ho_wo_global_desc,
-                                      p_b_global,
-                                      b_e_n_ho_wo_thread_desc,
-                                      make_tuple(I0, I0, I0, I0),
-                                      p_b_thread_double,
-                                      b_e_n_ho_wo_global_iterator_hacks);
-
-            a_blockwise_copy.RunWrite(a_e_k_desc, p_a_block);
-        }
-
-        __syncthreads();
-
-        index_t b_block_data_begin = 0;
-
-        if constexpr(HasMainKBlockLoop)
-        {
-            FloatAB* p_b_thread_even = p_b_thread_double;
-            FloatAB* p_b_thread_odd  = p_b_thread_double + b_thread_space_size;
-
-            // LDS double buffer: main body
-            // use Do-While loop instead of For loop to simplify control flow
-            do
+            // LDS double buffer: preload data into LDS
             {
-                // even iteration
-                b_threadwise_transfer.MoveSrcSliceWindow(b_e_n_ho_wo_global_desc,
-                                                         b_thread_slice_copy_step);
+                a_blockwise_copy.RunRead(
+                    a_e0_e1_k_global_desc, p_a_global, a_e0_e1_k_global_iterator_hacks);
 
-                b_threadwise_transfer.Run(b_e_n_ho_wo_global_desc,
+                b_threadwise_transfer.Run(b_e0_e1_n_ho_wo_global_desc,
                                           p_b_global,
-                                          b_e_n_ho_wo_thread_desc,
-                                          make_tuple(I0, I0, I0, I0),
-                                          p_b_thread_odd,
+                                          b_e0_e1_n_ho_wo_thread_desc,
+                                          make_tuple(I0, I0, I0, I0, I0),
+                                          p_b_thread_double,
                                           b_e_n_ho_wo_global_iterator_hacks);
 
-                // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(
-                    p_a_block + a_e_k_block_desc.CalculateOffset(make_tuple(b_block_data_begin, 0)),
-                    p_b_thread_even,
-                    p_c_thread);
+                a_blockwise_copy.RunWrite(a_e0_e1_k_desc, p_a_block);
+            }
 
-                b_block_data_begin += EPerBlock;
+            __syncthreads();
 
-                b_threadwise_transfer.MoveSrcSliceWindow(b_e_n_ho_wo_global_desc,
+            index_t e1_block_data_begin = 0;
+
+            if constexpr(HasMainKBlockLoop)
+            {
+                FloatAB* p_b_thread_even = p_b_thread_double;
+                FloatAB* p_b_thread_odd  = p_b_thread_double + b_thread_space_size;
+
+                // LDS double buffer: main body
+                // use Do-While loop instead of For loop to simplify control flow
+                do
+                {
+                    // even iteration
+                    b_threadwise_transfer.MoveSrcSliceWindow(b_e0_e1_n_ho_wo_global_desc,
+                                                             b_thread_slice_copy_step);
+
+                    b_threadwise_transfer.Run(b_e0_e1_n_ho_wo_global_desc,
+                                              p_b_global,
+                                              b_e0_e1_n_ho_wo_thread_desc,
+                                              make_tuple(I0, I0, I0, I0, I0),
+                                              p_b_thread_odd,
+                                              b_e_n_ho_wo_global_iterator_hacks);
+
+                    // LDS double buffer: GEMM on current data
+                    blockwise_gemm.Run(
+                        p_a_block + a_e0_e1_k_block_desc.CalculateOffset(
+                                        make_tuple(e0_block_data_begin, e1_block_data_begin, 0)),
+                        p_b_thread_even,
+                        p_c_thread);
+
+                    e1_block_data_begin += EPerBlock;
+
+                    b_threadwise_transfer.MoveSrcSliceWindow(b_e0_e1_n_ho_wo_global_desc,
+                                                             b_thread_slice_copy_step);
+
+                    b_threadwise_transfer.Run(b_e0_e1_n_ho_wo_global_desc,
+                                              p_b_global,
+                                              b_e0_e1_n_ho_wo_thread_desc,
+                                              make_tuple(I0, I0, I0, I0, I0),
+                                              p_b_thread_even,
+                                              b_e_n_ho_wo_global_iterator_hacks);
+
+                    // LDS double buffer: GEMM on current data
+                    blockwise_gemm.Run(
+                        p_a_block + a_e0_e1_k_block_desc.CalculateOffset(
+                                        make_tuple(e0_block_data_begin, e1_block_data_begin, 0)),
+                        p_b_thread_odd,
+                        p_c_thread);
+
+                    e1_block_data_begin += EPerBlock;
+
+                } while(e1_block_data_begin < E1 - 2 * EPerBlock);
+            }
+
+            // LDS double buffer: tail
+            if constexpr(HasDoubleTailKBlockLoop) // if has 2 iteration left
+            {
+                b_threadwise_transfer.MoveSrcSliceWindow(b_e0_e1_n_ho_wo_global_desc,
                                                          b_thread_slice_copy_step);
 
-                b_threadwise_transfer.Run(b_e_n_ho_wo_global_desc,
+                b_threadwise_transfer.Run(b_e0_e1_n_ho_wo_global_desc,
                                           p_b_global,
-                                          b_e_n_ho_wo_thread_desc,
-                                          make_tuple(I0, I0, I0, I0),
-                                          p_b_thread_even,
+                                          b_e0_e1_n_ho_wo_thread_desc,
+                                          make_tuple(I0, I0, I0, I0, I0),
+                                          p_b_thread_double + b_thread_space_size,
                                           b_e_n_ho_wo_global_iterator_hacks);
 
-                // LDS double buffer: GEMM on current data
-                blockwise_gemm.Run(
-                    p_a_block + a_e_k_block_desc.CalculateOffset(make_tuple(b_block_data_begin, 0)),
-                    p_b_thread_odd,
-                    p_c_thread);
+                // LDS double buffer: GEMM on 2nd-last data
+                blockwise_gemm.Run(p_a_block + a_e0_e1_k_block_desc.CalculateOffset(make_tuple(
+                                                   e0_block_data_begin, e1_block_data_begin, 0)),
+                                   p_b_thread_double,
+                                   p_c_thread);
 
-                b_block_data_begin += EPerBlock;
+                e1_block_data_begin += EPerBlock;
 
-            } while(b_block_data_begin < E - 2 * EPerBlock);
-        }
-
-        // LDS double buffer: tail
-        if constexpr(HasDoubleTailKBlockLoop) // if has 2 iteration left
-        {
-            b_threadwise_transfer.MoveSrcSliceWindow(b_e_n_ho_wo_global_desc,
-                                                     b_thread_slice_copy_step);
-
-            b_threadwise_transfer.Run(b_e_n_ho_wo_global_desc,
-                                      p_b_global,
-                                      b_e_n_ho_wo_thread_desc,
-                                      make_tuple(I0, I0, I0, I0),
-                                      p_b_thread_double + b_thread_space_size,
-                                      b_e_n_ho_wo_global_iterator_hacks);
-
-            // LDS double buffer: GEMM on 2nd-last data
-            blockwise_gemm.Run(
-                p_a_block + a_e_k_block_desc.CalculateOffset(make_tuple(b_block_data_begin, 0)),
-                p_b_thread_double,
-                p_c_thread);
-
-            b_block_data_begin += EPerBlock;
-
-            // LDS double buffer: GEMM on last data
-            blockwise_gemm.Run(
-                p_a_block + a_e_k_block_desc.CalculateOffset(make_tuple(b_block_data_begin, 0)),
-                p_b_thread_double + b_thread_space_size,
-                p_c_thread);
-        }
-        else // if has 1 iteration left
-        {
-            // LDS double buffer: GEMM on last data
-            blockwise_gemm.Run(
-                p_a_block + a_e_k_block_desc.CalculateOffset(make_tuple(b_block_data_begin, 0)),
-                p_b_thread_double,
-                p_c_thread);
-        }
-#endif
+                // LDS double buffer: GEMM on last data
+                blockwise_gemm.Run(p_a_block + a_e0_e1_k_block_desc.CalculateOffset(make_tuple(
+                                                   e0_block_data_begin, e1_block_data_begin, 0)),
+                                   p_b_thread_double + b_thread_space_size,
+                                   p_c_thread);
+            }
+            else // if has 1 iteration left
+            {
+                // LDS double buffer: GEMM on last data
+                blockwise_gemm.Run(p_a_block + a_e0_e1_k_block_desc.CalculateOffset(make_tuple(
+                                                   e0_block_data_begin, e1_block_data_begin, 0)),
+                                   p_b_thread_double,
+                                   p_c_thread);
+            }
+            e0_block_data_begin += 1;
+        } while(e0_block_data_begin < E0);
 
         // output: register to global memory
         {

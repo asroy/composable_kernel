@@ -16,13 +16,14 @@ template <index_t BlockSize,
           index_t KPerBlock,
           index_t HoPerBlock,
           index_t WoPerBlock,
+          index_t E1,
           index_t EPerBlock,
           index_t KPerThread,
           index_t HoPerThread,
           index_t WoPerThread,
           index_t EPerThread,
-          typename ABlockTransferThreadSliceLengths_E_K,
-          typename ABlockTransferThreadClusterLengths_E_K,
+          typename ABlockTransferThreadSliceLengths_E0_E1_K,
+          typename ABlockTransferThreadClusterLengths_E0_E1_K,
           index_t ABlockTransferSrcScalarPerVector_E,
           index_t ABlockTransferDstScalarPerVector_K,
           index_t BThreadTransferSrcScalarPerVector_W,
@@ -118,6 +119,13 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         std::cerr << "InRightPadH = " << InRightPadH << " InRightPadW = " << InRightPadW
                   << std::endl;
 
+
+        constexpr auto E = C * Y * X;
+
+        static_assert(E % E1 == 0, "");
+
+        constexpr auto E0 = E / E1;
+
         // weight tensor
         const auto wei_e_k_global_desc = transform_dynamic_tensor_descriptor(
             make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(K, C * Y * X)),
@@ -127,6 +135,15 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
         static_assert(wei_e_k_global_desc.IsKnownAtCompileTime(),
                       "wrong! wei_e_k_global_desc need to known at compile-time");
+
+        const auto wei_e0_e1_k_global_desc = transform_dynamic_tensor_descriptor(
+            wei_e_k_global_desc,
+            make_tuple(make_unmerge_transform(make_tuple(E0, E1)), make_pass_through_transform(K)),
+            make_tuple(Sequence<0>{}, Sequence<1>{}),
+            make_tuple(Sequence<0, 1>{}, Sequence<2>{}));
+
+        static_assert(wei_e0_e1_k_global_desc.IsKnownAtCompileTime(),
+                      "wrong! wei_e0_e1_k_global_desc need to known at compile-time");
 
         // input tensor
         const auto in_n_c_hip_wip_global_desc = transform_dynamic_tensor_descriptor(
@@ -166,6 +183,15 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         static_assert(in_e_n_ho_wo_global_desc.IsKnownAtCompileTime(),
                       "wrong! in_e_n_ho_wo_global_desc need to known at compile-time");
 
+        const auto in_e0_e1_n_ho_wo_global_desc = transform_dynamic_tensor_descriptor(
+            in_e_n_ho_wo_global_desc,
+            make_tuple(make_unmerge_transform(make_tuple(E0, E1)),
+                       make_pass_through_transform(N),
+                       make_pass_through_transform(Hop),
+                       make_pass_through_transform(Wop)),
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
+            make_tuple(Sequence<0, 1>{}, Sequence<2>{}, Sequence<3>{}, Sequence<4>{}));
+
         // output tensor
         const auto out_k_n_hop_wop_global_desc = transform_dynamic_tensor_descriptor(
             make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Ho, Wo)),
@@ -179,35 +205,37 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         static_assert(out_k_n_hop_wop_global_desc.IsKnownAtCompileTime(),
                       "wrong! out_k_n_hop_wop_global_desc need to known at compile-time");
 
-        const auto E = C * Y * X;
-
         std::cerr << "Hop = " << Hop << " Wop = " << Wop << std::endl;
 
         if(!((K % KPerBlock) == 0 && (Hop % HoPerBlock) == 0 && (Wop % WoPerBlock) == 0 &&
-             (E % EPerBlock) == 0))
+             (E1 % EPerBlock) == 0))
         {
             throw std::runtime_error("wrong! GEMM size no divisible");
         }
 
         // hack to control index calculation when iterating over a_k_m_global tensor
-        constexpr auto a_e_k_global_iterator_hacks =
-            make_tuple(make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}),
-                       make_tuple(Sequence<0, 0, 0>{}, Sequence<0, 0, 0>{}));
+        constexpr auto a_e0_e1_k_global_iterator_hacks = make_tuple(
+            make_tuple(
+                Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}),
+            make_tuple(
+                Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}, Sequence<0, 0, 0, 0, 0>{}));
 
-        constexpr auto a_e_k_global_move_slice_window_iterator_hack = Sequence<0, 0, 0>{};
+        constexpr auto a_e0_e1_k_global_move_slice_window_iterator_hack = Sequence<0, 0, 0, 0, 0>{};
 
-        constexpr auto b_e_n_ho_wo_global_iterator_hacks =
-            make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{},
-                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{}),
-                       make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0>{},
-                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
-                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{}));
+        constexpr auto b_e0_e1_n_ho_wo_global_iterator_hacks =
+            make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{}),
+                       make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{},
+                                  Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>{}));
 
-        constexpr auto b_e_n_ho_wo_global_move_slice_window_iterator_hack =
-            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>{};
+        constexpr auto b_e0_e1_n_ho_wo_global_move_slice_window_iterator_hack =
+            Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0>{};
 
         // hack to control index calculation when iterating over c_m0_m1_n0_n1_global tensor
         // hack for NKHW format
@@ -221,6 +249,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{}));
 
+        static_assert(wei_e0_e1_k_global_desc.GetLength(I0) == 2, "");
+
         // GEMM
         using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v2<
             BlockSize,
@@ -228,8 +258,8 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             FloatAcc,
             FloatC,
             InMemoryDataOperation::Set,
-            decltype(wei_e_k_global_desc),
-            decltype(in_e_n_ho_wo_global_desc),
+            decltype(wei_e0_e1_k_global_desc),
+            decltype(in_e0_e1_n_ho_wo_global_desc),
             decltype(out_k_n_hop_wop_global_desc),
             KPerBlock,
             HoPerBlock,
@@ -239,38 +269,39 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             HoPerThread,
             WoPerThread,
             EPerThread,
-            ABlockTransferThreadSliceLengths_E_K,
-            ABlockTransferThreadClusterLengths_E_K,
-            Sequence<1, 0>,
-            Sequence<1, 0>,
-            0,
+            ABlockTransferThreadSliceLengths_E0_E1_K,
+            ABlockTransferThreadClusterLengths_E0_E1_K,
+            Sequence<1, 0, 2>,
+            Sequence<1, 0, 2>,
+            1,
             ABlockTransferSrcScalarPerVector_E,
             ABlockTransferDstScalarPerVector_K,
             false, // don't move back src coordinate after threadwise copy
-            Sequence<0, 2, 3, 1>,
-            3,
+            Sequence<0, 1, 3, 4, 2>,
+            4,
             BThreadTransferSrcScalarPerVector_W,
             false, // don't move back src coordinate after threadwise copy, which will be fused with
                    // MoveSrcSliceWindow() to save addr computation
             Sequence<0, 2, 3, 1>,
             0,
             CThreadTransferDstScalarPerVector_W,
-            decltype(a_e_k_global_iterator_hacks),
-            decltype(b_e_n_ho_wo_global_iterator_hacks),
+            decltype(a_e0_e1_k_global_iterator_hacks),
+            decltype(b_e0_e1_n_ho_wo_global_iterator_hacks),
             decltype(c_k_n_ho_wo_global_tensor_iterator_hacks),
-            decltype(a_e_k_global_move_slice_window_iterator_hack),
-            decltype(b_e_n_ho_wo_global_move_slice_window_iterator_hack)>;
+            decltype(a_e0_e1_k_global_move_slice_window_iterator_hack),
+            decltype(b_e0_e1_n_ho_wo_global_move_slice_window_iterator_hack)>;
 
         const auto GridSize = (K / KPerBlock) * (Hop / HoPerBlock) * (Wop / WoPerBlock) * N;
 
         std::cout << "GridSize = " << GridSize << std::endl;
 
-        constexpr bool has_main_k_block_loop = (E + EPerBlock) / (2 * EPerBlock) > 1;
+        constexpr bool has_main_k_block_loop = (E1 + EPerBlock) / (2 * EPerBlock) > 1;
 
-        constexpr bool has_double_tail_k_block_loop = (E / EPerBlock) % 2 == 0;
+        constexpr bool has_double_tail_k_block_loop = (E1 / EPerBlock) % 2 == 0;
 
         index_t nrepeat = 100;
 
+#if 0
         for(index_t i = 0; i < 5; ++i)
         {
             std::cout << "Start running " << nrepeat << " times..." << std::endl;
@@ -377,6 +408,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s"
                       << std::endl;
         }
+#endif
     }
 };
 } // namespace ck

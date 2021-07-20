@@ -115,25 +115,29 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     // cdata = 64, BlockSize = 64, 16x8x32x4
     constexpr index_t BlockSize = 64;
 
+    constexpr index_t E = C0 * Y * X;
+    constexpr index_t E0 = 2;
+    constexpr index_t E1 = E / E0;
+
     constexpr index_t KPerBlock  = K;
     constexpr index_t HoPerBlock = 8;
     constexpr index_t WoPerBlock = 32;
-    constexpr index_t EPerBlock  = C0;
+    constexpr index_t E1PerBlock = C0 / E0;
 
     constexpr index_t KPerThread  = KPerBlock;
     constexpr index_t HoPerThread = 2;
     constexpr index_t WoPerThread = 2;
-    constexpr index_t EPerThread  = EPerBlock;
+    constexpr index_t EPerThread  = E1PerBlock;
 
-    using ABlockTransferThreadSliceLengths_E_K   = Sequence<9, 1>;
-    using ABlockTransferThreadClusterLengths_E_K = Sequence<EPerBlock, KPerBlock>;
+    using ABlockTransferThreadSliceLengths_E0_E1_K   = Sequence<1, 9, 1>;
+    using ABlockTransferThreadClusterLengths_E0_E1_K = Sequence<1, 2, 32>;
 
     constexpr index_t ABlockTransferSrcScalarPerVector_E = 1;
     constexpr index_t ABlockTransferDstScalarPerVector_K = 1;
 
     constexpr index_t BThreadTransferSrcScalarPerVector_W = 1;
 
-    constexpr index_t CThreadTransferDstScalarPerVector_W = K1;
+    constexpr index_t CThreadTransferDstScalarPerVector_W = 8;
 
     static_assert(KPerThread % CThreadTransferDstScalarPerVector_W == 0, "");
 
@@ -143,7 +147,7 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
               << in_left_pads[I0] << "p" << in_right_pads[I0] << std::endl;
 
     constexpr auto conv_driver =
-#if 1
+#if 0
         DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
 #else
         DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
@@ -155,13 +159,14 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
          KPerBlock,
          HoPerBlock,
          WoPerBlock,
-         EPerBlock,
+         E1,
+         E1PerBlock,
          KPerThread,
          HoPerThread,
          WoPerThread,
          EPerThread,
-         ABlockTransferThreadSliceLengths_E_K,
-         ABlockTransferThreadClusterLengths_E_K,
+         ABlockTransferThreadSliceLengths_E0_E1_K,
+         ABlockTransferThreadClusterLengths_E0_E1_K,
          ABlockTransferSrcScalarPerVector_E,
          ABlockTransferDstScalarPerVector_K,
          BThreadTransferSrcScalarPerVector_W,
