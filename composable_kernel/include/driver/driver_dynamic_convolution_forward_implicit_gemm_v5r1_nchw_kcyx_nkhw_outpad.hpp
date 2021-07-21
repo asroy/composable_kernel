@@ -16,7 +16,7 @@ template <index_t BlockSize,
           index_t KPerBlock,
           index_t HoPerBlock,
           index_t WoPerBlock,
-          index_t E1,
+          index_t E1_,
           index_t EPerBlock,
           index_t KPerThread,
           index_t HoPerThread,
@@ -119,12 +119,12 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         std::cerr << "InRightPadH = " << InRightPadH << " InRightPadW = " << InRightPadW
                   << std::endl;
 
-
-        constexpr auto E = C * Y * X;
+        constexpr auto E  = Number<C * Y * X>{};
+        constexpr auto E1 = Number<E1_>{};
 
         static_assert(E % E1 == 0, "");
 
-        constexpr auto E0 = E / E1;
+        constexpr auto E0 = Number<E / E1>{};
 
         // weight tensor
         const auto wei_e_k_global_desc = transform_dynamic_tensor_descriptor(
@@ -192,6 +192,9 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0, 1>{}, Sequence<2>{}, Sequence<3>{}, Sequence<4>{}));
 
+        static_assert(in_e0_e1_n_ho_wo_global_desc.IsKnownAtCompileTime(),
+                      "wrong! in_e0_e1_n_ho_wo_global_desc need to known at compile-time");
+
         // output tensor
         const auto out_k_n_hop_wop_global_desc = transform_dynamic_tensor_descriptor(
             make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Ho, Wo)),
@@ -249,8 +252,6 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{}));
 
-        static_assert(wei_e0_e1_k_global_desc.GetLength(I0) == 2, "");
-
         // GEMM
         using gridwise_gemm = GridwiseDynamicGemm_km_kn_mn_v2<
             BlockSize,
@@ -301,7 +302,7 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
         index_t nrepeat = 100;
 
-#if 0
+#if 1
         for(index_t i = 0; i < 5; ++i)
         {
             std::cout << "Start running " << nrepeat << " times..." << std::endl;

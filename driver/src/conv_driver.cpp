@@ -64,12 +64,12 @@ int main(int argc, char* argv[])
 
     using LeftPads                   = Sequence<0, 0>;
     using RightPads                  = Sequence<0, 0>;
-#elif 1
+#elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 32;
     constexpr index_t HI = 1080;
     constexpr index_t WI = 1920;
-    constexpr index_t K  = 32;
+    constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -80,10 +80,10 @@ int main(int argc, char* argv[])
     using RightPads                  = Sequence<1, 1>;
 #elif 0
     constexpr index_t N  = 1;
-    constexpr index_t C  = 4;
+    constexpr index_t C  = 32;
     constexpr index_t HI = 64;
     constexpr index_t WI = 64;
-    constexpr index_t K  = 4;
+    constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 
@@ -95,9 +95,9 @@ int main(int argc, char* argv[])
 #elif 1
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
-    constexpr index_t HI = 540;
+    constexpr index_t HI = 544;
     constexpr index_t WI = 960;
-    constexpr index_t K  = 16;
+    constexpr index_t K  = 32;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
 

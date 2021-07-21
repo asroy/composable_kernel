@@ -138,9 +138,6 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         constexpr auto a_e1_k_block_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
             make_tuple(Number<EPerBlock>{}, Number<KPerBlock>{}), max_lds_align);
 
-        constexpr auto a_e0_e1_k_desc = make_dynamic_naive_tensor_descriptor_aligned_v2(
-            make_tuple(I1, Number<E1>{}, Number<KPerBlock>{}), max_lds_align);
-
         // B matrix in LDS memory, dst of blockwise copy
         //   be careful of LDS alignment
         constexpr auto b_e1_n_ho_wo_block_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
@@ -179,6 +176,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
             wo_block_data_on_global + wo_thread_id * WoPerThread;
 
         // A matrix blockwise copy
+#if 0
         auto a_blockwise_copy =
             BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
                                                    InMemoryDataOperation::Set,
@@ -189,7 +187,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                                                    FloatAB,
                                                    FloatAB,
                                                    decltype(a_e0_e1_k_global_desc),
-                                                   decltype(a_e0_e1_k_desc),
+                                                   decltype(a_e0_e1_k_block_desc),
                                                    ABlockTransferSrcAccessOrder,
                                                    Sequence<0, 1, 2>,
                                                    ABlockTransferSrcVectorDim,
@@ -204,12 +202,14 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                                                    true>(
                 a_e0_e1_k_global_desc,
                 make_multi_index(0, 0, k_block_data_on_global),
-                a_e0_e1_k_desc,
+                a_e0_e1_k_block_desc,
                 make_multi_index(0, 0, 0));
+#endif
 
         constexpr auto b_e0_e1_n_ho_wo_thread_desc = make_dynamic_naive_tensor_descriptor_packed_v2(
             make_tuple(I1, Number<EPerBlock>{}, I1, Number<HoPerThread>{}, Number<WoPerThread>{}));
 
+#if 0
         auto b_threadwise_transfer = ThreadwiseDynamicTensorSliceTransfer_v2<
             FloatAB,
             FloatAB,
@@ -225,6 +225,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
             1,
             true>(b_e0_e1_n_ho_wo_global_desc,
                   make_multi_index(0, 0, 0, ho_thread_data_on_global, wo_thread_data_on_global));
+#endif
 
         FloatAB* p_a_block = p_shared_block;
 
@@ -234,18 +235,12 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
         // zero out threadwise output
         threadwise_matrix_set_zero_v3(c_k_n_ho_wo_thread_desc, p_c_thread);
 
+        constexpr auto a_block_slice_copy_step  = make_multi_index(I1, 0, 0);
         constexpr auto b_thread_slice_copy_step = make_multi_index(0, EPerBlock, 0, 0, 0);
 
         // hack to control index calculation when iterating over A and B matrix for threadwise copy
         constexpr auto a_e0_e1_k_global_iterator_hacks   = AGlobalIteratorHacks{};
         constexpr auto b_e_n_ho_wo_global_iterator_hacks = BGlobalIteratorHacks{};
-
-        // hack to control index calculation when move slice window for A and B matrix for
-        // threadwise copy
-        constexpr auto a_e_k_global_move_slice_window_iterator_hack =
-            AGlobalMoveSliceWindowIteratorHacks{};
-        constexpr auto b_e0_e1_n_ho_wo_global_move_slice_window_iterator_hack =
-            BGlobalMoveSliceWindowIteratorHacks{};
 
         constexpr auto b_thread_space_size = b_e0_e1_n_ho_wo_thread_desc.GetElementSpaceSize();
         FloatAB p_b_thread_double[b_thread_space_size * 2];
@@ -254,6 +249,51 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
 
         do
         {
+            auto a_blockwise_copy =
+                BlockwiseDynamicTensorSliceTransfer_v4<BlockSize,
+                                                       InMemoryDataOperation::Set,
+                                                       Sequence<1, E1, KPerBlock>,
+                                                       ABlockTransferThreadSliceLengths_E0_E1_K,
+                                                       ABlockTransferThreadClusterLengths_E0_E1_K,
+                                                       ABlockTransferThreadClusterArrangeOrder,
+                                                       FloatAB,
+                                                       FloatAB,
+                                                       decltype(a_e0_e1_k_global_desc),
+                                                       decltype(a_e0_e1_k_block_desc),
+                                                       ABlockTransferSrcAccessOrder,
+                                                       Sequence<0, 1, 2>,
+                                                       ABlockTransferSrcVectorDim,
+                                                       2,
+                                                       ABlockTransferSrcScalarPerVector,
+                                                       ABlockTransferDstScalarPerVector_K,
+                                                       AddressSpace::Global,
+                                                       AddressSpace::Lds,
+                                                       1,
+                                                       1,
+                                                       AThreadTransferSrcResetCoordinateAfterRun,
+                                                       true>(
+                    a_e0_e1_k_global_desc,
+                    make_multi_index(e0_block_data_begin, 0, k_block_data_on_global),
+                    a_e0_e1_k_block_desc,
+                    make_multi_index(0, 0, 0));
+
+            auto b_threadwise_transfer = ThreadwiseDynamicTensorSliceTransfer_v2<
+                FloatAB,
+                FloatAB,
+                decltype(b_e0_e1_n_ho_wo_global_desc),
+                decltype(b_e0_e1_n_ho_wo_thread_desc),
+                Sequence<1, EPerBlock, 1, HoPerThread, WoPerThread>,
+                BBlockTransferSrcAccessOrder,
+                BBlockTransferSrcVectorDim,
+                BBlockTransferSrcScalarPerVector,
+                AddressSpace::Global,
+                AddressSpace::Vgpr,
+                InMemoryDataOperation::Set,
+                1,
+                true>(
+                b_e0_e1_n_ho_wo_global_desc,
+                make_multi_index(
+                    e0_block_data_begin, 0, 0, ho_thread_data_on_global, wo_thread_data_on_global));
 
             // LDS double buffer: preload data into LDS
             {
@@ -267,7 +307,7 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                                           p_b_thread_double,
                                           b_e_n_ho_wo_global_iterator_hacks);
 
-                a_blockwise_copy.RunWrite(a_e0_e1_k_desc, p_a_block);
+                a_blockwise_copy.RunWrite(a_e0_e1_k_block_desc, p_a_block);
             }
 
             __syncthreads();
@@ -295,11 +335,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                                               b_e_n_ho_wo_global_iterator_hacks);
 
                     // LDS double buffer: GEMM on current data
-                    blockwise_gemm.Run(
-                        p_a_block + a_e0_e1_k_block_desc.CalculateOffset(
-                                        make_tuple(e0_block_data_begin, e1_block_data_begin, 0)),
-                        p_b_thread_even,
-                        p_c_thread);
+                    blockwise_gemm.Run(p_a_block + a_e1_k_block_desc.CalculateOffset(
+                                                       make_tuple(e1_block_data_begin, 0)),
+                                       p_b_thread_even,
+                                       p_c_thread);
 
                     e1_block_data_begin += EPerBlock;
 
@@ -314,11 +353,10 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                                               b_e_n_ho_wo_global_iterator_hacks);
 
                     // LDS double buffer: GEMM on current data
-                    blockwise_gemm.Run(
-                        p_a_block + a_e0_e1_k_block_desc.CalculateOffset(
-                                        make_tuple(e0_block_data_begin, e1_block_data_begin, 0)),
-                        p_b_thread_odd,
-                        p_c_thread);
+                    blockwise_gemm.Run(p_a_block + a_e1_k_block_desc.CalculateOffset(
+                                                       make_tuple(e1_block_data_begin, 0)),
+                                       p_b_thread_odd,
+                                       p_c_thread);
 
                     e1_block_data_begin += EPerBlock;
 
@@ -339,27 +377,33 @@ struct GridwiseDynamicGemm_km_kn_mn_v2
                                           b_e_n_ho_wo_global_iterator_hacks);
 
                 // LDS double buffer: GEMM on 2nd-last data
-                blockwise_gemm.Run(p_a_block + a_e0_e1_k_block_desc.CalculateOffset(make_tuple(
-                                                   e0_block_data_begin, e1_block_data_begin, 0)),
+                blockwise_gemm.Run(p_a_block + a_e1_k_block_desc.CalculateOffset(
+                                                   make_tuple(e1_block_data_begin, 0)),
                                    p_b_thread_double,
                                    p_c_thread);
 
                 e1_block_data_begin += EPerBlock;
 
                 // LDS double buffer: GEMM on last data
-                blockwise_gemm.Run(p_a_block + a_e0_e1_k_block_desc.CalculateOffset(make_tuple(
-                                                   e0_block_data_begin, e1_block_data_begin, 0)),
+                blockwise_gemm.Run(p_a_block + a_e1_k_block_desc.CalculateOffset(
+                                                   make_tuple(e1_block_data_begin, 0)),
                                    p_b_thread_double + b_thread_space_size,
                                    p_c_thread);
             }
             else // if has 1 iteration left
             {
                 // LDS double buffer: GEMM on last data
-                blockwise_gemm.Run(p_a_block + a_e0_e1_k_block_desc.CalculateOffset(make_tuple(
-                                                   e0_block_data_begin, e1_block_data_begin, 0)),
+                blockwise_gemm.Run(p_a_block + a_e1_k_block_desc.CalculateOffset(
+                                                   make_tuple(e1_block_data_begin, 0)),
                                    p_b_thread_double,
                                    p_c_thread);
             }
+
+            // a_blockwise_copy.MoveSrcSliceWindow(a_e0_e1_k_global_desc, a_block_slice_copy_step);
+
+            // b_threadwise_transfer.MoveSrcSliceWindow(b_e0_e1_n_ho_wo_global_desc,
+            // b_thread_slice_copy_step);
+
             e0_block_data_begin += 1;
         } while(e0_block_data_begin < E0);
 

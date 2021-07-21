@@ -115,19 +115,19 @@ void device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     // cdata = 64, BlockSize = 64, 16x8x32x4
     constexpr index_t BlockSize = 64;
 
-    constexpr index_t E = C0 * Y * X;
-    constexpr index_t E0 = 2;
-    constexpr index_t E1 = E / E0;
+    constexpr index_t E  = C0 * Y * X;
+    constexpr index_t E1 = 3 * 3 * 2;
+    constexpr index_t E0 = E / E1;
 
     constexpr index_t KPerBlock  = K;
     constexpr index_t HoPerBlock = 8;
     constexpr index_t WoPerBlock = 32;
-    constexpr index_t E1PerBlock = C0 / E0;
+    constexpr index_t E1PerBlock = 2;
 
     constexpr index_t KPerThread  = KPerBlock;
     constexpr index_t HoPerThread = 2;
     constexpr index_t WoPerThread = 2;
-    constexpr index_t EPerThread  = E1PerBlock;
+    constexpr index_t EPerThread  = 1;
 
     using ABlockTransferThreadSliceLengths_E0_E1_K   = Sequence<1, 9, 1>;
     using ABlockTransferThreadClusterLengths_E0_E1_K = Sequence<1, 2, 32>;

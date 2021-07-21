@@ -498,6 +498,7 @@ struct vector_type<T, 128>
 {
     using d1_t = T;
     typedef T d128_t __attribute__((ext_vector_type(128)));
+    typedef T d8_t __attribute__((ext_vector_type(8)));
     typedef T d16_t __attribute__((ext_vector_type(16)));
 
     using type = d128_t;
@@ -506,6 +507,7 @@ struct vector_type<T, 128>
     {
         d128_t d128_;
         StaticallyIndexedArray<d1_t, 128> d1x128_;
+        StaticallyIndexedArray<d8_t, 16> d8x16_;
         StaticallyIndexedArray<d16_t, 8> d16x8_;
         StaticallyIndexedArray<d128_t, 1> d16x1_;
     } data_;
@@ -518,6 +520,7 @@ struct vector_type<T, 128>
     __host__ __device__ constexpr const auto& AsType() const
     {
         static_assert(is_same<X, d1_t>::value ||
+                          is_same<X, d8_t>::value ||
                           is_same<X, d16_t>::value ||
                           is_same<X, d128_t>::value,
                       "wrong!");
@@ -525,6 +528,10 @@ struct vector_type<T, 128>
         if constexpr(is_same<X, d1_t>::value)
         {
             return data_.d1x128_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x16_;
         }
         else if constexpr(is_same<X, d16_t>::value)
         {
@@ -540,6 +547,7 @@ struct vector_type<T, 128>
     __host__ __device__ constexpr auto& AsType()
     {
         static_assert(is_same<X, d1_t>::value ||
+                          is_same<X, d8_t>::value ||
                           is_same<X, d16_t>::value ||
                           is_same<X, d128_t>::value,
                       "wrong!");
@@ -547,6 +555,10 @@ struct vector_type<T, 128>
         if constexpr(is_same<X, d1_t>::value)
         {
             return data_.d1x128_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x16_;
         }
         else if constexpr(is_same<X, d16_t>::value)
         {
