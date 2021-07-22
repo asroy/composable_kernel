@@ -103,13 +103,47 @@ int main(int argc, char* argv[])
     const bool do_log             = atoi(argv[5]);
     const int nrepeat             = atoi(argv[6]);
 
+#if 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
-    constexpr index_t Hi = 544;
+    constexpr index_t Hi = 1080;
+    constexpr index_t Wi = 1920;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 16;
+    constexpr index_t Hi = 540;
     constexpr index_t Wi = 960;
     constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 16;
+    constexpr index_t Hi = 480;
+    constexpr index_t Wi = 270;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+#elif 1
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 16;
+    constexpr index_t Hi = 240;
+    constexpr index_t Wi = 135;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+#elif 1
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 16;
+    constexpr index_t Hi = 1080;
+    constexpr index_t Wi = 1920;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+#endif
 
     const index_t conv_stride_h   = 1;
     const index_t conv_stride_w   = 1;

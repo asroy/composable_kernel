@@ -271,6 +271,14 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
         index_t nrepeat = 100;
 
+        std::cout << "conv_v5r1__NCHWc" << K1 << "_n" << N << "c" << C << "h" << Hi << "w" << Wi
+                  << "-k" << K << "c" << C << "y" << Y << "x" << X << "-u" << conv_strides[I0]
+                  << "v" << conv_strides[I1] << "l" << conv_dilations[I0] << "j"
+                  << conv_dilations[I1] << "q" << in_left_pads[I0] << "p" << in_right_pads[I0]
+                  << std::endl;
+
+        std::cout << "GridSize = " << GridSize << " BlockSize = " << BlockSize << std::endl;
+
         for(index_t i = 0; i < 5; ++i)
         {
             std::cout << "Start running " << nrepeat << " times..." << std::endl;

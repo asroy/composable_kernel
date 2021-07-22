@@ -92,7 +92,6 @@ void device_static_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     const auto out_n_k0_ho_wo_k1_desc =
         make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Ho, Wo, K1));
 
-#if 1
     // cdata = 64, BlockSize = 64, 16x8x32x4
     constexpr index_t BlockSize = 64;
 
@@ -114,34 +113,9 @@ void device_static_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
 
     constexpr index_t BThreadTransferSrcScalarPerVector_W = 1;
 
-    constexpr index_t CThreadTransferDstScalarPerVector_W = 8;
-
-    static_assert(KPerThread % CThreadTransferDstScalarPerVector_W == 0, "");
-#else
-    constexpr index_t BlockSize = 64;
-
-    constexpr index_t KPerBlock  = 16;
-    constexpr index_t HoPerBlock = 8;
-    constexpr index_t WoPerBlock = 32;
-    constexpr index_t EPerBlock  = 1;
-
-    constexpr index_t KPerThread  = 16;
-    constexpr index_t HoPerThread = 2;
-    constexpr index_t WoPerThread = 2;
-    constexpr index_t EPerThread  = EPerBlock;
-
-    using ABlockTransferThreadSliceLengths_E_K   = Sequence<9, 1>;
-    using ABlockTransferThreadClusterLengths_E_K = Sequence<EPerBlock, 16>;
-
-    constexpr index_t ABlockTransferSrcScalarPerVector_E = 1;
-    constexpr index_t ABlockTransferDstScalarPerVector_K = 1;
-
-    constexpr index_t BThreadTransferSrcScalarPerVector_W = 1;
-
     constexpr index_t CThreadTransferDstScalarPerVector_W = K1;
 
     static_assert(KPerThread % CThreadTransferDstScalarPerVector_W == 0, "");
-#endif
 
     constexpr auto conv_driver =
 #if 0
