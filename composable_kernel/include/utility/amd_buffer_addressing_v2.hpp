@@ -567,6 +567,7 @@ __device__ void amd_buffer_store_impl_v2(const typename vector_type<T, N>::type 
         {
             vector_type<half_t, 8> tmp{src_thread_data};
 
+#if 0
             __llvm_amdgcn_raw_buffer_store_fp16x4(tmp.AsType<half4_t>()[Number<0>{}],
                                                   dst_wave_buffer_resource,
                                                   dst_thread_addr_offset,
@@ -578,6 +579,11 @@ __device__ void amd_buffer_store_impl_v2(const typename vector_type<T, N>::type 
                                                   dst_thread_addr_offset,
                                                   dst_wave_addr_offset + 4 * sizeof(half_t),
                                                   0);
+#else
+            auto tmp_ = as_type<float4_t>(tmp);
+            __llvm_amdgcn_raw_buffer_store_fp32x4(
+                tmp_, dst_wave_buffer_resource, dst_thread_addr_offset, dst_wave_addr_offset, 0);
+#endif
         }
     }
 }

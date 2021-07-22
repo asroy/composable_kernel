@@ -16,6 +16,7 @@
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v6r1_nchw_kcyx_nkhw.hpp"
 #include "device_static_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw.hpp"
+#include "device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4r4_xdlops_nhwc_kyxc_nhwk.hpp"
 
@@ -104,7 +105,7 @@ int main(int argc, char* argv[])
 
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
-    constexpr index_t Hi = 540;
+    constexpr index_t Hi = 544;
     constexpr index_t Wi = 960;
     constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
@@ -380,20 +381,22 @@ int main(int argc, char* argv[])
 
         const auto tmp = f_make_for_device_nchw();
 
-        device_static_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw<in_data_t,
-                                                                            8,
-                                                                            acc_data_t,
-                                                                            out_data_t>(tmp[I0],
-                                                                                        tmp[I1],
-                                                                                        tmp[I2],
-                                                                                        tmp[I3],
-                                                                                        tmp[I4],
-                                                                                        tmp[I5],
-                                                                                        tmp[I6],
-                                                                                        in,
-                                                                                        wei,
-                                                                                        out_device,
-                                                                                        nrepeat);
+#if 1
+        device_static_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw
+#else
+        device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw
+#endif
+            <in_data_t, 8, acc_data_t, out_data_t>(tmp[I0],
+                                                   tmp[I1],
+                                                   tmp[I2],
+                                                   tmp[I3],
+                                                   tmp[I4],
+                                                   tmp[I5],
+                                                   tmp[I6],
+                                                   in,
+                                                   wei,
+                                                   out_device,
+                                                   nrepeat);
     }
 #endif
 

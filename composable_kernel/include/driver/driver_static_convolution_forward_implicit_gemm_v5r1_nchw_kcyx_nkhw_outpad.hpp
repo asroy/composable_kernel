@@ -269,7 +269,6 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
         index_t nrepeat = 100;
 
-#if 1
         for(index_t i = 0; i < 5; ++i)
         {
             std::cout << "Start running " << nrepeat << " times..." << std::endl;
@@ -376,7 +375,6 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s"
                       << std::endl;
         }
-#endif
     }
 };
 } // namespace ck

@@ -51,7 +51,11 @@ struct GridwiseStaticGemm_km_kn_mn_v3
 {
     __host__ __device__ static constexpr index_t GetSharedMemoryNumberOfByte()
     {
-        constexpr auto E = EPerBlock * 3 * 3;
+        constexpr auto I0 = Number<0>{};
+
+        constexpr auto a_e_k_global_desc = AGlobalDesc{};
+
+        constexpr auto E = a_e_k_global_desc.GetLength(I0);
 
         constexpr auto max_lds_align =
             math::lcm(Number<ABlockTransferDstScalarPerVector_K>{}, Number<KPerBlock>{});
@@ -393,60 +397,6 @@ struct GridwiseStaticGemm_km_kn_mn_v3
             integral_constant<bool, HasMainKBlockLoop>{},
             integral_constant<bool, HasDoubleTailKBlockLoop>{});
     }
-
-#if 0
-    // pass tensor descriptors by their pointers
-    template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
-    __device__ void Run(const AGlobalDesc* p_a_e_k_global_desc,
-                        const FloatAB* __restrict__ p_a_global,
-                        const BGlobalDesc* p_b_e_n_ho_wo_global_desc,
-                        const FloatAB* __restrict__ p_b_global,
-                        const CGlobalDesc* p_c_k_n_ho_wo_global_desc,
-                        FloatC* __restrict__ p_c_global,
-                        integral_constant<bool, HasMainKBlockLoop>,
-                        integral_constant<bool, HasDoubleTailKBlockLoop>) const
-    {
-        const auto a_e_k_global_desc       = *p_a_e_k_global_desc;
-        const auto b_e_n_ho_wo_global_desc = *p_b_e_n_ho_wo_global_desc;
-        const auto c_k_n_ho_wo_global_desc = *p_c_k_n_ho_wo_global_desc;
-
-        Run(a_e_k_global_desc,
-            p_a_global,
-            b_e_n_ho_wo_global_desc,
-            p_b_global,
-            c_k_n_ho_wo_global_desc,
-            p_c_global,
-            integral_constant<bool, HasMainKBlockLoop>{},
-            integral_constant<bool, HasDoubleTailKBlockLoop>{});
-    }
-
-    // pass tensor descriptors by void*
-    template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
-    __device__ void Run(const void* p_a_e_k_global_desc,
-                        const FloatAB* __restrict__ p_a_global,
-                        const void* p_b_e_n_ho_wo_global_desc,
-                        const FloatAB* __restrict__ p_b_global,
-                        const void* p_c_k_n_ho_wo_global_desc,
-                        FloatC* __restrict__ p_c_global,
-                        integral_constant<bool, HasMainKBlockLoop>,
-                        integral_constant<bool, HasDoubleTailKBlockLoop>) const
-    {
-        const auto a_e_k_global_desc = *reinterpret_cast<const AGlobalDesc*>(p_a_e_k_global_desc);
-        const auto b_e_n_ho_wo_global_desc =
-            *reinterpret_cast<const BGlobalDesc*>(p_b_e_n_ho_wo_global_desc);
-        const auto c_k_n_ho_wo_global_desc =
-            *reinterpret_cast<const CGlobalDesc*>(p_c_k_n_ho_wo_global_desc);
-
-        Run(a_e_k_global_desc,
-            p_a_global,
-            b_e_n_ho_wo_global_desc,
-            p_b_global,
-            c_k_n_ho_wo_global_desc,
-            p_c_global,
-            integral_constant<bool, HasMainKBlockLoop>{},
-            integral_constant<bool, HasDoubleTailKBlockLoop>{});
-    }
-#endif
 };
 
 } // namespace ck
