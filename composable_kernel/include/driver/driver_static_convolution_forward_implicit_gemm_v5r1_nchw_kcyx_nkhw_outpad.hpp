@@ -38,7 +38,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
               typename InRightPads>
     __host__ void Run(const DynamicTensorDescriptor<Wei...>& wei_k_c_y_x_global_desc,
                       const DynamicTensorDescriptor<In...>& in_n_c_hi_wi_global_desc,
-                      const DynamicTensorDescriptor<Out...>& out_n_k0_ho_wo_global_desc,
+                      const DynamicTensorDescriptor<Out...>& out_n_k0_ho_wo_k1_global_desc,
                       const ConvStrides& conv_strides,
                       const ConvDilations& conv_dilations,
                       const InLeftPads& in_left_pads,
@@ -53,15 +53,16 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         constexpr auto I3 = Number<3>{};
         constexpr auto I4 = Number<4>{};
 
-        const auto N_  = in_n_c_hi_wi_global_desc.GetLength(I0);
-        const auto C_  = in_n_c_hi_wi_global_desc.GetLength(I1);
-        const auto K0_ = out_n_k0_ho_wo_global_desc.GetLength(I1);
+        const auto N_ = in_n_c_hi_wi_global_desc.GetLength(I0);
+        const auto C_ = in_n_c_hi_wi_global_desc.GetLength(I1);
 
         const auto Hi_ = in_n_c_hi_wi_global_desc.GetLength(I2);
         const auto Wi_ = in_n_c_hi_wi_global_desc.GetLength(I3);
 
-        const auto Ho_ = out_n_k0_ho_wo_global_desc.GetLength(I2);
-        const auto Wo_ = out_n_k0_ho_wo_global_desc.GetLength(I3);
+        const auto K0_ = out_n_k0_ho_wo_k1_global_desc.GetLength(I1);
+        const auto Ho_ = out_n_k0_ho_wo_k1_global_desc.GetLength(I2);
+        const auto Wo_ = out_n_k0_ho_wo_k1_global_desc.GetLength(I3);
+        const auto K1_ = out_n_k0_ho_wo_k1_global_desc.GetLength(I4);
 
         const auto K_ = wei_k_c_y_x_global_desc.GetLength(I0);
         const auto Y_ = wei_k_c_y_x_global_desc.GetLength(I2);
@@ -70,6 +71,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         constexpr auto N  = Number<N_>{};
         constexpr auto C  = Number<C_>{};
         constexpr auto K0 = Number<K0_>{};
+        constexpr auto K1 = Number<K1_>{};
 
         constexpr auto Hi = Number<Hi_>{};
         constexpr auto Wi = Number<Wi_>{};
@@ -168,12 +170,12 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
         // output tensor
         const auto out_k_n_hop_wop_global_desc = transform_dynamic_tensor_descriptor(
-            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Ho, Wo)),
-            make_tuple(make_pass_through_transform(K0),
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Ho, Wo, K1)),
+            make_tuple(make_merge_transform(make_tuple(K0, K1)),
                        make_pass_through_transform(N),
                        make_pad_transform(Ho, I0, OutRightPadH),
                        make_pad_transform(Wo, I0, OutRightPadW)),
-            make_tuple(Sequence<1>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
+            make_tuple(Sequence<1, 4>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
             make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
 
         static_assert(out_k_n_hop_wop_global_desc.IsKnownAtCompileTime(),
@@ -212,11 +214,11 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         // hack to control index calculation when iterating over c_m0_m1_n0_n1_global tensor
         // hack for NKHW format
         constexpr auto c_k_n_ho_wo_global_tensor_iterator_hacks =
-            make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
+            make_tuple(make_tuple(Sequence<0, 1, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{}),
-                       make_tuple(Sequence<0, 0, 0, 0, 0>{},
+                       make_tuple(Sequence<0, 2, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{},
                                   Sequence<0, 0, 0, 0, 0>{}));
@@ -369,7 +371,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
             float perf = (float)calculate_convolution_flops(in_n_c_hi_wi_global_desc,
                                                             wei_k_c_y_x_global_desc,
-                                                            out_n_k0_ho_wo_global_desc) /
+                                                            out_n_k0_ho_wo_k1_global_desc) /
                          (std::size_t(1000) * 1000 * 1000) / ave_time;
 
             std::cout << "Average time : " << ave_time << " ms, " << perf << " TFlop/s"

@@ -53,16 +53,15 @@ struct DriverDynamicConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         constexpr auto I3 = Number<3>{};
         constexpr auto I4 = Number<4>{};
 
-        const auto N  = in_n_c_hi_wi_global_desc.GetLength(I0);
-        const auto C  = in_n_c_hi_wi_global_desc.GetLength(I1);
-        const auto K0 = out_n_k0_ho_wo_k1_global_desc.GetLength(I1);
+        const auto N = in_n_c_hi_wi_global_desc.GetLength(I0);
+        const auto C = in_n_c_hi_wi_global_desc.GetLength(I1);
 
         const auto Hi = in_n_c_hi_wi_global_desc.GetLength(I2);
         const auto Wi = in_n_c_hi_wi_global_desc.GetLength(I3);
 
+        const auto K0 = out_n_k0_ho_wo_k1_global_desc.GetLength(I1);
         const auto Ho = out_n_k0_ho_wo_k1_global_desc.GetLength(I2);
         const auto Wo = out_n_k0_ho_wo_k1_global_desc.GetLength(I3);
-
         const auto K1 = out_n_k0_ho_wo_k1_global_desc.GetLength(I4);
 
         const auto K = wei_k_c_y_x_global_desc.GetLength(I0);
