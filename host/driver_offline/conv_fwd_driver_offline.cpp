@@ -437,6 +437,8 @@ int main(int argc, char* argv[])
     }
 #endif
 
+    constexpr ck::index_t activ_type = 2;
+
 #if USE_CONV_FWD_V5R1_NCHW
     if(algo == ConvForwardAlgo::V5R1NCHW)
     {
@@ -452,17 +454,17 @@ int main(int argc, char* argv[])
 #else
         device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw
 #endif
-            <in_data_t, 8, 8, acc_data_t, out_data_t>(tmp[I0],
-                                                      tmp[I1],
-                                                      tmp[I2],
-                                                      tmp[I3],
-                                                      tmp[I4],
-                                                      tmp[I5],
-                                                      tmp[I6],
-                                                      in,
-                                                      wei,
-                                                      out_device,
-                                                      nrepeat);
+            <in_data_t, 8, 8, activ_type, acc_data_t, out_data_t>(tmp[I0],
+                                                                  tmp[I1],
+                                                                  tmp[I2],
+                                                                  tmp[I3],
+                                                                  tmp[I4],
+                                                                  tmp[I5],
+                                                                  tmp[I6],
+                                                                  in,
+                                                                  wei,
+                                                                  out_device,
+                                                                  nrepeat);
     }
 #endif
 
@@ -529,8 +531,8 @@ int main(int argc, char* argv[])
                                       make_tuple(conv_dilation_h, conv_dilation_w),
                                       make_tuple(in_left_pad_h, in_left_pad_w),
                                       make_tuple(in_right_pad_h, in_right_pad_w),
-                                      layout,
-                                      ActivType_t::sigmoid);
+                                      activ_type,
+                                      layout);
 
         check_error(out_host, out_device);
 

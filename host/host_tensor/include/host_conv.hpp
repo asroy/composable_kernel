@@ -1,13 +1,6 @@
 #pragma once
 #include "host_tensor.hpp"
 
-typedef enum
-{
-    passthrough = 0,
-    relu,
-    sigmoid
-} ActivType_t;
-
 template <typename TIn,
           typename TWei,
           typename TOut,
@@ -96,13 +89,13 @@ void host_direct_convolution(const Tensor<TIn>& in,
 }
 
 template <typename T>
-inline auto activ(T v, const ActivType_t activ_type)
+inline auto activ(T v, const ck::index_t activ_type)
 {
     switch(activ_type)
     {
-    case passthrough: return v;
-    case relu: return (v >= 0 ? v : 0);
-    case sigmoid: return (1 / (1 + exp(-v)));
+    case 0: return v;
+    case 1: return (v >= 0 ? v : 0);
+    case 2: return (1 / (1 + exp(-v)));
     default: throw std::runtime_error("unsupported activ type"); break;
     }
 }
@@ -121,8 +114,8 @@ void host_direct_convolution_activ(const Tensor<TIn>& in,
                                    const ConvDilations& conv_dilations,
                                    const InLeftPads& in_left_pads,
                                    const InRightPads& in_right_pads,
-                                   const ConvTensorLayout layout = ConvTensorLayout::NCHW,
-                                   const ActivType_t activ_type  = ActivType_t::passthrough)
+                                   const ck::index_t activ_type,
+                                   const ConvTensorLayout layout = ConvTensorLayout::NCHW)
 {
     using namespace ck;
 

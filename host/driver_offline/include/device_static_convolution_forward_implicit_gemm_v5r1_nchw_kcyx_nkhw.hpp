@@ -7,6 +7,7 @@
 template <typename TInWei,
           ck::index_t InWeiVectorSize,
           ck::index_t OutVectorSize,
+          ck::index_t activ_type,
           typename TAcc,
           typename TOut,
           typename InLengths,
@@ -152,6 +153,7 @@ void device_static_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
                     conv_dilations,
                     in_left_pads,
                     in_right_pads,
+                    Number<activ_type>{},
                     static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(
                         wei_k_c0_y_x_c1_device_buf.GetDeviceBuffer()),
                     static_cast<typename vector_type<TInWei, InWeiVectorSize>::type*>(

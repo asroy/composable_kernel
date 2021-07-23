@@ -72,11 +72,12 @@ struct GridwiseStaticGemm_km_kn_mn_v3
         return a_block_space_size * sizeof(FloatAB);
     }
 
-    template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
+    template <index_t activ_type, bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const FloatAB* __restrict__ p_a_global,
                         const FloatAB* __restrict__ p_b_global,
                         FloatC* __restrict__ p_c_global,
                         FloatAB* __restrict__ p_shared_block,
+                        Number<activ_type>,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
@@ -348,7 +349,6 @@ struct GridwiseStaticGemm_km_kn_mn_v3
 
         // activ
         {
-            constexpr index_t activ_type = 2;
             static_for<0, c_k_n_ho_wo_thread_desc.GetElementSpaceSize(), 1>{}([&](auto i) {
                 if constexpr(activ_type == 1)
                     c_thread_buf(i) = c_thread_buf[i] >= 0 ? c_thread_buf[i] : 0.0;
@@ -392,10 +392,11 @@ struct GridwiseStaticGemm_km_kn_mn_v3
     }
 
     // pass tensor descriptor by reference
-    template <bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
+    template <index_t activ_type, bool HasMainKBlockLoop, bool HasDoubleTailKBlockLoop>
     __device__ void Run(const FloatAB* __restrict__ p_a_global,
                         const FloatAB* __restrict__ p_b_global,
                         FloatC* __restrict__ p_c_global,
+                        Number<activ_type>,
                         integral_constant<bool, HasMainKBlockLoop>,
                         integral_constant<bool, HasDoubleTailKBlockLoop>) const
     {
@@ -407,6 +408,7 @@ struct GridwiseStaticGemm_km_kn_mn_v3
             p_b_global,
             p_c_global,
             p_shared_block,
+            Number<activ_type>{},
             integral_constant<bool, HasMainKBlockLoop>{},
             integral_constant<bool, HasDoubleTailKBlockLoop>{});
     }

@@ -35,7 +35,8 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
               typename ConvStrides,
               typename ConvDilations,
               typename InLeftPads,
-              typename InRightPads>
+              typename InRightPads,
+              index_t activ_type>
     __host__ void Run(const DynamicTensorDescriptor<Wei...>& wei_k_c_y_x_global_desc,
                       const DynamicTensorDescriptor<In...>& in_n_c_hi_wi_global_desc,
                       const DynamicTensorDescriptor<Out...>& out_n_k0_ho_wo_k1_global_desc,
@@ -43,6 +44,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                       const ConvDilations& conv_dilations,
                       const InLeftPads& in_left_pads,
                       const InRightPads& in_right_pads_,
+                      Number<activ_type>,
                       const FloatAB* __restrict__ p_wei_global,
                       const FloatAB* __restrict__ p_in_global,
                       FloatC* __restrict__ p_out_global) const
@@ -297,6 +299,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                                                const FloatAB*,
                                                                const FloatAB*,
                                                                FloatC*,
+                                                               Number<activ_type>,
                                                                integral_constant<bool, true>,
                                                                integral_constant<bool, true>>;
 
@@ -308,6 +311,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   p_wei_global,
                                   p_in_global,
                                   p_out_global,
+                                  Number<activ_type>{},
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, true>{});
                 }
@@ -317,6 +321,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                                                const FloatAB*,
                                                                const FloatAB*,
                                                                FloatC*,
+                                                               Number<activ_type>,
                                                                integral_constant<bool, true>,
                                                                integral_constant<bool, false>>;
 
@@ -328,6 +333,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   p_wei_global,
                                   p_in_global,
                                   p_out_global,
+                                  Number<activ_type>{},
                                   integral_constant<bool, true>{},
                                   integral_constant<bool, false>{});
                 }
@@ -337,6 +343,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                                                const FloatAB*,
                                                                const FloatAB*,
                                                                FloatC*,
+                                                               Number<activ_type>,
                                                                integral_constant<bool, false>,
                                                                integral_constant<bool, true>>;
 
@@ -348,6 +355,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   p_wei_global,
                                   p_in_global,
                                   p_out_global,
+                                  Number<activ_type>{},
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, true>{});
                 }
@@ -357,6 +365,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                                                const FloatAB*,
                                                                const FloatAB*,
                                                                FloatC*,
+                                                               Number<activ_type>,
                                                                integral_constant<bool, false>,
                                                                integral_constant<bool, false>>;
 
@@ -368,6 +377,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   p_wei_global,
                                   p_in_global,
                                   p_out_global,
+                                  Number<activ_type>{},
                                   integral_constant<bool, false>{},
                                   integral_constant<bool, false>{});
                 }
