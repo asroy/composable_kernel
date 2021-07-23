@@ -32,7 +32,7 @@ __host__ __device__ constexpr auto make_left_pad_transform(
     return DynamicLeftPad<LowLength, LeftPad, SkipIsValidCheck>{low_length, left_pad};
 }
 
-template <typename LowLength, typename RightPad, bool SkipIsValidCheck>
+template <typename LowLength, typename RightPad, bool SkipIsValidCheck = false>
 __host__ __device__ constexpr auto make_right_pad_transform(
     const LowLength& low_length,
     const RightPad& right_pad,

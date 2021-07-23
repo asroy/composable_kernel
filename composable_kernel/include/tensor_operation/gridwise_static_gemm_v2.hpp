@@ -346,6 +346,19 @@ struct GridwiseStaticGemm_km_kn_mn_v3
             blockwise_gemm.Run(a_block_buf, b_thread_even_buf, c_thread_buf);
         }
 
+        // activ
+        {
+            constexpr index_t activ_type = 2;
+            static_for<0, c_k_n_ho_wo_thread_desc.GetElementSpaceSize(), 1>{}([&](auto i) {
+                if constexpr(activ_type == 1)
+                    c_thread_buf(i) = c_thread_buf[i] >= 0 ? c_thread_buf[i] : 0.0;
+                else if constexpr(activ_type == 2)
+                    c_thread_buf(i) = 1.0 / (1.0 + exp(-c_thread_buf[i]));
+            }
+
+            );
+        }
+
         // output: register to global memory
         {
             // hack to control index calculation when iterating over c_k_n_ho_wo_global tensor

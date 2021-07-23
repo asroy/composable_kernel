@@ -103,14 +103,14 @@ int main(int argc, char* argv[])
     const bool do_log             = atoi(argv[5]);
     const int nrepeat             = atoi(argv[6]);
 
-#if 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 16;
-    constexpr index_t Hi = 1080;
-    constexpr index_t Wi = 1920;
-    constexpr index_t K  = 16;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
+#if 1
+    constexpr index_t N           = 1;
+    constexpr index_t C           = 16;
+    constexpr index_t Hi          = 1080;
+    constexpr index_t Wi          = 1920;
+    constexpr index_t K           = 16;
+    constexpr index_t Y           = 3;
+    constexpr index_t X           = 3;
 #elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
     constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
-#elif 1
+#elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
     constexpr index_t Hi = 240;
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
     constexpr index_t K  = 16;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
-#elif 1
+#elif 0
     constexpr index_t N  = 1;
     constexpr index_t C  = 16;
     constexpr index_t Hi = 1080;
@@ -143,6 +143,38 @@ int main(int argc, char* argv[])
     constexpr index_t K  = 16;
     constexpr index_t Y  = 1;
     constexpr index_t X  = 1;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 16;
+    constexpr index_t Hi = 540;
+    constexpr index_t Wi = 960;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 16;
+    constexpr index_t Hi = 480;
+    constexpr index_t Wi = 270;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 1;
+    constexpr index_t X  = 1;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 8;
+    constexpr index_t Hi = 1080;
+    constexpr index_t Wi = 1920;
+    constexpr index_t K  = 16;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
+#elif 0
+    constexpr index_t N  = 1;
+    constexpr index_t C  = 16;
+    constexpr index_t Hi = 1080;
+    constexpr index_t Wi = 1920;
+    constexpr index_t K  = 4;
+    constexpr index_t Y  = 3;
+    constexpr index_t X  = 3;
 #endif
 
     const index_t conv_stride_h   = 1;
@@ -420,17 +452,17 @@ int main(int argc, char* argv[])
 #else
         device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw
 #endif
-            <in_data_t, 8, acc_data_t, out_data_t>(tmp[I0],
-                                                   tmp[I1],
-                                                   tmp[I2],
-                                                   tmp[I3],
-                                                   tmp[I4],
-                                                   tmp[I5],
-                                                   tmp[I6],
-                                                   in,
-                                                   wei,
-                                                   out_device,
-                                                   nrepeat);
+            <in_data_t, 8, 8, acc_data_t, out_data_t>(tmp[I0],
+                                                      tmp[I1],
+                                                      tmp[I2],
+                                                      tmp[I3],
+                                                      tmp[I4],
+                                                      tmp[I5],
+                                                      tmp[I6],
+                                                      in,
+                                                      wei,
+                                                      out_device,
+                                                      nrepeat);
     }
 #endif
 
@@ -490,14 +522,15 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-        host_direct_convolution(in,
-                                wei,
-                                out_host,
-                                make_tuple(conv_stride_h, conv_stride_w),
-                                make_tuple(conv_dilation_h, conv_dilation_w),
-                                make_tuple(in_left_pad_h, in_left_pad_w),
-                                make_tuple(in_right_pad_h, in_right_pad_w),
-                                layout);
+        host_direct_convolution_activ(in,
+                                      wei,
+                                      out_host,
+                                      make_tuple(conv_stride_h, conv_stride_w),
+                                      make_tuple(conv_dilation_h, conv_dilation_w),
+                                      make_tuple(in_left_pad_h, in_left_pad_w),
+                                      make_tuple(in_right_pad_h, in_right_pad_w),
+                                      layout,
+                                      ActivType_t::sigmoid);
 
         check_error(out_host, out_device);
 

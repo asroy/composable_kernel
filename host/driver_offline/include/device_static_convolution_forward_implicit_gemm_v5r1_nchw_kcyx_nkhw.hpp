@@ -6,6 +6,7 @@
 
 template <typename TInWei,
           ck::index_t InWeiVectorSize,
+          ck::index_t OutVectorSize,
           typename TAcc,
           typename TOut,
           typename InLengths,
@@ -53,8 +54,8 @@ void device_static_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     const auto C0 = C / Number<InWeiVectorSize>{};
     const auto C1 = Number<InWeiVectorSize>{};
 
-    const auto K0 = K / Number<InWeiVectorSize>{};
-    const auto K1 = Number<InWeiVectorSize>{};
+    const auto K0 = K / Number<OutVectorSize>{};
+    const auto K1 = Number<OutVectorSize>{};
 
     Tensor<TInWei> in_n_c0_hi_wi_c1(
         HostTensorDescriptor(std::initializer_list<index_t>{N, C0, Hi, Wi, C1}));
@@ -105,7 +106,7 @@ void device_static_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     constexpr index_t WoPerThread = 2;
     constexpr index_t EPerThread  = EPerBlock;
 
-    using ABlockTransferThreadSliceLengths_E_K   = Sequence<9, 1>;
+    using ABlockTransferThreadSliceLengths_E_K   = Sequence<Y * X, 1>;
     using ABlockTransferThreadClusterLengths_E_K = Sequence<EPerBlock, KPerBlock>;
 
     constexpr index_t ABlockTransferSrcScalarPerVector_E = 1;
@@ -120,8 +121,10 @@ void device_static_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw(
     constexpr auto conv_driver =
 #if 0
         DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_pad
-#else
+#elif 1
         DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
+#elif 1
+        DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad_1x1
 #endif
         <BlockSize,
          typename vector_type<TInWei, InWeiVectorSize>::type,
