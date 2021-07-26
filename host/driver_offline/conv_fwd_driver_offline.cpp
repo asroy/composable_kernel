@@ -15,16 +15,15 @@
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_nhwc_kyxc_nhwk.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v6r1_nchw_kcyx_nkhw.hpp"
-#include "device_static_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4r2_xdlops_nchw_kcyx_nkhw.hpp"
 #include "device_dynamic_convolution_forward_implicit_gemm_v4r4r4_xdlops_nhwc_kyxc_nhwk.hpp"
 
-#define USE_DYNAMIC_MODE 0
-#define USE_CONV_FWD_V4R4_NCHW 0
+#define USE_DYNAMIC_MODE 1
+#define USE_CONV_FWD_V4R4_NCHW 1
 #define USE_CONV_FWD_V4R4R2_NHWC 0
 #define USE_CONV_FWD_V6R1_NCHW 0
-#define USE_CONV_FWD_V5R1_NCHW 1
+#define USE_CONV_FWD_V5R1_NCHW 0
 #define USE_CONV_FWD_V4R4R2_XDL_NCHW 0
 #define USE_CONV_FWD_V4R4R4_XDL_NHWC 0
 
@@ -103,82 +102,16 @@ int main(int argc, char* argv[])
     const bool do_log             = atoi(argv[5]);
     const int nrepeat             = atoi(argv[6]);
 
-#if 1
-    constexpr index_t N           = 1;
-    constexpr index_t C           = 16;
-    constexpr index_t Hi          = 1080;
-    constexpr index_t Wi          = 1920;
-    constexpr index_t K           = 16;
-    constexpr index_t Y           = 3;
-    constexpr index_t X           = 3;
-#elif 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 16;
-    constexpr index_t Hi = 540;
-    constexpr index_t Wi = 960;
-    constexpr index_t K  = 16;
+    constexpr index_t N  = 128;
+    constexpr index_t C  = 192;
+    constexpr index_t Hi = 71;
+    constexpr index_t Wi = 71;
+    constexpr index_t K  = 256;
     constexpr index_t Y  = 3;
     constexpr index_t X  = 3;
-#elif 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 16;
-    constexpr index_t Hi = 480;
-    constexpr index_t Wi = 270;
-    constexpr index_t K  = 16;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-#elif 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 16;
-    constexpr index_t Hi = 240;
-    constexpr index_t Wi = 135;
-    constexpr index_t K  = 16;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-#elif 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 16;
-    constexpr index_t Hi = 1080;
-    constexpr index_t Wi = 1920;
-    constexpr index_t K  = 16;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
-#elif 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 16;
-    constexpr index_t Hi = 540;
-    constexpr index_t Wi = 960;
-    constexpr index_t K  = 16;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
-#elif 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 16;
-    constexpr index_t Hi = 480;
-    constexpr index_t Wi = 270;
-    constexpr index_t K  = 16;
-    constexpr index_t Y  = 1;
-    constexpr index_t X  = 1;
-#elif 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 8;
-    constexpr index_t Hi = 1080;
-    constexpr index_t Wi = 1920;
-    constexpr index_t K  = 16;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-#elif 0
-    constexpr index_t N  = 1;
-    constexpr index_t C  = 16;
-    constexpr index_t Hi = 1080;
-    constexpr index_t Wi = 1920;
-    constexpr index_t K  = 4;
-    constexpr index_t Y  = 3;
-    constexpr index_t X  = 3;
-#endif
 
-    const index_t conv_stride_h   = 1;
-    const index_t conv_stride_w   = 1;
+    const index_t conv_stride_h   = 2;
+    const index_t conv_stride_w   = 2;
     const index_t conv_dilation_h = 1;
     const index_t conv_dilation_w = 1;
     const index_t in_left_pad_h   = 1;
@@ -193,7 +126,7 @@ int main(int argc, char* argv[])
     const index_t Wo = (Wi + in_left_pad_w + in_right_pad_w - XEff) / conv_stride_w + 1;
 #endif
 
-#if 0
+#if 1
     using in_data_t  = float;
     using acc_data_t = float;
     using out_data_t = float;
@@ -437,8 +370,6 @@ int main(int argc, char* argv[])
     }
 #endif
 
-    constexpr ck::index_t activ_type = 2;
-
 #if USE_CONV_FWD_V5R1_NCHW
     if(algo == ConvForwardAlgo::V5R1NCHW)
     {
@@ -449,22 +380,20 @@ int main(int argc, char* argv[])
 
         const auto tmp = f_make_for_device_nchw();
 
-#if 1
-        device_static_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw
-#else
-        device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw
-#endif
-            <in_data_t, 8, 8, activ_type, acc_data_t, out_data_t>(tmp[I0],
-                                                                  tmp[I1],
-                                                                  tmp[I2],
-                                                                  tmp[I3],
-                                                                  tmp[I4],
-                                                                  tmp[I5],
-                                                                  tmp[I6],
-                                                                  in,
-                                                                  wei,
-                                                                  out_device,
-                                                                  nrepeat);
+        device_dynamic_convolution_forward_implicit_gemm_v5r1_nchw_kcyx_nkhw<in_data_t,
+                                                                             16,
+                                                                             acc_data_t,
+                                                                             out_data_t>(tmp[I0],
+                                                                                         tmp[I1],
+                                                                                         tmp[I2],
+                                                                                         tmp[I3],
+                                                                                         tmp[I4],
+                                                                                         tmp[I5],
+                                                                                         tmp[I6],
+                                                                                         in,
+                                                                                         wei,
+                                                                                         out_device,
+                                                                                         nrepeat);
     }
 #endif
 
@@ -524,15 +453,14 @@ int main(int argc, char* argv[])
 
     if(do_verification)
     {
-        host_direct_convolution_activ(in,
-                                      wei,
-                                      out_host,
-                                      make_tuple(conv_stride_h, conv_stride_w),
-                                      make_tuple(conv_dilation_h, conv_dilation_w),
-                                      make_tuple(in_left_pad_h, in_left_pad_w),
-                                      make_tuple(in_right_pad_h, in_right_pad_w),
-                                      activ_type,
-                                      layout);
+        host_direct_convolution(in,
+                                wei,
+                                out_host,
+                                make_tuple(conv_stride_h, conv_stride_w),
+                                make_tuple(conv_dilation_h, conv_dilation_w),
+                                make_tuple(in_left_pad_h, in_left_pad_w),
+                                make_tuple(in_right_pad_h, in_right_pad_w),
+                                layout);
 
         check_error(out_host, out_device);
 

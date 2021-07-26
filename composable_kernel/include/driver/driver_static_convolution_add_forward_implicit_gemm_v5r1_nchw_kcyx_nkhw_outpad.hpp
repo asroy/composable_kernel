@@ -1,10 +1,10 @@
-#ifndef CK_DRIVER_STATIC_CONVOLUTION_FORWARD_IMPLICIT_GEMM_V5R1_NCHW_KCYX_NKHW_OUTPAD_HPP
-#define CK_DRIVER_STATIC_CONVOLUTION_FORWARD_IMPLICIT_GEMM_V5R1_NCHW_KCYX_NKHW_OUTPAD_HPP
+#ifndef CK_DRIVER_STATIC_CONVOLUTION_ADD_FORWARD_IMPLICIT_GEMM_V5R1_NCHW_KCYX_NKHW_OUTPAD_HPP
+#define CK_DRIVER_STATIC_CONVOLUTION_ADD_FORWARD_IMPLICIT_GEMM_V5R1_NCHW_KCYX_NKHW_OUTPAD_HPP
 
 #include "common_header.hpp"
 #include "dynamic_tensor_descriptor.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
-#include "gridwise_static_gemm_v2.hpp"
+#include "gridwise_static_gemm_v3.hpp"
 #include "gridwise_operation_wrapper.hpp"
 
 namespace ck {
@@ -27,10 +27,11 @@ template <index_t BlockSize,
           index_t ABlockTransferDstScalarPerVector_K,
           index_t BThreadTransferSrcScalarPerVector_W,
           index_t CThreadTransferDstScalarPerVector_W>
-struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
+struct DriverStaticConvolutionAddForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 {
     template <typename... Wei,
               typename... In,
+              typename... Add,
               typename... Out,
               typename ConvStrides,
               typename ConvDilations,
@@ -39,6 +40,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
               index_t activ_type>
     __host__ void Run(const DynamicTensorDescriptor<Wei...>& wei_k_c_y_x_global_desc,
                       const DynamicTensorDescriptor<In...>& in_n_c_hi_wi_global_desc,
+                      const DynamicTensorDescriptor<Add...>& add_n_k0_hox2_wox2_k1_global_desc,
                       const DynamicTensorDescriptor<Out...>& out_n_k0_ho_wo_k1_global_desc,
                       const ConvStrides& conv_strides,
                       const ConvDilations& conv_dilations,
@@ -47,6 +49,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                       Number<activ_type>,
                       const FloatAB* __restrict__ p_wei_global,
                       const FloatAB* __restrict__ p_in_global,
+                      const FloatC* __restrict__ p_add_global,
                       FloatC* __restrict__ p_out_global) const
     {
         constexpr auto I0 = Number<0>{};
@@ -80,6 +83,9 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
 
         constexpr auto Ho = Number<Ho_>{};
         constexpr auto Wo = Number<Wo_>{};
+
+        constexpr auto Hox2 = Number<Ho * 2>{};
+        constexpr auto Wox2 = Number<Wo * 2>{};
 
         constexpr auto K = Number<K_>{};
         constexpr auto Y = Number<Y_>{};
@@ -183,6 +189,19 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         static_assert(out_k_n_hop_wop_global_desc.IsKnownAtCompileTime(),
                       "wrong! out_k_n_hop_wop_global_desc need to known at compile-time");
 
+        // add tensor
+        const auto add_k_n_hopx2_wopx2_global_desc = transform_dynamic_tensor_descriptor(
+            make_dynamic_naive_tensor_descriptor_packed_v2(make_tuple(N, K0, Hox2, Wox2)),
+            make_tuple(make_pass_through_transform(K0),
+                       make_pass_through_transform(N),
+                       make_pass_through_transform(Hox2),
+                       make_pass_through_transform(Wox2)),
+            make_tuple(Sequence<1>{}, Sequence<0>{}, Sequence<2>{}, Sequence<3>{}),
+            make_tuple(Sequence<0>{}, Sequence<1>{}, Sequence<2>{}, Sequence<3>{}));
+
+        static_assert(add_k_n_hopx2_wopx2_global_desc.IsKnownAtCompileTime(),
+                      "wrong! add_k_n_hopx2_wopx2_global_desc need to known at compile-time");
+
         const auto E = C * Y * X;
 
         std::cerr << "Hop = " << Hop << " Wop = " << Wop << std::endl;
@@ -226,7 +245,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   Sequence<0, 0, 0, 0, 0>{}));
 
         // GEMM
-        using gridwise_gemm = GridwiseStaticGemm_km_kn_mn_v2<
+        using gridwise_gemm = GridwiseStaticGemm_km_kn_mn_v3<
             BlockSize,
             FloatAB,
             FloatAcc,
@@ -234,6 +253,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
             InMemoryDataOperation::Set,
             decltype(wei_e_k_global_desc),
             decltype(in_e_n_ho_wo_global_desc),
+            decltype(add_k_n_hopx2_wopx2_global_desc),
             decltype(out_k_n_hop_wop_global_desc),
             KPerBlock,
             HoPerBlock,
@@ -297,6 +317,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                     const auto kernel = run_gridwise_operation<gridwise_gemm,
                                                                const FloatAB*,
                                                                const FloatAB*,
+                                                               const FloatC*,
                                                                FloatC*,
                                                                Number<activ_type>,
                                                                integral_constant<bool, true>,
@@ -309,6 +330,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   0,
                                   p_wei_global,
                                   p_in_global,
+                                  p_add_global,
                                   p_out_global,
                                   Number<activ_type>{},
                                   integral_constant<bool, true>{},
@@ -319,6 +341,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                     const auto kernel = run_gridwise_operation<gridwise_gemm,
                                                                const FloatAB*,
                                                                const FloatAB*,
+                                                               const FloatC*,
                                                                FloatC*,
                                                                Number<activ_type>,
                                                                integral_constant<bool, true>,
@@ -331,6 +354,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   0,
                                   p_wei_global,
                                   p_in_global,
+                                  p_add_global,
                                   p_out_global,
                                   Number<activ_type>{},
                                   integral_constant<bool, true>{},
@@ -341,6 +365,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                     const auto kernel = run_gridwise_operation<gridwise_gemm,
                                                                const FloatAB*,
                                                                const FloatAB*,
+                                                               const FloatC*,
                                                                FloatC*,
                                                                Number<activ_type>,
                                                                integral_constant<bool, false>,
@@ -353,6 +378,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   0,
                                   p_wei_global,
                                   p_in_global,
+                                  p_add_global,
                                   p_out_global,
                                   Number<activ_type>{},
                                   integral_constant<bool, false>{},
@@ -363,6 +389,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                     const auto kernel = run_gridwise_operation<gridwise_gemm,
                                                                const FloatAB*,
                                                                const FloatAB*,
+                                                               const FloatC*,
                                                                FloatC*,
                                                                Number<activ_type>,
                                                                integral_constant<bool, false>,
@@ -375,6 +402,7 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
                                   0,
                                   p_wei_global,
                                   p_in_global,
+                                  p_add_global,
                                   p_out_global,
                                   Number<activ_type>{},
                                   integral_constant<bool, false>{},
@@ -396,6 +424,8 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_outpad
         }
     }
 };
+
+#if 0
 
 template <index_t BlockSize,
           typename FloatAB,
@@ -1104,5 +1134,6 @@ struct DriverStaticConvolutionForwardImplicitGemm_v5r1_nchw_kcyx_nkhw_1x1
         }
     }
 };
+#endif
 } // namespace ck
 #endif
