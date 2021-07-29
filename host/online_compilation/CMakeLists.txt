@@ -43,7 +43,7 @@ else()
     endif()
 endif()
 
-option(Boost_USE_STATIC_LIBS "Use boost static libraries" OFF)
+option(Boost_USE_STATIC_LIBS "Use boost static libraries" ON)
 set(BOOST_COMPONENTS filesystem)
 add_definitions(-DBOOST_ALL_NO_LIB=1)
 find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
@@ -73,17 +73,20 @@ include_directories(BEFORE
     ${PROJECT_BINARY_DIR}/host/online_compilation/include
 )
 
-message(STATUS "Hip compiler flags: ${HIP_COMPILER_FLAGS}")
-
 ## HIP_COMPILER_FLAGS will be used for on-line compiling of the HIP kernels
-add_definitions("-DHIP_COMPILER_FLAGS=${HIP_COMPILER_FLAGS}")
 set(HIP_COMPILER_FLAGS "${HIP_COMPILER_FLAGS} ${HIP_ONLINE_COMPILER_FLAGS}")
+add_definitions("-DHIP_COMPILER_FLAGS=${HIP_COMPILER_FLAGS}")
+
+message(STATUS "Hip compiler flags: ${HIP_COMPILER_FLAGS}")
 
 file(GLOB_RECURSE COMPOSABLE_KERNEL_INCLUDE_1 "${PROJECT_SOURCE_DIR}/composable_kernel/include/*/*.hpp")
 file(GLOB COMPOSABLE_KERNEL_INCLUDE_2 "${PROJECT_SOURCE_DIR}/external/rocm/include/bfloat16_dev.hpp")
+file(GLOB COMPOSABLE_KERNEL_INCLUDE_3 "${PROJECT_SOURCE_DIR}/composable_kernel/include/*.hpp")
+
 set(MCONV_KERNEL_INCLUDES
     ${COMPOSABLE_KERNEL_INCLUDE_1}
     ${COMPOSABLE_KERNEL_INCLUDE_2}
+    ${COMPOSABLE_KERNEL_INCLUDE_3}
    )
 
 file(GLOB_RECURSE MCONV_KERNELS "${PROJECT_SOURCE_DIR}/composable_kernel/src/kernel_wrapper/*.cpp")
