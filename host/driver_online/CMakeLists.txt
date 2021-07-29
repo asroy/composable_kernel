@@ -14,8 +14,14 @@ include_directories(BEFORE
 )
 
 set(CONV_FWD_DRIVER_ONLINE_SOURCE conv_fwd_driver_online.cpp)
+set(REDUCE_DRIVER_ONLINE_SOURCE reduce_driver_online.cpp)
 
 add_executable(conv_fwd_driver_online ${CONV_FWD_DRIVER_ONLINE_SOURCE})
+add_executable(reduce_driver_online ${REDUCE_DRIVER_ONLINE_SOURCE})
 
 target_link_libraries(conv_fwd_driver_online PRIVATE host_tensor)
 target_link_libraries(conv_fwd_driver_online PRIVATE online_compilation)
+
+target_link_libraries(reduce_driver_online PRIVATE host_tensor)
+target_link_libraries(reduce_driver_online PRIVATE online_compilation)
+
