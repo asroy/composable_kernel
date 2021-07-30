@@ -173,10 +173,14 @@ struct vector_type<T, 2>
     {
         static_assert(is_same<X, d1_t>::value || is_same<X, d2_t>::value, "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x2_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x2_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x1_;
+        }
     }
 
     template <typename X>
@@ -184,10 +188,14 @@ struct vector_type<T, 2>
     {
         static_assert(is_same<X, d1_t>::value || is_same<X, d2_t>::value, "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x2_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x2_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x1_;
+        }
     }
 };
 
@@ -218,12 +226,18 @@ struct vector_type<T, 4>
         static_assert(is_same<X, d1_t>::value || is_same<X, d2_t>::value || is_same<X, d4_t>::value,
                       "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x4_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x2_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x4_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x2_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x1_;
+        }
     }
 
     template <typename X>
@@ -232,12 +246,18 @@ struct vector_type<T, 4>
         static_assert(is_same<X, d1_t>::value || is_same<X, d2_t>::value || is_same<X, d4_t>::value,
                       "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x4_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x2_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x4_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x2_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x1_;
+        }
     }
 };
 
@@ -271,14 +291,22 @@ struct vector_type<T, 8>
                           is_same<X, d4_t>::value || is_same<X, d8_t>::value,
                       "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x8_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x4_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x2_; }
-        else if
-            constexpr(is_same<X, d8_t>::value) { return data_.d8x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x8_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x4_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x2_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x1_;
+        }
     }
 
     template <typename X>
@@ -288,14 +316,22 @@ struct vector_type<T, 8>
                           is_same<X, d4_t>::value || is_same<X, d8_t>::value,
                       "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x8_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x4_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x2_; }
-        else if
-            constexpr(is_same<X, d8_t>::value) { return data_.d8x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x8_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x4_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x2_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x1_;
+        }
     }
 };
 
@@ -332,16 +368,26 @@ struct vector_type<T, 16>
                           is_same<X, d16_t>::value,
                       "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x16_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x8_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x4_; }
-        else if
-            constexpr(is_same<X, d8_t>::value) { return data_.d8x2_; }
-        else if
-            constexpr(is_same<X, d16_t>::value) { return data_.d16x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x16_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x8_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x4_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x2_;
+        }
+        else if constexpr(is_same<X, d16_t>::value)
+        {
+            return data_.d16x1_;
+        }
     }
 
     template <typename X>
@@ -352,16 +398,26 @@ struct vector_type<T, 16>
                           is_same<X, d16_t>::value,
                       "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x16_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x8_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x4_; }
-        else if
-            constexpr(is_same<X, d8_t>::value) { return data_.d8x2_; }
-        else if
-            constexpr(is_same<X, d16_t>::value) { return data_.d16x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x16_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x8_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x4_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x2_;
+        }
+        else if constexpr(is_same<X, d16_t>::value)
+        {
+            return data_.d16x1_;
+        }
     }
 };
 
@@ -400,18 +456,30 @@ struct vector_type<T, 32>
                           is_same<X, d16_t>::value || is_same<X, d32_t>::value,
                       "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x32_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x16_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x8_; }
-        else if
-            constexpr(is_same<X, d8_t>::value) { return data_.d8x4_; }
-        else if
-            constexpr(is_same<X, d16_t>::value) { return data_.d16x2_; }
-        else if
-            constexpr(is_same<X, d32_t>::value) { return data_.d32x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x32_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x16_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x8_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x4_;
+        }
+        else if constexpr(is_same<X, d16_t>::value)
+        {
+            return data_.d16x2_;
+        }
+        else if constexpr(is_same<X, d32_t>::value)
+        {
+            return data_.d32x1_;
+        }
     }
 
     template <typename X>
@@ -422,18 +490,30 @@ struct vector_type<T, 32>
                           is_same<X, d16_t>::value || is_same<X, d32_t>::value,
                       "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x32_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x16_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x8_; }
-        else if
-            constexpr(is_same<X, d8_t>::value) { return data_.d8x4_; }
-        else if
-            constexpr(is_same<X, d16_t>::value) { return data_.d16x2_; }
-        else if
-            constexpr(is_same<X, d32_t>::value) { return data_.d32x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x32_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x16_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x8_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x4_;
+        }
+        else if constexpr(is_same<X, d16_t>::value)
+        {
+            return data_.d16x2_;
+        }
+        else if constexpr(is_same<X, d32_t>::value)
+        {
+            return data_.d32x1_;
+        }
     }
 };
 
@@ -475,20 +555,34 @@ struct vector_type<T, 64>
                           is_same<X, d64_t>::value,
                       "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x64_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x32_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x16_; }
-        else if
-            constexpr(is_same<X, d8_t>::value) { return data_.d8x8_; }
-        else if
-            constexpr(is_same<X, d16_t>::value) { return data_.d16x4_; }
-        else if
-            constexpr(is_same<X, d32_t>::value) { return data_.d32x2_; }
-        else if
-            constexpr(is_same<X, d64_t>::value) { return data_.d64x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x64_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x32_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x16_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x8_;
+        }
+        else if constexpr(is_same<X, d16_t>::value)
+        {
+            return data_.d16x4_;
+        }
+        else if constexpr(is_same<X, d32_t>::value)
+        {
+            return data_.d32x2_;
+        }
+        else if constexpr(is_same<X, d64_t>::value)
+        {
+            return data_.d64x1_;
+        }
     }
 
     template <typename X>
@@ -500,20 +594,34 @@ struct vector_type<T, 64>
                           is_same<X, d64_t>::value,
                       "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x64_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x32_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x16_; }
-        else if
-            constexpr(is_same<X, d8_t>::value) { return data_.d8x8_; }
-        else if
-            constexpr(is_same<X, d16_t>::value) { return data_.d16x4_; }
-        else if
-            constexpr(is_same<X, d32_t>::value) { return data_.d32x2_; }
-        else if
-            constexpr(is_same<X, d64_t>::value) { return data_.d64x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x64_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x32_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x16_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x8_;
+        }
+        else if constexpr(is_same<X, d16_t>::value)
+        {
+            return data_.d16x4_;
+        }
+        else if constexpr(is_same<X, d32_t>::value)
+        {
+            return data_.d32x2_;
+        }
+        else if constexpr(is_same<X, d64_t>::value)
+        {
+            return data_.d64x1_;
+        }
     }
 };
 
@@ -557,22 +665,38 @@ struct vector_type<T, 128>
                           is_same<X, d64_t>::value || is_same<X, d128_t>::value,
                       "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x128_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x64_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x32_; }
-        else if
-            constexpr(is_same<X, d8_t>::value) { return data_.d8x16_; }
-        else if
-            constexpr(is_same<X, d16_t>::value) { return data_.d16x8_; }
-        else if
-            constexpr(is_same<X, d32_t>::value) { return data_.d32x4_; }
-        else if
-            constexpr(is_same<X, d64_t>::value) { return data_.d64x2_; }
-        else if
-            constexpr(is_same<X, d128_t>::value) { return data_.d128x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x128_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x64_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x32_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x16_;
+        }
+        else if constexpr(is_same<X, d16_t>::value)
+        {
+            return data_.d16x8_;
+        }
+        else if constexpr(is_same<X, d32_t>::value)
+        {
+            return data_.d32x4_;
+        }
+        else if constexpr(is_same<X, d64_t>::value)
+        {
+            return data_.d64x2_;
+        }
+        else if constexpr(is_same<X, d128_t>::value)
+        {
+            return data_.d128x1_;
+        }
     }
 
     template <typename X>
@@ -584,22 +708,38 @@ struct vector_type<T, 128>
                           is_same<X, d64_t>::value || is_same<X, d128_t>::value,
                       "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x128_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x64_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x32_; }
-        else if
-            constexpr(is_same<X, d8_t>::value) { return data_.d8x16_; }
-        else if
-            constexpr(is_same<X, d16_t>::value) { return data_.d16x8_; }
-        else if
-            constexpr(is_same<X, d32_t>::value) { return data_.d32x4_; }
-        else if
-            constexpr(is_same<X, d64_t>::value) { return data_.d64x2_; }
-        else if
-            constexpr(is_same<X, d128_t>::value) { return data_.d128x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x128_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x64_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x32_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x16_;
+        }
+        else if constexpr(is_same<X, d16_t>::value)
+        {
+            return data_.d16x8_;
+        }
+        else if constexpr(is_same<X, d32_t>::value)
+        {
+            return data_.d32x4_;
+        }
+        else if constexpr(is_same<X, d64_t>::value)
+        {
+            return data_.d64x2_;
+        }
+        else if constexpr(is_same<X, d128_t>::value)
+        {
+            return data_.d128x1_;
+        }
     }
 };
 
@@ -645,24 +785,42 @@ struct vector_type<T, 256>
                 is_same<X, d64_t>::value || is_same<X, d128_t>::value || is_same<X, d256_t>::value,
             "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x256_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x128_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x64_; }
-        else if
-            constexpr(is_same<X, d8_t>::value) { return data_.d8x32_; }
-        else if
-            constexpr(is_same<X, d16_t>::value) { return data_.d16x16_; }
-        else if
-            constexpr(is_same<X, d32_t>::value) { return data_.d32x8_; }
-        else if
-            constexpr(is_same<X, d64_t>::value) { return data_.d64x4_; }
-        else if
-            constexpr(is_same<X, d128_t>::value) { return data_.d128x2_; }
-        else if
-            constexpr(is_same<X, d256_t>::value) { return data_.d256x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x256_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x128_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x64_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x32_;
+        }
+        else if constexpr(is_same<X, d16_t>::value)
+        {
+            return data_.d16x16_;
+        }
+        else if constexpr(is_same<X, d32_t>::value)
+        {
+            return data_.d32x8_;
+        }
+        else if constexpr(is_same<X, d64_t>::value)
+        {
+            return data_.d64x4_;
+        }
+        else if constexpr(is_same<X, d128_t>::value)
+        {
+            return data_.d128x2_;
+        }
+        else if constexpr(is_same<X, d256_t>::value)
+        {
+            return data_.d256x1_;
+        }
     }
 
     template <typename X>
@@ -674,24 +832,42 @@ struct vector_type<T, 256>
                 is_same<X, d64_t>::value || is_same<X, d128_t>::value || is_same<X, d256_t>::value,
             "wrong!");
 
-        if
-            constexpr(is_same<X, d1_t>::value) { return data_.d1x256_; }
-        else if
-            constexpr(is_same<X, d2_t>::value) { return data_.d2x128_; }
-        else if
-            constexpr(is_same<X, d4_t>::value) { return data_.d4x64_; }
-        else if
-            constexpr(is_same<X, d8_t>::value) { return data_.d8x32_; }
-        else if
-            constexpr(is_same<X, d16_t>::value) { return data_.d16x16_; }
-        else if
-            constexpr(is_same<X, d32_t>::value) { return data_.d32x8_; }
-        else if
-            constexpr(is_same<X, d64_t>::value) { return data_.d64x4_; }
-        else if
-            constexpr(is_same<X, d128_t>::value) { return data_.d128x2_; }
-        else if
-            constexpr(is_same<X, d256_t>::value) { return data_.d256x1_; }
+        if constexpr(is_same<X, d1_t>::value)
+        {
+            return data_.d1x256_;
+        }
+        else if constexpr(is_same<X, d2_t>::value)
+        {
+            return data_.d2x128_;
+        }
+        else if constexpr(is_same<X, d4_t>::value)
+        {
+            return data_.d4x64_;
+        }
+        else if constexpr(is_same<X, d8_t>::value)
+        {
+            return data_.d8x32_;
+        }
+        else if constexpr(is_same<X, d16_t>::value)
+        {
+            return data_.d16x16_;
+        }
+        else if constexpr(is_same<X, d32_t>::value)
+        {
+            return data_.d32x8_;
+        }
+        else if constexpr(is_same<X, d64_t>::value)
+        {
+            return data_.d64x4_;
+        }
+        else if constexpr(is_same<X, d128_t>::value)
+        {
+            return data_.d128x2_;
+        }
+        else if constexpr(is_same<X, d256_t>::value)
+        {
+            return data_.d256x1_;
+        }
     }
 };
 

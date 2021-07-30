@@ -313,16 +313,16 @@ void device_dynamic_generic_reduction_olc(olCompile::Handle* handle,
 
     std::vector<index_t> lens_buf(4096 / sizeof(index_t)); // allocate one page
 
-    for(int i           = 0; i < inLengths.size(); i++)
+    for(int i = 0; i < inLengths.size(); i++)
         lens_buf[0 + i] = static_cast<index_t>(inLengths[i]);
 
-    for(int i           = 0; i < inStrides.size(); i++)
+    for(int i = 0; i < inStrides.size(); i++)
         lens_buf[6 + i] = static_cast<index_t>(inStrides[i]);
 
-    for(int i            = 0; i < outLengths.size(); i++)
+    for(int i = 0; i < outLengths.size(); i++)
         lens_buf[12 + i] = static_cast<index_t>(outLengths[i]);
 
-    for(int i            = 0; i < outStrides.size(); i++)
+    for(int i = 0; i < outStrides.size(); i++)
         lens_buf[18 + i] = static_cast<index_t>(outStrides[i]);
 
     auto workspace_size = configurator.getWorkspaceSize(invariantLength, toReduceLength);
@@ -443,10 +443,10 @@ void device_dynamic_generic_reduction_olc(olCompile::Handle* handle,
                                             BlkGroupSize,
                                             tunable);
 
-        std::string param1 = param + " -DCK_PARAM_REDUCE_IMPL=" +
-                             std::to_string(static_cast<int>(reduceImpl)) +
-                             " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding.first) +
-                             " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding.second);
+        std::string param1 =
+            param + " -DCK_PARAM_REDUCE_IMPL=" + std::to_string(static_cast<int>(reduceImpl)) +
+            " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding.first) +
+            " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding.second);
 
         std::string program_name1    = "dynamic_gridwise_generic_reduction_first_call.cpp";
         std::string kernel_name1     = "gridwise_generic_reduce_1_prepare";
@@ -503,10 +503,10 @@ void device_dynamic_generic_reduction_olc(olCompile::Handle* handle,
                                                 BlkGroupSize,
                                                 tunable);
 
-            std::string param2 = param + " -DCK_PARAM_REDUCE_IMPL=" +
-                                 std::to_string(static_cast<int>(reduceImpl2)) +
-                                 " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding.first) +
-                                 " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding.second);
+            std::string param2 =
+                param + " -DCK_PARAM_REDUCE_IMPL=" + std::to_string(static_cast<int>(reduceImpl2)) +
+                " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding.first) +
+                " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding.second);
 
             std::string program_name2    = "dynamic_gridwise_generic_reduction_second_call.cpp";
             std::string kernel_name2     = "gridwise_generic_reduce_2_prepare";

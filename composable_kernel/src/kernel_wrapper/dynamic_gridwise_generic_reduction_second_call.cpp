@@ -144,9 +144,8 @@ template <>
 __device__ auto get_reduction_src2d_descriptor<ReductionMethod_t::DirectThreadWise>(
     const void CONSTANT* p_src2dDesc)
 {
-    if
-        constexpr(src2d_need_padding) return (
-            *reinterpret_cast<const refType_src2dDesc_padded_12*>((const void*)p_src2dDesc));
+    if constexpr(src2d_need_padding)
+        return (*reinterpret_cast<const refType_src2dDesc_padded_12*>((const void*)p_src2dDesc));
     else
         return (*reinterpret_cast<const refType_src2dDesc*>((const void*)p_src2dDesc));
 };
@@ -155,9 +154,8 @@ template <>
 __device__ auto
 get_reduction_src2d_descriptor<ReductionMethod_t::DirectWarpWise>(const void CONSTANT* p_src2dDesc)
 {
-    if
-        constexpr(src2d_need_padding) return (
-            *reinterpret_cast<const refType_src2dDesc_padded_12*>((const void*)p_src2dDesc));
+    if constexpr(src2d_need_padding)
+        return (*reinterpret_cast<const refType_src2dDesc_padded_12*>((const void*)p_src2dDesc));
     else
         return (*reinterpret_cast<const refType_src2dDesc*>((const void*)p_src2dDesc));
 };
@@ -166,9 +164,8 @@ template <>
 __device__ auto
 get_reduction_src2d_descriptor<ReductionMethod_t::BlockWise>(const void CONSTANT* p_src2dDesc)
 {
-    if
-        constexpr(src2d_need_padding) return (
-            *reinterpret_cast<const refType_src2dDesc_padded_34*>((const void*)p_src2dDesc));
+    if constexpr(src2d_need_padding)
+        return (*reinterpret_cast<const refType_src2dDesc_padded_34*>((const void*)p_src2dDesc));
     else
         return (*reinterpret_cast<const refType_src2dDesc*>((const void*)p_src2dDesc));
 };
@@ -177,18 +174,16 @@ template <>
 __device__ auto
 get_reduction_src2d_descriptor<ReductionMethod_t::MultiBlock>(const void CONSTANT* p_src2dDesc)
 {
-    if
-        constexpr(src2d_need_padding) return (
-            *reinterpret_cast<const refType_src2dDesc_padded_34*>((const void*)p_src2dDesc));
+    if constexpr(src2d_need_padding)
+        return (*reinterpret_cast<const refType_src2dDesc_padded_34*>((const void*)p_src2dDesc));
     else
         return (*reinterpret_cast<const refType_src2dDesc*>((const void*)p_src2dDesc));
 };
 
 static __device__ auto get_reduction_dst1d_descriptor(const void CONSTANT* p_dst1dDesc)
 {
-    if
-        constexpr(dst1d_need_padding) return (
-            *reinterpret_cast<const refType_dst1dDesc_padded*>((const void*)p_dst1dDesc));
+    if constexpr(dst1d_need_padding)
+        return (*reinterpret_cast<const refType_dst1dDesc_padded*>((const void*)p_dst1dDesc));
     else
         return (*reinterpret_cast<const refType_dst1dDesc*>((const void*)p_dst1dDesc));
 };

@@ -53,8 +53,8 @@ struct WarpReduce
     // This interface does not accumulate on indices
     __device__ static void Reduce(const BufferType& thread_buffer, compType& accuData)
     {
-        if
-            constexpr(have_builtin_shuffle) ReduceImpl1(thread_buffer, accuData);
+        if constexpr(have_builtin_shuffle)
+            ReduceImpl1(thread_buffer, accuData);
         else
             ReduceImpl2(thread_buffer, accuData);
     };
@@ -126,9 +126,8 @@ struct WarpReduce
     __device__ static void
     Reduce2(const BufferType& thread_buffer, compType& accuData, int& accuIndex, int indexStart)
     {
-        if
-            constexpr(have_builtin_shuffle)
-                Reduce2Impl1(thread_buffer, accuData, accuIndex, indexStart);
+        if constexpr(have_builtin_shuffle)
+            Reduce2Impl1(thread_buffer, accuData, accuIndex, indexStart);
         else
             Reduce2Impl2(thread_buffer, accuData, accuIndex, indexStart);
     };
@@ -265,9 +264,8 @@ struct WarpReduceWithIndicesInput
                                   compType& accuData,
                                   int& accuIndex)
     {
-        if
-            constexpr(have_builtin_shuffle)
-                ReduceImpl1(thread_buffer, thread_indices_buffer, accuData, accuIndex);
+        if constexpr(have_builtin_shuffle)
+            ReduceImpl1(thread_buffer, thread_indices_buffer, accuData, accuIndex);
         else
             ReduceImpl2(thread_buffer, thread_indices_buffer, accuData, accuIndex);
     };

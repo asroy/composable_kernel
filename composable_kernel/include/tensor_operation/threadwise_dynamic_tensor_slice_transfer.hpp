@@ -231,35 +231,30 @@ struct ThreadwiseDynamicTensorSliceTransfer_v1r3
 
             // move
             static_for<0, nDim, 1>{}([&](auto i) {
-                if
-                    constexpr(move_on_dim[i])
+                if constexpr(move_on_dim[i])
+                {
+                    if constexpr(forward_sweep[i])
                     {
-                        if
-                            constexpr(forward_sweep[i])
-                            {
-                                move_dynamic_tensor_coordinate(
-                                    dst_desc,
-                                    dst_coord_,
-                                    dst_forward_iterators[dim_access_order[i]]);
-                            }
-                        else
-                        {
-                            move_dynamic_tensor_coordinate(
-                                dst_desc, dst_coord_, dst_backward_iterators[dim_access_order[i]]);
-                        }
+                        move_dynamic_tensor_coordinate(
+                            dst_desc, dst_coord_, dst_forward_iterators[dim_access_order[i]]);
                     }
+                    else
+                    {
+                        move_dynamic_tensor_coordinate(
+                            dst_desc, dst_coord_, dst_backward_iterators[dim_access_order[i]]);
+                    }
+                }
             });
         });
 
         // move dst coordinate back to slice origin (or not)
-        if
-            constexpr(DstResetCoordinateAfterRun)
-            {
-                const auto dst_reset_iterator =
-                    make_dynamic_tensor_coordinate_iterator(dst_desc, GetDstCoordinateResetStep());
+        if constexpr(DstResetCoordinateAfterRun)
+        {
+            const auto dst_reset_iterator =
+                make_dynamic_tensor_coordinate_iterator(dst_desc, GetDstCoordinateResetStep());
 
-                move_dynamic_tensor_coordinate(dst_desc, dst_coord_, dst_reset_iterator);
-            }
+            move_dynamic_tensor_coordinate(dst_desc, dst_coord_, dst_reset_iterator);
+        }
     }
 
     template <typename SrcSliceOriginIdx, typename SrcBuffer, typename DstBuffer>
@@ -549,35 +544,30 @@ struct ThreadwiseDynamicTensorSliceTransfer_v2
 
             // move
             static_for<0, nDim, 1>{}([&](auto i) {
-                if
-                    constexpr(move_on_dim[i])
+                if constexpr(move_on_dim[i])
+                {
+                    if constexpr(forward_sweep[i])
                     {
-                        if
-                            constexpr(forward_sweep[i])
-                            {
-                                move_dynamic_tensor_coordinate(
-                                    src_desc,
-                                    src_coord_,
-                                    src_forward_iterators[dim_access_order[i]]);
-                            }
-                        else
-                        {
-                            move_dynamic_tensor_coordinate(
-                                src_desc, src_coord_, src_backward_iterators[dim_access_order[i]]);
-                        }
+                        move_dynamic_tensor_coordinate(
+                            src_desc, src_coord_, src_forward_iterators[dim_access_order[i]]);
                     }
+                    else
+                    {
+                        move_dynamic_tensor_coordinate(
+                            src_desc, src_coord_, src_backward_iterators[dim_access_order[i]]);
+                    }
+                }
             });
         });
 
         // move src coordinate back to slice origin (or not)
-        if
-            constexpr(SrcResetCoordinateAfterRun)
-            {
-                const auto src_reset_iterator =
-                    make_dynamic_tensor_coordinate_iterator(src_desc, GetSrcCoordinateResetStep());
+        if constexpr(SrcResetCoordinateAfterRun)
+        {
+            const auto src_reset_iterator =
+                make_dynamic_tensor_coordinate_iterator(src_desc, GetSrcCoordinateResetStep());
 
-                move_dynamic_tensor_coordinate(src_desc, src_coord_, src_reset_iterator);
-            }
+            move_dynamic_tensor_coordinate(src_desc, src_coord_, src_reset_iterator);
+        }
     }
 
     template <typename SrcBuffer, typename DstBuffer, typename DstSliceOriginIdx>
@@ -868,37 +858,30 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
             // move
             static_for<0, nDim, 1>{}([&](auto i) {
-                if
-                    constexpr(move_on_dim[i])
+                if constexpr(move_on_dim[i])
+                {
+                    if constexpr(forward_sweep[i])
                     {
-                        if
-                            constexpr(forward_sweep[i])
-                            {
-                                move_dynamic_tensor_coordinate(
-                                    src_desc,
-                                    src_coord_,
-                                    src_forward_iterators[src_dim_access_order[i]]);
-                            }
-                        else
-                        {
-                            move_dynamic_tensor_coordinate(
-                                src_desc,
-                                src_coord_,
-                                src_backward_iterators[src_dim_access_order[i]]);
-                        }
+                        move_dynamic_tensor_coordinate(
+                            src_desc, src_coord_, src_forward_iterators[src_dim_access_order[i]]);
                     }
+                    else
+                    {
+                        move_dynamic_tensor_coordinate(
+                            src_desc, src_coord_, src_backward_iterators[src_dim_access_order[i]]);
+                    }
+                }
             });
         });
 
         // move src coordinate back to slice origin (or not)
-        if
-            constexpr(SrcResetCoordinateAfterRun)
-            {
-                const auto src_reset_iterator =
-                    make_dynamic_tensor_coordinate_iterator(src_desc, GetSrcCoordinateResetStep());
+        if constexpr(SrcResetCoordinateAfterRun)
+        {
+            const auto src_reset_iterator =
+                make_dynamic_tensor_coordinate_iterator(src_desc, GetSrcCoordinateResetStep());
 
-                move_dynamic_tensor_coordinate(src_desc, src_coord_, src_reset_iterator);
-            }
+            move_dynamic_tensor_coordinate(src_desc, src_coord_, src_reset_iterator);
+        }
     }
 
     template <typename DstBuffer, typename DstIteratorHacks>
@@ -1041,37 +1024,30 @@ struct ThreadwiseDynamicTensorSliceTransfer_v3
 
             // move
             static_for<0, nDim, 1>{}([&](auto i) {
-                if
-                    constexpr(move_on_dim[i])
+                if constexpr(move_on_dim[i])
+                {
+                    if constexpr(forward_sweep[i])
                     {
-                        if
-                            constexpr(forward_sweep[i])
-                            {
-                                move_dynamic_tensor_coordinate(
-                                    dst_desc,
-                                    dst_coord_,
-                                    dst_forward_iterators[dst_dim_access_order[i]]);
-                            }
-                        else
-                        {
-                            move_dynamic_tensor_coordinate(
-                                dst_desc,
-                                dst_coord_,
-                                dst_backward_iterators[dst_dim_access_order[i]]);
-                        }
+                        move_dynamic_tensor_coordinate(
+                            dst_desc, dst_coord_, dst_forward_iterators[dst_dim_access_order[i]]);
                     }
+                    else
+                    {
+                        move_dynamic_tensor_coordinate(
+                            dst_desc, dst_coord_, dst_backward_iterators[dst_dim_access_order[i]]);
+                    }
+                }
             });
         });
 
         // move dst coordinate back to slice origin (or not)
-        if
-            constexpr(DstResetCoordinateAfterRun)
-            {
-                const auto dst_reset_iterator =
-                    make_dynamic_tensor_coordinate_iterator(dst_desc, GetDstCoordinateResetStep());
+        if constexpr(DstResetCoordinateAfterRun)
+        {
+            const auto dst_reset_iterator =
+                make_dynamic_tensor_coordinate_iterator(dst_desc, GetDstCoordinateResetStep());
 
-                move_dynamic_tensor_coordinate(dst_desc, dst_coord_, dst_reset_iterator);
-            }
+            move_dynamic_tensor_coordinate(dst_desc, dst_coord_, dst_reset_iterator);
+        }
     }
 
     template <typename SrcBuffer>
@@ -1368,8 +1344,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
         // scalar per access of each dim
         constexpr auto src_scalar_per_access = generate_sequence_v2(
             [&](auto i) constexpr {
-                if
-                    constexpr(i == SrcVectorDim) { return Number<SrcScalarPerVector>{}; }
+                if constexpr(i == SrcVectorDim)
+                {
+                    return Number<SrcScalarPerVector>{};
+                }
                 else
                 {
                     return Number<1>{};
@@ -1380,8 +1358,10 @@ struct ThreadwiseDynamicTensorSliceTransfer_v4
         // scalar step (if steping on SrcVectorDim) of each dim
         constexpr auto src_scalar_step_in_vector = generate_sequence_v2(
             [&](auto i) constexpr {
-                if
-                    constexpr(i == SrcVectorDim) { return Number<1>{}; }
+                if constexpr(i == SrcVectorDim)
+                {
+                    return Number<1>{};
+                }
                 else
                 {
                     return Number<0>{};

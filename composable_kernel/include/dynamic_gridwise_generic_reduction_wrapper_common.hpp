@@ -152,39 +152,37 @@ struct gridwise_generic_reduce_pad_and_store<ReductionMethod_t::DirectThreadWise
 
         constexpr auto copySliceLen = GredThreadBufferLength;
 
-        if
-            constexpr(src_need_padding)
-            {
-                const auto srcPad1 = GridSize * BlockSize - invariantLen;
-                const auto srcPad2 =
-                    ((toReduceLen + copySliceLen - 1) / copySliceLen) * copySliceLen - toReduceLen;
-                auto src2dDesc_2 = transform_dynamic_tensor_descriptor(
-                    src2dDesc,
-                    make_tuple(make_pad_transform(invariantLen, 0, srcPad1),
-                               make_pad_transform(toReduceLen, 0, srcPad2)),
-                    make_tuple(Sequence<0>{}, Sequence<1>{}),
-                    make_tuple(Sequence<0>{}, Sequence<1>{}));
-                if(hipThreadIdx_x == 0)
-                    *static_cast<decltype(src2dDesc_2)*>(p_src2dDesc) = src2dDesc_2;
-            }
+        if constexpr(src_need_padding)
+        {
+            const auto srcPad1 = GridSize * BlockSize - invariantLen;
+            const auto srcPad2 =
+                ((toReduceLen + copySliceLen - 1) / copySliceLen) * copySliceLen - toReduceLen;
+            auto src2dDesc_2 = transform_dynamic_tensor_descriptor(
+                src2dDesc,
+                make_tuple(make_pad_transform(invariantLen, 0, srcPad1),
+                           make_pad_transform(toReduceLen, 0, srcPad2)),
+                make_tuple(Sequence<0>{}, Sequence<1>{}),
+                make_tuple(Sequence<0>{}, Sequence<1>{}));
+            if(hipThreadIdx_x == 0)
+                *static_cast<decltype(src2dDesc_2)*>(p_src2dDesc) = src2dDesc_2;
+        }
         else
         {
             if(hipThreadIdx_x == 0)
                 *static_cast<src2dDescType*>(p_src2dDesc) = src2dDesc;
         };
 
-        if
-            constexpr(dst_need_padding)
-            {
-                const auto dstPad = GridSize * BlockSize - invariantLen;
-                auto dst1dDesc_2  = transform_dynamic_tensor_descriptor(
-                    dst1dDesc,
-                    make_tuple(make_pad_transform(invariantLen, 0, dstPad)),
-                    make_tuple(Sequence<0>{}),
-                    make_tuple(Sequence<0>{}));
-                if(hipThreadIdx_x == 0)
-                    *static_cast<decltype(dst1dDesc_2)*>(p_dst1dDesc) = dst1dDesc_2;
-            }
+        if constexpr(dst_need_padding)
+        {
+            const auto dstPad = GridSize * BlockSize - invariantLen;
+            auto dst1dDesc_2  = transform_dynamic_tensor_descriptor(
+                dst1dDesc,
+                make_tuple(make_pad_transform(invariantLen, 0, dstPad)),
+                make_tuple(Sequence<0>{}),
+                make_tuple(Sequence<0>{}));
+            if(hipThreadIdx_x == 0)
+                *static_cast<decltype(dst1dDesc_2)*>(p_dst1dDesc) = dst1dDesc_2;
+        }
         else
         {
             if(hipThreadIdx_x == 0)
@@ -215,40 +213,38 @@ struct gridwise_generic_reduce_pad_and_store<ReductionMethod_t::DirectWarpWise,
 
         constexpr auto copySliceLen = warpSize * GredAccessesPerThreadInWarp;
 
-        if
-            constexpr(src_need_padding)
-            {
-                const auto srcPad1 = GridSize * BlockSize / warpSize - invariantLen;
-                const auto srcPad2 =
-                    ((toReduceLen + copySliceLen - 1) / copySliceLen) * copySliceLen - toReduceLen;
+        if constexpr(src_need_padding)
+        {
+            const auto srcPad1 = GridSize * BlockSize / warpSize - invariantLen;
+            const auto srcPad2 =
+                ((toReduceLen + copySliceLen - 1) / copySliceLen) * copySliceLen - toReduceLen;
 
-                auto src2dDesc_2 = transform_dynamic_tensor_descriptor(
-                    src2dDesc,
-                    make_tuple(make_pad_transform(invariantLen, 0, srcPad1),
-                               make_pad_transform(toReduceLen, 0, srcPad2)),
-                    make_tuple(Sequence<0>{}, Sequence<1>{}),
-                    make_tuple(Sequence<0>{}, Sequence<1>{}));
-                if(hipThreadIdx_x == 0)
-                    *static_cast<decltype(src2dDesc_2)*>(p_src2dDesc) = src2dDesc_2;
-            }
+            auto src2dDesc_2 = transform_dynamic_tensor_descriptor(
+                src2dDesc,
+                make_tuple(make_pad_transform(invariantLen, 0, srcPad1),
+                           make_pad_transform(toReduceLen, 0, srcPad2)),
+                make_tuple(Sequence<0>{}, Sequence<1>{}),
+                make_tuple(Sequence<0>{}, Sequence<1>{}));
+            if(hipThreadIdx_x == 0)
+                *static_cast<decltype(src2dDesc_2)*>(p_src2dDesc) = src2dDesc_2;
+        }
         else
         {
             if(hipThreadIdx_x == 0)
                 *static_cast<src2dDescType*>(p_src2dDesc) = src2dDesc;
         };
 
-        if
-            constexpr(dst_need_padding)
-            {
-                const auto dstPad = GridSize * BlockSize / warpSize - invariantLen;
-                auto dst1dDesc_2  = transform_dynamic_tensor_descriptor(
-                    dst1dDesc,
-                    make_tuple(make_pad_transform(invariantLen, 0, dstPad)),
-                    make_tuple(Sequence<0>{}),
-                    make_tuple(Sequence<0>{}));
-                if(hipThreadIdx_x == 0)
-                    *static_cast<decltype(dst1dDesc_2)*>(p_dst1dDesc) = dst1dDesc_2;
-            }
+        if constexpr(dst_need_padding)
+        {
+            const auto dstPad = GridSize * BlockSize / warpSize - invariantLen;
+            auto dst1dDesc_2  = transform_dynamic_tensor_descriptor(
+                dst1dDesc,
+                make_tuple(make_pad_transform(invariantLen, 0, dstPad)),
+                make_tuple(Sequence<0>{}),
+                make_tuple(Sequence<0>{}));
+            if(hipThreadIdx_x == 0)
+                *static_cast<decltype(dst1dDesc_2)*>(p_dst1dDesc) = dst1dDesc_2;
+        }
         else
         {
             if(hipThreadIdx_x == 0)
@@ -279,21 +275,20 @@ struct gridwise_generic_reduce_pad_and_store<ReductionMethod_t::BlockWise,
 
         constexpr auto copySliceLen = BlockSize * GredAccessesPerThreadInBlock;
 
-        if
-            constexpr(src_need_padding)
-            {
-                const auto srcPad =
-                    ((toReduceLen + copySliceLen - 1) / copySliceLen) * copySliceLen - toReduceLen;
+        if constexpr(src_need_padding)
+        {
+            const auto srcPad =
+                ((toReduceLen + copySliceLen - 1) / copySliceLen) * copySliceLen - toReduceLen;
 
-                auto src2dDesc_2 = transform_dynamic_tensor_descriptor(
-                    src2dDesc,
-                    make_tuple(make_pass_through_transform(invariantLen),
-                               make_pad_transform(toReduceLen, 0, srcPad)),
-                    make_tuple(Sequence<0>{}, Sequence<1>{}),
-                    make_tuple(Sequence<0>{}, Sequence<1>{}));
-                if(hipThreadIdx_x == 0)
-                    *static_cast<decltype(src2dDesc_2)*>(p_src2dDesc) = src2dDesc_2;
-            }
+            auto src2dDesc_2 = transform_dynamic_tensor_descriptor(
+                src2dDesc,
+                make_tuple(make_pass_through_transform(invariantLen),
+                           make_pad_transform(toReduceLen, 0, srcPad)),
+                make_tuple(Sequence<0>{}, Sequence<1>{}),
+                make_tuple(Sequence<0>{}, Sequence<1>{}));
+            if(hipThreadIdx_x == 0)
+                *static_cast<decltype(src2dDesc_2)*>(p_src2dDesc) = src2dDesc_2;
+        }
         else
         {
             if(hipThreadIdx_x == 0)
@@ -330,20 +325,19 @@ struct gridwise_generic_reduce_pad_and_store<ReductionMethod_t::MultiBlock,
             (((toReduceLen + BlkGroupSize - 1) / BlkGroupSize + copySliceLen - 1) / copySliceLen) *
             copySliceLen;
 
-        if
-            constexpr(src_need_padding)
-            {
-                const auto srcPad = reduceSizePerBlock * BlkGroupSize - toReduceLen;
+        if constexpr(src_need_padding)
+        {
+            const auto srcPad = reduceSizePerBlock * BlkGroupSize - toReduceLen;
 
-                auto src2dDesc_2 = transform_dynamic_tensor_descriptor(
-                    src2dDesc,
-                    make_tuple(make_pass_through_transform(invariantLen),
-                               make_pad_transform(toReduceLen, 0, srcPad)),
-                    make_tuple(Sequence<0>{}, Sequence<1>{}),
-                    make_tuple(Sequence<0>{}, Sequence<1>{}));
-                if(hipThreadIdx_x == 0)
-                    *static_cast<decltype(src2dDesc_2)*>(p_src2dDesc) = src2dDesc_2;
-            }
+            auto src2dDesc_2 = transform_dynamic_tensor_descriptor(
+                src2dDesc,
+                make_tuple(make_pass_through_transform(invariantLen),
+                           make_pad_transform(toReduceLen, 0, srcPad)),
+                make_tuple(Sequence<0>{}, Sequence<1>{}),
+                make_tuple(Sequence<0>{}, Sequence<1>{}));
+            if(hipThreadIdx_x == 0)
+                *static_cast<decltype(src2dDesc_2)*>(p_src2dDesc) = src2dDesc_2;
+        }
         else
         {
             if(hipThreadIdx_x == 0)

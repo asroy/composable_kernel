@@ -40,7 +40,7 @@ static struct option long_options[] = {{"inLengths", required_argument, NULL, 'D
                                        {"log", required_argument, NULL, 'l'},
                                        {"help", no_argument, NULL, '?'},
                                        {0, 0, 0, 0}};
-static int option_index = 0;
+static int option_index             = 0;
 
 template <typename T>
 static T getSingleValueFromString(const string& valueStr);
@@ -409,7 +409,7 @@ static void do_reduce_testing(olCompile::Handle* handle)
         }
 
         if(beta != 0.0f)
-            for(size_t i         = 0; i < out_host.mDesc.GetElementSpace(); i++)
+            for(size_t i = 0; i < out_host.mDesc.GetElementSpace(); i++)
                 out_dev.mData[i] = out_host.mData[i];
     }
 

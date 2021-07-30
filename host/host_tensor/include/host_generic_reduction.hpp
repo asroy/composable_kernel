@@ -139,15 +139,15 @@ class ReductionHost
     void
     RunImpl_with_indices(float alpha, const TSrc* in_data, float beta, TDst* out_data, int* indices)
     {
-        using reduce::ReduceOpFn2;
-        using reduce::PreUnaryOpFn;
         using reduce::PosUnaryOpFn;
+        using reduce::PreUnaryOpFn;
+        using reduce::ReduceOpFn2;
         using reduce::ReduceOpZeroVal;
-        using reduce::float_equal_one;
-        using reduce::float_equal_zero;
-        using reduce::convert_type;
         using reduce::binop_with_nan_check;
         using reduce::binop_with_nan_check2;
+        using reduce::convert_type;
+        using reduce::float_equal_one;
+        using reduce::float_equal_zero;
 
         auto opReduce = ReduceOpFn2<compType>(this->reduceOp);
 
@@ -212,7 +212,7 @@ class ReductionHost
                 src_index.resize(this->inLengths.size());
 
                 // generate the part of src index belonging to invariant dims
-                for(int k                       = 0; k < invariantDims.size(); k++)
+                for(int k = 0; k < invariantDims.size(); k++)
                     src_index[invariantDims[k]] = index_1[k];
 
                 for(int k = 0; k < invariantDims.size(); k++)
@@ -227,7 +227,7 @@ class ReductionHost
                 for(const auto& index_2 : indexes_2)
                 {
                     // generate the part of src index belonging to toReduce dims
-                    for(int k                      = 0; k < toReduceDims.size(); k++)
+                    for(int k = 0; k < toReduceDims.size(); k++)
                         src_index[toReduceDims[k]] = index_2[k];
 
                     auto src_offset = get_offset_from_index(this->inStrides, src_index);
@@ -260,15 +260,15 @@ class ReductionHost
     template <typename compType>
     void RunImpl_no_indices(float alpha, const TSrc* in_data, float beta, TDst* out_data)
     {
-        using reduce::ReduceOpFn;
-        using reduce::PreUnaryOpFn;
         using reduce::PosUnaryOpFn;
+        using reduce::PreUnaryOpFn;
+        using reduce::ReduceOpFn;
         using reduce::ReduceOpZeroVal;
-        using reduce::float_equal_one;
-        using reduce::float_equal_zero;
-        using reduce::convert_type;
         using reduce::binop_with_nan_check;
         using reduce::binop_with_nan_check2;
+        using reduce::convert_type;
+        using reduce::float_equal_one;
+        using reduce::float_equal_zero;
 
         auto opReduce = ReduceOpFn<compType>(this->reduceOp);
 
@@ -335,7 +335,7 @@ class ReductionHost
                 int dst_offset = get_offset_from_index(this->outStrides, dst_index);
 
                 // generate the part of src index belonging to invariant dims
-                for(int k                       = 0; k < invariantDims.size(); k++)
+                for(int k = 0; k < invariantDims.size(); k++)
                     src_index[invariantDims[k]] = index_1[k];
 
                 compType accuVal = ReduceOpZeroVal<compType>(this->reduceOp);
@@ -344,7 +344,7 @@ class ReductionHost
                 for(const auto& index_2 : indexes_2)
                 {
                     // generate the part of src index belonging to toReduce dims
-                    for(int k                      = 0; k < toReduceDims.size(); k++)
+                    for(int k = 0; k < toReduceDims.size(); k++)
                         src_index[toReduceDims[k]] = index_2[k];
 
                     auto src_offset = get_offset_from_index(this->inStrides, src_index);

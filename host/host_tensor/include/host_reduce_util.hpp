@@ -79,8 +79,8 @@ static inline std::function<void(compType&)> PreUnaryOpFn(ReduceTensorOp_t op_, 
     case REDUCE_TENSOR_MAX: return ([&](compType&) {});
 
     default:
-        throw std::runtime_error(std::string(__FUNCTION__) + " operator: " +
-                                 std::to_string(static_cast<int>(op_)) +
+        throw std::runtime_error(std::string(__FUNCTION__) +
+                                 " operator: " + std::to_string(static_cast<int>(op_)) +
                                  ", using undefined Reduction operation is not permitted");
     };
 };

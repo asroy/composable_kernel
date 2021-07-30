@@ -118,48 +118,47 @@ struct BlockwiseReduction_2d_block_buffer
         compType lAccuData            = opReduce::GetZeroVal();
         int lAccuIndex                = 0;
 
-        if
-            constexpr(blockIsOneRow)
+        if constexpr(blockIsOneRow)
+        {
+            for(index_t otherDimInd = 0; otherDimInd < toReduceBlocks; otherDimInd++)
+            {
+                for(index_t indOffset = 1; indOffset < BlockSize; indOffset *= 2)
+                {
+                    if(thread_local_id % (indOffset * 2) == 0)
+                    {
+                        index_t offset1 =
+                            buffer2dDesc.CalculateOffset(make_tuple(otherDimInd, thread_local_id));
+                        index_t offset2 = buffer2dDesc.CalculateOffset(
+                            make_tuple(otherDimInd, thread_local_id + indOffset));
+
+                        compType currVal1 = type_convert<compType>{}(block_buffer[offset1]);
+                        compType currVal2 = type_convert<compType>{}(block_buffer[offset2]);
+                        int currIndex1    = block_indices_buffer[offset1];
+                        int currIndex2    = block_indices_buffer[offset2];
+
+                        binop::calculate(currVal1, currVal2, currIndex1, currIndex2);
+                        block_buffer(offset1)         = type_convert<compType>{}(currVal1);
+                        block_indices_buffer(offset1) = currIndex1;
+                    }
+                    __syncthreads();
+                }
+            }
+
+            if(thread_local_id == 0)
             {
                 for(index_t otherDimInd = 0; otherDimInd < toReduceBlocks; otherDimInd++)
                 {
-                    for(index_t indOffset = 1; indOffset < BlockSize; indOffset *= 2)
-                    {
-                        if(thread_local_id % (indOffset * 2) == 0)
-                        {
-                            index_t offset1 = buffer2dDesc.CalculateOffset(
-                                make_tuple(otherDimInd, thread_local_id));
-                            index_t offset2 = buffer2dDesc.CalculateOffset(
-                                make_tuple(otherDimInd, thread_local_id + indOffset));
+                    index_t offset = buffer2dDesc.CalculateOffset(make_tuple(otherDimInd, 0));
 
-                            compType currVal1 = type_convert<compType>{}(block_buffer[offset1]);
-                            compType currVal2 = type_convert<compType>{}(block_buffer[offset2]);
-                            int currIndex1    = block_indices_buffer[offset1];
-                            int currIndex2    = block_indices_buffer[offset2];
+                    compType tmpVal = type_convert<compType>{}(block_buffer[offset]);
+                    int tmpIndex    = block_indices_buffer[offset];
 
-                            binop::calculate(currVal1, currVal2, currIndex1, currIndex2);
-                            block_buffer(offset1)         = type_convert<compType>{}(currVal1);
-                            block_indices_buffer(offset1) = currIndex1;
-                        }
-                        __syncthreads();
-                    }
+                    binop::calculate(lAccuData, tmpVal, lAccuIndex, tmpIndex);
                 }
 
-                if(thread_local_id == 0)
-                {
-                    for(index_t otherDimInd = 0; otherDimInd < toReduceBlocks; otherDimInd++)
-                    {
-                        index_t offset = buffer2dDesc.CalculateOffset(make_tuple(otherDimInd, 0));
-
-                        compType tmpVal = type_convert<compType>{}(block_buffer[offset]);
-                        int tmpIndex    = block_indices_buffer[offset];
-
-                        binop::calculate(lAccuData, tmpVal, lAccuIndex, tmpIndex);
-                    }
-
-                    binop::calculate(accuData, lAccuData, accuIndex, lAccuIndex);
-                }
+                binop::calculate(accuData, lAccuData, accuIndex, lAccuIndex);
             }
+        }
         else
         {
             index_t offset;

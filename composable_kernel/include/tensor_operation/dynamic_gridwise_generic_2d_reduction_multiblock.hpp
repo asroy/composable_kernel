@@ -73,16 +73,16 @@ struct GridwiseReduction_xy_to_x_multiblock
                         srcDataType* const __restrict__ workspace_global,
                         int* const __restrict__ ws_indices_global)
     {
-        if
-            constexpr(need_indices) RunImpl2(src2dDesc,
-                                             dst1dDesc,
-                                             origReduceLen,
-                                             BlkGroupSize,
-                                             alpha,
-                                             p_src_global,
-                                             beta,
-                                             workspace_global,
-                                             ws_indices_global);
+        if constexpr(need_indices)
+            RunImpl2(src2dDesc,
+                     dst1dDesc,
+                     origReduceLen,
+                     BlkGroupSize,
+                     alpha,
+                     p_src_global,
+                     beta,
+                     workspace_global,
+                     ws_indices_global);
         else
             RunImpl1(src2dDesc,
                      dst1dDesc,

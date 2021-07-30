@@ -71,29 +71,28 @@ struct GridwiseReduction_xy_to_x_direct_threadwise
                         const int* const __restrict__ ws_indices_global,
                         int* const __restrict__ indices_global)
     {
-        if
-            constexpr(need_indices)
-            {
-                if
-                    constexpr(isFirstCall) RunImpl2(src2dDesc,
-                                                    dst1dDesc,
-                                                    origReduceLen,
-                                                    alpha,
-                                                    p_src_global,
-                                                    beta,
-                                                    p_dst_global,
-                                                    indices_global);
-                else
-                    RunImpl3(src2dDesc,
-                             dst1dDesc,
-                             origReduceLen,
-                             alpha,
-                             p_src_global,
-                             beta,
-                             p_dst_global,
-                             ws_indices_global,
-                             indices_global);
-            }
+        if constexpr(need_indices)
+        {
+            if constexpr(isFirstCall)
+                RunImpl2(src2dDesc,
+                         dst1dDesc,
+                         origReduceLen,
+                         alpha,
+                         p_src_global,
+                         beta,
+                         p_dst_global,
+                         indices_global);
+            else
+                RunImpl3(src2dDesc,
+                         dst1dDesc,
+                         origReduceLen,
+                         alpha,
+                         p_src_global,
+                         beta,
+                         p_dst_global,
+                         ws_indices_global,
+                         indices_global);
+        }
         else
             RunImpl1(src2dDesc, dst1dDesc, origReduceLen, alpha, p_src_global, beta, p_dst_global);
     };
