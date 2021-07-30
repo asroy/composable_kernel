@@ -77,8 +77,6 @@ include_directories(BEFORE
 set(HIP_COMPILER_FLAGS "${HIP_COMPILER_FLAGS} ${HIP_ONLINE_COMPILER_FLAGS}")
 add_definitions("-DHIP_COMPILER_FLAGS=${HIP_COMPILER_FLAGS}")
 
-message(STATUS "Hip compiler flags: ${HIP_COMPILER_FLAGS}")
-
 file(GLOB_RECURSE COMPOSABLE_KERNEL_INCLUDE_1 "${PROJECT_SOURCE_DIR}/composable_kernel/include/*/*.hpp")
 file(GLOB COMPOSABLE_KERNEL_INCLUDE_2 "${PROJECT_SOURCE_DIR}/external/rocm/include/bfloat16_dev.hpp")
 file(GLOB COMPOSABLE_KERNEL_INCLUDE_3 "${PROJECT_SOURCE_DIR}/composable_kernel/include/*.hpp")
