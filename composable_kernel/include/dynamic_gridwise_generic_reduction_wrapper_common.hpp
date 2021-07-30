@@ -320,7 +320,7 @@ struct gridwise_generic_reduce_pad_and_store<ReductionMethod_t::MultiBlock,
         const auto invariantLen = src2dDesc.GetLength(Number<0>{});
         const auto toReduceLen  = src2dDesc.GetLength(Number<1>{});
 
-        const auto copySliceLen = BlockSize * GredAccessesPerThreadInBlock;
+        constexpr auto copySliceLen = BlockSize * GredAccessesPerThreadInBlock;
         const index_t reduceSizePerBlock =
             (((toReduceLen + BlkGroupSize - 1) / BlkGroupSize + copySliceLen - 1) / copySliceLen) *
             copySliceLen;
