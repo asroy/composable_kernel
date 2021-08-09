@@ -13,9 +13,12 @@ include_directories(BEFORE
 
 set(CONV_FWD_DRIVER_OFFLINE_SOURCE conv_fwd_driver_offline.cpp)
 set(CONV_BWD_DRIVER_OFFLINE_SOURCE conv_bwd_driver_offline.cpp)
+set(CONV_BWW_DRIVER_OFFLINE_SOURCE conv_bww_driver_offline.cpp)
 
 add_executable(conv_fwd_driver_offline ${CONV_FWD_DRIVER_OFFLINE_SOURCE})
 add_executable(conv_bwd_driver_offline ${CONV_BWD_DRIVER_OFFLINE_SOURCE})
+add_executable(conv_bww_driver_offline ${CONV_BWW_DRIVER_OFFLINE_SOURCE})
 
 target_link_libraries(conv_fwd_driver_offline PRIVATE host_tensor)
 target_link_libraries(conv_bwd_driver_offline PRIVATE host_tensor)
+target_link_libraries(conv_bww_driver_offline PRIVATE host_tensor)
