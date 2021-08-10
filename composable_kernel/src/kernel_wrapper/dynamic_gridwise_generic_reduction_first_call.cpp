@@ -281,10 +281,6 @@ template <>
 __device__ const auto get_reduction_src2d_descriptor<ReductionMethod_t::DirectThreadWise>(
     const void CONSTANT* p_src2dDesc)
 {
-    using refType_src2dDesc_padded_12 =
-        typename get_ref_desc_types<reduceAllDims, srcDims, dstDims, invariantDims, toReduceDims>::
-            refType_src2dDesc_padded_12;
-
     if constexpr(src2d_need_padding)
         return (*reinterpret_cast<const refType_src2dDesc_padded_12*>((const void*)p_src2dDesc));
     else
