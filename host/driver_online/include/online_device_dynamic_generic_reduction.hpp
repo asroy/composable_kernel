@@ -273,7 +273,7 @@ static std::pair<bool, bool> get_padding_need(ReductionMethod_t reduceImpl,
 } // namespace detail_dyn_generic_reduction
 
 template <typename TSrc, typename TComp, typename TDst>
-void device_dynamic_generic_reduction_olc(olCompile::Handle* handle,
+void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                                           const std::vector<int> invariantDims,
                                           const std::vector<int> toReduceDims,
                                           const Tensor<TSrc>& in,

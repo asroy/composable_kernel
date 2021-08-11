@@ -313,7 +313,7 @@ static void check_indices(const Tensor<int>& ref, const Tensor<int>& result)
 }
 
 template <typename dataType, typename compType>
-static void do_reduce_testing(olCompile::Handle* handle);
+static void do_reduce_testing(online_compile::Handle* handle);
 
 int main(int argc, char* argv[])
 {
@@ -323,11 +323,11 @@ int main(int argc, char* argv[])
     check_cmdline_arguments(argc, argv);
 
     hipStream_t stream;
-    olCompile::Handle* handle;
+    online_compile::Handle* handle;
 
     MY_HIP_CHECK(hipStreamCreate(&stream));
 
-    handle = new olCompile::Handle(stream);
+    handle = new online_compile::Handle(stream);
 
     check_reduce_dims(inLengths.size(), toReduceDims);
 
@@ -372,7 +372,7 @@ int main(int argc, char* argv[])
 };
 
 template <typename dataType, typename compType>
-static void do_reduce_testing(olCompile::Handle* handle)
+static void do_reduce_testing(online_compile::Handle* handle)
 {
     Tensor<dataType> in(inLengths);
     Tensor<dataType> out_host(outLengths);
