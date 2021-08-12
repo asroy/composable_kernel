@@ -98,7 +98,8 @@ void device_dynamic_convolution_backward_weight_implicit_gemm_v4r4_dlops_nchw_kc
                                                                         in_right_pads);
 
     // HACK: hacks that control index calculation when iterating over A, B, C matrix
-    constexpr auto wei_gemmk_gemmm0_gemmn1_grid_iterator_hacks =
+    //Matrix A
+    constexpr auto out_gemmk_gemmm0_gemmn1_grid_iterator_hacks =
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
@@ -115,8 +116,8 @@ void device_dynamic_convolution_backward_weight_implicit_gemm_v4r4_dlops_nchw_kc
                    make_tuple(Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0>{}));
-
-    constexpr auto out_gemmm0_gemmm10_gemmm11_gemmn0_gemmn10_gemmn11_grid_iterator_hacks =
+    //Matrix c
+    constexpr auto wei_gemmm0_gemmm10_gemmm11_gemmn0_gemmn10_gemmn11_grid_iterator_hacks =
         make_tuple(make_tuple(Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
                               Sequence<0, 0, 0, 0, 0>{},
@@ -129,28 +130,28 @@ void device_dynamic_convolution_backward_weight_implicit_gemm_v4r4_dlops_nchw_kc
                               Sequence<0, 0, 2, 0, 0>{},
                               Sequence<0, 0, 2, 0, 0>{},
                               Sequence<0, 0, 2, 0, 0>{}));
-
-    constexpr auto wei_gemmk_gemmm0_gemmm1_grid_move_slice_window_iterator_hacks =
+    //Matrix A
+    constexpr auto out_gemmk_gemmm0_gemmm1_grid_move_slice_window_iterator_hacks =
         Sequence<0, 0, 0, 0, 0>{};
 
     constexpr auto in_gemmk_gemmn0_gemmn1_grid_move_slice_window_iterator_hacks =
         Sequence<0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0>{};
 
-    const auto wei_gemmk_gemmm_grid_desc = descs[I0];
+    const auto wei_gemmk_gemmm_grid_desc = descs[I2];
     const auto in_gemmk_gemmn_grid_desc  = descs[I1];
-    const auto out_gemmm_gemmn_grid_desc = descs[I2];
+    const auto out_gemmm_gemmn_grid_desc = descs[I0];
 
     for(index_t i = 0; i < 5; ++i)
     {
         float ave_time = driver_dynamic_gemm_dlops_v1r2<
             BlockSize,
-            TInWei,
-            TAcc,
             TOut,
+            TAcc,
+            TInWei,
             InMemoryDataOperationEnum_t::Set,
-            decltype(wei_gemmk_gemmm_grid_desc),
-            decltype(in_gemmk_gemmn_grid_desc),
             decltype(out_gemmm_gemmn_grid_desc),
+            decltype(in_gemmk_gemmn_grid_desc),
+            decltype(wei_gemmk_gemmm_grid_desc),
             GemmMPerBlockM1,
             GemmNPerBlockN1,
             GemmKPerBlock,
@@ -180,22 +181,22 @@ void device_dynamic_convolution_backward_weight_implicit_gemm_v4r4_dlops_nchw_kc
             Sequence<3, 4, 5, 0, 1, 2>, // CThreadTransferSrcDstAccessOrder
             5,                          // CThreadTransferSrcDstVectorDim
             GemmCThreadTransferDstScalarPerVector_N11,
-            decltype(wei_gemmk_gemmm0_gemmn1_grid_iterator_hacks),
+            decltype(out_gemmk_gemmm0_gemmn1_grid_iterator_hacks),
             decltype(in_gemmk_gemmn0_gemmn1_grid_iterator_hacks),
-            decltype(out_gemmm0_gemmm10_gemmm11_gemmn0_gemmn10_gemmn11_grid_iterator_hacks),
-            decltype(wei_gemmk_gemmm0_gemmm1_grid_move_slice_window_iterator_hacks),
+            decltype(wei_gemmm0_gemmm10_gemmm11_gemmn0_gemmn10_gemmn11_grid_iterator_hacks),
+            decltype(out_gemmk_gemmm0_gemmm1_grid_move_slice_window_iterator_hacks),
             decltype(in_gemmk_gemmn0_gemmn1_grid_move_slice_window_iterator_hacks)>(
-            static_cast<TInWei*>(wei_k_c_y_x_device_buf.GetDeviceBuffer()),
-            static_cast<TInWei*>(in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
-            static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()),
-            wei_gemmk_gemmm_grid_desc,
-            in_gemmk_gemmn_grid_desc,
-            out_gemmm_gemmn_grid_desc,
-            wei_gemmk_gemmm0_gemmn1_grid_iterator_hacks,
-            in_gemmk_gemmn0_gemmn1_grid_iterator_hacks,
-            out_gemmm0_gemmm10_gemmm11_gemmn0_gemmn10_gemmn11_grid_iterator_hacks,
-            wei_gemmk_gemmm0_gemmm1_grid_move_slice_window_iterator_hacks,
-            in_gemmk_gemmn0_gemmn1_grid_move_slice_window_iterator_hacks,
+                static_cast<TOut*>(out_n_k_ho_wo_device_buf.GetDeviceBuffer()),
+                static_cast<TInWei*>(in_n_c_hi_wi_device_buf.GetDeviceBuffer()),
+                static_cast<TInWei*>(wei_k_c_y_x_device_buf.GetDeviceBuffer()),
+                out_gemmm_gemmn_grid_desc,
+                in_gemmk_gemmn_grid_desc,
+                wei_gemmk_gemmm_grid_desc,
+                out_gemmk_gemmm0_gemmn1_grid_iterator_hacks,
+                in_gemmk_gemmn0_gemmn1_grid_iterator_hacks,
+                wei_gemmm0_gemmm10_gemmm11_gemmn0_gemmn10_gemmn11_grid_iterator_hacks,
+                out_gemmk_gemmm0_gemmm1_grid_move_slice_window_iterator_hacks,
+                in_gemmk_gemmn0_gemmn1_grid_move_slice_window_iterator_hacks,
             nrepeat);
 
         float perf = (float)calculate_convolution_flops(
