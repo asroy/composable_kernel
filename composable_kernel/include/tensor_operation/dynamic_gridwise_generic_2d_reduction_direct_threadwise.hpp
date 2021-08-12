@@ -49,10 +49,6 @@ template <index_t BlockSize,
           index_t GredThreadBufferLength>
 struct GridwiseReduction_xy_to_x_direct_threadwise
 {
-    static constexpr bool indexable = reduce_binary_operator<compType, op>::indexable;
-    static constexpr bool need_indices =
-        indexable && (reduceIndicesOpt != ReduceTensorIndices_t::NO_INDICES);
-
     using opReduce = typename reduce_binary_operator<compType, op>::opType;
     using preUnaryOpType =
         typename reduce_unary_operator<compType, op, isFirstCall, isLastCall>::preUnaryOp;
@@ -61,50 +57,31 @@ struct GridwiseReduction_xy_to_x_direct_threadwise
 
     static constexpr auto I0 = Number<0>{};
 
-    __device__ void Run(const src2dDescType& src2dDesc,
-                        const dst1dDescType& dst1dDesc,
-                        int origReduceLen,
-                        srcDataType alpha,
-                        const srcDataType* const __restrict__ p_src_global,
-                        dstDataType beta,
-                        dstDataType* const __restrict__ p_dst_global,
-                        const int* const __restrict__ ws_indices_global,
-                        int* const __restrict__ indices_global)
-    {
-        if constexpr(need_indices)
-        {
-            if constexpr(isFirstCall)
-                RunImpl2(src2dDesc,
-                         dst1dDesc,
-                         origReduceLen,
-                         alpha,
-                         p_src_global,
-                         beta,
-                         p_dst_global,
-                         indices_global);
-            else
-                RunImpl3(src2dDesc,
-                         dst1dDesc,
-                         origReduceLen,
-                         alpha,
-                         p_src_global,
-                         beta,
-                         p_dst_global,
-                         ws_indices_global,
-                         indices_global);
-        }
-        else
-            RunImpl1(src2dDesc, dst1dDesc, origReduceLen, alpha, p_src_global, beta, p_dst_global);
-    };
+    template <int RunId>
+    __device__ static void Run(const src2dDescType& src2dDesc,
+                               const dst1dDescType& dst1dDesc,
+                               int origReduceLen,
+                               srcDataType alpha,
+                               const srcDataType* const __restrict__ p_src_global,
+                               dstDataType beta,
+                               dstDataType* const __restrict__ p_dst_global,
+                               const int* const __restrict__ ws_indices_global,
+                               int* const __restrict__ indices_global);
 
-    __device__ static void RunImpl1(const src2dDescType& src2dDesc,
-                                    const dst1dDescType& dst1dDesc,
-                                    int origReduceLen,
-                                    srcDataType alpha,
-                                    const srcDataType* const __restrict__ p_src_global,
-                                    dstDataType beta,
-                                    dstDataType* const __restrict__ p_dst_global)
+    template <>
+    __device__ static void Run<1>(const src2dDescType& src2dDesc,
+                                  const dst1dDescType& dst1dDesc,
+                                  int origReduceLen,
+                                  srcDataType alpha,
+                                  const srcDataType* const __restrict__ p_src_global,
+                                  dstDataType beta,
+                                  dstDataType* const __restrict__ p_dst_global,
+                                  const int* const __restrict__ ws_indices_global,
+                                  int* const __restrict__ indices_global)
     {
+        (void)ws_indices_global;
+        (void)indices_global;
+
         auto zeroVal = opReduce::GetZeroVal();
 
         const auto src_global_buf = make_dynamic_buffer<AddressSpaceEnum_t::Global>(
@@ -214,15 +191,19 @@ struct GridwiseReduction_xy_to_x_direct_threadwise
             ReducedDataDesc, make_tuple(I0), accuValue_buf, dst1dDesc, dst_global_buf);
     };
 
-    __device__ static void RunImpl2(const src2dDescType& src2dDesc,
-                                    const dst1dDescType& dst1dDesc,
-                                    int origReduceLen,
-                                    srcDataType alpha,
-                                    const srcDataType* const __restrict__ p_src_global,
-                                    dstDataType beta,
-                                    dstDataType* const __restrict__ p_dst_global,
-                                    int* const __restrict__ indices_global)
+    template <>
+    __device__ static void Run<2>(const src2dDescType& src2dDesc,
+                                  const dst1dDescType& dst1dDesc,
+                                  int origReduceLen,
+                                  srcDataType alpha,
+                                  const srcDataType* const __restrict__ p_src_global,
+                                  dstDataType beta,
+                                  dstDataType* const __restrict__ p_dst_global,
+                                  const int* const __restrict__ ws_indices_global,
+                                  int* const __restrict__ indices_global)
     {
+        (void)ws_indices_global;
+
         auto zeroVal = opReduce::GetZeroVal();
 
         const auto src_global_buf = make_dynamic_buffer<AddressSpaceEnum_t::Global>(
@@ -354,15 +335,16 @@ struct GridwiseReduction_xy_to_x_direct_threadwise
             ReducedDataDesc, make_tuple(I0), accuIndex_buf, dst1dDesc, dst_global_idx_buf);
     };
 
-    __device__ static void RunImpl3(const src2dDescType& src2dDesc,
-                                    const dst1dDescType& dst1dDesc,
-                                    int origReduceLen,
-                                    srcDataType alpha,
-                                    const srcDataType* const __restrict__ ws_values_global,
-                                    dstDataType beta,
-                                    dstDataType* const __restrict__ p_dst_global,
-                                    const int* const __restrict__ ws_indices_global,
-                                    int* const __restrict__ indices_global)
+    template <>
+    __device__ static void Run<3>(const src2dDescType& src2dDesc,
+                                  const dst1dDescType& dst1dDesc,
+                                  int origReduceLen,
+                                  srcDataType alpha,
+                                  const srcDataType* const __restrict__ ws_values_global,
+                                  dstDataType beta,
+                                  dstDataType* const __restrict__ p_dst_global,
+                                  const int* const __restrict__ ws_indices_global,
+                                  int* const __restrict__ indices_global)
     {
         (void)origReduceLen;
 
