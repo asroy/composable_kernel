@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef CK_DYNAMIC_REDUCTION_OPERATOR_HPP
-#define CK_DYNAMIC_REDUCTION_OPERATOR_HPP
+#ifndef CK_REDUCTION_OPERATOR_HPP
+#define CK_REDUCTION_OPERATOR_HPP
 
 #include "reduction_common.hpp"
 

@@ -23,15 +23,15 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef CK_DYNAMIC_GRIDWISE_GENERIC_REDUCTION_FIRST_CALL_HPP
-#define CK_DYNAMIC_GRIDWISE_GENERIC_REDUCTION_FIRST_CALL_HPP
+#ifndef CK_GRIDWISE_GENERIC_REDUCTION_FIRST_CALL_METHOD_CHOOSER_HPP
+#define CK_GRIDWISE_GENERIC_REDUCTION_FIRST_CALL_METHOD_CHOOSER_HPP
 
 #include "data_type.hpp"
 
-#include "dynamic_gridwise_generic_2d_reduction_direct_threadwise.hpp"
-#include "dynamic_gridwise_generic_2d_reduction_direct_warpwise.hpp"
-#include "dynamic_gridwise_generic_2d_reduction_blockwise.hpp"
-#include "dynamic_gridwise_generic_2d_reduction_multiblock.hpp"
+#include "gridwise_generic_2d_reduction_direct_threadwise.hpp"
+#include "gridwise_generic_2d_reduction_direct_warpwise.hpp"
+#include "gridwise_generic_2d_reduction_blockwise.hpp"
+#include "gridwise_generic_2d_reduction_multiblock.hpp"
 
 namespace ck {
 

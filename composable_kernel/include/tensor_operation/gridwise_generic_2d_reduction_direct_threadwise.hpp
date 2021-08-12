@@ -23,13 +23,13 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef CK_DYNAMIC_GRIDWISE_GENERIC_2D_REDUCTION_DIRECT_THREADWISE_HPP
-#define CK_DYNAMIC_GRIDWISE_GENERIC_2D_REDUCTION_DIRECT_THREADWISE_HPP
+#ifndef CK_GRIDWISE_GENERIC_2D_REDUCTION_DIRECT_THREADWISE_HPP
+#define CK_GRIDWISE_GENERIC_2D_REDUCTION_DIRECT_THREADWISE_HPP
 
 #include "data_type.hpp"
 #include "reduction_common.hpp"
-#include "dynamic_reduction_operator.hpp"
-#include "dynamic_reduction_functions_threadwise.hpp"
+#include "reduction_operator.hpp"
+#include "reduction_functions_threadwise.hpp"
 
 #include "threadwise_dynamic_tensor_slice_transfer.hpp"
 

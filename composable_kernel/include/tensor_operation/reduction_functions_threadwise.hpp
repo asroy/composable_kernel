@@ -23,14 +23,14 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef CK_DYNAMIC_REDUCTION_FUNCTIONS_THREADWISE_HPP
-#define CK_DYNAMIC_REDUCTION_FUNCTIONS_THREADWISE_HPP
+#ifndef CK_REDUCTION_FUNCTIONS_THREADWISE_HPP
+#define CK_REDUCTION_FUNCTIONS_THREADWISE_HPP
 
 #include "data_type.hpp"
 
 #include "reduction_common.hpp"
-#include "dynamic_reduction_operator.hpp"
-#include "dynamic_reduction_functions_binop.hpp"
+#include "reduction_operator.hpp"
+#include "reduction_functions_binop.hpp"
 
 namespace ck {
 

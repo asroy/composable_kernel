@@ -1,12 +1,10 @@
-#define HIP_EANBLE_PRINTF
-
 #include "config.hpp"
 #include "number.hpp"
 #include "sequence.hpp"
 #include "dynamic_tensor_descriptor_helper.hpp"
 #include "reduction_common.hpp"
-#include "dynamic_gridwise_generic_reduction_first_call_method_chooser.hpp"
-#include "dynamic_gridwise_generic_reduction_wrapper_common.hpp"
+#include "gridwise_generic_reduction_first_call_method_chooser.hpp"
+#include "gridwise_generic_reduction_wrapper_common.hpp"
 
 using namespace ck;
 

@@ -23,12 +23,12 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef CK_DYNAMIC_GRIDWISE_GENERIC_2D_REDUCTION_MULTIBLOCK_HPP
-#define CK_DYNAMIC_GRIDWISE_GENERIC_2D_REDUCTION_MULTIBLOCK_HPP
+#ifndef CK_GRIDWISE_GENERIC_2D_REDUCTION_MULTIBLOCK_HPP
+#define CK_GRIDWISE_GENERIC_2D_REDUCTION_MULTIBLOCK_HPP
 
 #include "reduction_common.hpp"
-#include "dynamic_reduction_operator.hpp"
-#include "dynamic_reduction_functions_blockwise.hpp"
+#include "reduction_operator.hpp"
+#include "reduction_functions_blockwise.hpp"
 
 #include "blockwise_dynamic_tensor_slice_transfer.hpp"
 
