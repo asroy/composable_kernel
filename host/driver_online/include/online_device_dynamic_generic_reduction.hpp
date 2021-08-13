@@ -432,6 +432,9 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
     std::vector<float> kernel3_times;
     std::vector<float> kernel4_times;
 
+    size_t total_transfer_bytes = 0;
+    float total_transfer_time   = 0;
+
     for(index_t i = 0; i < nrepeat; ++i)
     {
         KernelTimer timer1, timer2;
@@ -486,6 +489,8 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
 
         kernel1_times.push_back(timer1.GetElapsedTime());
         kernel2_times.push_back(timer2.GetElapsedTime());
+
+        total_transfer_bytes = (size_t)invariantLength * toReduceLength * sizeof(TSrc);
 
         if(reduceImpl == ReductionMethod_t::MultiBlock)
         {
@@ -545,26 +550,43 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
 
             kernel3_times.push_back(timer1.GetElapsedTime());
             kernel4_times.push_back(timer2.GetElapsedTime());
+
+            total_transfer_bytes += (size_t)invariantLength * toReduceLength_2 *
+                                    (need_indices ? (sizeof(TSrc) + sizeof(int)) : sizeof(TSrc)) *
+                                    2;
         };
+
+        total_transfer_bytes +=
+            (size_t)invariantLength * (need_indices ? (sizeof(TDst) + sizeof(int)) : sizeof(TDst));
     }
 
     {
         auto ave_time1 = Driver::get_effective_average(kernel1_times);
         auto ave_time2 = Driver::get_effective_average(kernel2_times);
 
+        total_transfer_time += ave_time2;
+
         if(reduceImpl == ReductionMethod_t::MultiBlock)
         {
             auto ave_time3 = Driver::get_effective_average(kernel3_times);
             auto ave_time4 = Driver::get_effective_average(kernel4_times);
 
+            total_transfer_time += ave_time4;
+
             std::cout << "Average time : " << ave_time1 + ave_time2 + ave_time3 + ave_time3
                       << " ms(" << ave_time1 + ave_time3 << ", " << ave_time2 + ave_time4 << ")"
+                      << std::endl;
+            std::cout << "Average transfer rate : "
+                      << total_transfer_bytes * 0.000001f / total_transfer_time << " GBytes/second"
                       << std::endl;
         }
         else
         {
             std::cout << "Average time : " << ave_time1 + ave_time2 << " ms(" << ave_time1 << ", "
                       << ave_time2 << ")" << std::endl;
+            std::cout << "Average transfer rate : "
+                      << total_transfer_bytes * 0.000001f / total_transfer_time << " GBytes/second"
+                      << std::endl;
         };
     };
 
