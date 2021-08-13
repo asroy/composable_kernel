@@ -23,8 +23,8 @@ void device_dynamic_convolution_backward_weight_implicit_gemm_v4r4_dlops_nchw_kc
     const InLeftPads& in_left_pads,
     const InRightPads& in_right_pads,
     const Tensor<TInWei>& in_n_c_hi_wi,
-    const Tensor<TInWei>& wei_k_c_y_x,
-    Tensor<TOut>& out_n_k_ho_wo,
+    Tensor<TInWei>& wei_k_c_y_x,
+    const Tensor<TOut>& out_n_k_ho_wo,
     ck::index_t nrepeat)
 {
     using namespace ck;
@@ -207,5 +207,5 @@ void device_dynamic_convolution_backward_weight_implicit_gemm_v4r4_dlops_nchw_kc
     }
 
     // copy result back to host
-    out_n_k_ho_wo_device_buf.FromDevice(out_n_k_ho_wo.mData.data());
+    wei_k_c_y_x_device_buf.FromDevice(wei_k_c_y_x.mData.data());
 }
