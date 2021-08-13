@@ -285,7 +285,7 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                                           float alpha,
                                           float beta,
                                           const tunable_dyn_generic_reduction* tunable,
-                                          ck::index_t nrepeat)
+                                          int nrepeat)
 {
     using namespace ck;
     using namespace detail_dyn_generic_reduction;
@@ -311,19 +311,22 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
     auto outLengths = out.mDesc.GetLengths();
     auto outStrides = out.mDesc.GetStrides();
 
-    std::vector<index_t> lens_buf(4096 / sizeof(index_t)); // allocate one page
+    int p_inLengths[6];
+    int p_inStrides[6];
+    int p_outLengths[6];
+    int p_outStrides[6];
 
     for(int i = 0; i < inLengths.size(); i++)
-        lens_buf[0 + i] = static_cast<index_t>(inLengths[i]);
+        p_inLengths[i] = static_cast<int>(inLengths[i]);
 
     for(int i = 0; i < inStrides.size(); i++)
-        lens_buf[6 + i] = static_cast<index_t>(inStrides[i]);
+        p_inStrides[i] = static_cast<int>(inStrides[i]);
 
     for(int i = 0; i < outLengths.size(); i++)
-        lens_buf[12 + i] = static_cast<index_t>(outLengths[i]);
+        p_outLengths[i] = static_cast<int>(outLengths[i]);
 
     for(int i = 0; i < outStrides.size(); i++)
-        lens_buf[18 + i] = static_cast<index_t>(outStrides[i]);
+        p_outStrides[i] = static_cast<int>(outStrides[i]);
 
     auto workspace_size = configurator.getWorkspaceSize(invariantLength, toReduceLength);
 
@@ -338,14 +341,8 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
     DeviceMem workspace1(wsSizeInBytes);
     DeviceMem workspace2(4096);
 
-    void* p_dev_src2dDesc     = (char*)workspace2.GetDeviceBuffer() + 1024;
-    void* p_dev_dst1dDesc     = (char*)workspace2.GetDeviceBuffer() + 2048;
-    index_t* p_dev_inLengths  = (index_t*)workspace2.GetDeviceBuffer();
-    index_t* p_dev_inStrides  = &p_dev_inLengths[6];
-    index_t* p_dev_outLengths = &p_dev_inLengths[12];
-    index_t* p_dev_outStrides = &p_dev_inLengths[18];
-
-    workspace2.ToDevice(static_cast<const void*>(lens_buf.data()));
+    void* p_dev_src2dDesc = (char*)workspace2.GetDeviceBuffer();
+    void* p_dev_dst1dDesc = (char*)workspace2.GetDeviceBuffer() + 2048;
 
     size_t indicesSizeInBytes = need_indices ? out.mDesc.GetElementSize() * sizeof(int) : 0;
 
@@ -435,7 +432,7 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
     size_t total_transfer_bytes = 0;
     float total_transfer_time   = 0;
 
-    for(index_t i = 0; i < nrepeat; ++i)
+    for(int i = 0; i < nrepeat; ++i)
     {
         KernelTimer timer1, timer2;
         auto use_padding = get_padding_need(reduceImpl,
@@ -460,10 +457,30 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
             algo_name, network_config_1, program_name1, kernel_name1, vld, vgd1, param1)(
             GridSize,
             BlkGroupSize,
-            p_dev_inLengths,
-            p_dev_inStrides,
-            p_dev_outLengths,
-            p_dev_outStrides,
+            p_inLengths[0],
+            p_inLengths[1],
+            p_inLengths[2],
+            p_inLengths[3],
+            p_inLengths[4],
+            p_inLengths[5],
+            p_inStrides[0],
+            p_inStrides[1],
+            p_inStrides[2],
+            p_inStrides[3],
+            p_inStrides[4],
+            p_inStrides[5],
+            p_outLengths[0],
+            p_outLengths[1],
+            p_outLengths[2],
+            p_outLengths[3],
+            p_outLengths[4],
+            p_outLengths[5],
+            p_outStrides[0],
+            p_outStrides[1],
+            p_outStrides[2],
+            p_outStrides[3],
+            p_outStrides[4],
+            p_outStrides[5],
             p_dev_src2dDesc,
             p_dev_dst1dDesc);
         timer1.End();
@@ -522,10 +539,18 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                 algo_name, network_config_2, program_name2, kernel_name2, vld, vgd1, param2)(
                 GridSize_2,
                 BlkGroupSize,
-                p_dev_inLengths,
-                p_dev_inStrides,
-                p_dev_outLengths,
-                p_dev_outStrides,
+                p_outLengths[0],
+                p_outLengths[1],
+                p_outLengths[2],
+                p_outLengths[3],
+                p_outLengths[4],
+                p_outLengths[5],
+                p_outStrides[0],
+                p_outStrides[1],
+                p_outStrides[2],
+                p_outStrides[3],
+                p_outStrides[4],
+                p_outStrides[5],
                 p_dev_src2dDesc,
                 p_dev_dst1dDesc);
             timer1.End();

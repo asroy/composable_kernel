@@ -72,13 +72,26 @@ constexpr bool reduceAllDims = (invariantDims::Size() == 0) ? true : false;
 
 extern "C" __global__ void gridwise_generic_reduce_2_prepare(int GridSize,
                                                              int BlkGroupSize,
-                                                             const index_t* __restrict__ srcLengths,
-                                                             const index_t* srcStrides,
-                                                             const index_t* dstLengths,
-                                                             const index_t* dstStrides,
+                                                             int outLength0,
+                                                             int outLength1,
+                                                             int outLength2,
+                                                             int outLength3,
+                                                             int outLength4,
+                                                             int outLength5,
+                                                             int outStride0,
+                                                             int outStride1,
+                                                             int outStride2,
+                                                             int outStride3,
+                                                             int outStride4,
+                                                             int outStride5,
                                                              void* p_src2dDesc,
                                                              void* p_dst1dDesc)
 {
+    const int dstLengths[6] = {
+        outLength0, outLength1, outLength2, outLength3, outLength4, outLength5};
+    const int dstStrides[6] = {
+        outStride0, outStride1, outStride2, outStride3, outStride4, outStride5};
+
     const auto tupleDstLengths = make_tuple_from_array(dstLengths, Number<dstDims>{});
     const auto tupleDstStrides = make_tuple_from_array(dstStrides, Number<dstDims>{});
 

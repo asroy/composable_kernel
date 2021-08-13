@@ -113,13 +113,13 @@ struct get_reduce_op<788202> // 'N' * 10000 + 'R' * 100 + '2'
 };
 
 template <index_t... Ns>
-__device__ static auto make_tuple_from_array_and_index_seq(const index_t* lengths, Sequence<Ns...>)
+__device__ static auto make_tuple_from_array_and_index_seq(const int* lengths, Sequence<Ns...>)
 {
-    return make_tuple(lengths[Ns]...);
+    return make_tuple(static_cast<index_t>(lengths[Ns])...);
 };
 
 template <index_t arraySize>
-__device__ static auto make_tuple_from_array(const index_t* lengths, Number<arraySize>)
+__device__ static auto make_tuple_from_array(const int* lengths, Number<arraySize>)
 {
     static_assert(arraySize >= 1 && arraySize <= 6, "The tensor should have 1 to 6 dimensions");
 
@@ -129,10 +129,10 @@ __device__ static auto make_tuple_from_array(const index_t* lengths, Number<arra
 };
 
 template <index_t... Ids>
-__device__ static auto make_passthrough_tuple_from_array_and_index_seq(const index_t* lengths,
+__device__ static auto make_passthrough_tuple_from_array_and_index_seq(const int* lengths,
                                                                        Sequence<Ids...>)
 {
-    return make_tuple(make_pass_through_transform(lengths[Ids])...);
+    return make_tuple(make_pass_through_transform(static_cast<index_t>(lengths[Ids]))...);
 };
 
 template <index_t... Ns>
