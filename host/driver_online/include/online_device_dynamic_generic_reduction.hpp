@@ -270,6 +270,18 @@ static std::pair<bool, bool> get_padding_need(ReductionMethod_t reduceImpl,
     return (std::make_pair(src_need_padding, dst_need_padding));
 };
 
+static std::string getReductionMethodStr(ReductionMethod_t reduceImpl)
+{
+    switch(reduceImpl)
+    {
+    case ReductionMethod_t::DirectThreadWise: return (std::string("threadwise"));
+    case ReductionMethod_t::DirectWarpWise: return (std::string("warpwise"));
+    case ReductionMethod_t::BlockWise: return (std::string("blockwise"));
+    case ReductionMethod_t::MultiBlock: return (std::string("multiblock"));
+    default: throw std::runtime_error("Invalid reduction method ID!"); break;
+    };
+};
+
 } // namespace detail_dyn_generic_reduction
 
 template <typename TSrc, typename TComp, typename TDst>
@@ -448,9 +460,12 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
             " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding.first) +
             " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding.second);
 
-        std::string program_name1    = "dynamic_gridwise_generic_reduction_first_call.cpp";
-        std::string kernel_name1     = "gridwise_generic_reduce_1_prepare";
-        std::string network_config_1 = network_config + "_1_P";
+        std::string program_name1 = "dynamic_gridwise_generic_reduction_first_call_" +
+                                    getReductionMethodStr(reduceImpl) + ".cpp";
+        std::string kernel_name1 =
+            "gridwise_generic_reduce_1_prepare_" + getReductionMethodStr(reduceImpl);
+        std::string network_config_1 =
+            network_config + "_1_P_" + std::to_string(static_cast<int>(reduceImpl));
 
         timer1.Start();
         handle->AddKernel(
@@ -485,8 +500,8 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
             p_dev_dst1dDesc);
         timer1.End();
 
-        kernel_name1     = "gridwise_generic_reduce_1";
-        network_config_1 = network_config + "_1";
+        kernel_name1     = "gridwise_generic_reduce_1_" + getReductionMethodStr(reduceImpl);
+        network_config_1 = network_config + "_1_" + std::to_string(static_cast<int>(reduceImpl));
 
         timer2.Start();
         handle->AddKernel(
@@ -530,9 +545,12 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                 " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding.first) +
                 " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding.second);
 
-            std::string program_name2    = "dynamic_gridwise_generic_reduction_second_call.cpp";
-            std::string kernel_name2     = "gridwise_generic_reduce_2_prepare";
-            std::string network_config_2 = network_config + "_2_P";
+            std::string program_name2 = "dynamic_gridwise_generic_reduction_second_call_" +
+                                        getReductionMethodStr(reduceImpl2) + ".cpp";
+            std::string kernel_name2 =
+                "gridwise_generic_reduce_2_prepare_" + getReductionMethodStr(reduceImpl2);
+            std::string network_config_2 =
+                network_config + "_2_P_" + std::to_string(static_cast<int>(reduceImpl2));
 
             timer1.Start();
             handle->AddKernel(
@@ -555,8 +573,9 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                 p_dev_dst1dDesc);
             timer1.End();
 
-            kernel_name2     = "gridwise_generic_reduce_2";
-            network_config_2 = network_config + "_2";
+            kernel_name2 = "gridwise_generic_reduce_2_" + getReductionMethodStr(reduceImpl2);
+            network_config_2 =
+                network_config + "_2_" + std::to_string(static_cast<int>(reduceImpl2));
 
             timer2.Start();
             handle->AddKernel(
