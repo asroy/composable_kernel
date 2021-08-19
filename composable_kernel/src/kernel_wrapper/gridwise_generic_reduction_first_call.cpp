@@ -324,52 +324,31 @@ using refType_dst1dDesc_padded =
     typename get_ref_desc_types<reduceAllDims, srcDims, dstDims, invariantDims, toReduceDims>::
         refType_dst1dDesc_padded;
 
-template <ReductionMethod_t impl>
-static __device__ auto get_reduction_src2d_descriptor(const void* p_src2dDesc);
-
-template <>
-__device__ auto
-get_reduction_src2d_descriptor<ReductionMethod_t::DirectThreadWise>(const void* p_src2dDesc)
+template <ReductionMethod_t impl, bool need_padding>
+static __device__ auto get_reduction_src2d_descriptor(const void* p_src2dDesc)
 {
-    if constexpr(src2d_need_padding)
-        return (*reinterpret_cast<const refType_src2dDesc_padded_12*>(p_src2dDesc));
+
+    if constexpr(impl == ReductionMethod_t::DirectThreadWise ||
+                 impl == ReductionMethod_t::DirectWarpWise)
+    {
+        if constexpr(need_padding)
+            return (*reinterpret_cast<const refType_src2dDesc_padded_12*>(p_src2dDesc));
+        else
+            return (*reinterpret_cast<const refType_src2dDesc*>(p_src2dDesc));
+    }
     else
-        return (*reinterpret_cast<const refType_src2dDesc*>(p_src2dDesc));
+    {
+        if constexpr(need_padding)
+            return (*reinterpret_cast<const refType_src2dDesc_padded_34*>(p_src2dDesc));
+        else
+            return (*reinterpret_cast<const refType_src2dDesc*>(p_src2dDesc));
+    }
 };
 
-template <>
-__device__ auto
-get_reduction_src2d_descriptor<ReductionMethod_t::DirectWarpWise>(const void* p_src2dDesc)
-{
-    if constexpr(src2d_need_padding)
-        return (*reinterpret_cast<const refType_src2dDesc_padded_12*>(p_src2dDesc));
-    else
-        return (*reinterpret_cast<const refType_src2dDesc*>(p_src2dDesc));
-};
-
-template <>
-__device__ auto
-get_reduction_src2d_descriptor<ReductionMethod_t::BlockWise>(const void* p_src2dDesc)
-{
-    if constexpr(src2d_need_padding)
-        return (*reinterpret_cast<const refType_src2dDesc_padded_34*>(p_src2dDesc));
-    else
-        return (*reinterpret_cast<const refType_src2dDesc*>(p_src2dDesc));
-};
-
-template <>
-__device__ auto
-get_reduction_src2d_descriptor<ReductionMethod_t::MultiBlock>(const void* p_src2dDesc)
-{
-    if constexpr(src2d_need_padding)
-        return (*reinterpret_cast<const refType_src2dDesc_padded_34*>(p_src2dDesc));
-    else
-        return (*reinterpret_cast<const refType_src2dDesc*>(p_src2dDesc));
-};
-
+template <bool need_padding>
 static __device__ auto get_reduction_dst1d_descriptor(const void* p_dst1dDesc)
 {
-    if constexpr(dst1d_need_padding)
+    if constexpr(need_padding)
         return (*reinterpret_cast<const refType_dst1dDesc_padded*>(p_dst1dDesc));
     else
         return (*reinterpret_cast<const refType_dst1dDesc*>(p_dst1dDesc));
@@ -384,7 +363,7 @@ extern "C" __global__ void gridwise_generic_reduce_1(int origReduceLen,
                                                      float beta,
                                                      void* __restrict__ p_dst_global,
                                                      void* __restrict__ ws_buf1_global,
-                                                     size_t ws_buf2_bytes_offset,
+                                                     long ws_buf2_bytes_offset,
                                                      void* __restrict__ indices_global)
 {
     constexpr index_t GredThreadBufferLength = CK_PARAM_THREAD_BUFFER_LENGTH; // tunable
@@ -405,8 +384,9 @@ extern "C" __global__ void gridwise_generic_reduce_1(int origReduceLen,
                             GredAccessesPerThreadInBlock,
                             GredAccessesPerThreadInWarp>(origReduceLen, BlkGroupSize);
 
-    const auto src2dDesc = get_reduction_src2d_descriptor<reduceImpl>(p_src2dDesc);
-    const auto dst1dDesc = get_reduction_dst1d_descriptor(p_dst1dDesc);
+    const auto src2dDesc =
+        get_reduction_src2d_descriptor<reduceImpl, src2d_need_padding>(p_src2dDesc);
+    const auto dst1dDesc = get_reduction_dst1d_descriptor<dst1d_need_padding>(p_dst1dDesc);
 
     gridwise_2d_reduce.Run(src2dDesc,
                            dst1dDesc,
