@@ -220,9 +220,8 @@ extern "C" __global__ void gridwise_generic_reduce_2(int origReduceLen,
     constexpr index_t GredAccessesPerThreadInWarp = CK_PARAM_ACCESSES_PER_THREAD_INWARP; // tunable
 
     const auto src2dDesc =
-        get_reduction_src2d_descriptor<reduceImpl, src2d_need_padding>((const void*)p_src2dDesc);
-    const auto dst1dDesc =
-        get_reduction_dst1d_descriptor<dst1d_need_padding>((const void*)p_dst1dDesc);
+        get_reduction_src2d_descriptor<reduceImpl, src2d_need_padding>(p_src2dDesc);
+    const auto dst1dDesc = get_reduction_dst1d_descriptor<dst1d_need_padding>(p_dst1dDesc);
 
     const auto gridwise_2d_reduce = Gridwise2dReduction<BlockSize,
                                                         srcDataType,
