@@ -28,7 +28,7 @@
 #include "sequence.hpp"
 #include "tensor_descriptor_helper.hpp"
 #include "reduction_common.hpp"
-#include "gridwise_generic_reduction_first_call_method_chooser.hpp"
+#include "gridwise_generic_2d_reduction_multiblock.hpp"
 #include "gridwise_generic_reduction_wrapper_common.hpp"
 
 using namespace ck;
@@ -63,7 +63,13 @@ static_assert(is_valid_sequence_map<specDims>::value && specDims::Size() == srcD
               "Wrong invariant and/or toReduce dimensions!");
 
 // The number of invariant dimensions can be zero if all dimension are to be reduced
-static_assert(dstDims == 1, "If all source dimensions are reduced, the dest should have only one dimension !!");
+static_assert(dstDims == 1,
+              "If all source dimensions are reduced, the dest should have only one dimension !!");
+
+constexpr bool indexable    = reduce_binary_operator<compType, op>::indexable;
+constexpr bool need_indices = indexable && (reduceIndicesOpt != ReduceTensorIndices_t::NO_INDICES);
+
+constexpr index_t GredAccessesPerThreadInBlock = CK_PARAM_ACCESSES_PER_THREAD_INBLOCK; // tunable
 
 // helper functions using variadic template arguments
 template <index_t... Ns>
@@ -138,21 +144,47 @@ extern "C" __global__ void gridwise_generic_reduce_1_prepare(int GridSize,
         make_tuple(typename arithmetic_sequence_gen<0, srcDims, 1>::type{}),
         make_tuple(Sequence<0>{}));
 
-    const auto two_dim_srcDesc = transform_tensor_descriptor(
+    auto src2dDesc = transform_tensor_descriptor(
         one_dim_srcDesc,
         make_tuple(make_unmerge_transform(make_tuple(1, one_dim_srcDesc.GetLength(Number<0>{})))),
         make_tuple(Sequence<0>{}),
         make_tuple(Sequence<0, 1>{}));
 
-    const auto one_dim_dstDesc = transform_tensor_descriptor(
+    auto dst1dDesc = transform_tensor_descriptor(
         dstDesc,
         make_tuple(make_merge_transform(tupleDstLengths)),
         make_tuple(typename arithmetic_sequence_gen<0, dstDims, 1>::type{}),
         make_tuple(Sequence<0>{}));
 
-    gridwise_generic_reduce_pad_and_store<ReductionMethod_t::MultiBlock, src2d_need_padding, dst1d_need_padding>::
-        RunMethod(
-            GridSize, BlkGroupSize, two_dim_srcDesc, one_dim_dstDesc, p_src2dDesc, p_dst1dDesc);
+    const auto invariantLen = src2dDesc.GetLength(Number<0>{});
+    const auto toReduceLen  = src2dDesc.GetLength(Number<1>{});
+
+    constexpr auto copySliceLen = BlockSize * GredAccessesPerThreadInBlock;
+    const index_t reduceSizePerBlock =
+        (((toReduceLen + BlkGroupSize - 1) / BlkGroupSize + copySliceLen - 1) / copySliceLen) *
+        copySliceLen;
+
+    if constexpr(src2d_need_padding)
+    {
+        const auto srcPad = reduceSizePerBlock * BlkGroupSize - toReduceLen;
+
+        auto src2dDesc_2 =
+            transform_tensor_descriptor(src2dDesc,
+                                        make_tuple(make_pass_through_transform(invariantLen),
+                                                   make_pad_transform(toReduceLen, 0, srcPad)),
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}),
+                                        make_tuple(Sequence<0>{}, Sequence<1>{}));
+        if(hipThreadIdx_x == 0)
+            *static_cast<decltype(src2dDesc_2)*>(p_src2dDesc) = src2dDesc_2;
+    }
+    else
+    {
+        if(hipThreadIdx_x == 0)
+            *static_cast<decltype(src2dDesc)*>(p_src2dDesc) = src2dDesc;
+    };
+
+    if(hipThreadIdx_x == 0)
+        *static_cast<decltype(dst1dDesc)*>(p_dst1dDesc) = dst1dDesc;
 };
 
 template <index_t srcDims, index_t dstDims, typename toReduceDims>
@@ -189,14 +221,6 @@ struct get_ref_desc_types
     static constexpr auto ref_invariantLen = ref_src2dDesc.GetLength(Number<0>{});
     static constexpr auto ref_toReduceLen  = ref_src2dDesc.GetLength(Number<1>{});
 
-    // used by the DirectThreadWise and DirectWarpWise method
-    using refType_src2dDesc_padded_12 =
-        decltype(transform_tensor_descriptor(ref_src2dDesc,
-                                             make_tuple(make_pad_transform(ref_invariantLen, 0, 2),
-                                                        make_pad_transform(ref_toReduceLen, 0, 2)),
-                                             make_tuple(Sequence<0>{}, Sequence<1>{}),
-                                             make_tuple(Sequence<0>{}, Sequence<1>{})));
-
     // used by the BlockWise and MultiBlock method
     using refType_src2dDesc_padded_34 = decltype(
         transform_tensor_descriptor(ref_src2dDesc,
@@ -215,31 +239,22 @@ struct get_ref_desc_types
     using refType_dst1dDesc = decltype(ref_dst1dDesc);
 };
 
-using refType_src2dDesc = typename get_ref_desc_types<srcDims, dstDims, toReduceDims>::refType_src2dDesc;
-using refType_dst1dDesc = typename get_ref_desc_types<srcDims, dstDims, toReduceDims>::refType_dst1dDesc;
-using refType_src2dDesc_padded_12 = typename get_ref_desc_types<srcDims, dstDims, toReduceDims>::refType_src2dDesc_padded_12;
-using refType_src2dDesc_padded_34 = typename get_ref_desc_types<srcDims, dstDims, toReduceDims>::refType_src2dDesc_padded_34;
-using refType_dst1dDesc_padded = typename get_ref_desc_types<srcDims, dstDims, toReduceDims>::refType_dst1dDesc_padded;
+using refType_src2dDesc =
+    typename get_ref_desc_types<srcDims, dstDims, toReduceDims>::refType_src2dDesc;
+using refType_dst1dDesc =
+    typename get_ref_desc_types<srcDims, dstDims, toReduceDims>::refType_dst1dDesc;
+using refType_src2dDesc_padded_34 =
+    typename get_ref_desc_types<srcDims, dstDims, toReduceDims>::refType_src2dDesc_padded_34;
+using refType_dst1dDesc_padded =
+    typename get_ref_desc_types<srcDims, dstDims, toReduceDims>::refType_dst1dDesc_padded;
 
-template <ReductionMethod_t impl, bool need_padding>
+template <bool need_padding>
 static __device__ auto get_reduction_src2d_descriptor(const void* p_src2dDesc)
 {
-
-    if constexpr(impl == ReductionMethod_t::DirectThreadWise ||
-                 impl == ReductionMethod_t::DirectWarpWise)
-    {
-        if constexpr(need_padding)
-            return (*reinterpret_cast<const refType_src2dDesc_padded_12*>(p_src2dDesc));
-        else
-            return (*reinterpret_cast<const refType_src2dDesc*>(p_src2dDesc));
-    }
+    if constexpr(need_padding)
+        return (*reinterpret_cast<const refType_src2dDesc_padded_34*>(p_src2dDesc));
     else
-    {
-        if constexpr(need_padding)
-            return (*reinterpret_cast<const refType_src2dDesc_padded_34*>(p_src2dDesc));
-        else
-            return (*reinterpret_cast<const refType_src2dDesc*>(p_src2dDesc));
-    }
+        return (*reinterpret_cast<const refType_src2dDesc*>(p_src2dDesc));
 };
 
 template <bool need_padding>
@@ -263,35 +278,34 @@ extern "C" __global__ void gridwise_generic_reduce_1(int origReduceLen,
                                                      long ws_buf2_bytes_offset,
                                                      void* __restrict__ indices_global)
 {
-    constexpr index_t GredThreadBufferLength = CK_PARAM_THREAD_BUFFER_LENGTH; // tunable
-    constexpr index_t GredAccessesPerThreadInBlock =
-        CK_PARAM_ACCESSES_PER_THREAD_INBLOCK;                                            // tunable
-    constexpr index_t GredAccessesPerThreadInWarp = CK_PARAM_ACCESSES_PER_THREAD_INWARP; // tunable
-
-    const auto gridwise_2d_reduce =
-        Gridwise2dReduction<BlockSize,
-                            srcDataType,
-                            dstDataType,
-                            compType,
-                            static_cast<index_t>(ReductionMethod_t::MultiBlock),
-                            static_cast<index_t>(op),
-                            static_cast<index_t>(nanPropaOpt),
-                            static_cast<index_t>(reduceIndicesOpt),
-                            GredThreadBufferLength,
-                            GredAccessesPerThreadInBlock,
-                            GredAccessesPerThreadInWarp>(origReduceLen, BlkGroupSize);
-
-    const auto src2dDesc =
-        get_reduction_src2d_descriptor<ReductionMethod_t::MultiBlock, src2d_need_padding>(p_src2dDesc);
+    const auto src2dDesc = get_reduction_src2d_descriptor<src2d_need_padding>(p_src2dDesc);
     const auto dst1dDesc = get_reduction_dst1d_descriptor<dst1d_need_padding>(p_dst1dDesc);
 
-    gridwise_2d_reduce.Run(src2dDesc,
-                           dst1dDesc,
-                           alpha,
-                           const_cast<const void* const __restrict__>(p_src_global),
-                           beta,
-                           const_cast<void* const __restrict__>(p_dst_global),
-                           const_cast<void* const __restrict__>(ws_buf1_global),
-                           ws_buf2_bytes_offset,
-                           const_cast<void* const __restrict__>(indices_global));
+    using gridwise_2d_reduce = GridwiseReduction_xy_to_x_multiblock<BlockSize,
+                                                                    srcDataType,
+                                                                    dstDataType,
+                                                                    compType,
+                                                                    decltype(src2dDesc),
+                                                                    decltype(dst1dDesc),
+                                                                    op,
+                                                                    nanPropaOpt,
+                                                                    reduceIndicesOpt,
+                                                                    GredAccessesPerThreadInBlock>;
+
+    void* const ws_buf2_global =
+        ws_buf2_bytes_offset > 0
+            ? static_cast<void*>(static_cast<char*>(ws_buf1_global) + ws_buf2_bytes_offset)
+            : nullptr;
+
+    constexpr int RunId = need_indices ? 2 : 1;
+    gridwise_2d_reduce::template Run<RunId>(
+        src2dDesc,
+        dst1dDesc,
+        origReduceLen,
+        BlkGroupSize,
+        alpha,
+        static_cast<const srcDataType* const __restrict__>(p_src_global),
+        beta,
+        static_cast<srcDataType* const __restrict__>(ws_buf1_global),
+        static_cast<int* const __restrict__>(ws_buf2_global));
 };
