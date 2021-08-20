@@ -43,7 +43,7 @@ constexpr index_t srcDims = CK_PARAM_IN_DIMS;
 constexpr index_t dstDims = CK_PARAM_OUT_DIMS;
 
 using toReduceDims  = Sequence<CK_PARAM_TOREDUCE_DIMS>;
-using invariantDims = Sequence<CK_PARAM_INVARIANT_DIMS>; // this could be empty
+using invariantDims = Sequence<CK_PARAM_INVARIANT_DIMS>;
 
 constexpr ReductionMethod_t reduceImpl = static_cast<ReductionMethod_t>(CK_PARAM_REDUCE_IMPL);
 
@@ -159,28 +159,16 @@ extern "C" __global__ void gridwise_generic_reduce_1_prepare(int GridSize,
     const auto srcDesc = make_naive_tensor_descriptor(tupleSrcLengths, tupleSrcStrides);
     const auto dstDesc = make_naive_tensor_descriptor(tupleDstLengths, tupleDstStrides);
 
-    // for re-ordering the tensor dimensions
-    using lowDimSeq  = typename sequence_merge<invariantDims, toReduceDims>::type;
-    using highDimSeq = typename arithmetic_sequence_gen<0, srcDims, 1>::type;
-
     const auto toReduceDimLengths = make_tuple_from_array_and_index_seq(srcLengths, toReduceDims{});
     const auto invariantDimLengths =
         make_tuple_from_array_and_index_seq(srcLengths, invariantDims{});
 
-    // construct the reordered tensor descriptor according to the srcMode and dstMode mapping
-    const auto reordered_srcDesc = transform_tensor_descriptor(
-        srcDesc,
-        make_passthrough_tuple_from_array_and_index_seq(srcLengths, lowDimSeq{}),
-        make_dimensions_tuple(lowDimSeq{}),
-        make_dimensions_tuple(highDimSeq{}));
-
-    auto src2dDesc = transform_tensor_descriptor(
-        reordered_srcDesc,
-        make_tuple(make_merge_transform(invariantDimLengths),
-                   make_merge_transform(toReduceDimLengths)),
-        make_tuple(typename arithmetic_sequence_gen<0, dstDims, 1>::type{},
-                   typename arithmetic_sequence_gen<dstDims, srcDims, 1>::type{}),
-        make_tuple(Sequence<0>{}, Sequence<1>{}));
+    auto src2dDesc =
+        transform_tensor_descriptor(srcDesc,
+                                    make_tuple(make_merge_transform(invariantDimLengths),
+                                               make_merge_transform(toReduceDimLengths)),
+                                    make_tuple(invariantDims{}, toReduceDims{}),
+                                    make_tuple(Sequence<0>{}, Sequence<1>{}));
 
     auto dst1dDesc = transform_tensor_descriptor(
         dstDesc,
@@ -240,10 +228,6 @@ struct get_ref_desc_types
     static constexpr auto ref_invariantDimLengths =
         typename uniform_sequence_gen<invariantDims::Size(), 8>::type{};
 
-    // for re-ordering the tensor dimensions
-    using lowDimSeq  = typename sequence_merge<invariantDims, toReduceDims>::type;
-    using highDimSeq = typename arithmetic_sequence_gen<0, srcDims, 1>::type;
-
     static constexpr auto ref_srcLengths = typename uniform_sequence_gen<srcDims, 8>::type{};
     static constexpr auto ref_dstLengths = typename uniform_sequence_gen<dstDims, 8>::type{};
 
@@ -253,17 +237,11 @@ struct get_ref_desc_types
     static constexpr auto ref_dstDesc = make_naive_tensor_descriptor(
         make_tuple_from_seq(ref_dstLengths), make_tuple_from_seq(ref_dstLengths));
 
-    static constexpr auto ref_reordered_srcDesc =
-        transform_tensor_descriptor(ref_srcDesc,
-                                    make_passthrough_tuple_from_seq(ref_srcLengths),
-                                    make_dimensions_tuple(lowDimSeq{}),
-                                    make_dimensions_tuple(highDimSeq{}));
     static constexpr auto ref_src2dDesc = transform_tensor_descriptor(
-        ref_reordered_srcDesc,
+        ref_srcDesc,
         make_tuple(make_merge_transform(make_tuple_from_seq(ref_invariantDimLengths)),
                    make_merge_transform(make_tuple_from_seq(ref_toReduceDimLengths))),
-        make_tuple(typename arithmetic_sequence_gen<0, dstDims, 1>::type{},
-                   typename arithmetic_sequence_gen<dstDims, srcDims, 1>::type{}),
+        make_tuple(invariantDims{}, toReduceDims{}),
         make_tuple(Sequence<0>{}, Sequence<1>{}));
 
     static constexpr auto ref_dst1dDesc = transform_tensor_descriptor(
