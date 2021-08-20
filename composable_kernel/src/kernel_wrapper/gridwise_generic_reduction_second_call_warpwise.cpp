@@ -45,8 +45,6 @@ constexpr index_t dstDims = CK_PARAM_OUT_DIMS;
 using toReduceDims  = Sequence<CK_PARAM_TOREDUCE_DIMS>;
 using invariantDims = Sequence<CK_PARAM_INVARIANT_DIMS>; // this could be empty
 
-constexpr ReductionMethod_t reduceImpl = static_cast<ReductionMethod_t>(CK_PARAM_REDUCE_IMPL);
-
 constexpr ReduceTensorOp_t op          = get_reduce_op<CK_PARAM_REDUCE_OP>::op;
 constexpr NanPropagation_t nanPropaOpt = CK_PARAM_NAN_PROPAGATE == 0
                                              ? NanPropagation_t::NOT_PROPAGATE_NAN
@@ -68,7 +66,28 @@ static_assert(is_valid_sequence_map<specDims>::value && specDims::Size() == srcD
 static_assert(invariantDims::Size() > 0 || dstDims == 1,
               "If all source dimensions are reduced, the dest should have only one dimension !!");
 
-constexpr bool reduceAllDims = (invariantDims::Size() == 0) ? true : false;
+// helper functions using variadic template arguments
+template <index_t... Ns>
+__device__ static auto make_tuple_from_array_and_index_seq(const int* lengths, Sequence<Ns...>)
+{
+    return make_tuple(static_cast<index_t>(lengths[Ns])...);
+};
+
+template <index_t arraySize>
+__device__ static auto make_tuple_from_array(const int* lengths, Number<arraySize>)
+{
+    static_assert(arraySize >= 1 && arraySize <= 6, "The tensor should have 1 to 6 dimensions");
+
+    constexpr auto index_seq = typename arithmetic_sequence_gen<0, arraySize, 1>::type{};
+
+    return make_tuple_from_array_and_index_seq(lengths, index_seq);
+};
+
+template <index_t... Ns>
+__device__ static constexpr auto make_tuple_from_seq(Sequence<Ns...>)
+{
+    return make_tuple(Ns...);
+};
 
 extern "C" __global__ void gridwise_generic_reduce_2_prepare(int GridSize,
                                                              int BlkGroupSize,
@@ -109,7 +128,7 @@ extern "C" __global__ void gridwise_generic_reduce_2_prepare(int GridSize,
     const auto workspace_2d_desc =
         make_naive_tensor_descriptor_packed(make_tuple(invariantLen, toReduceLen));
 
-    gridwise_generic_reduce_pad_and_store<reduceImpl, src2d_need_padding, dst1d_need_padding>::
+    gridwise_generic_reduce_pad_and_store<ReductionMethod_t::DirectWarpWise, src2d_need_padding, dst1d_need_padding>::
         RunMethod(GridSize, 0, workspace_2d_desc, one_dim_dstDesc, p_src2dDesc, p_dst1dDesc);
 };
 
@@ -220,14 +239,14 @@ extern "C" __global__ void gridwise_generic_reduce_2(int origReduceLen,
     constexpr index_t GredAccessesPerThreadInWarp = CK_PARAM_ACCESSES_PER_THREAD_INWARP; // tunable
 
     const auto src2dDesc =
-        get_reduction_src2d_descriptor<reduceImpl, src2d_need_padding>(p_src2dDesc);
+        get_reduction_src2d_descriptor<ReductionMethod_t::DirectWarpWise, src2d_need_padding>(p_src2dDesc);
     const auto dst1dDesc = get_reduction_dst1d_descriptor<dst1d_need_padding>(p_dst1dDesc);
 
     const auto gridwise_2d_reduce = Gridwise2dReduction<BlockSize,
                                                         srcDataType,
                                                         dstDataType,
                                                         compType,
-                                                        static_cast<index_t>(reduceImpl),
+                                                        static_cast<index_t>(ReductionMethod_t::DirectWarpWise),
                                                         static_cast<index_t>(op),
                                                         static_cast<index_t>(nanPropaOpt),
                                                         static_cast<index_t>(reduceIndicesOpt),

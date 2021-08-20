@@ -204,22 +204,14 @@ static inline int GetReduceTensorOpId(ReduceTensorOp_t t)
 {
     switch(t)
     {
-    case REDUCE_TENSOR_ADD:
-        return (656868); // 'A' * 10000 + 'D' * 100 + 'D'
-    case REDUCE_TENSOR_MUL:
-        return (778576); // 'M' * 10000 + 'U' * 100 + 'L'
-    case REDUCE_TENSOR_MIN:
-        return (777378); // 'M' * 10000 + 'I' * 100 + 'N'
-    case REDUCE_TENSOR_MAX:
-        return (776588); // 'M' * 10000 + 'A' * 100 + 'X'
-    case REDUCE_TENSOR_AMAX:
-        return (657788); // 'A' * 10000 + 'M' * 100 + 'X'
-    case REDUCE_TENSOR_AVG:
-        return (658671); // 'A' * 10000 + 'V' * 100 + 'G'
-    case REDUCE_TENSOR_NORM1:
-        return (788201); // 'N' * 10000 + 'R' * 100 + '1'
-    case REDUCE_TENSOR_NORM2:
-        return (788202); // 'N' * 10000 + 'R' * 100 + '2'
+    case REDUCE_TENSOR_ADD: return (656868);   // 'A' * 10000 + 'D' * 100 + 'D'
+    case REDUCE_TENSOR_MUL: return (778576);   // 'M' * 10000 + 'U' * 100 + 'L'
+    case REDUCE_TENSOR_MIN: return (777378);   // 'M' * 10000 + 'I' * 100 + 'N'
+    case REDUCE_TENSOR_MAX: return (776588);   // 'M' * 10000 + 'A' * 100 + 'X'
+    case REDUCE_TENSOR_AMAX: return (657788);  // 'A' * 10000 + 'M' * 100 + 'X'
+    case REDUCE_TENSOR_AVG: return (658671);   // 'A' * 10000 + 'V' * 100 + 'G'
+    case REDUCE_TENSOR_NORM1: return (788201); // 'N' * 10000 + 'R' * 100 + '1'
+    case REDUCE_TENSOR_NORM2: return (788202); // 'N' * 10000 + 'R' * 100 + '2'
     default: throw std::runtime_error("Operation is not supported"); break;
     };
 };
@@ -270,29 +262,40 @@ static std::pair<bool, bool> get_padding_need(ReductionMethod_t reduceImpl,
     return (std::make_pair(src_need_padding, dst_need_padding));
 };
 
-static inline std::string get_arch_specific_compiler_flag(const online_compile::Handle *handle)
+static std::string getReductionMethodStr(ReductionMethod_t reduceImpl)
+{
+    switch(reduceImpl)
+    {
+    case ReductionMethod_t::DirectThreadWise: return (std::string("threadwise"));
+    case ReductionMethod_t::DirectWarpWise: return (std::string("warpwise"));
+    case ReductionMethod_t::BlockWise: return (std::string("blockwise"));
+    case ReductionMethod_t::MultiBlock: return (std::string("multiblock"));
+    default: throw std::runtime_error("Invalid reduction method ID!"); break;
+    };
+};
+
+static inline std::string get_arch_specific_compiler_flag(const online_compile::Handle* handle)
 {
     std::string compiler_flag;
 
     // GPU target
     static const std::string gpu_target = handle->GetDeviceName();
 
-    if( gpu_target.compare(0, 6, "gfx803") == 0)
+    if(gpu_target.compare(0, 6, "gfx803") == 0)
         compiler_flag = " -DCK_AMD_GPU_GFX803";
-    else if( gpu_target.compare(0, 6, "gfx900") == 0)
+    else if(gpu_target.compare(0, 6, "gfx900") == 0)
         compiler_flag = " -DCK_AMD_GPU_GFX900";
-    else if( gpu_target.compare(0, 6, "gfx906") == 0)
+    else if(gpu_target.compare(0, 6, "gfx906") == 0)
         compiler_flag = " -DCK_AMD_GPU_GFX906";
-    else if( gpu_target.compare(0, 6, "gfx908") == 0)
+    else if(gpu_target.compare(0, 6, "gfx908") == 0)
         compiler_flag = " -DCK_AMD_GPU_GFX908";
-    else if( gpu_target.compare(0, 6, "gfx90a") == 0)
+    else if(gpu_target.compare(0, 6, "gfx90a") == 0)
         compiler_flag = " -DCK_AMD_GPU_GFX90A";
-    else if( gpu_target.compare(0, 7, "gfx1030") == 0)
+    else if(gpu_target.compare(0, 7, "gfx1030") == 0)
         compiler_flag = " -DCK_AMD_GPU_GFX1030";
 
     return compiler_flag;
 };
-
 
 } // namespace detail_dyn_generic_reduction
 
@@ -450,6 +453,8 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
               << "Reduction method=" << reduceImpl << " GridSize=" << GridSize
               << " BlkGroupSize=" << BlkGroupSize << std::endl;
 
+    const bool reduceAllDims = invariantDims.empty();
+
     std::vector<float> kernel1_times;
     std::vector<float> kernel2_times;
     std::vector<float> kernel3_times;
@@ -474,8 +479,8 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
             " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding.first) +
             " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding.second);
 
-        std::string program_name1 = "gridwise_generic_reduction_first_call.cpp";
-        std::string kernel_name1  = "gridwise_generic_reduce_1_prepare";
+        std::string program_name1 = "gridwise_generic_reduction_first_call_" + getReductionMethodStr(reduceImpl) + (reduceAllDims? "_reduce_all_dims.cpp" : "_reduce_partial_dims.cpp");
+        std::string kernel_name1 = "gridwise_generic_reduce_1_prepare";
         std::string network_config_1 =
             network_config + "_1_P" + std::to_string(static_cast<int>(reduceImpl)) +
             std::to_string(use_padding.first) + std::to_string(use_padding.second);
@@ -558,7 +563,7 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                 " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding2.first) +
                 " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding2.second);
 
-            std::string program_name2 = "gridwise_generic_reduction_second_call.cpp";
+            std::string program_name2 = "gridwise_generic_reduction_second_call_" + getReductionMethodStr(reduceImpl2) + ".cpp";
             std::string kernel_name2  = "gridwise_generic_reduce_2_prepare";
             std::string network_config_2 =
                 network_config + "_2_P" + std::to_string(static_cast<int>(reduceImpl2)) +
