@@ -81,6 +81,13 @@ struct scalar_type<float>
 };
 
 template <>
+struct scalar_type<double>
+{
+    using type                           = double;
+    static constexpr index_t vector_size = 1;
+};
+
+template <>
 struct scalar_type<half_t>
 {
     using type                           = half_t;
