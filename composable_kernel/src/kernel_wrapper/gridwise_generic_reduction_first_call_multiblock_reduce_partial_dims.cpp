@@ -27,15 +27,18 @@
 #include "number.hpp"
 #include "sequence.hpp"
 #include "tensor_descriptor_helper.hpp"
+#include "data_type_enum_helper.hpp"
 #include "reduction_common.hpp"
 #include "gridwise_generic_2d_reduction_multiblock.hpp"
-#include "gridwise_generic_reduction_wrapper_common.hpp"
 
 using namespace ck;
 
-using srcDataType = typename get_type_from_type_id<static_cast<char>(CK_PARAM_SRC_DATATYPE)>::type;
-using dstDataType = typename get_type_from_type_id<static_cast<char>(CK_PARAM_DST_DATATYPE)>::type;
-using compType = typename get_type_from_type_id<static_cast<char>(CK_PARAM_REDUCE_COMPTYPE)>::type;
+using srcDataType =
+    typename get_datatype_from_enum<static_cast<DataTypeEnum_t>(CK_PARAM_SRC_DATATYPE)>::type;
+using dstDataType =
+    typename get_datatype_from_enum<static_cast<DataTypeEnum_t>(CK_PARAM_DST_DATATYPE)>::type;
+using compType =
+    typename get_datatype_from_enum<static_cast<DataTypeEnum_t>(CK_PARAM_REDUCE_COMPTYPE)>::type;
 
 constexpr index_t BlockSize = CK_PARAM_BLOCKSIZE; // tunable
 
@@ -45,7 +48,7 @@ constexpr index_t dstDims = CK_PARAM_OUT_DIMS;
 using toReduceDims  = Sequence<CK_PARAM_TOREDUCE_DIMS>;
 using invariantDims = Sequence<CK_PARAM_INVARIANT_DIMS>;
 
-constexpr ReduceTensorOp_t op          = get_reduce_op<CK_PARAM_REDUCE_OP>::op;
+constexpr ReduceTensorOp_t op          = static_cast<ReduceTensorOp_t>(CK_PARAM_REDUCE_OP);
 constexpr NanPropagation_t nanPropaOpt = CK_PARAM_NAN_PROPAGATE == 0
                                              ? NanPropagation_t::NOT_PROPAGATE_NAN
                                              : NanPropagation_t::PROPAGATE_NAN;

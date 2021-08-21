@@ -28,14 +28,16 @@
 
 #include <half.hpp>
 
-typedef enum {
+typedef enum
+{
     DirectThreadWise = 1,
     DirectWarpWise   = 2,
     BlockWise        = 3,
     MultiBlock       = 4
 } ReductionMethod_t;
 
-typedef enum {
+typedef enum
+{
     REDUCE_TENSOR_ADD   = 0,
     REDUCE_TENSOR_MUL   = 1,
     REDUCE_TENSOR_MIN   = 2,
@@ -46,17 +48,20 @@ typedef enum {
     REDUCE_TENSOR_NORM2 = 7
 } ReduceTensorOp_t;
 
-typedef enum {
+typedef enum
+{
     NOT_PROPAGATE_NAN = 0,
     PROPAGATE_NAN     = 1,
 } NanPropagation_t;
 
-typedef enum {
+typedef enum
+{
     REDUCE_TENSOR_NO_INDICES        = 0,
     REDUCE_TENSOR_FLATTENED_INDICES = 1,
 } ReduceTensorIndices_t;
 
-typedef enum {
+typedef enum
+{
     APP_32BIT_INDICES = 0,
     APP_64BIT_INDICES = 1,
     APP_16BIT_INDICES = 2,
@@ -74,7 +79,8 @@ static inline Tdst convert_type(Tsrc x)
 } // namespace reduce
 
 // this enumerate should be synchronized with include/miopen.h
-typedef enum {
+typedef enum
+{
     appHalf     = 0,
     appFloat    = 1,
     appInt32    = 2,
@@ -116,43 +122,28 @@ struct get_type_from_type_enum<appInt32>
     using type = int;
 };
 
-static inline int get_typeid_from_type_enum(appDataType_t t)
-{
-    switch(t)
-    {
-    case appHalf: return (static_cast<int>('H'));
-    case appFloat: return (static_cast<int>('F'));
-    case appBFloat16: return (static_cast<int>('B'));
-    case appDouble: return (static_cast<int>('D'));
-    case appInt8:
-    case appInt8x4:
-    case appInt32: return (static_cast<int>('O'));
-    default: throw std::runtime_error("Only float, half, bfloat16 data type is supported."); break;
-    };
-};
-
 template <typename T>
-static inline int get_typeid_from_type()
+static inline appDataType_t get_type_enum_from_type()
 {
     throw std::runtime_error("Unsupported typeid conversion for this type!");
 };
 
 template <>
-inline int get_typeid_from_type<float>()
+inline appDataType_t get_type_enum_from_type<float>()
 {
-    return (static_cast<int>('F'));
+    return (appFloat);
 };
 
 template <>
-inline int get_typeid_from_type<half_float::half>()
+inline appDataType_t get_type_enum_from_type<half_float::half>()
 {
-    return (static_cast<int>('H'));
+    return (appHalf);
 };
 
 template <>
-inline int get_typeid_from_type<double>()
+inline appDataType_t get_type_enum_from_type<double>()
 {
-    return (static_cast<int>('D'));
+    return (appDouble);
 };
 
 static inline float get_effective_average(std::vector<float>& values)

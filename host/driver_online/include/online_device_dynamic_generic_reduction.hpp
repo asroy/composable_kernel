@@ -6,56 +6,55 @@
 
 #include "handle.hpp"
 
+#include <sstream>
+
 namespace detail_dyn_generic_reduction {
 
 template <typename TSrc, typename TComp, typename TDst>
 static std::string get_network_config_string_from_types()
 {
-    std::string out;
+    std::ostringstream outs;
 
-    out += static_cast<char>(Driver::get_typeid_from_type<TSrc>()) +
-           static_cast<char>(Driver::get_typeid_from_type<TComp>()) +
-           static_cast<char>(Driver::get_typeid_from_type<TDst>());
+    outs << Driver::get_type_enum_from_type<TSrc>() << Driver::get_type_enum_from_type<TComp>()
+         << Driver::get_type_enum_from_type<TDst>();
 
-    return (out);
+    return (outs.str());
 };
 
 static std::string get_network_config_string_from_tunable(const tunable_dyn_generic_reduction* pt)
 {
-    std::string out("TUN_");
+    std::ostringstream outs;
 
-    out += std::to_string(pt->BlockSize) + "_";
-    out += std::to_string(pt->GredThreadBufferLength) + "_";
-    out += std::to_string(pt->GredAccessesPerThreadInBlock) + "_";
-    out += std::to_string(pt->GredAccessesPerThreadInWarp);
+    outs << "TUN_" << pt->BlockSize << "_";
+    outs << pt->GredThreadBufferLength << "_";
+    outs << pt->GredAccessesPerThreadInBlock << "_";
+    outs << pt->GredAccessesPerThreadInWarp;
 
-    return (out);
+    return (outs.str());
 };
 
 template <typename TSrc, typename TComp, typename TDst>
 static std::string get_definition_string_from_types()
 {
-    std::string out;
+    std::ostringstream outs;
 
-    out += " -DCK_PARAM_SRC_DATATYPE=" + std::to_string(Driver::get_typeid_from_type<TSrc>());
-    out += " -DCK_PARAM_DST_DATATYPE=" + std::to_string(Driver::get_typeid_from_type<TDst>());
-    out += " -DCK_PARAM_REDUCE_COMPTYPE=" + std::to_string(Driver::get_typeid_from_type<TComp>());
+    outs << " -DCK_PARAM_SRC_DATATYPE=" << Driver::get_type_enum_from_type<TSrc>();
+    outs << " -DCK_PARAM_DST_DATATYPE=" << Driver::get_type_enum_from_type<TDst>();
+    outs << " -DCK_PARAM_REDUCE_COMPTYPE=" << Driver::get_type_enum_from_type<TComp>();
 
-    return (out);
+    return (outs.str());
 };
 
 static std::string get_definition_string_from_tunable(const tunable_dyn_generic_reduction* pt)
 {
-    std::string out;
+    std::ostringstream outs;
 
-    out += " -DCK_PARAM_BLOCKSIZE=" + std::to_string(pt->BlockSize);
-    out += " -DCK_PARAM_THREAD_BUFFER_LENGTH=" + std::to_string(pt->GredThreadBufferLength);
-    out += " -DCK_PARAM_ACCESSES_PER_THREAD_INBLOCK=" +
-           std::to_string(pt->GredAccessesPerThreadInBlock);
-    out +=
-        " -DCK_PARAM_ACCESSES_PER_THREAD_INWARP=" + std::to_string(pt->GredAccessesPerThreadInWarp);
+    outs << " -DCK_PARAM_BLOCKSIZE=" << pt->BlockSize;
+    outs << " -DCK_PARAM_THREAD_BUFFER_LENGTH=" << pt->GredThreadBufferLength;
+    outs << " -DCK_PARAM_ACCESSES_PER_THREAD_INBLOCK=" << pt->GredAccessesPerThreadInBlock;
+    outs << " -DCK_PARAM_ACCESSES_PER_THREAD_INWARP=" << pt->GredAccessesPerThreadInWarp;
 
-    return (out);
+    return (outs.str());
 };
 
 struct ReductionKernelConfigurator
@@ -182,37 +181,6 @@ struct ReductionKernelConfigurator
             return (ReductionMethod_t::DirectWarpWise);
         else
             return (ReductionMethod_t::BlockWise);
-    };
-};
-
-static inline int GetDataTypeId(appDataType_t t)
-{
-    switch(t)
-    {
-    case appHalf: return (static_cast<int>('H'));
-    case appFloat: return (static_cast<int>('F'));
-    case appBFloat16: return (static_cast<int>('B'));
-    case appDouble: return (static_cast<int>('D'));
-    case appInt8:
-    case appInt8x4:
-    case appInt32: return (static_cast<int>('O'));
-    default: throw std::runtime_error("Only float, half, bfloat16 data type is supported."); break;
-    };
-};
-
-static inline int GetReduceTensorOpId(ReduceTensorOp_t t)
-{
-    switch(t)
-    {
-    case REDUCE_TENSOR_ADD: return (656868);   // 'A' * 10000 + 'D' * 100 + 'D'
-    case REDUCE_TENSOR_MUL: return (778576);   // 'M' * 10000 + 'U' * 100 + 'L'
-    case REDUCE_TENSOR_MIN: return (777378);   // 'M' * 10000 + 'I' * 100 + 'N'
-    case REDUCE_TENSOR_MAX: return (776588);   // 'M' * 10000 + 'A' * 100 + 'X'
-    case REDUCE_TENSOR_AMAX: return (657788);  // 'A' * 10000 + 'M' * 100 + 'X'
-    case REDUCE_TENSOR_AVG: return (658671);   // 'A' * 10000 + 'V' * 100 + 'G'
-    case REDUCE_TENSOR_NORM1: return (788201); // 'N' * 10000 + 'R' * 100 + '1'
-    case REDUCE_TENSOR_NORM2: return (788202); // 'N' * 10000 + 'R' * 100 + '2'
-    default: throw std::runtime_error("Operation is not supported"); break;
     };
 };
 
@@ -428,7 +396,7 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
         param += " -DCK_REDUCE_ALL_DIMS=1";
     };
 
-    param += " -DCK_PARAM_REDUCE_OP=" + std::to_string(GetReduceTensorOpId(reduceOp));
+    param += " -DCK_PARAM_REDUCE_OP=" + std::to_string(reduceOp);
     param += " -DCK_PARAM_NAN_PROPAGATE=" + std::to_string(nanPropaOpt == PROPAGATE_NAN ? 1 : 0);
     param += " -DCK_PARAM_REDUCE_INDICES=" +
              std::to_string(reduceIndicesOpt == REDUCE_TENSOR_FLATTENED_INDICES ? 1 : 0);
@@ -448,10 +416,6 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
     for(auto dim : toReduceDims)
         network_config += std::to_string(dim) + "_";
     network_config += "BSIZE_" + std::to_string(tunable->BlockSize);
-
-    std::cout << std::endl
-              << "Reduction method=" << reduceImpl << " GridSize=" << GridSize
-              << " BlkGroupSize=" << BlkGroupSize << std::endl;
 
     const bool reduceAllDims = invariantDims.empty();
 
@@ -474,16 +438,17 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                                             BlkGroupSize,
                                             tunable);
 
-        std::string param1 =
-            param + " -DCK_PARAM_REDUCE_IMPL=" + std::to_string(static_cast<int>(reduceImpl)) +
-            " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding.first) +
-            " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding.second);
+        std::string param1 = param +
+                             " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding.first) +
+                             " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding.second);
 
-        std::string program_name1 = "gridwise_generic_reduction_first_call_" + getReductionMethodStr(reduceImpl) + (reduceAllDims? "_reduce_all_dims.cpp" : "_reduce_partial_dims.cpp");
-        std::string kernel_name1 = "gridwise_generic_reduce_1_prepare";
-        std::string network_config_1 =
-            network_config + "_1_P" + std::to_string(static_cast<int>(reduceImpl)) +
-            std::to_string(use_padding.first) + std::to_string(use_padding.second);
+        std::string program_name1 =
+            "gridwise_generic_reduction_first_call_" + getReductionMethodStr(reduceImpl) +
+            (reduceAllDims ? "_reduce_all_dims.cpp" : "_reduce_partial_dims.cpp");
+        std::string kernel_name1     = "gridwise_generic_reduce_1_prepare";
+        std::string network_config_1 = network_config + "_1_P" + std::to_string(reduceImpl) +
+                                       std::to_string(use_padding.first) +
+                                       std::to_string(use_padding.second);
 
         timer1.Start();
         handle->AddKernel(
@@ -519,7 +484,8 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
         timer1.End();
 
         kernel_name1     = "gridwise_generic_reduce_1";
-        network_config_1 = network_config + "_1";
+        network_config_1 = network_config + "_1" + std::to_string(reduceImpl) +
+                           std::to_string(use_padding.first) + std::to_string(use_padding.second);
 
         timer2.Start();
         handle->AddKernel(
@@ -558,16 +524,16 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                                                  BlkGroupSize,
                                                  tunable);
 
-            std::string param2 =
-                param + " -DCK_PARAM_REDUCE_IMPL=" + std::to_string(static_cast<int>(reduceImpl2)) +
-                " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding2.first) +
-                " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding2.second);
+            std::string param2 = param +
+                                 " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding2.first) +
+                                 " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding2.second);
 
-            std::string program_name2 = "gridwise_generic_reduction_second_call_" + getReductionMethodStr(reduceImpl2) + ".cpp";
-            std::string kernel_name2  = "gridwise_generic_reduce_2_prepare";
-            std::string network_config_2 =
-                network_config + "_2_P" + std::to_string(static_cast<int>(reduceImpl2)) +
-                std::to_string(use_padding2.first) + std::to_string(use_padding2.second);
+            std::string program_name2 = "gridwise_generic_reduction_second_call_" +
+                                        getReductionMethodStr(reduceImpl2) + ".cpp";
+            std::string kernel_name2     = "gridwise_generic_reduce_2_prepare";
+            std::string network_config_2 = network_config + "_2_P" + std::to_string(reduceImpl2) +
+                                           std::to_string(use_padding2.first) +
+                                           std::to_string(use_padding2.second);
 
             timer1.Start();
             handle->AddKernel(
@@ -591,7 +557,9 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
             timer1.End();
 
             kernel_name2     = "gridwise_generic_reduce_2";
-            network_config_2 = network_config + "_2";
+            network_config_2 = network_config + "_2" + std::to_string(reduceImpl2) +
+                               std::to_string(use_padding2.first) +
+                               std::to_string(use_padding2.second);
 
             timer2.Start();
             handle->AddKernel(
