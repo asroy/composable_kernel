@@ -38,9 +38,7 @@ struct DynamicBuffer
         return BufferAddressSpace;
     }
 
-    __host__ __device__ constexpr const T& operator[](index_t i) const { return p_data_[i]; }
-
-    __host__ __device__ constexpr T& operator()(index_t i) { return p_data_[i]; }
+    __host__ __device__ constexpr T& operator[](index_t i) const { return p_data_[i]; }
 
     template <typename X,
               typename enable_if<
@@ -238,9 +236,14 @@ __host__ __device__ constexpr auto make_dynamic_buffer(T* p, ElementSpaceSize el
     return DynamicBuffer<BufferAddressSpace, T, ElementSpaceSize, true>{p, element_space_size};
 }
 
-template <AddressSpaceEnum_t BufferAddressSpace, typename T, typename ElementSpaceSize>
+template <
+    AddressSpaceEnum_t BufferAddressSpace,
+    typename T,
+    typename ElementSpaceSize,
+    typename X,
+    typename enable_if<is_same<remove_cvref_t<T>, remove_cvref_t<X>>::value, bool>::type = false>
 __host__ __device__ constexpr auto
-make_dynamic_buffer(T* p, ElementSpaceSize element_space_size, remove_cv_t<T> invalid_element_value)
+make_dynamic_buffer(T* p, ElementSpaceSize element_space_size, X invalid_element_value)
 {
     return DynamicBuffer<BufferAddressSpace, T, ElementSpaceSize, false>{
         p, element_space_size, invalid_element_value};
