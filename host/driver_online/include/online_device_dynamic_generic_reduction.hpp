@@ -403,10 +403,6 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
     param += " -DCK_PARAM_IN_DIMS=" + std::to_string(inLengths.size());
     param += " -DCK_PARAM_OUT_DIMS=" + std::to_string(outLengths.size());
 
-    // disable AMD Buffer Addressing for double data transfering
-    if(std::is_same<TSrc, double>::value || std::is_same<TDst, double>::value)
-        param += " -DCK_USE_AMD_BUFFER_ADDRESSING=0";
-
     network_config = get_network_config_string_from_types<TSrc, TComp, TDst>() + "_" +
                      get_network_config_string_from_tunable(tunable) + "_";
 
