@@ -91,29 +91,10 @@ __device__ static auto make_tuple_from_array(const int* lengths, Number<arraySiz
     return make_tuple_from_array_and_index_seq(lengths, index_seq);
 };
 
-template <index_t... Ids>
-__device__ static auto make_passthrough_tuple_from_array_and_index_seq(const int* lengths,
-                                                                       Sequence<Ids...>)
-{
-    return make_tuple(make_pass_through_transform(static_cast<index_t>(lengths[Ids]))...);
-};
-
 template <index_t... Ns>
 __device__ static constexpr auto make_tuple_from_seq(Sequence<Ns...>)
 {
     return make_tuple(Ns...);
-};
-
-template <index_t... Ns>
-__device__ static constexpr auto make_dimensions_tuple(Sequence<Ns...>)
-{
-    return make_tuple(Sequence<Ns>{}...);
-};
-
-template <index_t... Ns>
-__device__ static constexpr auto make_passthrough_tuple_from_seq(Sequence<Ns...>)
-{
-    return make_tuple(make_pass_through_transform(Ns)...);
 };
 
 extern "C" __global__ void gridwise_generic_reduce_1_prepare(int GridSize,
@@ -142,9 +123,13 @@ extern "C" __global__ void gridwise_generic_reduce_1_prepare(int GridSize,
                                                              int outStride3,
                                                              int outStride4,
                                                              int outStride5,
-                                                             void* p_src2dDesc,
-                                                             void* p_dst1dDesc)
+                                                             void* __restrict__ ws_global)
 {
+    (void)GridSize;
+
+    void* p_src2dDesc = ws_global;
+    void* p_dst1dDesc = static_cast<char*>(ws_global) + 2048;
+
     const int srcLengths[6] = {inLength0, inLength1, inLength2, inLength3, inLength4, inLength5};
     const int srcStrides[6] = {inStride0, inStride1, inStride2, inStride3, inStride4, inStride5};
     const int dstLengths[6] = {
@@ -202,7 +187,7 @@ extern "C" __global__ void gridwise_generic_reduce_1_prepare(int GridSize,
     {
         if(hipThreadIdx_x == 0)
             *static_cast<decltype(src2dDesc)*>(p_src2dDesc) = src2dDesc;
-    };
+    }
 
     if(hipThreadIdx_x == 0)
         *static_cast<decltype(dst1dDesc)*>(p_dst1dDesc) = dst1dDesc;
@@ -290,16 +275,21 @@ static __device__ auto get_reduction_dst1d_descriptor(const void* p_dst1dDesc)
 
 extern "C" __global__ void gridwise_generic_reduce_1(int origReduceLen,
                                                      int BlkGroupSize,
-                                                     const void* p_src2dDesc,
-                                                     const void* p_dst1dDesc,
                                                      float alpha,
                                                      const void* __restrict__ p_src_global,
                                                      float beta,
                                                      void* __restrict__ p_dst_global,
-                                                     void* __restrict__ ws_buf1_global,
+                                                     void* __restrict__ ws_global,
                                                      long ws_buf2_bytes_offset,
                                                      void* __restrict__ indices_global)
 {
+    (void)p_dst_global;
+    (void)indices_global;
+
+    const void* p_src2dDesc = ws_global;
+    const void* p_dst1dDesc = static_cast<char*>(ws_global) + 2048;
+    void* ws_buf1_global    = static_cast<char*>(ws_global) + 4096;
+
     const auto src2dDesc = get_reduction_src2d_descriptor<src2d_need_padding>(p_src2dDesc);
     const auto dst1dDesc = get_reduction_dst1d_descriptor<dst1d_need_padding>(p_dst1dDesc);
 

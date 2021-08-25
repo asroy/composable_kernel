@@ -211,9 +211,10 @@ struct WarpReduce
             binop::calculate(accuData, myDataBuffer[0], accuIndex, myIndicesBuffer[0]);
     };
 
+    // cppcheck-suppress constParameter
     __device__ static void set_buffer_value(BufferType& thread_buffer, compType value)
     {
-        static_for<0, ThreadBufferLen, 1>{}([&](auto I) { thread_buffer(Number<I>{}) = value; });
+        static_for<0, ThreadBufferLen, 1>{}([&](auto I) { thread_buffer(I) = value; });
 
         __all(1);
     };
@@ -222,7 +223,8 @@ struct WarpReduce
     template <typename unary_op_type>
     __device__ static void operate_on_elements(unary_op_type& unary_op, BufferType& thread_buffer)
     {
-        static_for<0, ThreadBufferLen, 1>{}([&](auto I) { unary_op(thread_buffer(I)); });
+        static_for<0, ThreadBufferLen, 1>{}(
+            [&](auto I) { thread_buffer(I) = unary_op(thread_buffer[I]); });
 
         __all(1);
     };
@@ -345,9 +347,10 @@ struct WarpReduceWithIndicesInput
             binop::calculate(accuData, myDataBuffer[0], accuIndex, myIndicesBuffer[0]);
     };
 
+    // cppcheck-suppress constParameter
     __device__ static void set_buffer_value(BufferType& thread_buffer, compType value)
     {
-        static_for<0, ThreadBufferLen, 1>{}([&](auto I) { thread_buffer(Number<I>{}) = value; });
+        static_for<0, ThreadBufferLen, 1>{}([&](auto I) { thread_buffer(I) = value; });
 
         __all(1);
     };
@@ -356,7 +359,8 @@ struct WarpReduceWithIndicesInput
     template <typename unary_op_type>
     __device__ static void operate_on_elements(unary_op_type& unary_op, BufferType& thread_buffer)
     {
-        static_for<0, ThreadBufferLen, 1>{}([&](auto I) { unary_op(thread_buffer(I)); });
+        static_for<0, ThreadBufferLen, 1>{}(
+            [&](auto I) { thread_buffer(I) = unary_op(thread_buffer[I]); });
 
         __all(1);
     };

@@ -99,19 +99,6 @@ struct float_equal_zero
     };
 };
 
-#define PRINT_MSG(msg)                                \
-    {                                                 \
-        if(hipBlockIdx_x == 0 && hipThreadIdx_x == 0) \
-            printf(msg);                              \
-    }
-
-#define PRINT_MSG_RET(msg)                            \
-    {                                                 \
-        if(hipBlockIdx_x == 0 && hipThreadIdx_x == 0) \
-            printf(msg);                              \
-        return;                                       \
-    }
-
 }; // end of namespace ck
 
 #endif

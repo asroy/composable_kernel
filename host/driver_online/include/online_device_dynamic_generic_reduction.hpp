@@ -189,6 +189,7 @@ static std::pair<bool, bool> get_padding_need(ReductionMethod_t reduceImpl,
                                               size_t toReduceLen,
                                               int GridSize,
                                               int BlockSize,
+                                              int warpSize,
                                               int BlkGroupSize,
                                               const tunable_dyn_generic_reduction* tunable)
 {
@@ -265,6 +266,20 @@ static inline std::string get_arch_specific_compiler_flag(const online_compile::
     return compiler_flag;
 };
 
+static std::string get_first_call_kernel_file(const ReductionMethod_t reduceImpl,
+                                              const bool allDimsReduced)
+{
+    std::ostringstream outs;
+
+    outs << "gridwise_generic_reduction_first_call_" << getReductionMethodStr(reduceImpl);
+    if(allDimsReduced)
+        outs << "_reduce_all_dims.cpp";
+    else
+        outs << "_reduce_partial_dims.cpp";
+
+    return (outs.str());
+};
+
 } // namespace detail_dyn_generic_reduction
 
 template <typename TSrc, typename TComp, typename TDst>
@@ -306,10 +321,10 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
     auto outLengths = out.mDesc.GetLengths();
     auto outStrides = out.mDesc.GetStrides();
 
-    int p_inLengths[6];
-    int p_inStrides[6];
-    int p_outLengths[6];
-    int p_outStrides[6];
+    int p_inLengths[6]  = {0};
+    int p_inStrides[6]  = {0};
+    int p_outLengths[6] = {0};
+    int p_outStrides[6] = {0};
 
     for(int i = 0; i < inLengths.size(); i++)
         p_inLengths[i] = static_cast<int>(inLengths[i]);
@@ -333,11 +348,7 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                                ? workspace_size * sizeof(TSrc)
                                : workspace_size * (sizeof(TSrc) + sizeof(int)) + 64 + sizeof(int);
 
-    DeviceMem workspace1(wsSizeInBytes);
-    DeviceMem workspace2(4096);
-
-    void* p_dev_src2dDesc = (char*)workspace2.GetDeviceBuffer();
-    void* p_dev_dst1dDesc = (char*)workspace2.GetDeviceBuffer() + 2048;
+    DeviceMem workspace(4096 + wsSizeInBytes);
 
     size_t indicesSizeInBytes = need_indices ? out.mDesc.GetElementSize() * sizeof(int) : 0;
 
@@ -391,10 +402,7 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
         };
     }
     else
-    {
         param += " -DCK_PARAM_INVARIANT_DIMS= ";
-        param += " -DCK_REDUCE_ALL_DIMS=1";
-    };
 
     param += " -DCK_PARAM_REDUCE_OP=" + std::to_string(reduceOp);
     param += " -DCK_PARAM_NAN_PROPAGATE=" + std::to_string(nanPropaOpt == PROPAGATE_NAN ? 1 : 0);
@@ -431,6 +439,7 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                                             toReduceLength,
                                             GridSize,
                                             tunable->BlockSize,
+                                            handle->GetWavefrontWidth(),
                                             BlkGroupSize,
                                             tunable);
 
@@ -438,9 +447,7 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                              " -DCK_PARAM_SRC2D_PADDING=" + std::to_string(use_padding.first) +
                              " -DCK_PARAM_DST1D_PADDING=" + std::to_string(use_padding.second);
 
-        std::string program_name1 =
-            "gridwise_generic_reduction_first_call_" + getReductionMethodStr(reduceImpl) +
-            (reduceAllDims ? "_reduce_all_dims.cpp" : "_reduce_partial_dims.cpp");
+        std::string program_name1    = get_first_call_kernel_file(reduceImpl, reduceAllDims);
         std::string kernel_name1     = "gridwise_generic_reduce_1_prepare";
         std::string network_config_1 = network_config + "_1_P" + std::to_string(reduceImpl) +
                                        std::to_string(use_padding.first) +
@@ -475,8 +482,7 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
             p_outStrides[3],
             p_outStrides[4],
             p_outStrides[5],
-            p_dev_src2dDesc,
-            p_dev_dst1dDesc);
+            workspace.GetDeviceBuffer());
         timer1.End();
 
         kernel_name1     = "gridwise_generic_reduce_1";
@@ -488,13 +494,11 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
             algo_name, network_config_1, program_name1, kernel_name1, vld, vgd2, param1)(
             origReduceLen,
             BlkGroupSize,
-            p_dev_src2dDesc,
-            p_dev_dst1dDesc,
             alpha,
             in_dev_buf.GetDeviceBuffer(),
             beta,
             out_dev_buf.GetDeviceBuffer(),
-            workspace1.GetDeviceBuffer(),
+            workspace.GetDeviceBuffer(),
             ws_buf2_bytes_offset,
             indices_dev_buf.GetDeviceBuffer());
         timer2.End();
@@ -517,6 +521,7 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                                                  toReduceLength_2,
                                                  GridSize_2,
                                                  tunable->BlockSize,
+                                                 handle->GetWavefrontWidth(),
                                                  BlkGroupSize,
                                                  tunable);
 
@@ -548,8 +553,7 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
                 p_outStrides[3],
                 p_outStrides[4],
                 p_outStrides[5],
-                p_dev_src2dDesc,
-                p_dev_dst1dDesc);
+                workspace.GetDeviceBuffer());
             timer1.End();
 
             kernel_name2     = "gridwise_generic_reduce_2";
@@ -561,13 +565,11 @@ void device_dynamic_generic_reduction_olc(online_compile::Handle* handle,
             handle->AddKernel(
                 algo_name, network_config_2, program_name2, kernel_name2, vld, vgd2_2, param2)(
                 origReduceLen,
-                p_dev_src2dDesc,
-                p_dev_dst1dDesc,
                 alpha,
                 in_dev_buf.GetDeviceBuffer(),
                 beta,
                 out_dev_buf.GetDeviceBuffer(),
-                workspace1.GetDeviceBuffer(),
+                workspace.GetDeviceBuffer(),
                 ws_buf2_bytes_offset,
                 indices_dev_buf.GetDeviceBuffer());
             timer2.End();

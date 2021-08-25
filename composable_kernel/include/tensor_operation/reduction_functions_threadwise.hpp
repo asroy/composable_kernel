@@ -68,6 +68,7 @@ struct ThreadReduce
     };
 
     // Set the elements in the per-thread buffer to a specific value
+    // cppcheck-suppress constParameter
     __device__ static void set_buffer_value(BufferType& thread_buffer, compType value)
     {
         static_for<0, ThreadBufferLen, 1>{}([&](auto I) { thread_buffer(I) = value; });
@@ -77,7 +78,8 @@ struct ThreadReduce
     template <typename unary_op_type>
     __device__ static void operate_on_elements(unary_op_type& unary_op, BufferType& thread_buffer)
     {
-        static_for<0, ThreadBufferLen, 1>{}([&](auto I) { unary_op(thread_buffer(I)); });
+        static_for<0, ThreadBufferLen, 1>{}(
+            [&](auto I) { thread_buffer(I) = unary_op(thread_buffer[I]); });
     };
 };
 
@@ -119,6 +121,7 @@ struct ThreadReduceWithIndicesInput
     };
 
     // Set the elements in the per-thread buffer to a specific value
+    // cppcheck-suppress constParameter
     __device__ static void set_buffer_value(BufferType& thread_buffer, compType value)
     {
         static_for<0, ThreadBufferLen, 1>{}([&](auto I) { thread_buffer(I) = value; });
@@ -128,7 +131,8 @@ struct ThreadReduceWithIndicesInput
     template <typename unary_op_type>
     __device__ static void operate_on_elements(unary_op_type& unary_op, BufferType& thread_buffer)
     {
-        static_for<0, ThreadBufferLen, 1>{}([&](auto I) { unary_op(thread_buffer(I)); });
+        static_for<0, ThreadBufferLen, 1>{}(
+            [&](auto I) { thread_buffer(I) = unary_op(thread_buffer[I]); });
     };
 };
 
