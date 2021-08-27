@@ -77,9 +77,9 @@ include_directories(BEFORE
 set(HIP_COMPILER_FLAGS "${HIP_COMPILER_FLAGS} ${HIP_ONLINE_COMPILER_FLAGS}")
 add_definitions("-DHIP_COMPILER_FLAGS=${HIP_COMPILER_FLAGS}")
 
-file(GLOB_RECURSE COMPOSABLE_KERNEL_INCLUDE_1 "${PROJECT_SOURCE_DIR}/composable_kernel/include/*/*.hpp")
-file(GLOB COMPOSABLE_KERNEL_INCLUDE_2 "${PROJECT_SOURCE_DIR}/external/rocm/include/bfloat16_dev.hpp")
-file(GLOB COMPOSABLE_KERNEL_INCLUDE_3 "${PROJECT_SOURCE_DIR}/composable_kernel/include/*.hpp")
+file(GLOB_RECURSE COMPOSABLE_KERNEL_INCLUDE_1 "${PROJECT_SOURCE_DIR}/ck/composable_kernel/include/*/*.hpp")
+file(GLOB COMPOSABLE_KERNEL_INCLUDE_2 "${PROJECT_SOURCE_DIR}/ck/external/rocm/include/bfloat16_dev.hpp")
+file(GLOB COMPOSABLE_KERNEL_INCLUDE_3 "${PROJECT_SOURCE_DIR}/ck/composable_kernel/include/*.hpp")
 
 set(MCONV_KERNEL_INCLUDES
     ${COMPOSABLE_KERNEL_INCLUDE_1}
@@ -87,7 +87,7 @@ set(MCONV_KERNEL_INCLUDES
     ${COMPOSABLE_KERNEL_INCLUDE_3}
    )
 
-file(GLOB_RECURSE MCONV_KERNELS "${PROJECT_SOURCE_DIR}/composable_kernel/src/kernel_wrapper/*.cpp")
+file(GLOB_RECURSE MCONV_KERNELS "${PROJECT_SOURCE_DIR}/ck/composable_kernel/src/kernel_wrapper/*.cpp")
 
 add_kernels(${CMAKE_CURRENT_SOURCE_DIR} "${MCONV_KERNELS}")
 add_kernel_includes(${CMAKE_CURRENT_SOURCE_DIR} "${MCONV_KERNEL_INCLUDES}")

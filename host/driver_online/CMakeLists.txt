@@ -4,14 +4,14 @@ include_directories(BEFORE
     ${PROJECT_SOURCE_DIR}/host/online_compile/include
     ${PROJECT_SOURCE_DIR}/host/host_tensor/include
     ${PROJECT_SOURCE_DIR}/host/solver/include
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/utility
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_description
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_operation
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/problem_transform
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/driver
-    ${PROJECT_SOURCE_DIR}/external/rocm/include
-    ${PROJECT_SOURCE_DIR}/external/half/include
+    ${PROJECT_SOURCE_DIR}/ck/composable_kernel/include
+    ${PROJECT_SOURCE_DIR}/ck/composable_kernel/include/utility
+    ${PROJECT_SOURCE_DIR}/ck/composable_kernel/include/tensor_description
+    ${PROJECT_SOURCE_DIR}/ck/composable_kernel/include/tensor_operation
+    ${PROJECT_SOURCE_DIR}/ck/composable_kernel/include/problem_transform
+    ${PROJECT_SOURCE_DIR}/ck/composable_kernel/include/driver
+    ${PROJECT_SOURCE_DIR}/ck/external/rocm/include
+    ${PROJECT_SOURCE_DIR}/ck/external/half/include
 )
 
 ##set(CONV_FWD_DRIVER_ONLINE_SOURCE conv_fwd_driver_online.cpp)

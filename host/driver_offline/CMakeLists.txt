@@ -2,13 +2,13 @@ include_directories(BEFORE
     include
     ${PROJECT_SOURCE_DIR}/host/host_tensor/include
     ${PROJECT_SOURCE_DIR}/host/solver/include
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/utility
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_description
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/tensor_operation
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/problem_transform
-    ${PROJECT_SOURCE_DIR}/composable_kernel/include/driver
-    ${PROJECT_SOURCE_DIR}/external/rocm/include
+    ${PROJECT_SOURCE_DIR}/ck/composable_kernel/include
+    ${PROJECT_SOURCE_DIR}/ck/composable_kernel/include/utility
+    ${PROJECT_SOURCE_DIR}/ck/composable_kernel/include/tensor_description
+    ${PROJECT_SOURCE_DIR}/ck/composable_kernel/include/tensor_operation
+    ${PROJECT_SOURCE_DIR}/ck/composable_kernel/include/problem_transform
+    ${PROJECT_SOURCE_DIR}/ck/composable_kernel/include/driver
+    ${PROJECT_SOURCE_DIR}/ck/external/rocm/include
 )
 
 set(CONV_FWD_DRIVER_OFFLINE_SOURCE src/conv_fwd_driver_offline.cpp)
